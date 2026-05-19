@@ -929,10 +929,15 @@
       }
       const messagesWrap = document.getElementById("messages-wrap");
       if (messagesWrap) messagesWrap.addEventListener("click", onSpeakerClick);
-      setTimeout(() => document.getElementById("input").focus(), 50);
+      setTimeout(() => { if (!state.searchOpen) document.getElementById("input")?.focus(); }, 50);
     } else if (state.view === "unlimited-chat") {
       const activeUnl = state.unlimitedSessions.find(s => s.id === state.activeUnlimitedId);
       const headerTitle = activeUnl ? (activeUnl.title || "New chat") : "The Field";
+      const headerSub = activeUnl
+        ? (activeUnl.lastMessageAt
+            ? "Last active " + formatRelativeTime(activeUnl.lastMessageAt)
+            : "Started " + formatRelativeTime(activeUnl.startedAt))
+        : "";
       app.innerHTML = `
         <div class="demo-banner">⚠ Demo Mode · The Field — Unlimited · Click a day chip above to test Reset mode</div>
         <div class="main-row">
@@ -941,7 +946,7 @@
             <div class="main-header">
               <div>
                 <div class="main-header-title">${escapeHtml(headerTitle)}</div>
-                <div class="main-header-sub">Unlimited conversation · grounded in Shimrit's full body of work</div>
+                ${headerSub ? `<div class="main-header-sub">${escapeHtml(headerSub)}</div>` : ""}
               </div>
             </div>
             <div class="messages-wrap" id="messages-wrap">
@@ -974,7 +979,7 @@
       }
       const messagesWrap = document.getElementById("messages-wrap");
       if (messagesWrap) messagesWrap.addEventListener("click", onUnlimitedSpeakerClick);
-      setTimeout(() => document.getElementById("input").focus(), 50);
+      setTimeout(() => { if (!state.searchOpen) document.getElementById("input")?.focus(); }, 50);
     }
 
     // Wire up controls present in every view.
@@ -997,9 +1002,41 @@
     if (magBtn) magBtn.addEventListener("click", onMagnifierClick);
     const unlSearch = document.getElementById("unl-search-input");
     if (unlSearch) {
-      unlSearch.addEventListener("input", (e) => { state.searchQuery = e.target.value; render(); });
-      if (state.searchOpen) setTimeout(() => unlSearch.focus(), 30);
+      // Update ONLY the chat list as the user types — full render would
+      // re-create the chat textarea and steal focus away from this input.
+      unlSearch.addEventListener("input", (e) => {
+        state.searchQuery = e.target.value;
+        renderUnlimitedChatList();
+      });
+      if (state.searchOpen && document.activeElement !== unlSearch) {
+        setTimeout(() => unlSearch.focus(), 30);
+      }
     }
+    wireUnlimitedChatItems();
+  }
+
+  // Re-render just the .unl-chat-list section. Used by search input changes
+  // so the search input keeps focus while the list filters live.
+  function renderUnlimitedChatList() {
+    const wrap = document.querySelector(".unl-chat-list");
+    if (!wrap) return;
+    const filtered = state.searchQuery
+      ? state.unlimitedSessions.filter(s => (s.title || "").toLowerCase().includes(state.searchQuery.toLowerCase()))
+      : state.unlimitedSessions;
+    if (filtered.length === 0) {
+      wrap.innerHTML = '<div class="unl-chat-empty">' + (state.searchQuery ? "No matches." : "No conversations yet.") + '</div>';
+    } else {
+      wrap.innerHTML = filtered.map(s => `
+        <div class="unl-chat-item ${s.id === state.activeUnlimitedId ? "active" : ""}" data-unl-id="${s.id}">
+          <div class="unl-chat-title">${escapeHtml(s.title || "New chat")}</div>
+          <div class="unl-chat-time">${escapeHtml(formatRelativeTime(s.lastMessageAt || s.startedAt))}</div>
+        </div>
+      `).join("");
+    }
+    wireUnlimitedChatItems();
+  }
+
+  function wireUnlimitedChatItems() {
     document.querySelectorAll(".unl-chat-item").forEach(el => {
       el.addEventListener("click", () => onUnlimitedChatClick(el.dataset.unlId));
     });
@@ -1122,21 +1159,20 @@
 
   async function onDayClick(day) {
     if (!state.sessionToken || day === state.currentDay) return;
+    // Make sure we land back in Reset chat view (in case the user is currently
+    // in the Unlimited side).
+    state.view = "chat";
     state.loading = true;
-    renderMessages();
+    render();
     try {
       const data = await apiSetDay(state.sessionToken, day);
       state.currentDay = data.currentDay;
       state.lastCompletedDay = data.lastCompletedDay;
-      if (data.opening) {
-        state.messages.push({
-          role: "assistant",
-          content: data.opening
-        });
-      }
+      // Replace messages with this day's own conversation history. Each day
+      // is its own thread; switching loads that thread fresh.
+      state.messages = data.messages || [];
       state.loading = false;
       render();
-      maybeAutoplayLastAssistant();
     } catch (err) {
       state.messages.push({ role: "assistant", content: "Demo error: " + (err.message || "could not switch day.") });
       state.loading = false;
@@ -1558,7 +1594,15 @@
       state.currentDay = data.currentDay || 1;
       state.lastCompletedDay = data.lastCompletedDay || 0;
       state.timeRemainingMs = data.timeRemainingMs;
-      state.messages = data.messages || [];
+      // Filter to messages for the CURRENT day only. Each day is its own
+      // thread in the demo. Falls back to all messages if no day metadata
+      // is present (older sessions).
+      const allMessages = data.messages || [];
+      const filtered = allMessages.filter(m => {
+        if (m.dayAtSend == null) return true;
+        return Number(m.dayAtSend) === Number(state.currentDay);
+      });
+      state.messages = filtered.length > 0 ? filtered : allMessages;
       state.view = "chat";
       render();
     } catch (err) {
