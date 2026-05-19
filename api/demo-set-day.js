@@ -81,25 +81,52 @@ export default async function handler(req, res) {
       RETURNING current_day, last_completed_day, pitch_eligible
     `;
 
-    // Persist the canonical opening for this day as an assistant message so
-    // the next chat turn sees it in context.
     const session = await getOrCreateSession(user.id);
-    const opening = DAY_OPENINGS[targetDay];
-    await insertMessage({
-      sessionId: session.id,
-      userId: user.id,
-      role: "assistant",
-      content: opening,
-      tierAtSend: user.tier,
-      dayAtSend: targetDay,
-      systemPromptVersion: PROMPT_VERSION + "-demo-opening",
-    });
+
+    // Each day is its own conversation thread. Messages are tagged with
+    // day_at_send so we can filter by day. Check whether this user has
+    // any messages for the target day yet — if not, insert the canonical
+    // welcome as the opening assistant message for that day.
+    const { rows: existing } = await sql`
+      SELECT id FROM messages
+      WHERE user_id = ${user.id} AND day_at_send = ${targetDay}
+      LIMIT 1
+    `;
+
+    if (existing.length === 0) {
+      const opening = DAY_OPENINGS[targetDay];
+      await insertMessage({
+        sessionId: session.id,
+        userId: user.id,
+        role: "assistant",
+        content: opening,
+        tierAtSend: user.tier,
+        dayAtSend: targetDay,
+        systemPromptVersion: PROMPT_VERSION + "-demo-opening",
+      });
+    }
+
+    // Return ALL messages for this user + day so the frontend can render
+    // the day's conversation history when the user switches in.
+    const { rows: dayMessages } = await sql`
+      SELECT id, role, content, created_at
+      FROM messages
+      WHERE user_id = ${user.id}
+        AND day_at_send = ${targetDay}
+        AND role IN ('user', 'assistant')
+      ORDER BY created_at ASC
+    `;
 
     return res.status(200).json({
       currentDay: rows[0]?.current_day,
       lastCompletedDay: rows[0]?.last_completed_day,
       pitchEligible: rows[0]?.pitch_eligible,
-      opening,
+      messages: dayMessages.map((m) => ({
+        id: m.id,
+        role: m.role,
+        content: m.content,
+        createdAt: m.created_at,
+      })),
     });
   } catch (err) {
     console.error("demo_set_day_error", { message: err?.message });
