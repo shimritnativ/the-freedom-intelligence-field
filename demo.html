@@ -110,18 +110,14 @@
   }
   .brand-mark {
     width: 48px; height: 48px;
-    border-radius: 6px;
     flex-shrink: 0;
-    overflow: hidden;
     display: block;
-    box-shadow: 0 0 0 1px var(--gold-line), 0 2px 8px rgba(0,0,0,0.3);
-    background: #000;
   }
   .brand-mark img {
     width: 100%;
     height: 100%;
     display: block;
-    object-fit: cover;
+    object-fit: contain;
   }
   .brand-text-1 {
     font-size: 10px;
@@ -496,6 +492,26 @@
   .autoplay-toggle input { margin: 0; accent-color: var(--gold); cursor: pointer; }
   .autoplay-toggle:hover { color: var(--text); }
 
+  /* Unlimited section in sidebar */
+  .sidebar-divider { height: 1px; background: var(--gold-line); margin: 16px 4px; opacity: 0.5; }
+  .unl-action-row { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; }
+  .new-chat-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 12px; background: linear-gradient(135deg, var(--gold), color-mix(in srgb, var(--gold) 70%, black)); color: var(--bg); border-radius: 8px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; border: none; cursor: pointer; }
+  .new-chat-btn svg { width: 14px; height: 14px; }
+  .magnifier-btn { width: 36px; height: 36px; flex-shrink: 0; background: var(--gold-soft); border: 1px solid var(--gold-line); color: var(--gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+  .magnifier-btn svg { width: 14px; height: 14px; }
+  .magnifier-btn.active { background: var(--gold-line); }
+  .unl-search-wrap { margin-bottom: 8px; display: none; }
+  .unl-search-wrap.open { display: block; }
+  .unl-search-wrap input { width: 100%; background: var(--panel); border: 1px solid var(--gold-line); color: var(--text); padding: 7px 10px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; border-radius: 6px; outline: none; }
+  .unl-search-wrap input::placeholder { color: var(--text-mute); }
+  .unl-chat-list { max-height: 280px; overflow-y: auto; }
+  .unl-chat-item { padding: 8px 10px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; border: 1px solid transparent; transition: background 0.15s ease, border-color 0.15s ease; }
+  .unl-chat-item:hover { background: var(--gold-soft); }
+  .unl-chat-item.active { background: var(--gold-soft); border-color: var(--gold-line); }
+  .unl-chat-title { font-size: 11px; color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-weight: 500; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .unl-chat-time { font-size: 9px; color: var(--text-mute); margin-top: 2px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .unl-chat-empty { padding: 10px 8px; font-size: 11px; color: var(--text-mute); font-style: italic; font-family: Georgia, serif; }
+
   .composer-note {
     max-width: 760px; margin: 8px auto 0;
     text-align: center;
@@ -661,7 +677,13 @@
     view: "entry",
     autoplay: (function () {
       try { return localStorage.getItem("tfif_autoplay_v1") === "1"; } catch (e) { return false; }
-    })()
+    })(),
+    // ===== Unlimited demo state =====
+    unlimitedSessions: [],
+    activeUnlimitedId: null,
+    unlimitedMessages: [],
+    searchOpen: false,
+    searchQuery: ""
   };
 
   // ===== Persistence =====
@@ -748,14 +770,14 @@
     return `
       <aside class="sidebar">
         <div class="brand">
-          <div class="brand-mark"><img src="https://i.ibb.co/n9hKLzH/Untitled-design-56.png" alt="Master Your Path" /></div>
+          <div class="brand-mark"><img src="/logo.png" alt="Master Your Path" /></div>
           <div>
             <div class="brand-text-1">Master Your Path</div>
             <div class="brand-text-2">Freedom Intelligence Field</div>
           </div>
         </div>
 
-        <div class="sidebar-label">Switch Day (demo only)</div>
+        <div class="sidebar-label">The 72-Hour Power Reset</div>
         <div class="day-list">
           ${DAY_META.map((d, i) => {
             const dayNum = i + 1;
@@ -776,16 +798,57 @@
 
         ${state.sessionToken ? `<button class="reset-btn" id="reset-btn">Reset conversation</button>` : ""}
 
-        <label class="autoplay-toggle" for="autoplay-checkbox">
-          <input type="checkbox" id="autoplay-checkbox" ${state.autoplay ? "checked" : ""} />
-          Auto-play Shimrit's voice
-        </label>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-label">The Field — Unlimited</div>
+
+        <div class="unl-action-row">
+          <button class="new-chat-btn" id="new-chat-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New chat
+          </button>
+          <button class="magnifier-btn ${state.searchOpen ? "active" : ""}" id="magnifier-btn" title="Search conversations">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </button>
+        </div>
+
+        <div class="unl-search-wrap ${state.searchOpen ? "open" : ""}">
+          <input type="text" id="unl-search-input" placeholder="Search your conversations" value="${escapeHtml(state.searchQuery || "")}" />
+        </div>
+
+        <div class="unl-chat-list">
+          ${(function () {
+            const filtered = state.searchQuery
+              ? state.unlimitedSessions.filter(s => (s.title || "").toLowerCase().includes(state.searchQuery.toLowerCase()))
+              : state.unlimitedSessions;
+            if (filtered.length === 0) {
+              return '<div class="unl-chat-empty">' + (state.searchQuery ? "No matches." : "No conversations yet.") + '</div>';
+            }
+            return filtered.map(s => `
+              <div class="unl-chat-item ${s.id === state.activeUnlimitedId ? "active" : ""}" data-unl-id="${s.id}">
+                <div class="unl-chat-title">${escapeHtml(s.title || "New chat")}</div>
+                <div class="unl-chat-time">${escapeHtml(formatRelativeTime(s.lastMessageAt || s.startedAt))}</div>
+              </div>
+            `).join("");
+          })()}
+        </div>
+
         <div class="sidebar-footer">
           <div class="footer-text">DEMO v1.0</div>
           <button class="theme-toggle" id="theme-toggle" title="Toggle theme" aria-label="Toggle theme">${themeIcon}</button>
         </div>
       </aside>
     `;
+  }
+
+  function formatRelativeTime(iso) {
+    if (!iso) return "";
+    const t = new Date(iso); const now = new Date();
+    const diffMs = now - t; const diffMin = Math.floor(diffMs / 60000); const diffHr = Math.floor(diffMs / 3600000); const diffDay = Math.floor(diffMs / 86400000);
+    if (diffMin < 2) return "Just now";
+    if (diffMin < 60) return diffMin + "m ago";
+    if (diffHr < 24) return diffHr + "h ago";
+    if (diffDay < 7) return diffDay + "d ago";
+    return t.toLocaleDateString();
   }
 
   function render() {
@@ -806,11 +869,11 @@
             <div class="entry-screen">
               <div class="entry-card">
                 <div class="entry-label">The Freedom Intelligence Field</div>
-                <div class="entry-title">Welcome to Day 1: State Reset</div>
-                <div class="entry-sub">Today we are not solving everything. We are locating what is currently active, what has been directing you, and how to return to yourself.</div>
+                <div class="entry-title">Welcome to the Freedom Intelligence Field<br/>Day 1: State Reset</div>
+                <div class="entry-sub">Drop your prompt and I'll guide you through a powerful process, or just tell me what's on your mind.</div>
                 <form id="entry-form">
                   <input class="entry-input" id="name-input" type="text" placeholder="Your name (optional)" autocomplete="given-name" />
-                  <textarea class="entry-input" id="opening-input" rows="4" placeholder="Start with one sentence. What is happening right now?" required style="font-family: Georgia, 'Times New Roman', serif; line-height: 1.6;"></textarea>
+                  <textarea class="entry-input" id="opening-input" rows="4" placeholder="Paste your Day 1 prompt or share what's present for you..." required style="font-family: Georgia, 'Times New Roman', serif; line-height: 1.6;"></textarea>
                   ${state.error ? `<div class="error-text">${escapeHtml(state.error)}</div>` : ""}
                   <button class="btn-primary" type="submit">Begin Day 1</button>
                 </form>
@@ -867,6 +930,51 @@
       const messagesWrap = document.getElementById("messages-wrap");
       if (messagesWrap) messagesWrap.addEventListener("click", onSpeakerClick);
       setTimeout(() => document.getElementById("input").focus(), 50);
+    } else if (state.view === "unlimited-chat") {
+      const activeUnl = state.unlimitedSessions.find(s => s.id === state.activeUnlimitedId);
+      const headerTitle = activeUnl ? (activeUnl.title || "New chat") : "The Field";
+      app.innerHTML = `
+        <div class="demo-banner">⚠ Demo Mode · The Field — Unlimited · Click a day chip above to test Reset mode</div>
+        <div class="main-row">
+          ${renderSidebar()}
+          <main class="main">
+            <div class="main-header">
+              <div>
+                <div class="main-header-title">${escapeHtml(headerTitle)}</div>
+                <div class="main-header-sub">Unlimited conversation · grounded in Shimrit's full body of work</div>
+              </div>
+            </div>
+            <div class="messages-wrap" id="messages-wrap">
+              <div class="messages" id="messages"></div>
+            </div>
+            <div class="composer-wrap">
+              <div class="composer">
+                <textarea id="input" rows="1" placeholder="Bring whatever is present for you..."></textarea>
+                <button class="mic-btn" id="mic-btn" type="button" aria-label="Record voice message" title="Record voice message">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <rect x="9" y="3" width="6" height="11" rx="3"/>
+                    <path d="M19 11a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.93V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.07A7 7 0 0 0 19 11z"/>
+                  </svg>
+                </button>
+                <button class="send-btn" id="send-btn" type="button">↑</button>
+              </div>
+              <div class="composer-note">Demo · The Field is using retrieval against Shimrit's full body of work.</div>
+            </div>
+          </main>
+        </div>
+      `;
+      renderUnlimitedMessages();
+      document.getElementById("input").addEventListener("input", onInputChange);
+      document.getElementById("input").addEventListener("keydown", onUnlimitedKeyDown);
+      document.getElementById("send-btn").addEventListener("click", onUnlimitedSendClick);
+      const micBtn = document.getElementById("mic-btn");
+      if (micBtn) {
+        if (!micSupported()) micBtn.style.display = "none";
+        else micBtn.addEventListener("click", onMicClick);
+      }
+      const messagesWrap = document.getElementById("messages-wrap");
+      if (messagesWrap) messagesWrap.addEventListener("click", onUnlimitedSpeakerClick);
+      setTimeout(() => document.getElementById("input").focus(), 50);
     }
 
     // Wire up controls present in every view.
@@ -882,6 +990,19 @@
         el.addEventListener("click", () => onDayClick(parseInt(el.dataset.day, 10)));
       });
     }
+    // Unlimited sidebar wires (present whenever sidebar is rendered).
+    const newChatBtn = document.getElementById("new-chat-btn");
+    if (newChatBtn) newChatBtn.addEventListener("click", onNewChatClick);
+    const magBtn = document.getElementById("magnifier-btn");
+    if (magBtn) magBtn.addEventListener("click", onMagnifierClick);
+    const unlSearch = document.getElementById("unl-search-input");
+    if (unlSearch) {
+      unlSearch.addEventListener("input", (e) => { state.searchQuery = e.target.value; render(); });
+      if (state.searchOpen) setTimeout(() => unlSearch.focus(), 30);
+    }
+    document.querySelectorAll(".unl-chat-item").forEach(el => {
+      el.addEventListener("click", () => onUnlimitedChatClick(el.dataset.unlId));
+    });
   }
 
   function renderMessages() {
@@ -1283,6 +1404,153 @@
     try { localStorage.setItem("tfif_autoplay_v1", state.autoplay ? "1" : "0"); } catch (err) {}
   }
 
+  // ===== Unlimited API =====
+  async function apiListUnlimited() {
+    const res = await fetch(API_BASE + "/unlimited/sessions", { method: "GET", headers: { "x-session-token": state.sessionToken } });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "could_not_list");
+    return data.sessions || [];
+  }
+  async function apiCreateUnlimited() {
+    const res = await fetch(API_BASE + "/unlimited/sessions", { method: "POST", headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken } });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "could_not_create");
+    return data.session;
+  }
+  async function apiLoadUnlimited(id) {
+    const res = await fetch(API_BASE + "/unlimited/session?id=" + encodeURIComponent(id), { method: "GET", headers: { "x-session-token": state.sessionToken } });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "could_not_load");
+    return data;
+  }
+  async function apiUnlimitedChat(sessionId, message) {
+    const res = await fetch(API_BASE + "/unlimited/chat", { method: "POST", headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken }, body: JSON.stringify({ sessionId, message }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "could_not_send");
+    return data;
+  }
+
+  // ===== Unlimited handlers =====
+  async function onNewChatClick() {
+    try {
+      const session = await apiCreateUnlimited();
+      state.unlimitedSessions.unshift(session);
+      state.activeUnlimitedId = session.id;
+      state.unlimitedMessages = [];
+      state.view = "unlimited-chat";
+      render();
+    } catch (e) { console.error("create_unl_failed", e); alert("Could not start a new chat. Try again."); }
+  }
+
+  function onMagnifierClick() {
+    state.searchOpen = !state.searchOpen;
+    if (!state.searchOpen) state.searchQuery = "";
+    render();
+  }
+
+  async function onUnlimitedChatClick(sessionId) {
+    if (!sessionId) return;
+    if (sessionId === state.activeUnlimitedId && state.view === "unlimited-chat") return;
+    try {
+      const data = await apiLoadUnlimited(sessionId);
+      state.activeUnlimitedId = sessionId;
+      state.unlimitedMessages = data.messages || [];
+      state.view = "unlimited-chat";
+      const idx = state.unlimitedSessions.findIndex(s => s.id === sessionId);
+      if (idx >= 0) state.unlimitedSessions[idx] = Object.assign({}, state.unlimitedSessions[idx], data.session);
+      render();
+    } catch (e) { console.error("load_unl_failed", e); alert("Could not load that conversation."); }
+  }
+
+  function renderUnlimitedMessages() {
+    const wrap = document.getElementById("messages");
+    if (!wrap) return;
+    let html = state.unlimitedMessages.map((m, i) => {
+      if (m.role === "user") return '<div class="msg-row user"><div class="msg">' + escapeHtml(m.content) + '</div></div>';
+      return '<div class="msg-row assistant"><div class="msg">' + escapeHtml(m.content) + '</div>'
+        + '<button class="speak-btn" data-unl-msg-index="' + i + '" type="button" aria-label="Play in Shimrit\'s voice">'
+        + '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/><path d="M14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>'
+        + '</button></div>';
+    }).join("");
+    if (state.loading) html += '<div class="msg-row assistant"><div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>';
+    wrap.innerHTML = html;
+    const wrapper = document.getElementById("messages-wrap");
+    if (wrapper) wrapper.scrollTop = wrapper.scrollHeight;
+  }
+
+  function onUnlimitedKeyDown(e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onUnlimitedSendClick(); } }
+
+  async function onUnlimitedSendClick() {
+    const inputEl = document.getElementById("input");
+    if (!inputEl) return;
+    const text = inputEl.value.trim();
+    if (!text || state.loading || !state.activeUnlimitedId) return;
+    state.unlimitedMessages.push({ role: "user", content: text });
+    inputEl.value = "";
+    inputEl.style.height = "auto";
+    state.loading = true;
+    document.getElementById("send-btn").classList.remove("active");
+    renderUnlimitedMessages();
+    try {
+      const data = await apiUnlimitedChat(state.activeUnlimitedId, text);
+      state.unlimitedMessages.push({ role: "assistant", content: data.reply });
+      state.loading = false;
+      const idx = state.unlimitedSessions.findIndex(s => s.id === state.activeUnlimitedId);
+      if (idx >= 0) {
+        const updated = Object.assign({}, state.unlimitedSessions[idx], { lastMessageAt: new Date().toISOString() });
+        if (data.title) updated.title = data.title;
+        state.unlimitedSessions.splice(idx, 1);
+        state.unlimitedSessions.unshift(updated);
+      }
+      render();
+      maybeAutoplayLastUnlimitedAssistant();
+    } catch (err) {
+      state.unlimitedMessages.push({ role: "assistant", content: "Something went wrong. Try again in a moment." });
+      state.loading = false;
+      renderUnlimitedMessages();
+    }
+  }
+
+  function onUnlimitedSpeakerClick(e) {
+    const btn = e.target.closest(".speak-btn");
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.unlMsgIndex, 10);
+    if (Number.isNaN(idx)) return;
+    playUnlimitedMessageAudio(idx, btn);
+  }
+
+  async function playUnlimitedMessageAudio(idx, btnEl) {
+    if (speakerState.currentIndex === idx && speakerState.currentAudio) { stopCurrentAudio(); return; }
+    stopCurrentAudio();
+    const msg = state.unlimitedMessages[idx];
+    if (!msg || msg.role !== "assistant" || !msg.content) return;
+    speakerState.currentBtnEl = btnEl;
+    speakerState.currentIndex = idx;
+    setSpeakerBtnState(btnEl, "loading");
+    try {
+      const res = await fetch(API_BASE + "/speak", { method: "POST", headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken }, body: JSON.stringify({ text: msg.content }) });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "tts_failed"); }
+      const blob = await res.blob();
+      const audio = new Audio(URL.createObjectURL(blob));
+      speakerState.currentAudio = audio;
+      audio.onended = () => { if (speakerState.currentAudio === audio) stopCurrentAudio(); };
+      audio.onerror = () => { if (speakerState.currentAudio === audio) stopCurrentAudio(); };
+      setSpeakerBtnState(btnEl, "playing");
+      await audio.play();
+    } catch (err) {
+      console.error("speak_failed", err);
+      setSpeakerBtnState(btnEl, "idle");
+      speakerState.currentAudio = null; speakerState.currentBtnEl = null; speakerState.currentIndex = -1;
+    }
+  }
+
+  function maybeAutoplayLastUnlimitedAssistant() {
+    if (!state.autoplay) return;
+    const last = state.unlimitedMessages.length - 1; if (last < 0) return;
+    const m = state.unlimitedMessages[last]; if (!m || m.role !== "assistant") return;
+    setTimeout(() => { const btn = document.querySelector('.speak-btn[data-unl-msg-index="' + last + '"]'); if (btn) playUnlimitedMessageAudio(last, btn); }, 50);
+  }
+
   async function loadFullState() {
     try {
       const data = await apiState(state.sessionToken);
@@ -1301,12 +1569,17 @@
     }
   }
 
+  async function loadUnlimitedSessions() {
+    try { state.unlimitedSessions = await apiListUnlimited(); }
+    catch (e) { console.warn("could_not_load_unlimited_sessions", e?.message); state.unlimitedSessions = []; }
+  }
+
   function init() {
     applyTheme(loadTheme());
     const existing = loadToken();
     if (existing) {
       state.sessionToken = existing;
-      loadFullState();
+      loadFullState().then(() => loadUnlimitedSessions().then(() => render()));
     } else {
       state.view = "entry";
       render();
