@@ -12,28 +12,21 @@ import { sql } from "@vercel/postgres";
 import { getUserBySessionToken, getOrCreateSession, insertMessage } from "../lib/db.js";
 import { PROMPT_VERSION } from "../lib/prompts/index.js";
 
-// Canonical opening text for each day, verbatim from the source PDFs.
-// See docs/extracted/day1-state-reset.md, day2-decision-alignment.md, day3-aligned-action.md.
+// Canonical welcome text shown as the AI's first message when the user
+// enters or switches to each day. Short and inviting — the structured
+// teaching lives in the system prompt itself. The participant pastes
+// their day prompt from the Kajabi PDF (or just shares what's present)
+// and the Field responds using the day-specific methodology.
 const DAY_OPENINGS = {
-  1: `Welcome to Day 1: State Reset.
+  1: `Welcome to the Freedom Intelligence Field — Day 1: State Reset.
 
-Today we are not solving everything. We are locating what is currently active, what has been directing you, and how to return to yourself.
+Drop your prompt and I'll guide you through a powerful process, or just tell me what's on your mind.`,
+  2: `Welcome to the Freedom Intelligence Field — Day 2: Decision.
 
-Start with one sentence: what is happening right now?`,
-  2: `Today is Day 2: Decision.
+Drop your prompt below and let's begin!`,
+  3: `Welcome to the Freedom Intelligence Field — Day 3: Action.
 
-We are not here to process the pattern again. We are here to bring the mind, heart, and body into alignment so a clean decision can be made.
-
-I will guide this one step at a time.
-
-First question: What decision, goal, or situation are you bringing into alignment today?`,
-  3: `Welcome to Day 3: Aligned Action.
-
-Day 1 helped you locate the state. Day 2 helped you make the decision.
-
-Today we are turning that decision into action. But we are not forcing action from pressure. We are going to identify the old loop, the old inner conversation, and the action that expresses the self you are choosing to become.
-
-First question: What decision did you make on Day 2?`
+Drop your prompt below for your last day of the 72-Hour Power Reset!`
 };
 
 function applyCors(req, res) {
