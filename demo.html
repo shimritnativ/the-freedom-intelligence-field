@@ -249,6 +249,26 @@
   }
   .theme-toggle:hover { border-color: var(--gold); color: var(--gold); }
 
+  /* Footer cluster: font-size controls + theme toggle. */
+  .footer-actions { display: flex; align-items: center; gap: 6px; }
+  .font-btn {
+    background: transparent;
+    border: 1px solid var(--gold-line);
+    color: var(--text-dim);
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    padding: 0;
+    line-height: 1;
+  }
+  .font-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .font-btn:disabled { opacity: 0.35; cursor: not-allowed; border-color: var(--gold-line); color: var(--text-mute); }
+  .font-btn.font-larger { font-size: 13px; } /* slightly larger "A+" reads better */
+
   /* Main */
   .main {
     flex: 1; display: flex; flex-direction: column;
@@ -307,7 +327,8 @@
     max-width: 78%;
     padding: 13px 18px;
     color: var(--text);
-    font-size: 15px;
+    /* Reader scale — adjustable via the A−/A+ buttons in the sidebar footer. */
+    font-size: calc(15px * var(--msg-scale, 1));
     line-height: 1.75;
   }
   .msg-row.user .msg {
@@ -870,7 +891,7 @@
 
     .messages-wrap { padding: 14px 0; }
     .messages { padding: 0 14px; gap: 14px; }
-    .msg { font-size: 14px; max-width: 88%; }
+    .msg { font-size: calc(14px * var(--msg-scale, 1)); max-width: 88%; }
     .composer-wrap { padding: 10px 14px 12px; }
     .composer-note { font-size: 10px; }
 
@@ -924,7 +945,15 @@
     searchOpen: false,
     searchQuery: "",
     // ===== Mobile chrome state =====
-    mobileDrawerOpen: false
+    mobileDrawerOpen: false,
+    // ===== Reader font scale (1 = default; 0.85 = small; 1.3 = large) =====
+    fontScale: (function () {
+      try {
+        const v = parseFloat(localStorage.getItem("tfif_font_scale_v1"));
+        if (isNaN(v) || v < 0.7 || v > 1.5) return 1;
+        return v;
+      } catch (e) { return 1; }
+    })()
   };
 
   // ===== Persistence =====
@@ -936,6 +965,38 @@
   function applyTheme(theme) {
     document.documentElement.setAttribute("data-theme", theme);
     saveTheme(theme);
+  }
+
+  // ===== Reader font scale =====
+  // Applies a CSS custom property used by .msg font-size calc(). Persisted to
+  // localStorage so the user's preference carries across sessions.
+  function applyFontScale(scale) {
+    state.fontScale = scale;
+    document.documentElement.style.setProperty("--msg-scale", String(scale));
+    try { localStorage.setItem("tfif_font_scale_v1", String(scale)); } catch (e) {}
+  }
+  const FONT_SCALE_MIN = 0.85;
+  const FONT_SCALE_MAX = 1.30;
+  const FONT_SCALE_STEP = 0.10;
+  function onFontSmaller() {
+    const next = Math.max(FONT_SCALE_MIN, Math.round((state.fontScale - FONT_SCALE_STEP) * 100) / 100);
+    if (next === state.fontScale) return;
+    applyFontScale(next);
+    // Refresh the footer so disabled state on min/max updates without a full
+    // app re-render.
+    const smaller = document.getElementById("font-smaller");
+    const larger = document.getElementById("font-larger");
+    if (smaller) smaller.disabled = next <= FONT_SCALE_MIN;
+    if (larger) larger.disabled = next >= FONT_SCALE_MAX;
+  }
+  function onFontLarger() {
+    const next = Math.min(FONT_SCALE_MAX, Math.round((state.fontScale + FONT_SCALE_STEP) * 100) / 100);
+    if (next === state.fontScale) return;
+    applyFontScale(next);
+    const smaller = document.getElementById("font-smaller");
+    const larger = document.getElementById("font-larger");
+    if (smaller) smaller.disabled = next <= FONT_SCALE_MIN;
+    if (larger) larger.disabled = next >= FONT_SCALE_MAX;
   }
 
   function generateAnonId() {
@@ -1139,7 +1200,11 @@
 
         <div class="sidebar-footer">
           <div class="footer-text">DEMO v1.0</div>
-          <button class="theme-toggle" id="theme-toggle" title="Toggle theme" aria-label="Toggle theme">${themeIcon}</button>
+          <div class="footer-actions">
+            <button class="font-btn font-smaller" id="font-smaller" type="button" title="Smaller text" aria-label="Smaller text"${state.fontScale <= 0.85 ? " disabled" : ""}>A−</button>
+            <button class="font-btn font-larger" id="font-larger" type="button" title="Larger text" aria-label="Larger text"${state.fontScale >= 1.3 ? " disabled" : ""}>A+</button>
+            <button class="theme-toggle" id="theme-toggle" title="Toggle theme" aria-label="Toggle theme">${themeIcon}</button>
+          </div>
         </div>
       </aside>
     `;
@@ -1388,6 +1453,10 @@
     // Wire up controls present in every view.
     const themeBtn = document.getElementById("theme-toggle");
     if (themeBtn) themeBtn.addEventListener("click", onThemeToggle);
+    const fontSmallerBtn = document.getElementById("font-smaller");
+    if (fontSmallerBtn) fontSmallerBtn.addEventListener("click", onFontSmaller);
+    const fontLargerBtn = document.getElementById("font-larger");
+    if (fontLargerBtn) fontLargerBtn.addEventListener("click", onFontLarger);
     const resetBtn = document.getElementById("reset-btn");
     if (resetBtn) resetBtn.addEventListener("click", onReset);
     const autoplayCheckbox = document.getElementById("autoplay-checkbox");
@@ -1926,10 +1995,49 @@
   }
 
   // ===== Unlimited handlers =====
+  // Silently bootstrap a demo session if one doesn't exist yet — this lets a
+  // visitor preview The Field — Unlimited without first completing the Day 1
+  // entry form. Same anonymous identity flow as onStartSubmit.
+  async function ensureDemoSession() {
+    if (state.sessionToken) return true;
+    try {
+      const anonId = getOrCreateAnonId();
+      const syntheticEmail = "demo-" + anonId + "@tfif.local";
+      const data = await apiStart(syntheticEmail, "");
+      state.sessionToken = data.sessionToken;
+      saveToken(data.sessionToken);
+      state.currentDay = data.currentDay || 1;
+      state.timeRemainingMs = data.timeRemainingMs;
+      return true;
+    } catch (e) {
+      console.error("auto_start_failed", e);
+      return false;
+    }
+  }
+
+  // Cross-deploy recovery: if a request fails because the token is stale (DB
+  // was reset, schema changed, session expired), purge the token, mint a fresh
+  // anonymous session, and retry once.
+  async function createUnlimitedWithRetry() {
+    try {
+      return await apiCreateUnlimited();
+    } catch (e) {
+      console.warn("create_unl_first_try_failed_resetting_session", e?.message);
+      clearToken();
+      state.sessionToken = null;
+      state.unlimitedSessions = [];
+      const ok = await ensureDemoSession();
+      if (!ok) throw new Error("could_not_bootstrap_session");
+      return await apiCreateUnlimited();
+    }
+  }
+
   async function onNewChatClick() {
     state.mobileDrawerOpen = false;
+    const ok = await ensureDemoSession();
+    if (!ok) { alert("Could not start a new chat. Try again."); return; }
     try {
-      const session = await apiCreateUnlimited();
+      const session = await createUnlimitedWithRetry();
       state.unlimitedSessions.unshift(session);
       state.activeUnlimitedId = session.id;
       state.unlimitedMessages = [];
@@ -2081,6 +2189,7 @@
 
   function init() {
     applyTheme(loadTheme());
+    applyFontScale(state.fontScale);
     const existing = loadToken();
     if (existing) {
       state.sessionToken = existing;
