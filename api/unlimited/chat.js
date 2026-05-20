@@ -16,7 +16,7 @@ import {
   formatParticipantContext,
 } from "../../lib/brain/retrieval.js";
 
-const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
+const ANTHROPIC_MODEL = "claude-sonnet-4-5";
 const MAX_MESSAGES_IN_CONTEXT = 20;
 
 // Extend timeout: retrieval + embedding + Claude call can together take
