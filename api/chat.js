@@ -30,7 +30,7 @@ import {
 // Constants
 // ============================================================================
 
-const MODEL = "claude-sonnet-4-5"; // bump to claude-sonnet-4-6 once tested
+const MODEL = "claude-haiku-4-5-20251001"; // bump to claude-haiku-4-5-20251001 once tested
 const MAX_TOKENS = 800;
 const MAX_USER_MESSAGE_LEN = 4000;
 const MAX_MESSAGES_PER_15MIN = 30;
