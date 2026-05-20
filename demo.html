@@ -1064,12 +1064,11 @@
     if (resetBtn) resetBtn.addEventListener("click", onReset);
     const autoplayCheckbox = document.getElementById("autoplay-checkbox");
     if (autoplayCheckbox) autoplayCheckbox.addEventListener("change", onAutoplayChange);
-    // Day items only clickable in chat view.
-    if (state.view === "chat") {
-      document.querySelectorAll(".day-item").forEach(el => {
-        el.addEventListener("click", () => onDayClick(parseInt(el.dataset.day, 10)));
-      });
-    }
+    // Day items should be clickable in ANY view (entry, chat, unlimited-chat)
+    // so users can navigate freely between days and Unlimited.
+    document.querySelectorAll(".day-item").forEach(el => {
+      el.addEventListener("click", () => onDayClick(parseInt(el.dataset.day, 10)));
+    });
     // Unlimited sidebar wires (present whenever sidebar is rendered).
     const newChatBtn = document.getElementById("new-chat-btn");
     if (newChatBtn) newChatBtn.addEventListener("click", onNewChatClick);
