@@ -1233,11 +1233,14 @@
   }
 
   async function onDayClick(day) {
-    if (!state.sessionToken || day === state.currentDay) return;
-    // Make sure we land back in Reset chat view (in case the user is currently
-    // in the Unlimited side).
+    if (!state.sessionToken) return;
+    // Only skip if we're ALREADY viewing this exact day in the Reset chat
+    // view. If the user is in Unlimited and clicks back to their current
+    // day, we still need to switch views and reload the day's messages.
+    if (day === state.currentDay && state.view === "chat") return;
     state.view = "chat";
     state.loading = true;
+    state.activeUnlimitedId = null; // deactivate any unlimited chat highlight
     render();
     try {
       const data = await apiSetDay(state.sessionToken, day);
