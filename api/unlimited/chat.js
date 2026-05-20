@@ -13,7 +13,6 @@ import { getUnlimitedSystemPrompt, PROMPT_VERSION } from "../../lib/prompts/inde
 import {
   retrieveChunks,
   formatRetrievedContext,
-  formatParticipantContext,
 } from "../../lib/brain/retrieval.js";
 
 const ANTHROPIC_MODEL = "claude-sonnet-4-5";
@@ -41,26 +40,74 @@ function applyCors(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-session-token");
 }
 
-// Fetch the participant's prior Reset outputs from day_completions so the AI
-// can reference their state-reset, decision, and declaration when relevant.
-async function loadResetContext(userId) {
+// Fetch the participant's prior Reset day conversations as silent context.
+// Returns the last N messages from each completed day so the AI can
+// reference what they reset, decided, and committed to.
+async function loadResetMemory(userId) {
   try {
-    const { rows } = await sql`
-      SELECT day, data
-      FROM day_completions
-      WHERE user_id = ${userId}
-      ORDER BY day ASC
-    `;
-    const ctx = {};
-    for (const row of rows) {
-      if (row.day === 1) ctx.day1 = row.data;
-      else if (row.day === 2) ctx.day2 = row.data;
-      else if (row.day === 3) ctx.day3 = row.data;
+    const blocks = [];
+    for (let d = 1; d <= 3; d++) {
+      const { rows } = await sql`
+        SELECT role, content
+        FROM messages
+        WHERE user_id = ${userId}
+          AND day_at_send = ${d}
+          AND role IN ('user', 'assistant')
+        ORDER BY created_at DESC
+        LIMIT 12
+      `;
+      if (rows.length === 0) continue;
+      const chronological = rows.reverse();
+      const formatted = chronological.map((m) => {
+        const speaker = m.role === "user" ? "Participant" : "Field";
+        return speaker + ": " + m.content;
+      }).join("\n\n");
+      blocks.push("### Day " + d + " excerpt:\n" + formatted);
     }
-    return ctx;
+    return blocks;
   } catch (e) {
-    console.warn("loadResetContext_error", e?.message);
-    return {};
+    console.warn("loadResetMemory_error", e?.message);
+    return [];
+  }
+}
+
+// Fetch excerpts from the participant's prior Unlimited conversations (other
+// than the current one). Returns the most recent assistant+user exchanges
+// from each, so the AI can recall ongoing themes across chats.
+async function loadPriorUnlimitedMemory(userId, currentSessionId) {
+  try {
+    const { rows: priorSessions } = await sql`
+      SELECT id, title
+      FROM sessions
+      WHERE user_id = ${userId}
+        AND session_type = 'unlimited'
+        AND id != ${currentSessionId}
+      ORDER BY COALESCE(last_message_at, started_at) DESC
+      LIMIT 5
+    `;
+    const blocks = [];
+    for (const s of priorSessions) {
+      const { rows: msgRows } = await sql`
+        SELECT role, content
+        FROM messages
+        WHERE session_id = ${s.id}
+          AND role IN ('user', 'assistant')
+        ORDER BY created_at DESC
+        LIMIT 8
+      `;
+      if (msgRows.length === 0) continue;
+      const chronological = msgRows.reverse();
+      const formatted = chronological.map((m) => {
+        const speaker = m.role === "user" ? "Participant" : "Field";
+        return speaker + ": " + m.content;
+      }).join("\n\n");
+      const title = s.title && s.title !== "New chat" ? s.title : "Untitled chat";
+      blocks.push("### Prior chat \"" + title + "\":\n" + formatted);
+    }
+    return blocks;
+  } catch (e) {
+    console.warn("loadPriorUnlimitedMemory_error", e?.message);
+    return [];
   }
 }
 
@@ -157,13 +204,26 @@ export default async function handler(req, res) {
       console.warn("retrieval_failed_continuing_without", e?.message);
     }
 
-    // Load the participant's prior Reset work (if any).
-    const resetContext = await loadResetContext(user.id);
+    // Load the participant's full memory: prior Reset day work + prior
+    // Unlimited chats. Both are silent context for personalization.
+    const resetBlocks = await loadResetMemory(user.id);
+    const priorUnlBlocks = await loadPriorUnlimitedMemory(user.id, sessionId);
 
-    // Build the system prompt = base Unlimited prompt + participant context
-    // + retrieved context.
+    let participantBlock = "PARTICIPANT MEMORY (silent context — do not recite back to them verbatim, but reference naturally when relevant):\n";
+    if (resetBlocks.length === 0 && priorUnlBlocks.length === 0) {
+      participantBlock += "\nThis is a brand new participant. No prior Reset or Unlimited work to reference yet.";
+    } else {
+      if (resetBlocks.length > 0) {
+        participantBlock += "\n\n### Their 72-Hour Power Reset work:\n\n" + resetBlocks.join("\n\n---\n\n");
+      }
+      if (priorUnlBlocks.length > 0) {
+        participantBlock += "\n\n### Their prior Unlimited conversations:\n\n" + priorUnlBlocks.join("\n\n---\n\n");
+      }
+    }
+
+    // Build the system prompt = base Unlimited prompt + participant memory
+    // + retrieved brain context.
     const baseSystem = getUnlimitedSystemPrompt();
-    const participantBlock = formatParticipantContext(resetContext);
     const retrievedBlock = formatRetrievedContext(retrievedChunks);
     const systemPrompt = `${baseSystem}\n\n---\n\n${participantBlock}\n\n---\n\n${retrievedBlock}`;
 
