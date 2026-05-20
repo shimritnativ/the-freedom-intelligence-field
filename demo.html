@@ -1497,13 +1497,22 @@
   }
 
   // ===== Mobile chrome handlers =====
+  // Toggle the drawer by mutating classes on the existing DOM nodes — calling
+  // render() would replace the sidebar element, and the browser only animates
+  // CSS transitions on elements that already exist when a property changes.
   function onMobileMenuClick() {
     state.mobileDrawerOpen = true;
-    render();
+    const sidebar = document.querySelector(".sidebar");
+    const overlay = document.getElementById("mobile-overlay");
+    if (sidebar) sidebar.classList.add("mobile-open");
+    if (overlay) overlay.classList.add("open");
   }
   function onMobileOverlayClick() {
     state.mobileDrawerOpen = false;
-    render();
+    const sidebar = document.querySelector(".sidebar");
+    const overlay = document.getElementById("mobile-overlay");
+    if (sidebar) sidebar.classList.remove("mobile-open");
+    if (overlay) overlay.classList.remove("open");
   }
   // Bottom-tab navigation. Reset → switch to current day's Reset chat.
   // Unlimited → open the most recent chat, or start a new one if none exist.
