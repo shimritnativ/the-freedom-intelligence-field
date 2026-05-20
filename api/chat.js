@@ -15,6 +15,7 @@
 //   - No internal error details leak to the client.
 //   - Basic rate limiting via DB row count.
 
+import { sql } from "@vercel/postgres";
 import { getSystemPromptForDay, PROMPT_VERSION } from "../lib/prompts/index.js";
 import {
   getUserBySessionToken,
@@ -121,8 +122,56 @@ export default async function handler(req, res) {
 
     // ----- Build context -----
     const session = await getOrCreateSession(user.id);
-    const history = await fetchConversation(session.id);
-    const systemPrompt = getSystemPromptForDay(day);
+
+    // History sent to Claude is scoped to the CURRENT day only. Each day
+    // is its own visible thread; prior days don't pollute the conversation.
+    const { rows: history } = await sql`
+      SELECT id, role, content, created_at
+      FROM messages
+      WHERE session_id = ${session.id}
+        AND day_at_send = ${day}
+        AND role IN ('user', 'assistant')
+      ORDER BY created_at ASC
+      LIMIT 200
+    `;
+
+    // For Day 2 and Day 3, fetch excerpts from prior days as silent context
+    // injected into the system prompt. This lets the AI personalize and
+    // reference what the participant already worked on — without showing
+    // the prior conversation visibly in this day's UI.
+    let priorDayContext = "";
+    if (day > 1) {
+      const priorBlocks = [];
+      for (let d = 1; d < day; d++) {
+        const { rows: priorRows } = await sql`
+          SELECT role, content, created_at
+          FROM messages
+          WHERE user_id = ${user.id}
+            AND day_at_send = ${d}
+            AND role IN ('user', 'assistant')
+          ORDER BY created_at DESC
+          LIMIT 10
+        `;
+        if (priorRows.length === 0) continue;
+        const chronological = priorRows.reverse();
+        const formatted = chronological.map((m) => {
+          const speaker = m.role === "user" ? "Participant" : "Field";
+          return speaker + ": " + m.content;
+        }).join("\n\n");
+        priorBlocks.push("### Day " + d + " excerpt:\n" + formatted);
+      }
+      if (priorBlocks.length > 0) {
+        priorDayContext =
+          "\n\n## PARTICIPANT'S PRIOR DAY WORK IN THIS RESET\n\n" +
+          "The participant has already worked through earlier days. Below are excerpts from their prior day conversations so you have context for what they've already named, decided, and committed to. " +
+          "Use this context naturally when relevant — reference patterns, decisions, or themes when they connect to the current moment. " +
+          "Do NOT re-process prior days. Do NOT recite the prior context back to them verbatim. " +
+          "The visible conversation history is filtered to today only; the participant cannot see these excerpts.\n\n" +
+          priorBlocks.join("\n\n---\n\n");
+      }
+    }
+
+    const systemPrompt = getSystemPromptForDay(day) + priorDayContext;
     const systemHash = hashSystemPrompt(systemPrompt);
 
     // ----- Persist user message FIRST so it never gets lost -----
