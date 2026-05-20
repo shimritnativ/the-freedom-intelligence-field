@@ -365,6 +365,37 @@
     width: fit-content;
     border: 1px solid var(--assistant-msg-border);
   }
+
+  /* Skeleton lines shown while a chat's messages are loading. Mimics the
+     paragraph shape of incoming content so the wait reads as "filling in"
+     rather than "stuck". Width values are inlined per-line below. */
+  .chat-loading {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    padding: 20px 8px;
+    max-width: 760px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .skeleton-line {
+    height: 10px;
+    background: var(--text);
+    opacity: 0.08;
+    border-radius: 999px;
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+  }
+  .skeleton-line.skel-title { height: 14px; opacity: 0.10; margin-bottom: 10px; }
+  .skeleton-line.skel-gap { margin-top: 18px; }
+  @keyframes skeleton-pulse {
+    0%, 100% { opacity: 0.06; }
+    50% { opacity: 0.18; }
+  }
+  @media (max-width: 560px) {
+    .chat-loading { padding: 16px 6px; gap: 10px; }
+    .skeleton-line { height: 9px; }
+    .skeleton-line.skel-title { height: 12px; }
+  }
   .typing .dot {
     width: 7px; height: 7px;
     border-radius: 50%;
@@ -967,6 +998,41 @@
     saveTheme(theme);
   }
 
+  // ===== Composer draft persistence =====
+  // If a user types but doesn't send, the text survives view-switches and
+  // reloads. Drafts are scoped per context: entry, day_1/2/3, unlimited_<id>.
+  function currentContextKey() {
+    if (state.view === "chat") return "day_" + state.currentDay;
+    if (state.view === "unlimited-chat") return "unlimited_" + (state.activeUnlimitedId || "default");
+    return "entry";
+  }
+  function draftStorageKey(context) { return "tfif_draft_" + context; }
+  function loadDraft(context) {
+    try { return localStorage.getItem(draftStorageKey(context)) || ""; } catch (e) { return ""; }
+  }
+  function saveDraft(context, text) {
+    try {
+      if (!text) localStorage.removeItem(draftStorageKey(context));
+      else localStorage.setItem(draftStorageKey(context), text);
+    } catch (e) {}
+  }
+  function clearDraft(context) {
+    try { localStorage.removeItem(draftStorageKey(context)); } catch (e) {}
+  }
+  // Restore saved draft into the textarea and recalc its auto-height + send
+  // button active state. Called from render() after the textarea exists.
+  function restoreDraftIntoInput() {
+    const inputEl = document.getElementById("input");
+    if (!inputEl) return;
+    const draft = loadDraft(currentContextKey());
+    if (!draft) return;
+    inputEl.value = draft;
+    inputEl.style.height = "auto";
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 200) + "px";
+    const send = document.getElementById("send-btn");
+    if (send && draft.trim() && !state.loading) send.classList.add("active");
+  }
+
   // ===== Reader font scale =====
   // Applies a CSS custom property used by .msg font-size calc(). Persisted to
   // localStorage so the user's preference carries across sessions.
@@ -1347,6 +1413,19 @@
         ${renderMobileOverlay()}
       `;
       document.getElementById("entry-form").addEventListener("submit", onStartSubmit);
+      // Restore + persist drafts on the entry form too.
+      const nameInput = document.getElementById("name-input");
+      const openingInput = document.getElementById("opening-input");
+      if (nameInput) {
+        const savedName = loadDraft("entry_name");
+        if (savedName) nameInput.value = savedName;
+        nameInput.addEventListener("input", (e) => saveDraft("entry_name", e.target.value));
+      }
+      if (openingInput) {
+        const savedOpening = loadDraft("entry");
+        if (savedOpening) openingInput.value = savedOpening;
+        openingInput.addEventListener("input", (e) => saveDraft("entry", e.target.value));
+      }
       setTimeout(() => document.getElementById("name-input").focus(), 50);
     } else if (state.view === "chat") {
       app.innerHTML = `
@@ -1395,6 +1474,7 @@
       }
       const messagesWrap = document.getElementById("messages-wrap");
       if (messagesWrap) messagesWrap.addEventListener("click", onSpeakerClick);
+      restoreDraftIntoInput();
       setTimeout(() => { if (!state.searchOpen) document.getElementById("input")?.focus(); }, 50);
     } else if (state.view === "unlimited-chat") {
       const activeUnl = state.unlimitedSessions.find(s => s.id === state.activeUnlimitedId);
@@ -1447,6 +1527,7 @@
       }
       const messagesWrap = document.getElementById("messages-wrap");
       if (messagesWrap) messagesWrap.addEventListener("click", onUnlimitedSpeakerClick);
+      restoreDraftIntoInput();
       setTimeout(() => { if (!state.searchOpen) document.getElementById("input")?.focus(); }, 50);
     }
 
@@ -1529,9 +1610,34 @@
     });
   }
 
+  // Skeleton placeholder shown while a chat's messages stream in. Widths
+  // vary to feel like incoming paragraphs rather than a static block.
+  function renderSkeletonLoading() {
+    return `
+      <div class="chat-loading" aria-label="Loading conversation" role="status">
+        <div class="skeleton-line skel-title" style="width: 32%"></div>
+        <div class="skeleton-line" style="width: 88%"></div>
+        <div class="skeleton-line" style="width: 94%"></div>
+        <div class="skeleton-line" style="width: 76%"></div>
+        <div class="skeleton-line" style="width: 64%"></div>
+        <div class="skeleton-line skel-gap" style="width: 70%"></div>
+        <div class="skeleton-line" style="width: 86%"></div>
+        <div class="skeleton-line" style="width: 80%"></div>
+        <div class="skeleton-line" style="width: 50%"></div>
+      </div>
+    `;
+  }
+
   function renderMessages() {
     const wrap = document.getElementById("messages");
     if (!wrap) return;
+    // Empty + loading = switched into a chat whose messages haven't arrived
+    // yet. Render skeleton lines that mimic paragraph shapes so the wait
+    // reads as "content filling in" rather than "stuck".
+    if (state.loading && state.messages.length === 0) {
+      wrap.innerHTML = renderSkeletonLoading();
+      return;
+    }
     let html = state.messages.map((m, i) => {
       if (m.role === "user") {
         return `
@@ -1627,6 +1733,8 @@
       state.view = "chat";
       state.messages = [{ role: "user", content: opening }];
       state.loading = true;
+      clearDraft("entry");
+      clearDraft("entry_name");
       render();
       const chatData = await apiChat(state.sessionToken, opening);
       if (chatData.expired) { state.view = "entry"; state.error = "Window expired."; state.loading = false; render(); return; }
@@ -1649,6 +1757,8 @@
     const send = document.getElementById("send-btn");
     if (e.target.value.trim() && !state.loading) send.classList.add("active");
     else send.classList.remove("active");
+    // Persist draft so the text survives view changes / reloads.
+    saveDraft(currentContextKey(), e.target.value);
   }
 
   function onInputKeyDown(e) {
@@ -1665,6 +1775,7 @@
     inputEl.style.height = "auto";
     state.loading = true;
     document.getElementById("send-btn").classList.remove("active");
+    clearDraft(currentContextKey());
     renderMessages();
     try {
       const data = await apiChat(state.sessionToken, text);
@@ -1688,6 +1799,10 @@
     // view. If the user is in Unlimited and clicks back to their current
     // day, we still need to switch views and reload the day's messages.
     if (day === state.currentDay && state.view === "chat") return;
+    // Optimistic switch — header (day pill + title) and message area update
+    // instantly so the click feels responsive; real messages stream in after.
+    state.currentDay = day;
+    state.messages = [];
     state.view = "chat";
     state.loading = true;
     state.activeUnlimitedId = null; // deactivate any unlimited chat highlight
@@ -1716,6 +1831,13 @@
     state.lastCompletedDay = 0;
     state.messages = [];
     state.view = "entry";
+    // Purge any saved drafts so the fresh session starts clean.
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf("tfif_draft_") === 0) localStorage.removeItem(k);
+      }
+    } catch (e) {}
     render();
   }
 
@@ -2056,20 +2178,35 @@
     if (!sessionId) return;
     state.mobileDrawerOpen = false;
     if (sessionId === state.activeUnlimitedId && state.view === "unlimited-chat") return;
+    // Optimistic switch — header + chat-list highlight + loading visual update
+    // immediately so the click feels instant. Messages stream in after fetch.
+    state.activeUnlimitedId = sessionId;
+    state.unlimitedMessages = [];
+    state.view = "unlimited-chat";
+    state.loading = true;
+    render();
     try {
       const data = await apiLoadUnlimited(sessionId);
-      state.activeUnlimitedId = sessionId;
       state.unlimitedMessages = data.messages || [];
-      state.view = "unlimited-chat";
+      state.loading = false;
       const idx = state.unlimitedSessions.findIndex(s => s.id === sessionId);
       if (idx >= 0) state.unlimitedSessions[idx] = Object.assign({}, state.unlimitedSessions[idx], data.session);
       render();
-    } catch (e) { console.error("load_unl_failed", e); alert("Could not load that conversation."); }
+    } catch (e) {
+      console.error("load_unl_failed", e);
+      state.loading = false;
+      render();
+      alert("Could not load that conversation.");
+    }
   }
 
   function renderUnlimitedMessages() {
     const wrap = document.getElementById("messages");
     if (!wrap) return;
+    if (state.loading && state.unlimitedMessages.length === 0) {
+      wrap.innerHTML = renderSkeletonLoading();
+      return;
+    }
     let html = state.unlimitedMessages.map((m, i) => {
       if (m.role === "user") return '<div class="msg-row user"><div class="msg">' + escapeHtml(m.content) + '</div></div>';
       return '<div class="msg-row assistant"><div class="msg">' + renderMarkdown(m.content) + '</div>'
@@ -2095,6 +2232,7 @@
     inputEl.style.height = "auto";
     state.loading = true;
     document.getElementById("send-btn").classList.remove("active");
+    clearDraft(currentContextKey());
     renderUnlimitedMessages();
     try {
       const data = await apiUnlimitedChat(state.activeUnlimitedId, text);
