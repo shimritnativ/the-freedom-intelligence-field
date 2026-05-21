@@ -22,21 +22,21 @@ const DAY_OPENINGS = {
 
 The Reset moves through a precise sequence, and each day opens with its own prompt. That prompt is what calibrates the process and gives you the full experience.
 
-[[button:Access Your Prompts|https://www.shimritnativ.com/products/the-freedom-intelligence-field]]
+[[button:Access Your Prompts|https://www.shimritnativ.com/products/the-power-reset]]
 
 Open your Day 1 prompt, paste it here, and we begin.`,
   2: `Welcome to Day 2 of your 72 Hour Power Reset.
 
 The Reset moves through a precise sequence, and each day opens with its own prompt. That prompt is what calibrates the process and gives you the full experience.
 
-[[button:Access Your Prompts|https://www.shimritnativ.com/products/the-freedom-intelligence-field]]
+[[button:Access Your Prompts|https://www.shimritnativ.com/products/the-power-reset]]
 
 Open your Day 2 prompt, paste it here, and we begin.`,
   3: `Welcome to Day 3 of your 72 Hour Power Reset.
 
 The Reset moves through a precise sequence, and each day opens with its own prompt. That prompt is what calibrates the process and gives you the full experience.
 
-[[button:Access Your Prompts|https://www.shimritnativ.com/products/the-freedom-intelligence-field]]
+[[button:Access Your Prompts|https://www.shimritnativ.com/products/the-power-reset]]
 
 Open your Day 3 prompt, paste it here, and we begin.`
 };
