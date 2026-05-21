@@ -12,21 +12,33 @@ import { sql } from "@vercel/postgres";
 import { getUserBySessionToken, getOrCreateSession, insertMessage } from "../lib/db.js";
 import { PROMPT_VERSION } from "../lib/prompts/index.js";
 
-// Canonical welcome text shown as the AI's first message when the user
-// enters or switches to each day. Short and inviting — the structured
-// teaching lives in the system prompt itself. The participant pastes
-// their day prompt from the Kajabi PDF (or just shares what's present)
-// and the Field responds using the day-specific methodology.
+// Welcome message shown as the Field's first message when the user enters
+// or switches to each day. Matches the Scenario B (freeform) opening in the
+// day system prompts: it directs the participant to their library for the
+// day's prompt. The [[button:...]] token renders as an in-brand CTA button
+// in the interface.
 const DAY_OPENINGS = {
-  1: `Welcome to the Freedom Intelligence Field — Day 1: State Reset.
+  1: `Welcome to Day 1 of your 72 Hour Power Reset.
 
-Drop your prompt and I'll guide you through a powerful process, or just tell me what's on your mind.`,
-  2: `Welcome to the Freedom Intelligence Field — Day 2: Decision.
+The Reset moves through a precise sequence, and each day opens with its own prompt. That prompt is what calibrates the process and gives you the full experience.
 
-Drop your prompt below and let's begin!`,
-  3: `Welcome to the Freedom Intelligence Field — Day 3: Action.
+[[button:Access Your Prompts|https://www.shimritnativ.com/products/the-freedom-intelligence-field]]
 
-Drop your prompt below for your last day of the 72-Hour Power Reset!`
+Open your Day 1 prompt, paste it here, and we begin.`,
+  2: `Welcome to Day 2 of your 72 Hour Power Reset.
+
+The Reset moves through a precise sequence, and each day opens with its own prompt. That prompt is what calibrates the process and gives you the full experience.
+
+[[button:Access Your Prompts|https://www.shimritnativ.com/products/the-freedom-intelligence-field]]
+
+Open your Day 2 prompt, paste it here, and we begin.`,
+  3: `Welcome to Day 3 of your 72 Hour Power Reset.
+
+The Reset moves through a precise sequence, and each day opens with its own prompt. That prompt is what calibrates the process and gives you the full experience.
+
+[[button:Access Your Prompts|https://www.shimritnativ.com/products/the-freedom-intelligence-field]]
+
+Open your Day 3 prompt, paste it here, and we begin.`
 };
 
 function applyCors(req, res) {
