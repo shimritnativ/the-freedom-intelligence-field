@@ -356,6 +356,27 @@
   .msg-row.assistant .msg li:last-child { margin-bottom: 0; }
   .msg-row.assistant .msg ul li { list-style-type: disc; }
   .msg-row.assistant .msg ol li { list-style-type: decimal; }
+  /* In-brand CTA button, rendered from [[button:Label|url]] in AI messages. */
+  .msg-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0 2px;
+    padding: 11px 22px;
+    background: var(--gold);
+    color: var(--bg);
+    border-radius: 999px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: opacity 0.15s ease, transform 0.05s ease;
+  }
+  .msg-cta-btn:hover { opacity: 0.88; }
+  .msg-cta-btn:active { transform: scale(0.98); }
+  .msg-cta-arrow { font-size: 14px; line-height: 1; }
 
   .typing {
     display: flex; gap: 5px; align-items: center;
@@ -977,6 +998,9 @@
     searchQuery: "",
     // ===== Mobile chrome state =====
     mobileDrawerOpen: false,
+    // ===== Re-entry guards (prevent double-submit duplicate messages) =====
+    starting: false,
+    creatingChat: false,
     // ===== Reader font scale (1 = default; 0.85 = small; 1.3 = large) =====
     fontScale: (function () {
       try {
@@ -1137,6 +1161,18 @@
   // injection — only the parsed markdown patterns become real HTML.
   function renderMarkdown(text) {
     let html = escapeHtml(String(text || ""));
+
+    // CTA button syntax: [[button:Label|https://url]] -> in-brand gold button.
+    // escapeHtml has already run, so Label/URL arrive as safe text. Only
+    // http(s) destinations are allowed; quotes are encoded before the href.
+    html = html.replace(/\[\[button:([^|\]]+)\|([^\]]+)\]\]/g, function (m, label, url) {
+      const u = String(url).trim();
+      if (!/^https?:\/\//i.test(u)) return label.trim();
+      const safeHref = u.replace(/"/g, "%22");
+      return '<a class="msg-cta-btn" href="' + safeHref + '" target="_blank" rel="noopener noreferrer">'
+        + label.trim()
+        + '<span class="msg-cta-arrow" aria-hidden="true">→</span></a>';
+    });
 
     // Inline formatting. Order matters: bold before italic so ** doesn't
     // get partially consumed by single-asterisk italic match.
@@ -1448,7 +1484,7 @@
             </div>
             <div class="composer-wrap">
               <div class="composer">
-                <textarea id="input" rows="1" placeholder="${PLACEHOLDERS[state.currentDay - 1]}"></textarea>
+                <textarea id="input" rows="1" placeholder="Chat with The Field"></textarea>
                 <button class="mic-btn" id="mic-btn" type="button" aria-label="Record voice message" title="Record voice message">
                   <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                     <rect x="9" y="3" width="6" height="11" rx="3"/>
@@ -1501,7 +1537,7 @@
             </div>
             <div class="composer-wrap">
               <div class="composer">
-                <textarea id="input" rows="1" placeholder="Bring whatever is present for you..."></textarea>
+                <textarea id="input" rows="1" placeholder="Chat with The Field"></textarea>
                 <button class="mic-btn" id="mic-btn" type="button" aria-label="Record voice message" title="Record voice message">
                   <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                     <rect x="9" y="3" width="6" height="11" rx="3"/>
@@ -1718,10 +1754,19 @@
 
   async function onStartSubmit(e) {
     e.preventDefault();
+    // Re-entry guard. The first await below is apiStart — without this flag,
+    // a fast double-tap on "Begin Day 1" fires onStartSubmit twice before
+    // either render() runs, producing two apiChat calls and a duplicated
+    // opening exchange in the database. Set synchronously, before any await.
+    if (state.starting) return;
     const name = (document.getElementById("name-input").value || "").trim();
     const opening = (document.getElementById("opening-input").value || "").trim();
     if (!opening) return;
+    state.starting = true;
     state.error = null;
+    // Visually disable the submit button for the brief window before render().
+    const submitBtn = e.target && e.target.querySelector(".btn-primary");
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Beginning…"; }
     try {
       const anonId = getOrCreateAnonId();
       const syntheticEmail = "demo-" + anonId + "@tfif.local";
@@ -1748,6 +1793,8 @@
       state.loading = false;
       state.view = "entry";
       render();
+    } finally {
+      state.starting = false;
     }
   }
 
@@ -2155,17 +2202,26 @@
   }
 
   async function onNewChatClick() {
+    // Re-entry guard — a double-tap on "+ New chat" would otherwise create
+    // two empty Unlimited sessions. Set synchronously, before any await.
+    if (state.creatingChat) return;
+    state.creatingChat = true;
     state.mobileDrawerOpen = false;
-    const ok = await ensureDemoSession();
-    if (!ok) { alert("Could not start a new chat. Try again."); return; }
     try {
+      const ok = await ensureDemoSession();
+      if (!ok) { alert("Could not start a new chat. Try again."); return; }
       const session = await createUnlimitedWithRetry();
       state.unlimitedSessions.unshift(session);
       state.activeUnlimitedId = session.id;
       state.unlimitedMessages = [];
       state.view = "unlimited-chat";
       render();
-    } catch (e) { console.error("create_unl_failed", e); alert("Could not start a new chat. Try again."); }
+    } catch (e) {
+      console.error("create_unl_failed", e);
+      alert("Could not start a new chat. Try again.");
+    } finally {
+      state.creatingChat = false;
+    }
   }
 
   function onMagnifierClick() {
