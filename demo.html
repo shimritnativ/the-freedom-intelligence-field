@@ -2207,17 +2207,32 @@
     if (state.creatingChat) return;
     state.creatingChat = true;
     state.mobileDrawerOpen = false;
+    // Optimistic switch: jump to the Unlimited chat view with a loading state
+    // the instant the button is clicked, instead of waiting for the API to
+    // create the session. The click registers immediately.
+    const prevView = state.view;
+    const prevActiveId = state.activeUnlimitedId;
+    state.view = "unlimited-chat";
+    state.activeUnlimitedId = null;
+    state.unlimitedMessages = [];
+    state.loading = true;
+    render();
     try {
       const ok = await ensureDemoSession();
-      if (!ok) { alert("Could not start a new chat. Try again."); return; }
+      if (!ok) throw new Error("could_not_bootstrap_session");
       const session = await createUnlimitedWithRetry();
       state.unlimitedSessions.unshift(session);
       state.activeUnlimitedId = session.id;
       state.unlimitedMessages = [];
-      state.view = "unlimited-chat";
+      state.loading = false;
       render();
     } catch (e) {
       console.error("create_unl_failed", e);
+      // Restore the view the user came from so they aren't stranded.
+      state.loading = false;
+      state.view = prevView;
+      state.activeUnlimitedId = prevActiveId;
+      render();
       alert("Could not start a new chat. Try again.");
     } finally {
       state.creatingChat = false;
