@@ -4,6 +4,9 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>The Freedom Intelligence Field</title>
+<link rel="icon" type="image/png" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" />
+<link rel="apple-touch-icon" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" />
+
 <style>
   html[data-theme="dark"] {
     --bg: #080808;
@@ -93,18 +96,14 @@
   }
   .brand-mark {
     width: 48px; height: 48px;
-    border-radius: 6px;
     flex-shrink: 0;
-    overflow: hidden;
     display: block;
-    box-shadow: 0 0 0 1px var(--gold-line), 0 2px 8px rgba(0,0,0,0.3);
-    background: #000;
   }
   .brand-mark img {
     width: 100%;
     height: 100%;
     display: block;
-    object-fit: cover;
+    object-fit: contain;
   }
   .brand-text-1 {
     font-size: 10px;
@@ -338,7 +337,6 @@
     color: var(--text);
     font-size: 15px;
     line-height: 1.75;
-    white-space: pre-wrap;
   }
   .msg-row.user .msg {
     padding: 11px 16px;
@@ -346,6 +344,7 @@
     border: 1px solid var(--user-msg-border);
     border-radius: 14px 14px 3px 14px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    white-space: pre-wrap;
   }
   .msg-row.assistant .msg {
     background: var(--assistant-msg-bg);
@@ -353,6 +352,38 @@
     border-radius: 14px 14px 14px 3px;
     font-family: Georgia, "Times New Roman", serif;
   }
+  /* Markdown rendering inside assistant messages */
+  .msg-row.assistant .msg p { margin: 0 0 0.7em 0; }
+  .msg-row.assistant .msg p:last-child { margin-bottom: 0; }
+  .msg-row.assistant .msg strong { font-weight: 700; color: var(--text); }
+  .msg-row.assistant .msg em { font-style: italic; }
+  .msg-row.assistant .msg code { background: var(--gold-soft); padding: 1px 6px; border-radius: 4px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.9em; color: var(--gold); }
+  .msg-row.assistant .msg ul, .msg-row.assistant .msg ol { margin: 0.4em 0 0.7em 1.4em; padding: 0; }
+  .msg-row.assistant .msg li { margin-bottom: 0.35em; line-height: 1.6; }
+  .msg-row.assistant .msg li:last-child { margin-bottom: 0; }
+  .msg-row.assistant .msg ul li { list-style-type: disc; }
+  .msg-row.assistant .msg ol li { list-style-type: decimal; }
+  /* In-brand CTA button, rendered from [[button:Label|url]] in AI messages. */
+  .msg-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0 2px;
+    padding: 11px 22px;
+    background: var(--gold);
+    color: var(--bg);
+    border-radius: 999px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: opacity 0.15s ease, transform 0.05s ease;
+  }
+  .msg-cta-btn:hover { opacity: 0.88; }
+  .msg-cta-btn:active { transform: scale(0.98); }
+  .msg-cta-arrow { font-size: 14px; line-height: 1; }
 
   .typing {
     display: flex;
@@ -493,6 +524,54 @@
     animation: blink 1s ease-in-out infinite;
   }
   @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  /* Speaker (Shimrit voice playback) */
+  .msg-row.assistant { flex-direction: column; align-items: flex-start; }
+  .speak-btn {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--gold-soft);
+    border: 1px solid var(--gold-line);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    color: var(--gold);
+    cursor: pointer;
+    padding: 0;
+    margin-top: 6px;
+    margin-left: 4px;
+    transition: background 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
+  }
+  .speak-btn:hover { background: rgba(201, 168, 76, 0.18); }
+  .speak-btn:active { transform: scale(0.92); }
+  .speak-btn svg { width: 14px; height: 14px; display: block; }
+  .speak-btn.loading svg { display: none; }
+  .speak-btn.loading::after {
+    content: "";
+    width: 10px; height: 10px;
+    border: 1.5px solid var(--gold-line);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  .speak-btn.playing {
+    background: linear-gradient(135deg, var(--gold), color-mix(in srgb, var(--gold) 70%, black));
+    color: var(--bg);
+    border-color: transparent;
+  }
+  .autoplay-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 4px;
+    margin-top: 6px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+    cursor: pointer;
+  }
+  .autoplay-toggle input { margin: 0; accent-color: var(--gold); cursor: pointer; }
+  .autoplay-toggle:hover { color: var(--text); }
 
   .composer-note {
     max-width: 760px;
@@ -734,7 +813,10 @@
     messages: [],
     loading: false,
     error: null,
-    view: "entry"
+    view: "entry",
+    autoplay: (function () {
+      try { return localStorage.getItem("tfif_autoplay_v1") === "1"; } catch (e) { return false; }
+    })()
   };
 
   function loadToken() { try { return localStorage.getItem(STORAGE_KEY); } catch (e) { return null; } }
@@ -800,6 +882,78 @@
   function escapeHtml(str) {
     return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
+
+  // Light markdown renderer for assistant messages. Supports bold (**x**),
+  // italic (*x*, _x_), inline code (`x`), bullet lists (-, *), numbered
+  // lists (1.), paragraphs, line breaks, and the [[button:Label|url]] CTA.
+  // Escapes HTML first to prevent injection.
+  function renderMarkdown(text) {
+    let html = escapeHtml(String(text || ""));
+
+    // CTA button syntax: [[button:Label|https://url]] -> in-brand gold button.
+    html = html.replace(/\[\[button:([^|\]]+)\|([^\]]+)\]\]/g, function (m, label, url) {
+      const u = String(url).trim();
+      if (!/^https?:\/\//i.test(u)) return label.trim();
+      const safeHref = u.replace(/"/g, "%22");
+      return '<a class="msg-cta-btn" href="' + safeHref + '" target="_blank" rel="noopener noreferrer">'
+        + label.trim()
+        + '<span class="msg-cta-arrow" aria-hidden="true">→</span></a>';
+    });
+
+    html = html.replace(/\*\*([^\n*]+?)\*\*/g, "<strong>$1</strong>");
+    html = html.replace(/__([^\n_]+?)__/g, "<strong>$1</strong>");
+    html = html.replace(/(^|[^*])\*([^\n*]+?)\*(?!\*)/g, "$1<em>$2</em>");
+    html = html.replace(/(^|[^_])_([^\n_]+?)_(?!_)/g, "$1<em>$2</em>");
+    html = html.replace(/`([^`\n]+?)`/g, "<code>$1</code>");
+
+    const lines = html.split("\n");
+    const blocks = [];
+    let paragraph = [];
+    let listType = null;
+    let listItems = [];
+
+    function flushParagraph() {
+      if (paragraph.length > 0) {
+        blocks.push("<p>" + paragraph.join("<br>") + "</p>");
+        paragraph = [];
+      }
+    }
+    function flushList() {
+      if (listType && listItems.length > 0) {
+        blocks.push("<" + listType + ">" + listItems.map(i => "<li>" + i + "</li>").join("") + "</" + listType + ">");
+        listItems = [];
+        listType = null;
+      }
+    }
+
+    for (const rawLine of lines) {
+      const line = rawLine;
+      const trimmed = line.trim();
+      const ulMatch = line.match(/^\s*[-*]\s+(.+)$/);
+      const olMatch = line.match(/^\s*\d+\.\s+(.+)$/);
+
+      if (ulMatch) {
+        flushParagraph();
+        if (listType !== "ul") { flushList(); listType = "ul"; }
+        listItems.push(ulMatch[1]);
+      } else if (olMatch) {
+        flushParagraph();
+        if (listType !== "ol") { flushList(); listType = "ol"; }
+        listItems.push(olMatch[1]);
+      } else if (trimmed === "") {
+        flushParagraph();
+        flushList();
+      } else {
+        flushList();
+        paragraph.push(line);
+      }
+    }
+    flushParagraph();
+    flushList();
+
+    return blocks.join("");
+  }
+
   function formatTime(ms) {
     if (!ms || ms <= 0) return { h: 0, m: 0 };
     return { h: Math.floor(ms / 3600000), m: Math.floor((ms % 3600000) / 60000) };
@@ -812,7 +966,7 @@
     return `
       <aside class="sidebar">
         <div class="brand">
-          <div class="brand-mark"><img src="https://i.ibb.co/zhrpQVTw/myp-logo.png" alt="Master Your Path" /></div>
+          <div class="brand-mark"><img src="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" alt="Master Your Path" /></div>
           <div>
             <div class="brand-text-1">Master Your Path</div>
             <div class="brand-text-2">Freedom Intelligence Field</div>
@@ -844,6 +998,10 @@
             <div class="time-sub">until the reset closes</div>
           </div>
         ` : `<div style="flex:1"></div>`}
+        <label class="autoplay-toggle" for="autoplay-checkbox">
+          <input type="checkbox" id="autoplay-checkbox" ${state.autoplay ? "checked" : ""} />
+          Auto-play Shimrit's voice
+        </label>
         <div class="sidebar-footer">
           <div class="footer-text">v1.0</div>
           <button class="theme-toggle" id="theme-toggle" title="Toggle theme" aria-label="Toggle theme">${themeIcon}</button>
@@ -910,7 +1068,7 @@
               </button>
               <button class="send-btn" id="send-btn" type="button">↑</button>
             </div>
-            <div class="composer-note">Messages persist across sessions and devices</div>
+            <div class="composer-note">Your conversation is private. No one else has access to it.</div>
           </div>
         </main>
       `;
@@ -923,6 +1081,8 @@
         if (!micSupported()) micBtn.style.display = "none";
         else micBtn.addEventListener("click", onMicClick);
       }
+      const messagesWrap = document.getElementById("messages-wrap");
+      if (messagesWrap) messagesWrap.addEventListener("click", onSpeakerClick);
       setTimeout(() => document.getElementById("input").focus(), 50);
     } else if (state.view === "expired") {
       app.innerHTML = `
@@ -954,16 +1114,34 @@
 
     const themeBtn = document.getElementById("theme-toggle");
     if (themeBtn) themeBtn.addEventListener("click", onThemeToggle);
+    const autoplayCheckbox = document.getElementById("autoplay-checkbox");
+    if (autoplayCheckbox) autoplayCheckbox.addEventListener("change", onAutoplayChange);
   }
 
   function renderMessages() {
     const wrap = document.getElementById("messages");
     if (!wrap) return;
-    let html = state.messages.map(m => `
-      <div class="msg-row ${m.role}">
-        <div class="msg">${escapeHtml(m.content)}</div>
-      </div>
-    `).join("");
+    let html = state.messages.map((m, i) => {
+      if (m.role === "user") {
+        return `
+          <div class="msg-row ${m.role}">
+            <div class="msg">${escapeHtml(m.content)}</div>
+          </div>
+        `;
+      }
+      return `
+        <div class="msg-row ${m.role}">
+          <div class="msg">${renderMarkdown(m.content)}</div>
+          <button class="speak-btn" data-msg-index="${i}" type="button" aria-label="Play in Shimrit's voice" title="Play in Shimrit's voice">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M3 9v6h4l5 5V4L7 9H3z"/>
+              <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+              <path d="M14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+            </svg>
+          </button>
+        </div>
+      `;
+    }).join("");
     if (state.loading) {
       html += `
         <div class="msg-row assistant">
@@ -1015,6 +1193,7 @@
       state.timeRemainingMs = chatData.timeRemainingMs;
       state.loading = false;
       render();
+      maybeAutoplayLastAssistant();
     } catch (err) {
       state.error = err.message || "Could not start. Please try again.";
       state.loading = false;
@@ -1061,6 +1240,7 @@
       state.timeRemainingMs = data.timeRemainingMs;
       state.loading = false;
       render();
+      maybeAutoplayLastAssistant();
     } catch (err) {
       state.messages.push({ role: "assistant", content: "Something went wrong. Try again in a moment." });
       state.loading = false;
@@ -1215,6 +1395,109 @@
     } finally {
       if (micBtn) micBtn.classList.remove("transcribing");
     }
+  }
+
+  // ===== Speaker (Shimrit voice playback) =====
+  const speakerState = {
+    currentAudio: null,
+    currentBtnEl: null,
+    currentIndex: -1
+  };
+
+  function setSpeakerBtnState(btnEl, stateName) {
+    if (!btnEl) return;
+    btnEl.classList.remove("loading", "playing");
+    if (stateName === "loading") btnEl.classList.add("loading");
+    else if (stateName === "playing") btnEl.classList.add("playing");
+  }
+
+  function stopCurrentAudio() {
+    if (speakerState.currentAudio) {
+      try { speakerState.currentAudio.pause(); } catch (e) {}
+      try { URL.revokeObjectURL(speakerState.currentAudio.src); } catch (e) {}
+      speakerState.currentAudio = null;
+    }
+    if (speakerState.currentBtnEl) {
+      setSpeakerBtnState(speakerState.currentBtnEl, "idle");
+      speakerState.currentBtnEl = null;
+    }
+    speakerState.currentIndex = -1;
+  }
+
+  async function playMessageAudio(msgIndex, btnEl) {
+    // If the same message is already playing, stop it.
+    if (speakerState.currentIndex === msgIndex && speakerState.currentAudio) {
+      stopCurrentAudio();
+      return;
+    }
+    // Stop anything currently playing first.
+    stopCurrentAudio();
+
+    const msg = state.messages[msgIndex];
+    if (!msg || msg.role !== "assistant" || !msg.content) return;
+
+    speakerState.currentBtnEl = btnEl;
+    speakerState.currentIndex = msgIndex;
+    setSpeakerBtnState(btnEl, "loading");
+
+    try {
+      const res = await fetch(API_BASE + "/speak", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-session-token": state.sessionToken
+        },
+        body: JSON.stringify({ text: msg.content })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "tts_failed");
+      }
+      const audioBlob = await res.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      speakerState.currentAudio = audio;
+      audio.onended = () => {
+        if (speakerState.currentAudio === audio) stopCurrentAudio();
+      };
+      audio.onerror = () => {
+        if (speakerState.currentAudio === audio) stopCurrentAudio();
+      };
+      setSpeakerBtnState(btnEl, "playing");
+      await audio.play();
+    } catch (err) {
+      console.error("speak_failed", err);
+      setSpeakerBtnState(btnEl, "idle");
+      speakerState.currentAudio = null;
+      speakerState.currentBtnEl = null;
+      speakerState.currentIndex = -1;
+    }
+  }
+
+  function onSpeakerClick(e) {
+    const btn = e.target.closest(".speak-btn");
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.msgIndex, 10);
+    if (Number.isNaN(idx)) return;
+    playMessageAudio(idx, btn);
+  }
+
+  function maybeAutoplayLastAssistant() {
+    if (!state.autoplay) return;
+    const lastIdx = state.messages.length - 1;
+    if (lastIdx < 0) return;
+    const last = state.messages[lastIdx];
+    if (!last || last.role !== "assistant") return;
+    // Defer a tick so the DOM has the button rendered.
+    setTimeout(() => {
+      const btn = document.querySelector(`.speak-btn[data-msg-index="${lastIdx}"]`);
+      if (btn) playMessageAudio(lastIdx, btn);
+    }, 50);
+  }
+
+  function onAutoplayChange(e) {
+    state.autoplay = !!e.target.checked;
+    try { localStorage.setItem("tfif_autoplay_v1", state.autoplay ? "1" : "0"); } catch (err) {}
   }
 
   async function loadFullState() {
