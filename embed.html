@@ -698,6 +698,17 @@
     color: var(--text);
     font-weight: 700;
   }
+  .readonly-notice a,
+  .readonly-notice a:link,
+  .readonly-notice a:visited,
+  .readonly-notice a:hover,
+  .readonly-notice a:active {
+    color: var(--gold);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .readonly-notice a:hover { opacity: 0.8; }
 
   /* Entry */
   .entry-screen {
@@ -1258,7 +1269,7 @@
           <div class="unlimited-title">Continue the work.</div>
           <div class="unlimited-desc">Unlimited conversations with the Field. Mind, heart, and body, anytime. Voice and memory included.</div>
           <a class="unlimited-btn" href="${UNLIMITED_URL}" target="_blank" rel="noopener noreferrer">
-            Open The Field
+            Access The Field
             <span class="unlimited-btn-arrow" aria-hidden="true">↗</span>
           </a>
         </div>
@@ -1386,9 +1397,9 @@
           </div>
           <div class="composer-wrap">
             ${state.readOnly ? `
-             <div class="readonly-notice">
-  <strong>Your 72-Hour Power Reset is complete.</strong> You can still read your conversations from the 72-Hour Power Reset, but to keep chatting, upgrade to <a href="${UNLIMITED_URL}" target="_blank" rel="noopener noreferrer">The Field Unlimited</a>.
-</div>
+              <div class="readonly-notice">
+                <strong>Your 72-Hour Power Reset is complete.</strong> You can still read your conversations from the 72-Hour Power Reset, but to keep chatting, upgrade to <a href="${UNLIMITED_URL}" target="_blank" rel="noopener noreferrer">The Field Unlimited</a>.
+              </div>
             ` : `
               <div class="composer">
                 <textarea id="input" rows="1" placeholder="Chat with The Field"></textarea>
