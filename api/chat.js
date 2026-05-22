@@ -31,8 +31,12 @@ import {
 // Constants
 // ============================================================================
 
-const MODEL = "claude-sonnet-4-5"; // bump to claude-sonnet-4-6 once tested
-const MAX_TOKENS = 800;
+const MODEL = "claude-sonnet-4-6";
+// The Day 2 / Day 3 final outputs are long — the full structured summary,
+// the commitment-statement instruction, the continuation invitation, and the
+// CTA button token. 800 truncated them mid-output (the button token got cut
+// off). 3000 gives the longest final output ample room.
+const MAX_TOKENS = 3000;
 const MAX_USER_MESSAGE_LEN = 4000;
 const MAX_MESSAGES_PER_15MIN = 30;
 const MAX_RETRY = 3;
@@ -187,8 +191,22 @@ export default async function handler(req, res) {
     });
 
     // ----- Build Anthropic request -----
+    // Sanitize the history so the request is always valid for Anthropic:
+    //   1. Drop any message with empty/whitespace content — a single empty
+    //      content block makes the API reject the whole request.
+    //   2. Drop leading non-user messages so the array begins with a user
+    //      turn. The demo's day-opening welcome is an assistant message; a
+    //      day whose history starts with it would otherwise 400 every turn
+    //      ("first message must use the user role"), surfacing as
+    //      "internal_error" on every send.
+    const cleanHistory = history.filter(
+      (m) => m.content && String(m.content).trim().length > 0
+    );
+    while (cleanHistory.length > 0 && cleanHistory[0].role !== "user") {
+      cleanHistory.shift();
+    }
     const messagesForAnthropic = [
-      ...history.map((m) => ({ role: m.role, content: m.content })),
+      ...cleanHistory.map((m) => ({ role: m.role, content: m.content })),
       { role: "user", content: message.trim() },
     ];
 
@@ -200,6 +218,12 @@ export default async function handler(req, res) {
 
     // ----- Persist assistant message -----
     const replyText = result.content[0]?.text || "";
+    // Never store an empty assistant reply — it would poison the day's
+    // history and make every subsequent turn fail. Surface a clean error.
+    if (!replyText.trim()) {
+      console.error("chat_empty_reply", { day, stopReason: result.stop_reason });
+      return res.status(502).json({ error: "ai_empty_reply" });
+    }
     await insertMessage({
       sessionId: session.id,
       userId: user.id,
@@ -249,6 +273,10 @@ async function callAnthropicWithRetry({ systemPrompt, messages }) {
         body: JSON.stringify({
           model: MODEL,
           max_tokens: MAX_TOKENS,
+          // Slightly below the default of 1.0. Keeps Shimrit's voice natural
+          // while reducing token-level "language bleed" (stray foreign-script
+          // characters appearing mid-sentence).
+          temperature: 0.7,
           system: systemPrompt,
           messages,
         }),
