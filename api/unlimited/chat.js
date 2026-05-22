@@ -15,7 +15,7 @@ import {
   formatRetrievedContext,
 } from "../../lib/brain/retrieval.js";
 
-const ANTHROPIC_MODEL = "claude-sonnet-4-5";
+const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 const MAX_MESSAGES_IN_CONTEXT = 20;
 
 // Extend timeout: retrieval + embedding + Claude call can together take
@@ -247,6 +247,10 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: ANTHROPIC_MODEL,
         max_tokens: 1024,
+        // Slightly below the default of 1.0 — keeps the voice natural while
+        // reducing token-level "language bleed" (stray foreign-script
+        // characters appearing mid-sentence).
+        temperature: 0.7,
         system: systemPrompt,
         messages,
       }),
