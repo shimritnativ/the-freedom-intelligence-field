@@ -599,6 +599,59 @@
   .unl-chat-time { font-size: 9px; color: var(--text-mute); margin-top: 2px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
   .unl-chat-empty { padding: 10px 8px; font-size: 11px; color: var(--text-mute); font-style: italic; font-family: Georgia, serif; }
 
+  /* Guided-process dropdown in the Unlimited section */
+  .process-menu { margin-bottom: 10px; }
+  .process-menu-btn {
+    width: 100%;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 9px 12px;
+    background: var(--gold-soft);
+    border: 1px solid var(--gold-line);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .process-menu-btn:hover { border-color: var(--gold); }
+  .process-menu.open .process-menu-btn {
+    border-color: var(--gold-line);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  .process-menu-caret {
+    color: var(--gold);
+    font-size: 10px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .process-menu-list {
+    display: none;
+    border: 1px solid var(--gold-line);
+    border-top: none;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    background: var(--panel);
+    overflow: hidden;
+  }
+  .process-menu.open .process-menu-list { display: block; }
+  .process-menu-item {
+    padding: 9px 12px;
+    cursor: pointer;
+    color: var(--text-dim);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    border-top: 1px solid var(--border);
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .process-menu-item:first-child { border-top: none; }
+  .process-menu-item:hover { background: var(--gold-soft); color: var(--text); }
+
   .composer-note {
     max-width: 760px; margin: 8px auto 0;
     text-align: center;
@@ -963,7 +1016,7 @@
 (function () {
   "use strict";
 
-  const API_BASE = "https://myp-ascension.vercel.app/api";
+  const API_BASE = "/api";
   const STORAGE_KEY = "tfif_demo_session_v1";
   const ANON_KEY = "tfif_demo_anon_id";
   const THEME_KEY = "tfif_theme_v1";
@@ -976,6 +1029,14 @@
     "What feels most active right now?",
     "What are you no longer available for?",
     "What is the one move you will take in the next 24 hours?"
+  ];
+  const DEMO_PROCESSES = [
+    { key: "decision-alignment", name: "Decision Alignment" },
+    { key: "desired-outcome-snapshot", name: "Desired Outcome Snapshot" },
+    { key: "dream-reading", name: "Dream Reading" },
+    { key: "frequency-calibration", name: "Frequency Calibration" },
+    { key: "identity-upgrade", name: "Identity Upgrade" },
+    { key: "root-pattern-release", name: "Root Pattern Release" },
   ];
 
   const state = {
@@ -996,6 +1057,7 @@
     unlimitedMessages: [],
     searchOpen: false,
     searchQuery: "",
+    processMenuOpen: false,
     // ===== Mobile chrome state =====
     mobileDrawerOpen: false,
     // ===== Re-entry guards (prevent double-submit duplicate messages) =====
@@ -1277,6 +1339,18 @@
           <button class="magnifier-btn ${state.searchOpen ? "active" : ""}" id="magnifier-btn" title="Search conversations">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           </button>
+        </div>
+
+        <div class="process-menu${state.processMenuOpen ? " open" : ""}">
+          <button class="process-menu-btn" id="process-menu-btn" type="button" aria-label="Start a guided process">
+            <span>Start a guided process</span>
+            <span class="process-menu-caret">${state.processMenuOpen ? "▴" : "▾"}</span>
+          </button>
+          <div class="process-menu-list">
+            ${DEMO_PROCESSES.map(p => `
+              <div class="process-menu-item" data-process="${p.key}">${escapeHtml(p.name)}</div>
+            `).join("")}
+          </div>
         </div>
 
         <div class="unl-search-wrap ${state.searchOpen ? "open" : ""}">
@@ -1604,6 +1678,11 @@
     if (newChatBtn) newChatBtn.addEventListener("click", onNewChatClick);
     const magBtn = document.getElementById("magnifier-btn");
     if (magBtn) magBtn.addEventListener("click", onMagnifierClick);
+    const processMenuBtn = document.getElementById("process-menu-btn");
+    if (processMenuBtn) processMenuBtn.addEventListener("click", onProcessMenuToggle);
+    document.querySelectorAll(".process-menu-item").forEach(el => {
+      el.addEventListener("click", () => onProcessPick(el.dataset.process));
+    });
     const unlSearch = document.getElementById("unl-search-input");
     if (unlSearch) {
       // Update ONLY the chat list as the user types — full render would
@@ -2144,8 +2223,12 @@
     if (!res.ok) throw new Error(data.error || "could_not_list");
     return data.sessions || [];
   }
-  async function apiCreateUnlimited() {
-    const res = await fetch(API_BASE + "/unlimited/sessions", { method: "POST", headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken } });
+  async function apiCreateUnlimited(processKey) {
+    const res = await fetch(API_BASE + "/unlimited/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken },
+      body: JSON.stringify(processKey ? { process: processKey } : {})
+    });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "could_not_create");
     return data.session;
@@ -2187,9 +2270,9 @@
   // Cross-deploy recovery: if a request fails because the token is stale (DB
   // was reset, schema changed, session expired), purge the token, mint a fresh
   // anonymous session, and retry once.
-  async function createUnlimitedWithRetry() {
+  async function createUnlimitedWithRetry(processKey) {
     try {
-      return await apiCreateUnlimited();
+      return await apiCreateUnlimited(processKey);
     } catch (e) {
       console.warn("create_unl_first_try_failed_resetting_session", e?.message);
       clearToken();
@@ -2197,7 +2280,7 @@
       state.unlimitedSessions = [];
       const ok = await ensureDemoSession();
       if (!ok) throw new Error("could_not_bootstrap_session");
-      return await apiCreateUnlimited();
+      return await apiCreateUnlimited(processKey);
     }
   }
 
@@ -2234,6 +2317,70 @@
       state.activeUnlimitedId = prevActiveId;
       render();
       alert("Could not start a new chat. Try again.");
+    } finally {
+      state.creatingChat = false;
+    }
+  }
+
+  // Toggle the guided-process dropdown by mutating the class on the existing
+  // DOM node — same pattern as onMobileMenuClick. A full render() would steal
+  // focus from the chat textarea and rebuild the whole sidebar needlessly.
+  function onProcessMenuToggle() {
+    state.processMenuOpen = !state.processMenuOpen;
+    const menu = document.querySelector(".process-menu");
+    if (menu) menu.classList.toggle("open", state.processMenuOpen);
+    const caret = menu && menu.querySelector(".process-menu-caret");
+    if (caret) caret.textContent = state.processMenuOpen ? "▴" : "▾";
+  }
+
+  // Start a new Unlimited chat already bound to a guided process. Mirrors
+  // onNewChatClick, then auto-sends an activation message so The Field
+  // delivers the process opening.
+  async function onProcessPick(processKey) {
+    if (state.creatingChat) return;
+    const proc = DEMO_PROCESSES.find(p => p.key === processKey);
+    if (!proc) return;
+    state.creatingChat = true;
+    // Close the process menu and the mobile drawer.
+    state.processMenuOpen = false;
+    state.mobileDrawerOpen = false;
+    // Optimistic switch to the Unlimited chat view with a loading state.
+    const prevView = state.view;
+    const prevActiveId = state.activeUnlimitedId;
+    state.view = "unlimited-chat";
+    state.activeUnlimitedId = null;
+    state.unlimitedMessages = [];
+    state.loading = true;
+    render();
+    try {
+      const ok = await ensureDemoSession();
+      if (!ok) throw new Error("could_not_bootstrap_session");
+      const session = await createUnlimitedWithRetry(processKey);
+      state.unlimitedSessions.unshift(session);
+      state.activeUnlimitedId = session.id;
+      // Auto-send a first message so The Field opens the process.
+      const activationMessage = "I am entering the " + proc.name + " process. Begin.";
+      state.unlimitedMessages = [{ role: "user", content: activationMessage }];
+      state.loading = true;
+      render();
+      const data = await apiUnlimitedChat(session.id, activationMessage);
+      state.unlimitedMessages.push({ role: "assistant", content: data.reply });
+      state.loading = false;
+      const idx = state.unlimitedSessions.findIndex(s => s.id === session.id);
+      if (idx >= 0) {
+        const updated = Object.assign({}, state.unlimitedSessions[idx], { lastMessageAt: new Date().toISOString() });
+        if (data.title) updated.title = data.title;
+        state.unlimitedSessions[idx] = updated;
+      }
+      render();
+      maybeAutoplayLastUnlimitedAssistant();
+    } catch (e) {
+      console.error("start_process_failed", e);
+      state.loading = false;
+      state.view = prevView;
+      state.activeUnlimitedId = prevActiveId;
+      render();
+      alert("Could not start the process. Try again.");
     } finally {
       state.creatingChat = false;
     }
