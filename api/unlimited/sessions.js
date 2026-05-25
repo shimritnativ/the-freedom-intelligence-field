@@ -4,6 +4,7 @@
 
 import { sql } from "@vercel/postgres";
 import { getUserBySessionToken } from "../../lib/db.js";
+import { getProcessByKey } from "../../lib/prompts/processes/index.js";
 
 function applyCors(req, res) {
   const allowed = (process.env.ALLOWED_ORIGINS || "")
@@ -56,10 +57,16 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "POST") {
-      // Create a new Unlimited session.
+      // Create a new Unlimited session. Optionally bind it to a guided
+      // process (when started from the picker) — its prompt then drives
+      // every turn of this chat.
+      const requestedProcess = req.body && req.body.process;
+      const proc = requestedProcess ? getProcessByKey(requestedProcess) : null;
+      const newTitle = proc ? proc.displayName : "New chat";
+      const newMetadata = JSON.stringify(proc ? { process: proc.key } : {});
       const { rows } = await sql`
-        INSERT INTO sessions (user_id, session_type, title)
-        VALUES (${user.id}, 'unlimited', 'New chat')
+        INSERT INTO sessions (user_id, session_type, title, metadata)
+        VALUES (${user.id}, 'unlimited', ${newTitle}, ${newMetadata})
         RETURNING id, title, started_at, last_message_at, metadata
       `;
       const row = rows[0];
