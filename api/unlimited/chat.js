@@ -14,6 +14,7 @@ import {
   retrieveChunks,
   formatRetrievedContext,
 } from "../../lib/brain/retrieval.js";
+import { findProcessByMessage, getProcessByKey } from "../../lib/prompts/processes/index.js";
 
 const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 const MAX_MESSAGES_IN_CONTEXT = 20;
@@ -190,6 +191,23 @@ export default async function handler(req, res) {
     `;
     const isFirstMessage = priorMessages.length === 0;
 
+    // Determine the active guided process for this chat.
+    //   - If the session already has one (set by the picker, or detected on
+    //     an earlier turn), that process stays active for the chat's life.
+    //   - Otherwise, if this message is a process activation prompt, route to
+    //     that process and remember it on the session.
+    //   - If neither, this is a free-form Unlimited chat (general prompt).
+    let processKey = (session.metadata && session.metadata.process) || null;
+    if (!processKey) {
+      const detected = findProcessByMessage(userMessage);
+      if (detected) {
+        processKey = detected.key;
+        const newMeta = Object.assign({}, session.metadata || {}, { process: processKey });
+        await sql`UPDATE sessions SET metadata = ${JSON.stringify(newMeta)} WHERE id = ${sessionId}`;
+      }
+    }
+    const activeProcess = processKey ? getProcessByKey(processKey) : null;
+
     // Persist the user's new message.
     await sql`
       INSERT INTO messages (session_id, user_id, role, content, system_prompt_version)
@@ -221,9 +239,11 @@ export default async function handler(req, res) {
       }
     }
 
-    // Build the system prompt = base Unlimited prompt + participant memory
-    // + retrieved brain context.
-    const baseSystem = getUnlimitedSystemPrompt();
+    // Build the system prompt. The base is either the active process prompt
+    // (a scripted guided process) or the general Unlimited prompt (free-form
+    // chat). Participant memory and retrieved brain context are layered on in
+    // both cases — the process gets the structure, retrieval gets the depth.
+    const baseSystem = activeProcess ? activeProcess.prompt : getUnlimitedSystemPrompt();
     const retrievedBlock = formatRetrievedContext(retrievedChunks);
     const systemPrompt = `${baseSystem}\n\n---\n\n${participantBlock}\n\n---\n\n${retrievedBlock}`;
 
