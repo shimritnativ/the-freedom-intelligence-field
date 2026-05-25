@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>The Freedom Intelligence Field — DEMO</title>
+<title>The Freedom Intelligence Field</title>
 <link rel="icon" type="image/png" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" />
 <link rel="apple-touch-icon" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" />
 
@@ -1454,17 +1454,10 @@ Begin.` },
           }).join("")}
         </div>
 
-        <div class="demo-help">Click a day above to switch the AI's prompt instantly. Use the reset button to start a fresh conversation.</div>
-
         ${state.sessionToken ? `<button class="reset-btn" id="reset-btn">Reset conversation</button>` : ""}
 
         <div class="sidebar-divider"></div>
         <div class="sidebar-label">The Field — Unlimited</div>
-
-        <div class="tier-toggle" role="group" aria-label="Preview tier (review control)">
-          <button type="button" data-tier="preview" class="${state.tier !== "full" ? "active" : ""}">Reset member</button>
-          <button type="button" data-tier="full" class="${state.tier === "full" ? "active" : ""}">Unlimited member</button>
-        </div>
 
         ${unlimitedUnlocked() ? `
         <div class="unl-action-row">
@@ -1530,7 +1523,7 @@ Begin.` },
         </div>
 
         <div class="sidebar-footer">
-          <div class="footer-text">DEMO v1.0</div>
+          <div class="footer-text">The Field</div>
           <div class="footer-actions">
             <button class="font-btn font-smaller" id="font-smaller" type="button" title="Smaller text" aria-label="Smaller text"${state.fontScale <= 0.85 ? " disabled" : ""}>A−</button>
             <button class="font-btn font-larger" id="font-larger" type="button" title="Larger text" aria-label="Larger text"${state.fontScale >= 1.3 ? " disabled" : ""}>A+</button>
@@ -1649,7 +1642,6 @@ Begin.` },
 
     if (state.view === "entry") {
       app.innerHTML = `
-        <div class="demo-banner">⚠ Demo Mode · Internal Testing Only</div>
         ${renderMobileTopBar()}
         <div class="main-row">
           ${renderSidebar()}
@@ -1694,7 +1686,6 @@ Begin.` },
       setTimeout(() => document.getElementById("name-input").focus(), 50);
     } else if (state.view === "chat") {
       app.innerHTML = `
-        <div class="demo-banner">⚠ Demo Mode · Click any day in the sidebar to switch instantly</div>
         ${renderMobileTopBar()}
         <div class="main-row">
           ${renderSidebar()}
@@ -1744,7 +1735,6 @@ Begin.` },
     } else if (state.view === "unlimited-chat") {
       if (!unlimitedUnlocked()) {
         app.innerHTML = `
-          <div class="demo-banner">⚠ Demo Mode · The Field — Unlimited</div>
           ${renderMobileTopBar()}
           <div class="main-row">
             ${renderSidebar()}
@@ -1770,7 +1760,6 @@ Begin.` },
             : "Started " + formatRelativeTime(activeUnl.startedAt))
         : "";
       app.innerHTML = `
-        <div class="demo-banner">⚠ Demo Mode · The Field — Unlimited · Click a day chip above to test Reset mode</div>
         ${renderMobileTopBar()}
         <div class="main-row">
           ${renderSidebar()}
@@ -1832,9 +1821,6 @@ Begin.` },
     // so users can navigate freely between days and Unlimited.
     document.querySelectorAll(".day-item").forEach(el => {
       el.addEventListener("click", () => onDayClick(parseInt(el.dataset.day, 10)));
-    });
-    document.querySelectorAll(".tier-toggle button").forEach(el => {
-      el.addEventListener("click", () => onTierToggle(el.dataset.tier));
     });
 
     // ===== Mobile chrome wiring =====
@@ -2001,15 +1987,6 @@ Begin.` },
         onNewChatClick();
       }
     }
-  }
-
-  // Review control: flips the previewed entitlement tier. Replaced by the real
-  // Kajabi entitlement once member identity is wired in.
-  function onTierToggle(tier) {
-    if (tier !== "preview" && tier !== "full") return;
-    if (state.tier === tier) return;
-    state.tier = tier;
-    render();
   }
 
   // ===== Handlers =====
