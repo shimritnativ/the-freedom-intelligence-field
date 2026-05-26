@@ -1,0 +1,2937 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Freedom Intelligence Field</title>
+<link rel="icon" type="image/png" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" />
+<link rel="apple-touch-icon" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" />
+
+<style>
+  html[data-theme="dark"] {
+    --bg: #080808;
+    --panel: #0f0f0f;
+    --panel-2: #131313;
+    --sidebar-bg: #0a0a0a;
+    --text: #f0ead6;
+    --text-dim: rgba(240, 234, 214, 0.55);
+    --text-mute: rgba(240, 234, 214, 0.28);
+    --gold: #C9A84C;
+    --gold-soft: rgba(201, 168, 76, 0.09);
+    --gold-line: rgba(201, 168, 76, 0.16);
+    --gold-strong: rgba(201, 168, 76, 0.25);
+    --user-msg-bg: rgba(201, 168, 76, 0.10);
+    --user-msg-border: rgba(201, 168, 76, 0.22);
+    --assistant-msg-bg: rgba(240, 234, 214, 0.03);
+    --assistant-msg-border: rgba(240, 234, 214, 0.07);
+    --border: rgba(201, 168, 76, 0.07);
+    --shadow: 0 0 80px rgba(201, 168, 76, 0.03), 0 24px 48px rgba(0,0,0,0.6);
+    --demo-banner: #6B2C2C;
+    --demo-banner-text: #FFD1D1;
+    color-scheme: dark;
+  }
+  html[data-theme="light"] {
+    --bg: #F7F1E1;
+    --panel: #FFFFFF;
+    --panel-2: #FAF6E8;
+    --sidebar-bg: #EFE7CE;
+    --text: #1A1612;
+    --text-dim: rgba(26, 22, 18, 0.65);
+    --text-mute: rgba(26, 22, 18, 0.4);
+    --gold: #9A6E10;
+    --gold-soft: rgba(154, 110, 16, 0.07);
+    --gold-line: rgba(154, 110, 16, 0.2);
+    --gold-strong: rgba(154, 110, 16, 0.35);
+    --user-msg-bg: rgba(154, 110, 16, 0.10);
+    --user-msg-border: rgba(154, 110, 16, 0.25);
+    --assistant-msg-bg: #FFFFFF;
+    --assistant-msg-border: rgba(26, 22, 18, 0.08);
+    --border: rgba(26, 22, 18, 0.08);
+    --shadow: 0 6px 24px rgba(26, 22, 18, 0.06), 0 1px 4px rgba(26, 22, 18, 0.04);
+    --demo-banner: #C84545;
+    --demo-banner-text: #FFFFFF;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Georgia, "Times New Roman", serif;
+    min-height: 100%;
+  }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* Demo banner */
+  .demo-banner {
+    background: var(--demo-banner);
+    color: var(--demo-banner-text);
+    padding: 8px 16px;
+    text-align: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+  }
+  .main-row {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 22px 18px;
+    overflow-y: auto;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 22px;
+  }
+  .brand-mark {
+    width: 48px; height: 48px;
+    flex-shrink: 0;
+    display: block;
+  }
+  .brand-mark img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+  }
+  .brand-text-1 {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--gold);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    line-height: 1.2;
+  }
+  .brand-text-2 {
+    font-size: 13px;
+    color: var(--text);
+    font-style: italic;
+    margin-top: 3px;
+  }
+  .sidebar-label {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-weight: 700;
+    margin-bottom: 12px;
+    padding: 0 4px;
+  }
+  .day-list {
+    display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px;
+  }
+  .day-item {
+    display: flex; align-items: center; gap: 11px;
+    padding: 11px 12px; border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    background: var(--panel);
+  }
+  .day-item:hover {
+    border-color: var(--gold-line);
+  }
+  .day-item.active {
+    background: var(--gold-soft);
+    border-color: var(--gold-line);
+  }
+  .day-num {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 1px solid var(--gold-line);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    color: var(--gold);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .day-item.active .day-num {
+    background: var(--gold); color: var(--bg); border-color: var(--gold);
+  }
+  .day-info { flex: 1; min-width: 0; }
+  .day-title {
+    font-size: 12px;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .day-theme {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-style: italic;
+    margin-top: 2px;
+  }
+
+  .demo-help {
+    margin-top: 8px;
+    padding: 12px;
+    background: var(--panel);
+    border: 1px dashed var(--gold-line);
+    border-radius: 8px;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.5;
+  }
+
+  .reset-btn {
+    margin-top: 14px;
+    padding: 10px;
+    background: transparent;
+    border: 1px solid var(--gold-line);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: all 0.15s ease;
+  }
+  .reset-btn:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+
+  /* Persistent CTA buttons pinned above the sidebar footer. */
+  .sidebar-cta { margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding-top: 4px; }
+  .sidebar-cta-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 12px; background: var(--gold-soft); border: 1px solid var(--gold-line); border-radius: 8px; color: var(--text); text-decoration: none; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; transition: border-color 0.15s ease, background 0.15s ease; }
+  .sidebar-cta-btn:hover { border-color: var(--gold); }
+  .sidebar-cta-arrow { color: var(--gold); font-size: 11px; line-height: 1; flex-shrink: 0; }
+
+  .sidebar-footer {
+    margin-top: 12px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .footer-text {
+    font-size: 10px;
+    color: var(--text-mute);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    letter-spacing: 0.05em;
+  }
+  .theme-toggle {
+    background: transparent;
+    border: 1px solid var(--gold-line);
+    color: var(--text-dim);
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+  .theme-toggle:hover { border-color: var(--gold); color: var(--gold); }
+
+  /* Footer cluster: font-size controls + theme toggle. */
+  .footer-actions { display: flex; align-items: center; gap: 6px; }
+  .font-btn {
+    background: transparent;
+    border: 1px solid var(--gold-line);
+    color: var(--text-dim);
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    padding: 0;
+    line-height: 1;
+  }
+  .font-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .font-btn:disabled { opacity: 0.35; cursor: not-allowed; border-color: var(--gold-line); color: var(--text-mute); }
+  .font-btn.font-larger { font-size: 13px; } /* slightly larger "A+" reads better */
+
+  /* Main */
+  .main {
+    flex: 1; display: flex; flex-direction: column;
+    min-width: 0; min-height: 0;
+    background: var(--bg);
+  }
+  .main-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  .main-header-title {
+    font-size: 14px;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-weight: 600;
+  }
+  .main-header-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    margin-top: 2px;
+  }
+  .day-chip {
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: var(--gold-soft);
+    border: 1px solid var(--gold-line);
+    font-size: 10px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+
+  .messages-wrap {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 24px 0;
+  }
+  .messages-wrap::-webkit-scrollbar { width: 6px; }
+  .messages-wrap::-webkit-scrollbar-thumb {
+    background: var(--gold-strong); border-radius: 3px;
+  }
+  .messages {
+    max-width: 760px; margin: 0 auto;
+    padding: 0 28px;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .msg-row { display: flex; animation: fadeIn 0.3s ease; }
+  .msg-row.user { justify-content: flex-end; }
+  .msg-row.assistant { justify-content: flex-start; }
+  .msg {
+    max-width: 78%;
+    padding: 13px 18px;
+    color: var(--text);
+    /* Reader scale — adjustable via the A−/A+ buttons in the sidebar footer. */
+    font-size: calc(15px * var(--msg-scale, 1));
+    line-height: 1.75;
+  }
+  .msg-row.user .msg {
+    padding: 11px 16px;
+    background: var(--user-msg-bg);
+    border: 1px solid var(--user-msg-border);
+    border-radius: 14px 14px 3px 14px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    white-space: pre-wrap;
+  }
+  .msg-row.assistant .msg {
+    background: var(--assistant-msg-bg);
+    border: 1px solid var(--assistant-msg-border);
+    border-radius: 14px 14px 14px 3px;
+    font-family: Georgia, "Times New Roman", serif;
+  }
+  /* Markdown rendering inside assistant messages */
+  .msg-row.assistant .msg p { margin: 0 0 0.7em 0; }
+  .msg-row.assistant .msg p:last-child { margin-bottom: 0; }
+  .msg-row.assistant .msg strong { font-weight: 700; color: var(--text); }
+  .msg-row.assistant .msg em { font-style: italic; }
+  .msg-row.assistant .msg code { background: var(--gold-soft); padding: 1px 6px; border-radius: 4px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.9em; color: var(--gold); }
+  .msg-row.assistant .msg ul, .msg-row.assistant .msg ol { margin: 0.4em 0 0.7em 1.4em; padding: 0; }
+  .msg-row.assistant .msg li { margin-bottom: 0.35em; line-height: 1.6; }
+  .msg-row.assistant .msg li:last-child { margin-bottom: 0; }
+  .msg-row.assistant .msg ul li { list-style-type: disc; }
+  .msg-row.assistant .msg ol li { list-style-type: decimal; }
+  /* In-brand CTA button, rendered from [[button:Label|url]] in AI messages. */
+  .msg-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0 2px;
+    padding: 11px 22px;
+    background: var(--gold);
+    color: var(--bg);
+    border-radius: 999px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: opacity 0.15s ease, transform 0.05s ease;
+  }
+  .msg-cta-btn:hover { opacity: 0.88; }
+  .msg-cta-btn:active { transform: scale(0.98); }
+  .msg-cta-arrow { font-size: 14px; line-height: 1; }
+
+  .typing {
+    display: flex; gap: 5px; align-items: center;
+    padding: 12px 16px;
+    background: var(--assistant-msg-bg);
+    border-radius: 14px 14px 14px 3px;
+    width: fit-content;
+    border: 1px solid var(--assistant-msg-border);
+  }
+
+  /* Skeleton lines shown while a chat's messages are loading. Mimics the
+     paragraph shape of incoming content so the wait reads as "filling in"
+     rather than "stuck". Width values are inlined per-line below. */
+  .chat-loading {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    padding: 20px 8px;
+    max-width: 760px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .skeleton-line {
+    height: 10px;
+    background: var(--text);
+    opacity: 0.08;
+    border-radius: 999px;
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+  }
+  .skeleton-line.skel-title { height: 14px; opacity: 0.10; margin-bottom: 10px; }
+  .skeleton-line.skel-gap { margin-top: 18px; }
+  @keyframes skeleton-pulse {
+    0%, 100% { opacity: 0.06; }
+    50% { opacity: 0.18; }
+  }
+  @media (max-width: 560px) {
+    .chat-loading { padding: 16px 6px; gap: 10px; }
+    .skeleton-line { height: 9px; }
+    .skeleton-line.skel-title { height: 12px; }
+  }
+  .typing .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--gold);
+    opacity: 0.7;
+    animation: bounce 1.2s infinite;
+  }
+  .typing .dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing .dot:nth-child(3) { animation-delay: 0.4s; }
+
+  .composer-wrap {
+    border-top: 1px solid var(--border);
+    padding: 16px 28px 20px;
+  }
+  .composer {
+    max-width: 760px; margin: 0 auto;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 6px 8px 6px 14px;
+    display: flex; align-items: flex-end; gap: 10px;
+    position: relative;
+  }
+  .composer:focus-within { border-color: var(--gold-line); }
+  textarea {
+    flex: 1; background: transparent; border: none;
+    color: var(--text);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 15px; line-height: 1.6;
+    padding: 12px 4px;
+    max-height: 200px; overflow-y: auto;
+    resize: none;
+  }
+  textarea:focus { outline: none; }
+  textarea::placeholder { color: var(--text-mute); }
+  .send-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--gold-soft);
+    border: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+    color: var(--text-mute);
+    cursor: default;
+    margin-bottom: 4px;
+  }
+  .send-btn.active {
+    background: linear-gradient(135deg, var(--gold), color-mix(in srgb, var(--gold) 70%, black));
+    color: var(--bg);
+    cursor: pointer;
+  }
+
+  /* Voice input */
+  .mic-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold), color-mix(in srgb, var(--gold) 70%, black));
+    border: none;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    color: var(--bg);
+    cursor: pointer;
+    margin-bottom: 4px;
+    transition: filter 0.15s ease, transform 0.1s ease;
+    padding: 0;
+  }
+  .mic-btn:hover { filter: brightness(1.1); }
+  .mic-btn:active { transform: scale(0.95); }
+  .mic-btn svg { width: 22px; height: 22px; display: block; }
+  .mic-btn.recording {
+    background: linear-gradient(135deg, #e57373, #b94a4a);
+    color: var(--bg);
+    animation: pulse-record 1.4s ease-in-out infinite;
+  }
+  .mic-btn.transcribing { cursor: wait; }
+  .mic-btn.transcribing svg { display: none; }
+  .mic-btn.transcribing::after {
+    content: "";
+    width: 14px; height: 14px;
+    border: 2px solid rgba(8, 8, 8, 0.25);
+    border-top-color: #080808;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes pulse-record {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(228, 87, 87, 0.35); }
+    50% { box-shadow: 0 0 0 8px rgba(228, 87, 87, 0); }
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .recording-indicator {
+    position: absolute;
+    top: -30px;
+    right: 14px;
+    background: var(--panel);
+    border: 1px solid var(--gold-line);
+    border-radius: 12px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 5;
+  }
+  .recording-indicator .red-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #e57373;
+    margin-right: 5px;
+    vertical-align: middle;
+    animation: blink 1s ease-in-out infinite;
+  }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  /* Speaker (Shimrit voice playback) */
+  .msg-row.assistant { flex-direction: column; align-items: flex-start; }
+  .speak-btn {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--gold-soft);
+    border: 1px solid var(--gold-line);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    color: var(--gold);
+    cursor: pointer;
+    padding: 0;
+    margin-top: 6px;
+    margin-left: 4px;
+    transition: background 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
+  }
+  .speak-btn:hover { background: rgba(201, 168, 76, 0.18); }
+  .speak-btn:active { transform: scale(0.92); }
+  .speak-btn svg { width: 14px; height: 14px; display: block; }
+  .speak-btn.loading svg { display: none; }
+  .speak-btn.loading::after {
+    content: "";
+    width: 10px; height: 10px;
+    border: 1.5px solid var(--gold-line);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  .speak-btn.playing {
+    background: linear-gradient(135deg, var(--gold), color-mix(in srgb, var(--gold) 70%, black));
+    color: var(--bg);
+    border-color: transparent;
+  }
+  .autoplay-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 4px;
+    margin-top: 6px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+    cursor: pointer;
+  }
+  .autoplay-toggle input { margin: 0; accent-color: var(--gold); cursor: pointer; }
+  .autoplay-toggle:hover { color: var(--text); }
+
+  /* Unlimited section in sidebar */
+  .sidebar-divider { height: 1px; background: var(--gold-line); margin: 16px 4px; opacity: 0.5; }
+  .unl-action-row { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; }
+  .new-chat-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 12px; background: linear-gradient(135deg, var(--gold), color-mix(in srgb, var(--gold) 70%, black)); color: var(--bg); border-radius: 8px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; border: none; cursor: pointer; }
+  .new-chat-btn svg { width: 14px; height: 14px; }
+  .magnifier-btn { width: 36px; height: 36px; flex-shrink: 0; background: var(--gold-soft); border: 1px solid var(--gold-line); color: var(--gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+  .magnifier-btn svg { width: 14px; height: 14px; }
+  .magnifier-btn.active { background: var(--gold-line); }
+  .unl-search-wrap { margin-bottom: 8px; display: none; }
+  .unl-search-wrap.open { display: block; }
+  .unl-search-wrap input { width: 100%; background: var(--panel); border: 1px solid var(--gold-line); color: var(--text); padding: 7px 10px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; border-radius: 6px; outline: none; }
+  .unl-search-wrap input::placeholder { color: var(--text-mute); }
+  .unl-chat-list { max-height: 280px; overflow-y: auto; }
+  .unl-chat-item { padding: 8px 10px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; border: 1px solid transparent; transition: background 0.15s ease, border-color 0.15s ease; }
+  .unl-chat-item:hover { background: var(--gold-soft); }
+  .unl-chat-item.active { background: var(--gold-soft); border-color: var(--gold-line); }
+  .unl-chat-title { font-size: 11px; color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-weight: 500; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .unl-chat-time { font-size: 9px; color: var(--text-mute); margin-top: 2px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .unl-chat-empty { padding: 10px 8px; font-size: 11px; color: var(--text-mute); font-style: italic; font-family: Georgia, serif; }
+
+  /* Guided-process dropdown in the Unlimited section */
+  .process-menu { margin-bottom: 10px; }
+  .process-menu-btn {
+    width: 100%;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 9px 12px;
+    background: var(--gold-soft);
+    border: 1px solid var(--gold-line);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .process-menu-btn:hover { border-color: var(--gold); }
+  .process-menu.open .process-menu-btn {
+    border-color: var(--gold-line);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  .process-menu-caret {
+    color: var(--gold);
+    font-size: 10px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .process-menu-list {
+    display: none;
+    border: 1px solid var(--gold-line);
+    border-top: none;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    background: var(--panel);
+    overflow: hidden;
+  }
+  .process-menu.open .process-menu-list { display: block; }
+  .process-menu-item {
+    padding: 9px 12px;
+    cursor: pointer;
+    color: var(--text-dim);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    border-top: 1px solid var(--border);
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .process-menu-item:first-child { border-top: none; }
+  .process-menu-item:hover { background: var(--gold-soft); color: var(--text); }
+
+  /* Tier preview toggle — review control until Kajabi entitlements are wired */
+  .tier-toggle { display: flex; gap: 4px; margin-bottom: 12px; padding: 3px; background: var(--gold-soft); border: 1px solid var(--gold-line); border-radius: 8px; }
+  .tier-toggle button { flex: 1; padding: 6px 8px; background: transparent; border: none; border-radius: 6px; color: var(--text-dim); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; transition: background 0.15s ease, color 0.15s ease; }
+  .tier-toggle button.active { background: var(--gold); color: var(--bg); }
+
+  /* Locked-Unlimited upgrade card — shown to Reset-tier members */
+  .unlimited-card { border: 1px solid var(--gold-line); background: var(--gold-soft); border-radius: 14px; padding: 22px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .unlimited-lock { width: 46px; height: 46px; border-radius: 50%; background: var(--gold-soft); border: 1px solid var(--gold-line); color: var(--gold); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-bottom: 14px; }
+  .unlimited-lock svg { width: 20px; height: 20px; display: block; }
+  .unlimited-title { font-family: Georgia, "Times New Roman", serif; font-style: italic; font-size: 16px; color: var(--text); line-height: 1.4; margin-bottom: 8px; }
+  .unlimited-desc { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 12px; color: var(--text-dim); line-height: 1.6; margin-bottom: 16px; }
+  .unlimited-btn { display: inline-flex; align-items: center; gap: 7px; padding: 11px 20px; background: var(--gold); color: var(--bg); border-radius: 999px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; transition: opacity 0.15s ease, transform 0.05s ease; }
+  .unlimited-btn:hover { opacity: 0.88; }
+  .unlimited-btn:active { transform: scale(0.98); }
+  .unlimited-btn-arrow { font-size: 13px; line-height: 1; }
+  /* Upsell panel shown in the main area when a Reset-tier member opens Unlimited */
+  .unl-upsell-main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
+  .unl-upsell-main .unlimited-card { max-width: 420px; padding: 32px; }
+  .unl-upsell-main .unlimited-title { font-size: 20px; }
+  .unl-upsell-main .unlimited-desc { font-size: 13px; }
+
+  /* Kajabi embed identity gate — connecting / locked screen */
+  .embed-gate { flex: 1; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 32px; background: var(--bg); }
+  .embed-gate-card { max-width: 400px; text-align: center; }
+  .embed-gate-mark { width: 54px; height: 54px; margin: 0 auto 20px; }
+  .embed-gate-mark img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .embed-gate-title { font-family: Georgia, "Times New Roman", serif; font-size: 17px; font-style: italic; color: var(--text-dim); line-height: 1.6; }
+
+  /* Email + 6-digit-code login */
+  .login-code-input { text-align: center; font-size: 26px; letter-spacing: 0.4em; font-weight: 700; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .login-back { margin-top: 14px; background: none; border: none; color: var(--text-dim); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 12px; text-decoration: underline; cursor: pointer; }
+  .login-back:hover { color: var(--text); }
+
+  .composer-note {
+    max-width: 760px; margin: 8px auto 0;
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-mute);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  /* Entry */
+  .entry-screen { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 20px; }
+  .entry-card {
+    max-width: 460px; width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 44px 38px;
+    text-align: center;
+    box-shadow: var(--shadow);
+  }
+  .entry-label {
+    font-size: 10px;
+    color: var(--text-mute);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    margin-bottom: 22px;
+  }
+  .entry-title {
+    font-size: 26px;
+    color: var(--text);
+    font-style: italic;
+    line-height: 1.4;
+    margin-bottom: 10px;
+  }
+  .entry-sub {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.8;
+    margin: 0 auto 28px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    text-align: left;
+  }
+  .entry-input {
+    width: 100%;
+    padding: 13px 17px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+  .entry-input:focus { outline: none; border-color: var(--gold-line); }
+  .btn-primary {
+    width: 100%;
+    padding: 13px;
+    background: linear-gradient(135deg, var(--gold), color-mix(in srgb, var(--gold) 70%, black));
+    border: none;
+    border-radius: 8px;
+    color: var(--bg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .error-text {
+    color: #e57373;
+    font-size: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    margin-bottom: 10px;
+    text-align: left;
+  }
+
+  @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  @media (max-width: 720px) {
+    .sidebar { width: 220px; padding: 16px 12px; }
+    .messages, .composer { padding-left: 16px; padding-right: 16px; }
+  }
+
+  /* ===== Mobile chrome (hidden on desktop) =====
+     Top bar with hamburger + brand + theme, horizontal day-strip / chat-header
+     nav, bottom Reset/Unlimited tabs, slide-out drawer for the full sidebar. */
+  .mobile-top-bar,
+  .mobile-nav-strip,
+  .mobile-bottom-tabs,
+  .mobile-overlay { display: none; }
+
+  @media (max-width: 560px) {
+    #app {
+      height: 100vh;
+      max-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Demo banner — compact on mobile */
+    .demo-banner { font-size: 10px; padding: 6px 12px; letter-spacing: 0.1em; }
+
+    /* Sidebar becomes a slide-in drawer from the left */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 86%;
+      max-width: 320px;
+      border-right: 1px solid var(--gold-line);
+      border-bottom: none;
+      padding: 18px 16px;
+      overflow-y: auto;
+      z-index: 70;
+      transform: translateX(-100%);
+      transition: transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    }
+    .sidebar.mobile-open { transform: translateX(0); }
+    .brand { padding-bottom: 12px; margin-bottom: 12px; }
+    .brand-mark { width: 40px; height: 40px; }
+    .day-list { flex-direction: column; gap: 6px; margin-bottom: 12px; overflow-x: visible; }
+    .day-item { padding: 10px 12px; gap: 10px; }
+
+    /* Overlay backdrop behind drawer */
+    .mobile-overlay {
+      display: block;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      z-index: 65;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .mobile-overlay.open { opacity: 1; pointer-events: auto; }
+
+    /* Top bar (always visible on mobile) */
+    .mobile-top-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      min-height: 52px;
+    }
+    .mobile-menu-btn,
+    .mobile-theme-btn {
+      width: 36px; height: 36px;
+      background: transparent;
+      border: 1px solid var(--gold-line);
+      border-radius: 9px;
+      color: var(--gold);
+      font-size: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .mobile-menu-btn:active,
+    .mobile-theme-btn:active { background: var(--gold-soft); }
+
+    /* At-a-glance section indicator: DAY 1 / 2 / 3 or UNLIMITED. */
+    .mobile-section-pill {
+      flex-shrink: 0;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+      white-space: nowrap;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+    }
+    .mobile-section-reset {
+      background: var(--gold-soft);
+      border-color: var(--gold-strong);
+      color: var(--gold);
+    }
+    .mobile-section-unlimited {
+      background: rgba(140, 110, 220, 0.14);
+      border-color: rgba(160, 130, 230, 0.42);
+      color: rgba(200, 175, 245, 0.98);
+    }
+    html[data-theme="light"] .mobile-section-unlimited {
+      background: rgba(95, 65, 175, 0.10);
+      border-color: rgba(95, 65, 175, 0.32);
+      color: rgba(85, 55, 165, 1);
+    }
+
+    .mobile-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
+    }
+    .mobile-brand img {
+      width: 26px; height: 26px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .mobile-brand-text {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 12px;
+      color: var(--gold);
+      letter-spacing: 0.03em;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+      flex: 1;
+    }
+    .mobile-brand-text .mobile-brand-sub {
+      display: block;
+      font-size: 9px;
+      letter-spacing: 0.16em;
+      color: var(--text-mute);
+      text-transform: uppercase;
+      margin-top: 2px;
+      font-family: -apple-system, sans-serif;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Nav strip — day chips (Reset) or chat header (Unlimited) */
+    .mobile-nav-strip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: var(--panel-2);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .mobile-nav-strip::-webkit-scrollbar { display: none; }
+    .mobile-day-chip {
+      flex-shrink: 0;
+      padding: 7px 13px;
+      border-radius: 999px;
+      border: 1px solid var(--gold-line);
+      background: transparent;
+      color: var(--text-dim);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .mobile-day-chip.active {
+      background: var(--gold-soft);
+      border-color: var(--gold-strong);
+      color: var(--gold);
+    }
+    .mobile-chat-title {
+      flex: 1;
+      min-width: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 13px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 4px 4px;
+    }
+    .mobile-new-chat-btn {
+      flex-shrink: 0;
+      width: 34px; height: 34px;
+      border-radius: 9px;
+      background: var(--gold-soft);
+      border: 1px solid var(--gold-line);
+      color: var(--gold);
+      font-size: 22px;
+      line-height: 1;
+      font-weight: 300;
+    }
+
+    /* Bottom tab bar */
+    .mobile-bottom-tabs {
+      display: flex;
+      align-items: stretch;
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+      padding: 6px 6px;
+      padding-bottom: calc(6px + env(safe-area-inset-bottom));
+      gap: 6px;
+    }
+    .mobile-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      padding: 8px 4px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      color: var(--text-dim);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    .mobile-tab .mobile-tab-icon {
+      font-size: 18px;
+      line-height: 1;
+      font-weight: 400;
+    }
+    .mobile-tab.active {
+      background: var(--gold-soft);
+      border-color: var(--gold-line);
+      color: var(--gold);
+    }
+
+    /* Main row & content adjustments */
+    .main-row {
+      flex: 1;
+      min-height: 0;
+      flex-direction: row;
+      overflow: hidden;
+    }
+    .main { flex: 1; min-width: 0; }
+    .main-header { display: none; } /* replaced by mobile chrome */
+    .day-chip { display: none; }
+
+    .messages-wrap { padding: 14px 0; }
+    .messages { padding: 0 14px; gap: 14px; }
+    .msg { font-size: calc(14px * var(--msg-scale, 1)); max-width: 88%; }
+    .composer-wrap { padding: 10px 14px 12px; }
+    .composer-note { font-size: 10px; }
+
+    /* Entry screen */
+    .entry-screen { padding: 24px 16px; }
+    .entry-card { padding: 28px 22px; }
+    .entry-title { font-size: 20px; }
+    .entry-sub { font-size: 12px; }
+    textarea, .entry-input { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+  <div id="app"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  const API_BASE = "/api";
+  const STORAGE_KEY = "tfif_demo_session_v1";
+  const ANON_KEY = "tfif_demo_anon_id";
+  const THEME_KEY = "tfif_theme_v1";
+  const DAY_META = [
+    { label: "Day 1", theme: "State Reset" },
+    { label: "Day 2", theme: "Decision" },
+    { label: "Day 3", theme: "Action" }
+  ];
+  const PLACEHOLDERS = [
+    "What feels most active right now?",
+    "What are you no longer available for?",
+    "What is the one move you will take in the next 24 hours?"
+  ];
+  // Upgrade destination for Reset-tier members — the Field Unlimited offer.
+  const UNLIMITED_URL = "http://shimritnativ.com/the-freedom-intelligence-field";
+
+  // Entitlement tier passed in by the Kajabi page via ?tier=full|preview.
+  // When present it wins over the backend tier and the review toggle — this is
+  // how a Kajabi page sets the member's tier until the webhook sync is wired.
+  const URL_TIER = (function () {
+    try {
+      const t = new URLSearchParams(location.search).get("tier");
+      return (t === "full" || t === "preview") ? t : null;
+    } catch (e) { return null; }
+  })();
+
+  // Origins permitted to hand the app a verified member identity — your Kajabi
+  // site. In embed mode a member is ONLY accepted from a postMessage sent by one
+  // of these origins; the browser stamps the origin and it cannot be forged.
+  // EDIT THIS if your Kajabi member area is served from a different domain.
+  const KAJABI_ALLOWED_ORIGINS = ["https://shimritnativ.com", "https://www.shimritnativ.com"];
+
+  // Embed mode: the app is running inside the Kajabi page iframe (?embed=kajabi).
+  // In this mode identity must arrive via a verified postMessage — URL params are
+  // ignored and there is no anonymous fallback, so a shared URL cannot be used.
+  const EMBED_MODE = (function () {
+    try { return new URLSearchParams(location.search).get("embed") === "kajabi"; }
+    catch (e) { return false; }
+  })();
+
+  // Set only by a verified postMessage from an allowed Kajabi origin.
+  let KAJABI_IDENTITY = null; // { kajabiId, tier, name }
+
+  // The six guided processes. The `prompt` is the exact client activation
+  // prompt from the FIF client-prompt docs — sent verbatim when a process is
+  // picked, so the Field receives the same instruction a participant would
+  // paste themselves. Keys must match lib/prompts/processes/index.js.
+  const DEMO_PROCESSES = [
+    { key: "decision-alignment", name: "Decision Alignment", prompt: `Freedom Intelligence Field, I am entering the Decision Alignment process.
+I am here to bring my mind, heart, and body into alignment around a decision, goal, or area of resistance that is active in my instrument right now. I will leave with a clear and aligned decision and one action I will take within 24 hours.
+Guide me through the Decision Alignment now.
+Begin.` },
+    { key: "desired-outcome-snapshot", name: "Desired Outcome Snapshot", prompt: `Freedom Intelligence Field, I am entering the Desired Outcome Snapshot process.
+Something is active in my instrument right now. I am here to see the current pattern clearly and reverse-engineer the desired outcome — the thoughts, feelings, and behaviors that belong to where I am choosing to go.
+Guide me through the Desired Outcome Snapshot now.
+Begin.` },
+    { key: "dream-reading", name: "Dream Reading", prompt: `Freedom Intelligence Field, I am entering the Dream Reading process.
+I have a dream I want to bring. I am here to receive what this dream is showing me through my own associations and with the Field as my guide.
+Guide me through the Dream Reading now.
+Begin.` },
+    { key: "frequency-calibration", name: "Frequency Calibration", prompt: `Freedom Intelligence Field, I am entering the Frequency Calibration process.
+I know what I want to create. I am here to identify the frequency my instrument is currently running, name the frequency of my desired reality, and build the daily practice that trains the new frequency until it becomes the default.
+Guide me through the Frequency Calibration now.
+Begin.` },
+    { key: "identity-upgrade", name: "Identity Upgrade", prompt: `Freedom Intelligence Field, I am entering the Identity Upgrade process.
+I am here to name what has been protecting the old identity, resign it consciously, and define and anchor the new identity that is already trying to come online. I want to leave this process with a clear definition of my new identity, its name, and a daily practice to install it.
+Guide me through the Identity Upgrade now.
+Begin.` },
+    { key: "root-pattern-release", name: "Root Pattern Release", prompt: `Freedom Intelligence Field, I am entering the Root Pattern Release process.
+A pattern keeps repeating in my instrument even after surface work. I am ready to trace it back to its root, release the charge held there, receive the wisdom inside it, and welcome back the part of myself that separated.
+Guide me through the Root Pattern Release now.
+Begin.` },
+  ];
+
+  const state = {
+    sessionToken: null,
+    currentDay: 1,
+    lastCompletedDay: 0,
+    timeRemainingMs: null,
+    messages: [],
+    loading: false,
+    error: null,
+    view: "entry",
+    autoplay: (function () {
+      try { return localStorage.getItem("tfif_autoplay_v1") === "1"; } catch (e) { return false; }
+    })(),
+    // ===== Unlimited demo state =====
+    unlimitedSessions: [],
+    activeUnlimitedId: null,
+    unlimitedMessages: [],
+    searchOpen: false,
+    searchQuery: "",
+    processMenuOpen: false,
+    // 'preview' = Reset-tier member (Unlimited locked); 'full' = Unlimited member.
+    // Set from the backend tier at /api/start; the sidebar toggle overrides it
+    // for review until real Kajabi entitlements are wired in.
+    tier: URL_TIER || "full",
+    // ===== Email + 6-digit-code login state =====
+    loginStep: "email",   // 'email' | 'code'
+    loginEmail: "",
+    loginError: "",
+    loginLoading: false,
+    // ===== Mobile chrome state =====
+    mobileDrawerOpen: false,
+    // ===== Re-entry guards (prevent double-submit duplicate messages) =====
+    starting: false,
+    creatingChat: false,
+    // ===== Reader font scale (1 = default; 0.85 = small; 1.3 = large) =====
+    fontScale: (function () {
+      try {
+        const v = parseFloat(localStorage.getItem("tfif_font_scale_v1"));
+        if (isNaN(v) || v < 0.7 || v > 1.5) return 1;
+        return v;
+      } catch (e) { return 1; }
+    })()
+  };
+
+  // ===== Persistence =====
+  function loadToken() { try { return localStorage.getItem(STORAGE_KEY); } catch (e) { return null; } }
+  function saveToken(t) { try { localStorage.setItem(STORAGE_KEY, t); } catch (e) {} }
+  function clearToken() { try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(ANON_KEY); } catch (e) {} }
+  function loadTheme() { try { return localStorage.getItem(THEME_KEY) || "dark"; } catch (e) { return "dark"; } }
+  function saveTheme(t) { try { localStorage.setItem(THEME_KEY, t); } catch (e) {} }
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    saveTheme(theme);
+  }
+
+  // ===== Composer draft persistence =====
+  // If a user types but doesn't send, the text survives view-switches and
+  // reloads. Drafts are scoped per context: entry, day_1/2/3, unlimited_<id>.
+  function currentContextKey() {
+    if (state.view === "chat") return "day_" + state.currentDay;
+    if (state.view === "unlimited-chat") return "unlimited_" + (state.activeUnlimitedId || "default");
+    return "entry";
+  }
+  function draftStorageKey(context) { return "tfif_draft_" + context; }
+  function loadDraft(context) {
+    try { return localStorage.getItem(draftStorageKey(context)) || ""; } catch (e) { return ""; }
+  }
+  function saveDraft(context, text) {
+    try {
+      if (!text) localStorage.removeItem(draftStorageKey(context));
+      else localStorage.setItem(draftStorageKey(context), text);
+    } catch (e) {}
+  }
+  function clearDraft(context) {
+    try { localStorage.removeItem(draftStorageKey(context)); } catch (e) {}
+  }
+  // Restore saved draft into the textarea and recalc its auto-height + send
+  // button active state. Called from render() after the textarea exists.
+  function restoreDraftIntoInput() {
+    const inputEl = document.getElementById("input");
+    if (!inputEl) return;
+    const draft = loadDraft(currentContextKey());
+    if (!draft) return;
+    inputEl.value = draft;
+    inputEl.style.height = "auto";
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 200) + "px";
+    const send = document.getElementById("send-btn");
+    if (send && draft.trim() && !state.loading) send.classList.add("active");
+  }
+
+  // ===== Reader font scale =====
+  // Applies a CSS custom property used by .msg font-size calc(). Persisted to
+  // localStorage so the user's preference carries across sessions.
+  function applyFontScale(scale) {
+    state.fontScale = scale;
+    document.documentElement.style.setProperty("--msg-scale", String(scale));
+    try { localStorage.setItem("tfif_font_scale_v1", String(scale)); } catch (e) {}
+  }
+  const FONT_SCALE_MIN = 0.85;
+  const FONT_SCALE_MAX = 1.30;
+  const FONT_SCALE_STEP = 0.10;
+  function onFontSmaller() {
+    const next = Math.max(FONT_SCALE_MIN, Math.round((state.fontScale - FONT_SCALE_STEP) * 100) / 100);
+    if (next === state.fontScale) return;
+    applyFontScale(next);
+    // Refresh the footer so disabled state on min/max updates without a full
+    // app re-render.
+    const smaller = document.getElementById("font-smaller");
+    const larger = document.getElementById("font-larger");
+    if (smaller) smaller.disabled = next <= FONT_SCALE_MIN;
+    if (larger) larger.disabled = next >= FONT_SCALE_MAX;
+  }
+  function onFontLarger() {
+    const next = Math.min(FONT_SCALE_MAX, Math.round((state.fontScale + FONT_SCALE_STEP) * 100) / 100);
+    if (next === state.fontScale) return;
+    applyFontScale(next);
+    const smaller = document.getElementById("font-smaller");
+    const larger = document.getElementById("font-larger");
+    if (smaller) smaller.disabled = next <= FONT_SCALE_MIN;
+    if (larger) larger.disabled = next >= FONT_SCALE_MAX;
+  }
+
+  function generateAnonId() {
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === "x" ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+  function getOrCreateAnonId() {
+    try {
+      let id = localStorage.getItem(ANON_KEY);
+      if (!id) {
+        id = generateAnonId();
+        localStorage.setItem(ANON_KEY, id);
+      }
+      return id;
+    } catch (e) { return generateAnonId(); }
+  }
+
+  // ===== API =====
+  // Identity for a Kajabi member arrives in the page URL (?email=&kajabiId=&name=),
+  // injected by the Kajabi page's Liquid. When those params are absent the app
+  // falls back to an anonymous demo identity so it still works standalone.
+  function resolveIdentity() {
+    // Embed mode: identity comes only from the verified Kajabi postMessage that
+    // the gate captured before the app started. URL params are not trusted here.
+    if (EMBED_MODE && KAJABI_IDENTITY && KAJABI_IDENTITY.kajabiId) {
+      return {
+        email: "kajabi-" + KAJABI_IDENTITY.kajabiId + "@tfif.local",
+        displayName: KAJABI_IDENTITY.name || "",
+        kajabiMemberId: String(KAJABI_IDENTITY.kajabiId)
+      };
+    }
+    let email = "", kajabiId = "", name = "";
+    try {
+      const p = new URLSearchParams(location.search);
+      email = (p.get("email") || "").trim().toLowerCase();
+      kajabiId = (p.get("kajabiId") || p.get("kajabiMemberId") || "").trim();
+      name = (p.get("name") || "").trim();
+    } catch (e) {}
+    if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return { email: email, displayName: name, kajabiMemberId: kajabiId || null };
+    }
+    // Kajabi member identified by member ID only (Kajabi.currentSiteUser.id,
+    // passed as ?kajabiId=). The Kajabi member ID is stable and unique, so a
+    // synthetic email keyed to it gives the member one consistent account
+    // without needing their real email passed through.
+    if (kajabiId && /^[0-9A-Za-z_-]{1,64}$/.test(kajabiId)) {
+      return { email: "kajabi-" + kajabiId + "@tfif.local", displayName: name, kajabiMemberId: kajabiId };
+    }
+    return { email: "demo-" + getOrCreateAnonId() + "@tfif.local", displayName: name, kajabiMemberId: null };
+  }
+
+  async function apiStart(email, displayName, kajabiMemberId) {
+    const res = await fetch(API_BASE + "/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, displayName: displayName || null, kajabiMemberId: kajabiMemberId || null })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not start");
+    return data;
+  }
+  // Passwordless login — step 1: request a 6-digit code by email.
+  async function apiRequestCode(email) {
+    const res = await fetch(API_BASE + "/auth/request-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "request_failed");
+    return data;
+  }
+  // Passwordless login — step 2: verify the code, receive a session token.
+  async function apiVerifyCode(email, code) {
+    const res = await fetch(API_BASE + "/auth/verify-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email, code: code })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "verify_failed");
+    return data;
+  }
+  async function apiState(token) {
+    const res = await fetch(API_BASE + "/state", {
+      method: "GET",
+      headers: { "x-session-token": token }
+    });
+    if (res.status === 410) return { expired: true };
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not load state");
+    return data;
+  }
+  async function apiChat(token, message) {
+    const res = await fetch(API_BASE + "/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-session-token": token },
+      body: JSON.stringify({ message })
+    });
+    if (res.status === 410) return { expired: true };
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not send");
+    return data;
+  }
+  async function apiSetDay(token, day) {
+    const res = await fetch(API_BASE + "/demo-set-day", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-session-token": token },
+      body: JSON.stringify({ day })
+    });
+    if (res.status === 404) throw new Error("Demo mode not enabled on backend (set DEMO_MODE_ENABLED=true in Vercel).");
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not set day");
+    return data;
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  // Light markdown renderer for assistant messages. Supports bold (**x**),
+  // italic (*x*, _x_), inline code (`x`), bullet lists (-, *), numbered
+  // lists (1.), paragraphs, and line breaks. Escapes HTML first to prevent
+  // injection — only the parsed markdown patterns become real HTML.
+  function renderMarkdown(text) {
+    let html = escapeHtml(String(text || ""));
+
+    // CTA button syntax: [[button:Label|https://url]] -> in-brand gold button.
+    // escapeHtml has already run, so Label/URL arrive as safe text. Only
+    // http(s) destinations are allowed; quotes are encoded before the href.
+    html = html.replace(/\[\[button:([^|\]]+)\|([^\]]+)\]\]/g, function (m, label, url) {
+      const u = String(url).trim();
+      if (!/^https?:\/\//i.test(u)) return label.trim();
+      const safeHref = u.replace(/"/g, "%22");
+      return '<a class="msg-cta-btn" href="' + safeHref + '" target="_blank" rel="noopener noreferrer">'
+        + label.trim()
+        + '<span class="msg-cta-arrow" aria-hidden="true">→</span></a>';
+    });
+
+    // Inline formatting. Order matters: bold before italic so ** doesn't
+    // get partially consumed by single-asterisk italic match.
+    html = html.replace(/\*\*([^\n*]+?)\*\*/g, "<strong>$1</strong>");
+    html = html.replace(/__([^\n_]+?)__/g, "<strong>$1</strong>");
+    html = html.replace(/(^|[^*])\*([^\n*]+?)\*(?!\*)/g, "$1<em>$2</em>");
+    html = html.replace(/(^|[^_])_([^\n_]+?)_(?!_)/g, "$1<em>$2</em>");
+    html = html.replace(/`([^`\n]+?)`/g, "<code>$1</code>");
+
+    // Block-level parsing: paragraphs, line breaks, lists.
+    const lines = html.split("\n");
+    const blocks = [];
+    let paragraph = [];
+    let listType = null;
+    let listItems = [];
+
+    function flushParagraph() {
+      if (paragraph.length > 0) {
+        blocks.push("<p>" + paragraph.join("<br>") + "</p>");
+        paragraph = [];
+      }
+    }
+    function flushList() {
+      if (listType && listItems.length > 0) {
+        blocks.push("<" + listType + ">" + listItems.map(i => "<li>" + i + "</li>").join("") + "</" + listType + ">");
+        listItems = [];
+        listType = null;
+      }
+    }
+
+    for (const rawLine of lines) {
+      const line = rawLine;
+      const trimmed = line.trim();
+      const ulMatch = line.match(/^\s*[-*]\s+(.+)$/);
+      const olMatch = line.match(/^\s*\d+\.\s+(.+)$/);
+
+      if (ulMatch) {
+        flushParagraph();
+        if (listType !== "ul") { flushList(); listType = "ul"; }
+        listItems.push(ulMatch[1]);
+      } else if (olMatch) {
+        flushParagraph();
+        if (listType !== "ol") { flushList(); listType = "ol"; }
+        listItems.push(olMatch[1]);
+      } else if (trimmed === "") {
+        flushParagraph();
+        flushList();
+      } else {
+        flushList();
+        paragraph.push(line);
+      }
+    }
+    flushParagraph();
+    flushList();
+
+    return blocks.join("");
+  }
+
+  // ===== Renderers =====
+  // Unlimited is unlocked only for full-tier (Unlimited) members. Reset-tier
+  // members see the locked upgrade card in its place.
+  function unlimitedUnlocked() { return state.tier === "full"; }
+  function lockIconSvg() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+  }
+
+  function renderSidebar() {
+    const currentTheme = document.documentElement.getAttribute("data-theme") || "dark";
+    const themeIcon = currentTheme === "dark" ? "☀" : "☾";
+    return `
+      <aside class="sidebar${state.mobileDrawerOpen ? " mobile-open" : ""}">
+        <div class="brand">
+          <div class="brand-mark"><img src="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" alt="Master Your Path" /></div>
+          <div>
+            <div class="brand-text-1">Master Your Path</div>
+            <div class="brand-text-2">Freedom Intelligence Field</div>
+          </div>
+        </div>
+
+        <div class="sidebar-label">The 72-Hour Power Reset</div>
+        <div class="day-list">
+          ${DAY_META.map((d, i) => {
+            const dayNum = i + 1;
+            const isCurrent = dayNum === state.currentDay;
+            return `
+              <div class="day-item ${isCurrent ? "active" : ""}" data-day="${dayNum}">
+                <div class="day-num">${dayNum}</div>
+                <div class="day-info">
+                  <div class="day-title">${d.label}</div>
+                  <div class="day-theme">${d.theme}</div>
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+
+        ${state.sessionToken ? `<button class="reset-btn" id="reset-btn">Reset conversation</button>` : ""}
+
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-label">The Field — Unlimited</div>
+
+        ${unlimitedUnlocked() ? `
+        <div class="unl-action-row">
+          <button class="new-chat-btn" id="new-chat-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New chat
+          </button>
+          <button class="magnifier-btn ${state.searchOpen ? "active" : ""}" id="magnifier-btn" title="Search conversations">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </button>
+        </div>
+
+        <div class="process-menu${state.processMenuOpen ? " open" : ""}">
+          <button class="process-menu-btn" id="process-menu-btn" type="button" aria-label="Start a guided process">
+            <span>Start a guided process</span>
+            <span class="process-menu-caret">${state.processMenuOpen ? "▴" : "▾"}</span>
+          </button>
+          <div class="process-menu-list">
+            ${DEMO_PROCESSES.map(p => `
+              <div class="process-menu-item" data-process="${p.key}">${escapeHtml(p.name)}</div>
+            `).join("")}
+          </div>
+        </div>
+
+        <div class="unl-search-wrap ${state.searchOpen ? "open" : ""}">
+          <input type="text" id="unl-search-input" placeholder="Search your conversations" value="${escapeHtml(state.searchQuery || "")}" />
+        </div>
+
+        <div class="unl-chat-list">
+          ${(function () {
+            const filtered = state.searchQuery
+              ? state.unlimitedSessions.filter(s => (s.title || "").toLowerCase().includes(state.searchQuery.toLowerCase()))
+              : state.unlimitedSessions;
+            if (filtered.length === 0) {
+              return '<div class="unl-chat-empty">' + (state.searchQuery ? "No matches." : "No conversations yet.") + '</div>';
+            }
+            return filtered.map(s => `
+              <div class="unl-chat-item ${s.id === state.activeUnlimitedId ? "active" : ""}" data-unl-id="${s.id}">
+                <div class="unl-chat-title">${escapeHtml(s.title || "New chat")}</div>
+                <div class="unl-chat-time">${escapeHtml(formatRelativeTime(s.lastMessageAt || s.startedAt))}</div>
+              </div>
+            `).join("");
+          })()}
+        </div>
+        ` : `
+        <div class="unlimited-card">
+          <div class="unlimited-lock">${lockIconSvg()}</div>
+          <div class="unlimited-title">Continue the work.</div>
+          <div class="unlimited-desc">Unlimited conversations with the Field, plus the six guided processes — mind, heart, and body, anytime.</div>
+          <a class="unlimited-btn" href="${UNLIMITED_URL}" target="_blank" rel="noopener noreferrer">Unlock The Field <span class="unlimited-btn-arrow" aria-hidden="true">↗</span></a>
+        </div>
+        `}
+
+        <div class="sidebar-cta">
+          <a class="sidebar-cta-btn" href="https://api.leadconnectorhq.com/widget/bookings/connectcall-masteryourpath" target="_blank" rel="noopener noreferrer">
+            <span>Book a complimentary call</span>
+            <span class="sidebar-cta-arrow" aria-hidden="true">↗</span>
+          </a>
+          <a class="sidebar-cta-btn" href="https://www.shimritnativ.com/myp-programs" target="_blank" rel="noopener noreferrer">
+            <span>Explore all MYP Programs</span>
+            <span class="sidebar-cta-arrow" aria-hidden="true">↗</span>
+          </a>
+        </div>
+
+        <div class="sidebar-footer">
+          <div class="footer-text">The Field</div>
+          <div class="footer-actions">
+            <button class="font-btn font-smaller" id="font-smaller" type="button" title="Smaller text" aria-label="Smaller text"${state.fontScale <= 0.85 ? " disabled" : ""}>A−</button>
+            <button class="font-btn font-larger" id="font-larger" type="button" title="Larger text" aria-label="Larger text"${state.fontScale >= 1.3 ? " disabled" : ""}>A+</button>
+            <button class="theme-toggle" id="theme-toggle" title="Toggle theme" aria-label="Toggle theme">${themeIcon}</button>
+          </div>
+        </div>
+      </aside>
+    `;
+  }
+
+  // ===== Mobile chrome =====
+  // Top bar: hamburger (always visible — opens drawer = full sidebar) + section
+  // pill (DAY 1 / 2 / 3 or UNLIMITED — at-a-glance "you are here") + brand text
+  // (active section title + product subtitle) + theme toggle.
+  function renderMobileTopBar() {
+    const currentTheme = document.documentElement.getAttribute("data-theme") || "dark";
+    const themeIcon = currentTheme === "dark" ? "☀" : "☾";
+
+    // Default = entry view (about to start Day 1).
+    let title = "Day 1: State Reset";
+    let subtitle = "72-Hour Power Reset";
+    let pillLabel = "DAY 1";
+    let pillStyle = "reset";
+
+    if (state.view === "chat") {
+      const d = DAY_META[state.currentDay - 1];
+      title = `Day ${state.currentDay} · ${d.theme}`;
+      subtitle = "72-Hour Power Reset";
+      pillLabel = `DAY ${state.currentDay}`;
+      pillStyle = "reset";
+    } else if (state.view === "unlimited-chat") {
+      const active = state.unlimitedSessions.find(s => s.id === state.activeUnlimitedId);
+      title = active ? (active.title || "New chat") : "The Field";
+      subtitle = "The Field — Unlimited";
+      pillLabel = "UNLIMITED";
+      pillStyle = "unlimited";
+    }
+
+    return `
+      <div class="mobile-top-bar">
+        <button class="mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Open menu">☰</button>
+        <span class="mobile-section-pill mobile-section-${pillStyle}">${escapeHtml(pillLabel)}</span>
+        <div class="mobile-brand">
+          <img src="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" alt="Master Your Path" />
+          <div class="mobile-brand-text">
+            ${escapeHtml(title)}
+            <span class="mobile-brand-sub">${escapeHtml(subtitle)}</span>
+          </div>
+        </div>
+        <button class="mobile-theme-btn" id="mobile-theme-btn" type="button" aria-label="Toggle theme">${themeIcon}</button>
+      </div>
+    `;
+  }
+
+  // Day chips (Reset view) OR active chat title + new-chat button (Unlimited view).
+  // Suppressed on the entry screen.
+  function renderMobileNavStrip() {
+    if (state.view === "entry") return "";
+    if (state.view === "unlimited-chat") {
+      const active = state.unlimitedSessions.find(s => s.id === state.activeUnlimitedId);
+      const title = active ? (active.title || "New chat") : "The Field";
+      return `
+        <div class="mobile-nav-strip">
+          <div class="mobile-chat-title">${escapeHtml(title)}</div>
+          <button class="mobile-new-chat-btn" id="mobile-new-chat-btn" type="button" aria-label="New chat">+</button>
+        </div>
+      `;
+    }
+    // Default: Reset day chips
+    return `
+      <div class="mobile-nav-strip">
+        ${DAY_META.map((d, i) => {
+          const n = i + 1;
+          return `<button class="mobile-day-chip ${n === state.currentDay ? "active" : ""}" data-mobile-day="${n}" type="button">Day ${n} · ${escapeHtml(d.theme)}</button>`;
+        }).join("")}
+      </div>
+    `;
+  }
+
+  // Primary nav: Reset vs Unlimited. Suppressed on the entry screen.
+  function renderMobileBottomTabs() {
+    if (state.view === "entry") return "";
+    const onReset = state.view === "chat";
+    const onUnlimited = state.view === "unlimited-chat";
+    return `
+      <div class="mobile-bottom-tabs">
+        <button class="mobile-tab ${onReset ? "active" : ""}" data-mobile-tab="reset" type="button">
+          <span class="mobile-tab-icon">⟲</span>
+          <span>Reset</span>
+        </button>
+        <button class="mobile-tab ${onUnlimited ? "active" : ""}" data-mobile-tab="unlimited" type="button">
+          <span class="mobile-tab-icon">∞</span>
+          <span>Unlimited</span>
+        </button>
+      </div>
+    `;
+  }
+
+  function renderMobileOverlay() {
+    return `<div class="mobile-overlay${state.mobileDrawerOpen ? " open" : ""}" id="mobile-overlay"></div>`;
+  }
+
+  function formatRelativeTime(iso) {
+    if (!iso) return "";
+    const t = new Date(iso); const now = new Date();
+    const diffMs = now - t; const diffMin = Math.floor(diffMs / 60000); const diffHr = Math.floor(diffMs / 3600000); const diffDay = Math.floor(diffMs / 86400000);
+    if (diffMin < 2) return "Just now";
+    if (diffMin < 60) return diffMin + "m ago";
+    if (diffHr < 24) return diffHr + "h ago";
+    if (diffDay < 7) return diffDay + "d ago";
+    return t.toLocaleDateString();
+  }
+
+  function render() {
+    const app = document.getElementById("app");
+
+    if (state.view === "login") {
+      const onCode = state.loginStep === "code";
+      app.innerHTML = `
+        <div class="entry-screen">
+          <div class="entry-card">
+            <div class="entry-label">The Freedom Intelligence Field</div>
+            ${onCode ? `
+              <div class="entry-title">Check your email</div>
+              <div class="entry-sub">We sent a 6-digit code to <strong>${escapeHtml(state.loginEmail)}</strong>. Enter it below to continue.</div>
+              <form id="login-code-form">
+                <input class="entry-input login-code-input" id="login-code-input" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" required />
+                ${state.loginError ? `<div class="error-text">${escapeHtml(state.loginError)}</div>` : ""}
+                <button class="btn-primary" type="submit"${state.loginLoading ? " disabled" : ""}>${state.loginLoading ? "Verifying…" : "Verify and enter"}</button>
+              </form>
+              <button type="button" class="login-back" id="login-back">Use a different email</button>
+            ` : `
+              <div class="entry-title">Enter the Field</div>
+              <div class="entry-sub">Sign in with the email from your Master Your Path purchase. We'll send a 6-digit code to confirm it's you.</div>
+              <form id="login-email-form">
+                <input class="entry-input" id="login-email-input" type="email" placeholder="you@example.com" autocomplete="email" required />
+                ${state.loginError ? `<div class="error-text">${escapeHtml(state.loginError)}</div>` : ""}
+                <button class="btn-primary" type="submit"${state.loginLoading ? " disabled" : ""}>${state.loginLoading ? "Sending…" : "Send me a code"}</button>
+              </form>
+            `}
+          </div>
+        </div>
+      `;
+      if (onCode) {
+        const cf = document.getElementById("login-code-form");
+        if (cf) cf.addEventListener("submit", onVerifyCode);
+        const cb = document.getElementById("login-back");
+        if (cb) cb.addEventListener("click", onLoginBack);
+        setTimeout(() => { const i = document.getElementById("login-code-input"); if (i) i.focus(); }, 50);
+      } else {
+        const ef = document.getElementById("login-email-form");
+        if (ef) ef.addEventListener("submit", onRequestCode);
+        setTimeout(() => { const i = document.getElementById("login-email-input"); if (i) i.focus(); }, 50);
+      }
+    } else if (state.view === "entry") {
+      app.innerHTML = `
+        ${renderMobileTopBar()}
+        <div class="main-row">
+          ${renderSidebar()}
+          <main class="main">
+            <div class="main-header">
+              <div>
+                <div class="main-header-title">Begin a test conversation</div>
+                <div class="main-header-sub">Demo build</div>
+              </div>
+            </div>
+            <div class="entry-screen">
+              <div class="entry-card">
+                <div class="entry-label">The Freedom Intelligence Field</div>
+                <div class="entry-title">Welcome to the Freedom Intelligence Field<br/>Day 1: State Reset</div>
+                <div class="entry-sub">Drop your prompt and I'll guide you through a powerful process.</div>
+                <form id="entry-form">
+                  <input class="entry-input" id="name-input" type="text" placeholder="Your name (optional)" autocomplete="given-name" />
+                  <textarea class="entry-input" id="opening-input" rows="4" placeholder="Paste your Day 1 prompt here and let's begin." required style="font-family: Georgia, 'Times New Roman', serif; line-height: 1.6;"></textarea>
+                  ${state.error ? `<div class="error-text">${escapeHtml(state.error)}</div>` : ""}
+                  <button class="btn-primary" type="submit">Begin Day 1</button>
+                </form>
+              </div>
+            </div>
+          </main>
+        </div>
+        ${renderMobileOverlay()}
+      `;
+      document.getElementById("entry-form").addEventListener("submit", onStartSubmit);
+      // Restore + persist drafts on the entry form too.
+      const nameInput = document.getElementById("name-input");
+      const openingInput = document.getElementById("opening-input");
+      if (nameInput) {
+        const savedName = loadDraft("entry_name");
+        if (savedName) nameInput.value = savedName;
+        nameInput.addEventListener("input", (e) => saveDraft("entry_name", e.target.value));
+      }
+      if (openingInput) {
+        const savedOpening = loadDraft("entry");
+        if (savedOpening) openingInput.value = savedOpening;
+        openingInput.addEventListener("input", (e) => saveDraft("entry", e.target.value));
+      }
+      setTimeout(() => document.getElementById("name-input").focus(), 50);
+    } else if (state.view === "chat") {
+      app.innerHTML = `
+        ${renderMobileTopBar()}
+        <div class="main-row">
+          ${renderSidebar()}
+          <main class="main">
+            <div class="main-header">
+              <div>
+                <div class="main-header-title">${DAY_META[state.currentDay - 1].label} · ${DAY_META[state.currentDay - 1].theme}</div>
+                <div class="main-header-sub">Demo · Backend reports current day = ${state.currentDay}</div>
+              </div>
+              <div>
+                <div class="day-chip">${DAY_META[state.currentDay - 1].label} · ${DAY_META[state.currentDay - 1].theme}</div>
+              </div>
+            </div>
+            <div class="messages-wrap" id="messages-wrap">
+              <div class="messages" id="messages"></div>
+            </div>
+            <div class="composer-wrap">
+              <div class="composer">
+                <textarea id="input" rows="1" placeholder="Interact with The Field"></textarea>
+                <button class="mic-btn" id="mic-btn" type="button" aria-label="Record voice message" title="Record voice message">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <rect x="9" y="3" width="6" height="11" rx="3"/>
+                    <path d="M19 11a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.93V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.07A7 7 0 0 0 19 11z"/>
+                  </svg>
+                </button>
+                <button class="send-btn" id="send-btn" type="button">↑</button>
+              </div>
+              <div class="composer-note">Your conversation is private. No one else has access to it.</div>
+            </div>
+          </main>
+        </div>
+        ${renderMobileOverlay()}
+      `;
+      renderMessages();
+      document.getElementById("input").addEventListener("input", onInputChange);
+      document.getElementById("input").addEventListener("keydown", onInputKeyDown);
+      document.getElementById("send-btn").addEventListener("click", onSendClick);
+      const micBtn = document.getElementById("mic-btn");
+      if (micBtn) {
+        if (!micSupported()) micBtn.style.display = "none";
+        else micBtn.addEventListener("click", onMicClick);
+      }
+      const messagesWrap = document.getElementById("messages-wrap");
+      if (messagesWrap) messagesWrap.addEventListener("click", onSpeakerClick);
+      restoreDraftIntoInput();
+      setTimeout(() => { if (!state.searchOpen) document.getElementById("input")?.focus(); }, 50);
+    } else if (state.view === "unlimited-chat") {
+      if (!unlimitedUnlocked()) {
+        app.innerHTML = `
+          ${renderMobileTopBar()}
+          <div class="main-row">
+            ${renderSidebar()}
+            <main class="main">
+              <div class="unl-upsell-main">
+                <div class="unlimited-card">
+                  <div class="unlimited-lock">${lockIconSvg()}</div>
+                  <div class="unlimited-title">The Field — Unlimited</div>
+                  <div class="unlimited-desc">Unlimited conversations with the Field, plus the six guided processes. Continue the work whenever life asks you to shift, choose, create, or return to your power.</div>
+                  <a class="unlimited-btn" href="${UNLIMITED_URL}" target="_blank" rel="noopener noreferrer">Unlock The Field <span class="unlimited-btn-arrow" aria-hidden="true">↗</span></a>
+                </div>
+              </div>
+            </main>
+          </div>
+          ${renderMobileOverlay()}
+        `;
+      } else {
+      const activeUnl = state.unlimitedSessions.find(s => s.id === state.activeUnlimitedId);
+      const headerTitle = activeUnl ? (activeUnl.title || "New chat") : "The Field";
+      const headerSub = activeUnl
+        ? (activeUnl.lastMessageAt
+            ? "Last active " + formatRelativeTime(activeUnl.lastMessageAt)
+            : "Started " + formatRelativeTime(activeUnl.startedAt))
+        : "";
+      app.innerHTML = `
+        ${renderMobileTopBar()}
+        <div class="main-row">
+          ${renderSidebar()}
+          <main class="main">
+            <div class="main-header">
+              <div>
+                <div class="main-header-title">${escapeHtml(headerTitle)}</div>
+                ${headerSub ? `<div class="main-header-sub">${escapeHtml(headerSub)}</div>` : ""}
+              </div>
+            </div>
+            <div class="messages-wrap" id="messages-wrap">
+              <div class="messages" id="messages"></div>
+            </div>
+            <div class="composer-wrap">
+              <div class="composer">
+                <textarea id="input" rows="1" placeholder="Interact with The Field"></textarea>
+                <button class="mic-btn" id="mic-btn" type="button" aria-label="Record voice message" title="Record voice message">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <rect x="9" y="3" width="6" height="11" rx="3"/>
+                    <path d="M19 11a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.93V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.07A7 7 0 0 0 19 11z"/>
+                  </svg>
+                </button>
+                <button class="send-btn" id="send-btn" type="button">↑</button>
+              </div>
+              <div class="composer-note">Your conversation is private. No one else has access to it.</div>
+            </div>
+          </main>
+        </div>
+        ${renderMobileOverlay()}
+      `;
+      renderUnlimitedMessages();
+      document.getElementById("input").addEventListener("input", onInputChange);
+      document.getElementById("input").addEventListener("keydown", onUnlimitedKeyDown);
+      document.getElementById("send-btn").addEventListener("click", onUnlimitedSendClick);
+      const micBtn = document.getElementById("mic-btn");
+      if (micBtn) {
+        if (!micSupported()) micBtn.style.display = "none";
+        else micBtn.addEventListener("click", onMicClick);
+      }
+      const messagesWrap = document.getElementById("messages-wrap");
+      if (messagesWrap) messagesWrap.addEventListener("click", onUnlimitedSpeakerClick);
+      restoreDraftIntoInput();
+      setTimeout(() => { if (!state.searchOpen) document.getElementById("input")?.focus(); }, 50);
+      }
+    }
+
+    // Wire up controls present in every view.
+    const themeBtn = document.getElementById("theme-toggle");
+    if (themeBtn) themeBtn.addEventListener("click", onThemeToggle);
+    const fontSmallerBtn = document.getElementById("font-smaller");
+    if (fontSmallerBtn) fontSmallerBtn.addEventListener("click", onFontSmaller);
+    const fontLargerBtn = document.getElementById("font-larger");
+    if (fontLargerBtn) fontLargerBtn.addEventListener("click", onFontLarger);
+    const resetBtn = document.getElementById("reset-btn");
+    if (resetBtn) resetBtn.addEventListener("click", onReset);
+    const autoplayCheckbox = document.getElementById("autoplay-checkbox");
+    if (autoplayCheckbox) autoplayCheckbox.addEventListener("change", onAutoplayChange);
+    // Day items should be clickable in ANY view (entry, chat, unlimited-chat)
+    // so users can navigate freely between days and Unlimited.
+    document.querySelectorAll(".day-item").forEach(el => {
+      el.addEventListener("click", () => onDayClick(parseInt(el.dataset.day, 10)));
+    });
+
+    // ===== Mobile chrome wiring =====
+    const mobileMenuBtn = document.getElementById("mobile-menu-btn");
+    if (mobileMenuBtn) mobileMenuBtn.addEventListener("click", onMobileMenuClick);
+    const mobileThemeBtn = document.getElementById("mobile-theme-btn");
+    if (mobileThemeBtn) mobileThemeBtn.addEventListener("click", onThemeToggle);
+    const mobileOverlay = document.getElementById("mobile-overlay");
+    if (mobileOverlay) mobileOverlay.addEventListener("click", onMobileOverlayClick);
+    const mobileNewChat = document.getElementById("mobile-new-chat-btn");
+    if (mobileNewChat) mobileNewChat.addEventListener("click", onNewChatClick);
+    document.querySelectorAll(".mobile-day-chip").forEach(el => {
+      el.addEventListener("click", () => onDayClick(parseInt(el.dataset.mobileDay, 10)));
+    });
+    document.querySelectorAll(".mobile-tab").forEach(el => {
+      el.addEventListener("click", () => onMobileTabClick(el.dataset.mobileTab));
+    });
+    // Unlimited sidebar wires (present whenever sidebar is rendered).
+    const newChatBtn = document.getElementById("new-chat-btn");
+    if (newChatBtn) newChatBtn.addEventListener("click", onNewChatClick);
+    const magBtn = document.getElementById("magnifier-btn");
+    if (magBtn) magBtn.addEventListener("click", onMagnifierClick);
+    const processMenuBtn = document.getElementById("process-menu-btn");
+    if (processMenuBtn) processMenuBtn.addEventListener("click", onProcessMenuToggle);
+    document.querySelectorAll(".process-menu-item").forEach(el => {
+      el.addEventListener("click", () => onProcessPick(el.dataset.process));
+    });
+    const unlSearch = document.getElementById("unl-search-input");
+    if (unlSearch) {
+      // Update ONLY the chat list as the user types — full render would
+      // re-create the chat textarea and steal focus away from this input.
+      unlSearch.addEventListener("input", (e) => {
+        state.searchQuery = e.target.value;
+        renderUnlimitedChatList();
+      });
+      if (state.searchOpen && document.activeElement !== unlSearch) {
+        setTimeout(() => unlSearch.focus(), 30);
+      }
+    }
+    wireUnlimitedChatItems();
+  }
+
+  // Re-render just the .unl-chat-list section. Used by search input changes
+  // so the search input keeps focus while the list filters live.
+  function renderUnlimitedChatList() {
+    const wrap = document.querySelector(".unl-chat-list");
+    if (!wrap) return;
+    const filtered = state.searchQuery
+      ? state.unlimitedSessions.filter(s => (s.title || "").toLowerCase().includes(state.searchQuery.toLowerCase()))
+      : state.unlimitedSessions;
+    if (filtered.length === 0) {
+      wrap.innerHTML = '<div class="unl-chat-empty">' + (state.searchQuery ? "No matches." : "No conversations yet.") + '</div>';
+    } else {
+      wrap.innerHTML = filtered.map(s => `
+        <div class="unl-chat-item ${s.id === state.activeUnlimitedId ? "active" : ""}" data-unl-id="${s.id}">
+          <div class="unl-chat-title">${escapeHtml(s.title || "New chat")}</div>
+          <div class="unl-chat-time">${escapeHtml(formatRelativeTime(s.lastMessageAt || s.startedAt))}</div>
+        </div>
+      `).join("");
+    }
+    wireUnlimitedChatItems();
+  }
+
+  function wireUnlimitedChatItems() {
+    document.querySelectorAll(".unl-chat-item").forEach(el => {
+      el.addEventListener("click", () => onUnlimitedChatClick(el.dataset.unlId));
+    });
+  }
+
+  // Skeleton placeholder shown while a chat's messages stream in. Widths
+  // vary to feel like incoming paragraphs rather than a static block.
+  function renderSkeletonLoading() {
+    return `
+      <div class="chat-loading" aria-label="Loading conversation" role="status">
+        <div class="skeleton-line skel-title" style="width: 32%"></div>
+        <div class="skeleton-line" style="width: 88%"></div>
+        <div class="skeleton-line" style="width: 94%"></div>
+        <div class="skeleton-line" style="width: 76%"></div>
+        <div class="skeleton-line" style="width: 64%"></div>
+        <div class="skeleton-line skel-gap" style="width: 70%"></div>
+        <div class="skeleton-line" style="width: 86%"></div>
+        <div class="skeleton-line" style="width: 80%"></div>
+        <div class="skeleton-line" style="width: 50%"></div>
+      </div>
+    `;
+  }
+
+  function renderMessages() {
+    const wrap = document.getElementById("messages");
+    if (!wrap) return;
+    // Empty + loading = switched into a chat whose messages haven't arrived
+    // yet. Render skeleton lines that mimic paragraph shapes so the wait
+    // reads as "content filling in" rather than "stuck".
+    if (state.loading && state.messages.length === 0) {
+      wrap.innerHTML = renderSkeletonLoading();
+      return;
+    }
+    let html = state.messages.map((m, i) => {
+      if (m.role === "user") {
+        return `
+          <div class="msg-row ${m.role}">
+            <div class="msg">${escapeHtml(m.content)}</div>
+          </div>
+        `;
+      }
+      return `
+        <div class="msg-row ${m.role}">
+          <div class="msg">${renderMarkdown(m.content)}</div>
+          <button class="speak-btn" data-msg-index="${i}" type="button" aria-label="Play in Shimrit's voice" title="Play in Shimrit's voice">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M3 9v6h4l5 5V4L7 9H3z"/>
+              <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+              <path d="M14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+            </svg>
+          </button>
+        </div>
+      `;
+    }).join("");
+    if (state.loading) {
+      html += `
+        <div class="msg-row assistant">
+          <div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+        </div>
+      `;
+    }
+    wrap.innerHTML = html;
+    const wrapper = document.getElementById("messages-wrap");
+    if (wrapper) wrapper.scrollTop = wrapper.scrollHeight;
+  }
+
+  // ===== Mobile chrome handlers =====
+  // Toggle the drawer by mutating classes on the existing DOM nodes — calling
+  // render() would replace the sidebar element, and the browser only animates
+  // CSS transitions on elements that already exist when a property changes.
+  function onMobileMenuClick() {
+    state.mobileDrawerOpen = true;
+    const sidebar = document.querySelector(".sidebar");
+    const overlay = document.getElementById("mobile-overlay");
+    if (sidebar) sidebar.classList.add("mobile-open");
+    if (overlay) overlay.classList.add("open");
+  }
+  function onMobileOverlayClick() {
+    state.mobileDrawerOpen = false;
+    const sidebar = document.querySelector(".sidebar");
+    const overlay = document.getElementById("mobile-overlay");
+    if (sidebar) sidebar.classList.remove("mobile-open");
+    if (overlay) overlay.classList.remove("open");
+  }
+  // Bottom-tab navigation. Reset → switch to current day's Reset chat.
+  // Unlimited → open the most recent chat, or start a new one if none exist.
+  function onMobileTabClick(tab) {
+    state.mobileDrawerOpen = false; // close drawer if it happened to be open
+    if (tab === "reset") {
+      if (state.view === "chat") { render(); return; }
+      onDayClick(state.currentDay || 1);
+      return;
+    }
+    if (tab === "unlimited") {
+      if (!unlimitedUnlocked()) { state.view = "unlimited-chat"; render(); return; }
+      if (state.view === "unlimited-chat") { render(); return; }
+      if (state.unlimitedSessions.length > 0) {
+        onUnlimitedChatClick(state.unlimitedSessions[0].id);
+      } else {
+        onNewChatClick();
+      }
+    }
+  }
+
+  // ===== Handlers =====
+  function onThemeToggle() {
+    const current = document.documentElement.getAttribute("data-theme") || "dark";
+    const next = current === "dark" ? "light" : "dark";
+    applyTheme(next);
+    render();
+  }
+
+  // ===== Login (email + 6-digit code) =====
+  function loginErrorMessage(code) {
+    switch (code) {
+      case "not_a_member":
+        return "We couldn't find a Master Your Path membership for that email. Use the email from your purchase.";
+      case "too_many_requests":
+        return "Too many code requests. Please wait a few minutes, then try again.";
+      case "too_many_attempts":
+        return "Too many incorrect tries. Request a new code.";
+      case "wrong_code":
+        return "That code isn't right. Check your email and try again.";
+      case "code_expired":
+        return "That code has expired. Request a new one.";
+      case "invalid_email":
+        return "Please enter a valid email address.";
+      default:
+        return "Something went wrong. Please try again in a moment.";
+    }
+  }
+
+  async function onRequestCode(e) {
+    if (e) e.preventDefault();
+    if (state.loginLoading) return;
+    const input = document.getElementById("login-email-input");
+    const email = ((input && input.value) || "").trim().toLowerCase();
+    if (!email) return;
+    state.loginEmail = email;
+    state.loginError = "";
+    state.loginLoading = true;
+    render();
+    try {
+      await apiRequestCode(email);
+      state.loginLoading = false;
+      state.loginStep = "code";
+      render();
+    } catch (err) {
+      state.loginLoading = false;
+      state.loginError = loginErrorMessage(err && err.message);
+      render();
+    }
+  }
+
+  async function onVerifyCode(e) {
+    if (e) e.preventDefault();
+    if (state.loginLoading) return;
+    const input = document.getElementById("login-code-input");
+    const code = ((input && input.value) || "").trim();
+    if (!/^[0-9]{6}$/.test(code)) {
+      state.loginError = "Enter the 6-digit code from your email.";
+      render();
+      return;
+    }
+    state.loginError = "";
+    state.loginLoading = true;
+    render();
+    try {
+      const data = await apiVerifyCode(state.loginEmail, code);
+      state.sessionToken = data.sessionToken;
+      saveToken(data.sessionToken);
+      state.tier = data.tier || "preview";
+      state.loginLoading = false;
+      state.loginStep = "email";
+      state.loginError = "";
+      loadFullState().then(() => loadUnlimitedSessions().then(() => render()));
+    } catch (err) {
+      state.loginLoading = false;
+      state.loginError = loginErrorMessage(err && err.message);
+      render();
+    }
+  }
+
+  function onLoginBack() {
+    state.loginStep = "email";
+    state.loginError = "";
+    state.loginLoading = false;
+    render();
+  }
+
+  async function onStartSubmit(e) {
+    e.preventDefault();
+    // Re-entry guard. The first await below is apiStart — without this flag,
+    // a fast double-tap on "Begin Day 1" fires onStartSubmit twice before
+    // either render() runs, producing two apiChat calls and a duplicated
+    // opening exchange in the database. Set synchronously, before any await.
+    if (state.starting) return;
+    const name = (document.getElementById("name-input").value || "").trim();
+    const opening = (document.getElementById("opening-input").value || "").trim();
+    if (!opening) return;
+    state.starting = true;
+    state.error = null;
+    // Visually disable the submit button for the brief window before render().
+    const submitBtn = e.target && e.target.querySelector(".btn-primary");
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Beginning…"; }
+    try {
+      const ident = resolveIdentity();
+      const data = await apiStart(ident.email, ident.displayName || name, ident.kajabiMemberId);
+      state.sessionToken = data.sessionToken;
+      saveToken(data.sessionToken);
+      state.currentDay = data.currentDay || 1;
+      state.timeRemainingMs = data.timeRemainingMs;
+      state.tier = URL_TIER || "full";
+      state.view = "chat";
+      state.messages = [{ role: "user", content: opening }];
+      state.loading = true;
+      clearDraft("entry");
+      clearDraft("entry_name");
+      render();
+      const chatData = await apiChat(state.sessionToken, opening);
+      if (chatData.expired) { state.view = "entry"; state.error = "Window expired."; state.loading = false; render(); return; }
+      state.messages.push({ role: "assistant", content: chatData.reply });
+      state.currentDay = chatData.currentDay;
+      state.loading = false;
+      render();
+      maybeAutoplayLastAssistant();
+    } catch (err) {
+      state.error = err.message || "Could not start.";
+      state.loading = false;
+      state.view = "entry";
+      render();
+    } finally {
+      state.starting = false;
+    }
+  }
+
+  function onInputChange(e) {
+    e.target.style.height = "auto";
+    e.target.style.height = Math.min(e.target.scrollHeight, 200) + "px";
+    const send = document.getElementById("send-btn");
+    if (e.target.value.trim() && !state.loading) send.classList.add("active");
+    else send.classList.remove("active");
+    // Persist draft so the text survives view changes / reloads.
+    saveDraft(currentContextKey(), e.target.value);
+  }
+
+  function onInputKeyDown(e) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSendClick(); }
+  }
+
+  async function onSendClick() {
+    const inputEl = document.getElementById("input");
+    if (!inputEl) return;
+    const text = inputEl.value.trim();
+    if (!text || state.loading) return;
+    state.messages.push({ role: "user", content: text });
+    inputEl.value = "";
+    inputEl.style.height = "auto";
+    state.loading = true;
+    document.getElementById("send-btn").classList.remove("active");
+    clearDraft(currentContextKey());
+    renderMessages();
+    try {
+      const data = await apiChat(state.sessionToken, text);
+      if (data.expired) { state.error = "Window expired."; state.loading = false; render(); return; }
+      state.messages.push({ role: "assistant", content: data.reply });
+      state.currentDay = data.currentDay;
+      state.loading = false;
+      render();
+      maybeAutoplayLastAssistant();
+    } catch (err) {
+      state.messages.push({ role: "assistant", content: "Demo error: " + (err.message || "could not send.") });
+      state.loading = false;
+      renderMessages();
+    }
+  }
+
+  async function onDayClick(day) {
+    if (!state.sessionToken) return;
+    state.mobileDrawerOpen = false; // close mobile drawer once a day is picked
+    // Only skip if we're ALREADY viewing this exact day in the Reset chat
+    // view. If the user is in Unlimited and clicks back to their current
+    // day, we still need to switch views and reload the day's messages.
+    if (day === state.currentDay && state.view === "chat") return;
+    // Optimistic switch — header (day pill + title) and message area update
+    // instantly so the click feels responsive; real messages stream in after.
+    state.currentDay = day;
+    state.messages = [];
+    state.view = "chat";
+    state.loading = true;
+    state.activeUnlimitedId = null; // deactivate any unlimited chat highlight
+    render();
+    try {
+      const data = await apiSetDay(state.sessionToken, day);
+      state.currentDay = data.currentDay;
+      state.lastCompletedDay = data.lastCompletedDay;
+      // Replace messages with this day's own conversation history. Each day
+      // is its own thread; switching loads that thread fresh.
+      state.messages = data.messages || [];
+      state.loading = false;
+      render();
+    } catch (err) {
+      state.messages.push({ role: "assistant", content: "Demo error: " + (err.message || "could not switch day.") });
+      state.loading = false;
+      renderMessages();
+    }
+  }
+
+  function onReset() {
+    if (!confirm("Reset this demo conversation? A fresh anonymous user will be created on next message.")) return;
+    clearToken();
+    state.sessionToken = null;
+    state.currentDay = 1;
+    state.lastCompletedDay = 0;
+    state.messages = [];
+    state.view = "entry";
+    // Purge any saved drafts so the fresh session starts clean.
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf("tfif_draft_") === 0) localStorage.removeItem(k);
+      }
+    } catch (e) {}
+    render();
+  }
+
+  // ===== Voice input =====
+  const MAX_RECORDING_MS = 60000;
+  const voiceState = {
+    mediaRecorder: null, audioChunks: [], stream: null, mimeType: "",
+    startedAt: 0, timerInterval: null, autoStopTimer: null, indicatorEl: null
+  };
+
+  function micSupported() {
+    return !!(typeof navigator !== "undefined" && navigator.mediaDevices &&
+      navigator.mediaDevices.getUserMedia && typeof window.MediaRecorder !== "undefined");
+  }
+
+  async function onMicClick() {
+    if (state.loading) return;
+    if (voiceState.mediaRecorder && voiceState.mediaRecorder.state === "recording") {
+      stopRecording();
+      return;
+    }
+    await startRecording();
+  }
+
+  async function startRecording() {
+    const micBtn = document.getElementById("mic-btn");
+    if (!micBtn) return;
+    try {
+      voiceState.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const candidates = ["audio/webm;codecs=opus","audio/webm","audio/mp4","audio/ogg;codecs=opus"];
+      let mimeType = "";
+      for (const m of candidates) {
+        if (window.MediaRecorder.isTypeSupported && window.MediaRecorder.isTypeSupported(m)) {
+          mimeType = m;
+          break;
+        }
+      }
+      voiceState.mimeType = mimeType || "audio/webm";
+      voiceState.mediaRecorder = mimeType
+        ? new MediaRecorder(voiceState.stream, { mimeType })
+        : new MediaRecorder(voiceState.stream);
+      voiceState.audioChunks = [];
+      voiceState.mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) voiceState.audioChunks.push(e.data);
+      };
+      voiceState.mediaRecorder.onstop = async () => {
+        cleanupRecording();
+        micBtn.classList.remove("recording");
+        const blob = new Blob(voiceState.audioChunks, { type: voiceState.mimeType });
+        voiceState.audioChunks = [];
+        if (blob.size < 1000) return;
+        await transcribeBlob(blob, voiceState.mimeType);
+      };
+      voiceState.mediaRecorder.start();
+      voiceState.startedAt = Date.now();
+      micBtn.classList.add("recording");
+      showRecordingIndicator();
+      voiceState.timerInterval = setInterval(updateRecordingIndicator, 250);
+      voiceState.autoStopTimer = setTimeout(() => {
+        if (voiceState.mediaRecorder && voiceState.mediaRecorder.state === "recording") {
+          stopRecording();
+        }
+      }, MAX_RECORDING_MS);
+    } catch (err) {
+      console.error("mic_permission_or_error", err);
+      cleanupRecording();
+      micBtn.classList.remove("recording");
+      alert("Could not access your microphone. Please allow microphone access and try again.");
+    }
+  }
+
+  function stopRecording() {
+    if (voiceState.mediaRecorder && voiceState.mediaRecorder.state === "recording") {
+      voiceState.mediaRecorder.stop();
+    }
+  }
+
+  function cleanupRecording() {
+    if (voiceState.timerInterval) { clearInterval(voiceState.timerInterval); voiceState.timerInterval = null; }
+    if (voiceState.autoStopTimer) { clearTimeout(voiceState.autoStopTimer); voiceState.autoStopTimer = null; }
+    if (voiceState.stream) { voiceState.stream.getTracks().forEach((t) => t.stop()); voiceState.stream = null; }
+    removeRecordingIndicator();
+  }
+
+  function showRecordingIndicator() {
+    const composer = document.querySelector(".composer");
+    if (!composer) return;
+    voiceState.indicatorEl = document.createElement("div");
+    voiceState.indicatorEl.className = "recording-indicator";
+    voiceState.indicatorEl.innerHTML = '<span class="red-dot"></span><span class="rec-time">0:00</span> / 1:00';
+    composer.appendChild(voiceState.indicatorEl);
+  }
+
+  function updateRecordingIndicator() {
+    if (!voiceState.indicatorEl) return;
+    const elapsedMs = Date.now() - voiceState.startedAt;
+    const totalSec = Math.floor(elapsedMs / 1000);
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    const timeEl = voiceState.indicatorEl.querySelector(".rec-time");
+    if (timeEl) timeEl.textContent = `${min}:${String(sec).padStart(2, "0")}`;
+  }
+
+  function removeRecordingIndicator() {
+    if (voiceState.indicatorEl) { voiceState.indicatorEl.remove(); voiceState.indicatorEl = null; }
+  }
+
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result || "";
+        const idx = String(result).indexOf(",");
+        resolve(idx >= 0 ? String(result).slice(idx + 1) : "");
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function transcribeBlob(blob, mimeType) {
+    const micBtn = document.getElementById("mic-btn");
+    if (micBtn) micBtn.classList.add("transcribing");
+    try {
+      const audioBase64 = await blobToBase64(blob);
+      const res = await fetch(API_BASE + "/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken },
+        body: JSON.stringify({ audioBase64, mimeType })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "transcription_failed");
+      const text = (data.text || "").trim();
+      if (text) {
+        const inputEl = document.getElementById("input");
+        if (inputEl) {
+          const existing = inputEl.value.trim();
+          inputEl.value = existing ? `${existing} ${text}` : text;
+          inputEl.style.height = "auto";
+          inputEl.style.height = Math.min(inputEl.scrollHeight, 200) + "px";
+          inputEl.focus();
+          inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      }
+    } catch (err) {
+      console.error("transcribe_failed", err);
+      alert("Could not transcribe your message. Please try again or type instead.");
+    } finally {
+      if (micBtn) micBtn.classList.remove("transcribing");
+    }
+  }
+
+  // ===== Speaker (Shimrit voice playback) =====
+  const speakerState = {
+    currentAudio: null,
+    currentBtnEl: null,
+    currentIndex: -1
+  };
+
+  function setSpeakerBtnState(btnEl, stateName) {
+    if (!btnEl) return;
+    btnEl.classList.remove("loading", "playing");
+    if (stateName === "loading") btnEl.classList.add("loading");
+    else if (stateName === "playing") btnEl.classList.add("playing");
+  }
+
+  function stopCurrentAudio() {
+    if (speakerState.currentAudio) {
+      try { speakerState.currentAudio.pause(); } catch (e) {}
+      try { URL.revokeObjectURL(speakerState.currentAudio.src); } catch (e) {}
+      speakerState.currentAudio = null;
+    }
+    if (speakerState.currentBtnEl) {
+      setSpeakerBtnState(speakerState.currentBtnEl, "idle");
+      speakerState.currentBtnEl = null;
+    }
+    speakerState.currentIndex = -1;
+  }
+
+  async function playMessageAudio(msgIndex, btnEl) {
+    if (speakerState.currentIndex === msgIndex && speakerState.currentAudio) {
+      stopCurrentAudio();
+      return;
+    }
+    stopCurrentAudio();
+
+    const msg = state.messages[msgIndex];
+    if (!msg || msg.role !== "assistant" || !msg.content) return;
+
+    speakerState.currentBtnEl = btnEl;
+    speakerState.currentIndex = msgIndex;
+    setSpeakerBtnState(btnEl, "loading");
+
+    try {
+      const res = await fetch(API_BASE + "/speak", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-session-token": state.sessionToken
+        },
+        body: JSON.stringify({ text: msg.content })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "tts_failed");
+      }
+      const audioBlob = await res.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      speakerState.currentAudio = audio;
+      audio.onended = () => {
+        if (speakerState.currentAudio === audio) stopCurrentAudio();
+      };
+      audio.onerror = () => {
+        if (speakerState.currentAudio === audio) stopCurrentAudio();
+      };
+      setSpeakerBtnState(btnEl, "playing");
+      await audio.play();
+    } catch (err) {
+      console.error("speak_failed", err);
+      setSpeakerBtnState(btnEl, "idle");
+      speakerState.currentAudio = null;
+      speakerState.currentBtnEl = null;
+      speakerState.currentIndex = -1;
+    }
+  }
+
+  function onSpeakerClick(e) {
+    const btn = e.target.closest(".speak-btn");
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.msgIndex, 10);
+    if (Number.isNaN(idx)) return;
+    playMessageAudio(idx, btn);
+  }
+
+  function maybeAutoplayLastAssistant() {
+    if (!state.autoplay) return;
+    const lastIdx = state.messages.length - 1;
+    if (lastIdx < 0) return;
+    const last = state.messages[lastIdx];
+    if (!last || last.role !== "assistant") return;
+    setTimeout(() => {
+      const btn = document.querySelector(`.speak-btn[data-msg-index="${lastIdx}"]`);
+      if (btn) playMessageAudio(lastIdx, btn);
+    }, 50);
+  }
+
+  function onAutoplayChange(e) {
+    state.autoplay = !!e.target.checked;
+    try { localStorage.setItem("tfif_autoplay_v1", state.autoplay ? "1" : "0"); } catch (err) {}
+  }
+
+  // ===== Unlimited API =====
+  async function apiListUnlimited() {
+    const res = await fetch(API_BASE + "/unlimited/sessions", { method: "GET", headers: { "x-session-token": state.sessionToken } });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "could_not_list");
+    return data.sessions || [];
+  }
+  async function apiCreateUnlimited(processKey) {
+    const res = await fetch(API_BASE + "/unlimited/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken },
+      body: JSON.stringify(processKey ? { process: processKey } : {})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "could_not_create");
+    return data.session;
+  }
+  async function apiLoadUnlimited(id) {
+    const res = await fetch(API_BASE + "/unlimited/session?id=" + encodeURIComponent(id), { method: "GET", headers: { "x-session-token": state.sessionToken } });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "could_not_load");
+    return data;
+  }
+  async function apiUnlimitedChat(sessionId, message) {
+    const res = await fetch(API_BASE + "/unlimited/chat", { method: "POST", headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken }, body: JSON.stringify({ sessionId, message }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "could_not_send");
+    return data;
+  }
+
+  // ===== Unlimited handlers =====
+  // Silently bootstrap a demo session if one doesn't exist yet — this lets a
+  // visitor preview The Field — Unlimited without first completing the Day 1
+  // entry form. Same anonymous identity flow as onStartSubmit.
+  async function ensureDemoSession() {
+    if (state.sessionToken) return true;
+    try {
+      const ident = resolveIdentity();
+      const data = await apiStart(ident.email, ident.displayName, ident.kajabiMemberId);
+      state.sessionToken = data.sessionToken;
+      saveToken(data.sessionToken);
+      state.currentDay = data.currentDay || 1;
+      state.timeRemainingMs = data.timeRemainingMs;
+      return true;
+    } catch (e) {
+      console.error("auto_start_failed", e);
+      return false;
+    }
+  }
+
+  // Cross-deploy recovery: if a request fails because the token is stale (DB
+  // was reset, schema changed, session expired), purge the token, mint a fresh
+  // anonymous session, and retry once.
+  async function createUnlimitedWithRetry(processKey) {
+    try {
+      return await apiCreateUnlimited(processKey);
+    } catch (e) {
+      console.warn("create_unl_first_try_failed_resetting_session", e?.message);
+      clearToken();
+      state.sessionToken = null;
+      state.unlimitedSessions = [];
+      const ok = await ensureDemoSession();
+      if (!ok) throw new Error("could_not_bootstrap_session");
+      return await apiCreateUnlimited(processKey);
+    }
+  }
+
+  async function onNewChatClick() {
+    // Re-entry guard — a double-tap on "+ New chat" would otherwise create
+    // two empty Unlimited sessions. Set synchronously, before any await.
+    if (state.creatingChat) return;
+    state.creatingChat = true;
+    state.mobileDrawerOpen = false;
+    // Optimistic switch: jump to the Unlimited chat view with a loading state
+    // the instant the button is clicked, instead of waiting for the API to
+    // create the session. The click registers immediately.
+    const prevView = state.view;
+    const prevActiveId = state.activeUnlimitedId;
+    state.view = "unlimited-chat";
+    state.activeUnlimitedId = null;
+    state.unlimitedMessages = [];
+    state.loading = true;
+    render();
+    try {
+      const ok = await ensureDemoSession();
+      if (!ok) throw new Error("could_not_bootstrap_session");
+      const session = await createUnlimitedWithRetry();
+      state.unlimitedSessions.unshift(session);
+      state.activeUnlimitedId = session.id;
+      state.unlimitedMessages = [];
+      state.loading = false;
+      render();
+    } catch (e) {
+      console.error("create_unl_failed", e);
+      // Restore the view the user came from so they aren't stranded.
+      state.loading = false;
+      state.view = prevView;
+      state.activeUnlimitedId = prevActiveId;
+      render();
+      alert("Could not start a new chat. Try again.");
+    } finally {
+      state.creatingChat = false;
+    }
+  }
+
+  // Toggle the guided-process dropdown by mutating the class on the existing
+  // DOM node — same pattern as onMobileMenuClick. A full render() would steal
+  // focus from the chat textarea and rebuild the whole sidebar needlessly.
+  function onProcessMenuToggle() {
+    state.processMenuOpen = !state.processMenuOpen;
+    const menu = document.querySelector(".process-menu");
+    if (menu) menu.classList.toggle("open", state.processMenuOpen);
+    const caret = menu && menu.querySelector(".process-menu-caret");
+    if (caret) caret.textContent = state.processMenuOpen ? "▴" : "▾";
+  }
+
+  // Start a new Unlimited chat already bound to a guided process. Mirrors
+  // onNewChatClick, then auto-sends an activation message so The Field
+  // delivers the process opening.
+  async function onProcessPick(processKey) {
+    if (state.creatingChat) return;
+    const proc = DEMO_PROCESSES.find(p => p.key === processKey);
+    if (!proc) return;
+    state.creatingChat = true;
+    // Close the process menu and the mobile drawer.
+    state.processMenuOpen = false;
+    state.mobileDrawerOpen = false;
+    // Optimistic switch to the Unlimited chat view with a loading state.
+    const prevView = state.view;
+    const prevActiveId = state.activeUnlimitedId;
+    state.view = "unlimited-chat";
+    state.activeUnlimitedId = null;
+    state.unlimitedMessages = [];
+    state.loading = true;
+    render();
+    try {
+      const ok = await ensureDemoSession();
+      if (!ok) throw new Error("could_not_bootstrap_session");
+      const session = await createUnlimitedWithRetry(processKey);
+      state.unlimitedSessions.unshift(session);
+      state.activeUnlimitedId = session.id;
+      // Auto-send a first message so The Field opens the process.
+      const activationMessage = proc.prompt || ("I am entering the " + proc.name + " process. Begin.");
+      state.unlimitedMessages = [{ role: "user", content: activationMessage }];
+      state.loading = true;
+      render();
+      const data = await apiUnlimitedChat(session.id, activationMessage);
+      state.unlimitedMessages.push({ role: "assistant", content: data.reply });
+      state.loading = false;
+      const idx = state.unlimitedSessions.findIndex(s => s.id === session.id);
+      if (idx >= 0) {
+        const updated = Object.assign({}, state.unlimitedSessions[idx], { lastMessageAt: new Date().toISOString() });
+        if (data.title) updated.title = data.title;
+        state.unlimitedSessions[idx] = updated;
+      }
+      render();
+      maybeAutoplayLastUnlimitedAssistant();
+    } catch (e) {
+      console.error("start_process_failed", e);
+      state.loading = false;
+      state.view = prevView;
+      state.activeUnlimitedId = prevActiveId;
+      render();
+      alert("Could not start the process. Try again.");
+    } finally {
+      state.creatingChat = false;
+    }
+  }
+
+  function onMagnifierClick() {
+    state.searchOpen = !state.searchOpen;
+    if (!state.searchOpen) state.searchQuery = "";
+    render();
+  }
+
+  async function onUnlimitedChatClick(sessionId) {
+    if (!sessionId) return;
+    state.mobileDrawerOpen = false;
+    if (sessionId === state.activeUnlimitedId && state.view === "unlimited-chat") return;
+    // Optimistic switch — header + chat-list highlight + loading visual update
+    // immediately so the click feels instant. Messages stream in after fetch.
+    state.activeUnlimitedId = sessionId;
+    state.unlimitedMessages = [];
+    state.view = "unlimited-chat";
+    state.loading = true;
+    render();
+    try {
+      const data = await apiLoadUnlimited(sessionId);
+      state.unlimitedMessages = data.messages || [];
+      state.loading = false;
+      const idx = state.unlimitedSessions.findIndex(s => s.id === sessionId);
+      if (idx >= 0) state.unlimitedSessions[idx] = Object.assign({}, state.unlimitedSessions[idx], data.session);
+      render();
+    } catch (e) {
+      console.error("load_unl_failed", e);
+      state.loading = false;
+      render();
+      alert("Could not load that conversation.");
+    }
+  }
+
+  function renderUnlimitedMessages() {
+    const wrap = document.getElementById("messages");
+    if (!wrap) return;
+    if (state.loading && state.unlimitedMessages.length === 0) {
+      wrap.innerHTML = renderSkeletonLoading();
+      return;
+    }
+    let html = state.unlimitedMessages.map((m, i) => {
+      if (m.role === "user") return '<div class="msg-row user"><div class="msg">' + escapeHtml(m.content) + '</div></div>';
+      return '<div class="msg-row assistant"><div class="msg">' + renderMarkdown(m.content) + '</div>'
+        + '<button class="speak-btn" data-unl-msg-index="' + i + '" type="button" aria-label="Play in Shimrit\'s voice">'
+        + '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/><path d="M14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>'
+        + '</button></div>';
+    }).join("");
+    if (state.loading) html += '<div class="msg-row assistant"><div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>';
+    wrap.innerHTML = html;
+    const wrapper = document.getElementById("messages-wrap");
+    if (wrapper) wrapper.scrollTop = wrapper.scrollHeight;
+  }
+
+  function onUnlimitedKeyDown(e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onUnlimitedSendClick(); } }
+
+  async function onUnlimitedSendClick() {
+    const inputEl = document.getElementById("input");
+    if (!inputEl) return;
+    const text = inputEl.value.trim();
+    if (!text || state.loading || !state.activeUnlimitedId) return;
+    state.unlimitedMessages.push({ role: "user", content: text });
+    inputEl.value = "";
+    inputEl.style.height = "auto";
+    state.loading = true;
+    document.getElementById("send-btn").classList.remove("active");
+    clearDraft(currentContextKey());
+    renderUnlimitedMessages();
+    try {
+      const data = await apiUnlimitedChat(state.activeUnlimitedId, text);
+      state.unlimitedMessages.push({ role: "assistant", content: data.reply });
+      state.loading = false;
+      const idx = state.unlimitedSessions.findIndex(s => s.id === state.activeUnlimitedId);
+      if (idx >= 0) {
+        const updated = Object.assign({}, state.unlimitedSessions[idx], { lastMessageAt: new Date().toISOString() });
+        if (data.title) updated.title = data.title;
+        state.unlimitedSessions.splice(idx, 1);
+        state.unlimitedSessions.unshift(updated);
+      }
+      render();
+      maybeAutoplayLastUnlimitedAssistant();
+    } catch (err) {
+      state.unlimitedMessages.push({ role: "assistant", content: "Something went wrong. Try again in a moment." });
+      state.loading = false;
+      renderUnlimitedMessages();
+    }
+  }
+
+  function onUnlimitedSpeakerClick(e) {
+    const btn = e.target.closest(".speak-btn");
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.unlMsgIndex, 10);
+    if (Number.isNaN(idx)) return;
+    playUnlimitedMessageAudio(idx, btn);
+  }
+
+  async function playUnlimitedMessageAudio(idx, btnEl) {
+    if (speakerState.currentIndex === idx && speakerState.currentAudio) { stopCurrentAudio(); return; }
+    stopCurrentAudio();
+    const msg = state.unlimitedMessages[idx];
+    if (!msg || msg.role !== "assistant" || !msg.content) return;
+    speakerState.currentBtnEl = btnEl;
+    speakerState.currentIndex = idx;
+    setSpeakerBtnState(btnEl, "loading");
+    try {
+      const res = await fetch(API_BASE + "/speak", { method: "POST", headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken }, body: JSON.stringify({ text: msg.content }) });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "tts_failed"); }
+      const blob = await res.blob();
+      const audio = new Audio(URL.createObjectURL(blob));
+      speakerState.currentAudio = audio;
+      audio.onended = () => { if (speakerState.currentAudio === audio) stopCurrentAudio(); };
+      audio.onerror = () => { if (speakerState.currentAudio === audio) stopCurrentAudio(); };
+      setSpeakerBtnState(btnEl, "playing");
+      await audio.play();
+    } catch (err) {
+      console.error("speak_failed", err);
+      setSpeakerBtnState(btnEl, "idle");
+      speakerState.currentAudio = null; speakerState.currentBtnEl = null; speakerState.currentIndex = -1;
+    }
+  }
+
+  function maybeAutoplayLastUnlimitedAssistant() {
+    if (!state.autoplay) return;
+    const last = state.unlimitedMessages.length - 1; if (last < 0) return;
+    const m = state.unlimitedMessages[last]; if (!m || m.role !== "assistant") return;
+    setTimeout(() => { const btn = document.querySelector('.speak-btn[data-unl-msg-index="' + last + '"]'); if (btn) playUnlimitedMessageAudio(last, btn); }, 50);
+  }
+
+  async function loadFullState() {
+    try {
+      const data = await apiState(state.sessionToken);
+      if (data.expired) { state.view = "entry"; render(); return; }
+      state.currentDay = data.currentDay || 1;
+      state.lastCompletedDay = data.lastCompletedDay || 0;
+      state.timeRemainingMs = data.timeRemainingMs;
+      // Filter to messages for the CURRENT day only. Each day is its own
+      // thread in the demo. Falls back to all messages if no day metadata
+      // is present (older sessions).
+      const allMessages = data.messages || [];
+      const filtered = allMessages.filter(m => {
+        if (m.dayAtSend == null) return true;
+        return Number(m.dayAtSend) === Number(state.currentDay);
+      });
+      state.messages = filtered.length > 0 ? filtered : allMessages;
+      state.view = "chat";
+      render();
+    } catch (err) {
+      clearToken();
+      state.sessionToken = null;
+      state.view = "entry";
+      render();
+    }
+  }
+
+  async function loadUnlimitedSessions() {
+    try { state.unlimitedSessions = await apiListUnlimited(); }
+    catch (e) { console.warn("could_not_load_unlimited_sessions", e?.message); state.unlimitedSessions = []; }
+  }
+
+  // The normal app startup. In embed mode this runs only AFTER the identity
+  // gate has verified the member.
+  function initApp() {
+    // Embed mode never resumes a saved token — identity is always re-established
+    // from the verified Kajabi member, so one browser cannot carry another
+    // member's session.
+    const existing = EMBED_MODE ? null : loadToken();
+    if (existing) {
+      state.sessionToken = existing;
+      loadFullState().then(() => loadUnlimitedSessions().then(() => render()));
+    } else {
+      state.view = "entry";
+      render();
+    }
+  }
+
+  // ===== Kajabi embed identity gate =====
+  // In embed mode the app will not start until it receives the member's
+  // identity in a postMessage from an allowed Kajabi origin. A visitor who opens
+  // the app URL outside Kajabi never receives that message and sees a locked
+  // screen instead — this is what makes a shared URL useless.
+  function renderEmbedGate(message) {
+    const app = document.getElementById("app");
+    if (!app) return;
+    app.innerHTML = `
+      <div class="embed-gate">
+        <div class="embed-gate-card">
+          <div class="embed-gate-mark"><img src="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" alt="Master Your Path" /></div>
+          <div class="embed-gate-title">${escapeHtml(message)}</div>
+        </div>
+      </div>`;
+  }
+
+  function startEmbedGate() {
+    renderEmbedGate("Connecting to your member area…");
+    let settled = false;
+
+    window.addEventListener("message", function (event) {
+      if (settled) return;
+      // Only a message from your Kajabi site is trusted. The browser sets
+      // event.origin; the sender cannot forge it.
+      if (KAJABI_ALLOWED_ORIGINS.indexOf(event.origin) === -1) return;
+      const d = event.data || {};
+      if (!d || d.type !== "tfif-identity") return;
+      const kajabiId = String(d.kajabiId == null ? "" : d.kajabiId).trim();
+      if (!/^[0-9A-Za-z_-]{1,64}$/.test(kajabiId)) return;
+      settled = true;
+      KAJABI_IDENTITY = {
+        kajabiId: kajabiId,
+        tier: d.tier === "full" ? "full" : "preview",
+        name: typeof d.name === "string" ? d.name.slice(0, 80) : ""
+      };
+      state.tier = KAJABI_IDENTITY.tier;
+      initApp();
+    });
+
+    // Tell the Kajabi parent page the app is loaded and ready for the identity.
+    try { window.parent.postMessage({ type: "tfif-ready" }, "*"); } catch (e) {}
+
+    // If no valid identity arrives, lock the screen. Fails closed by design.
+    setTimeout(function () {
+      if (settled) return;
+      settled = true;
+      renderEmbedGate("Please open The Field from your Master Your Path member area.");
+    }, 8000);
+  }
+
+  function init() {
+    applyTheme(loadTheme());
+    applyFontScale(state.fontScale);
+    if (EMBED_MODE) { startEmbedGate(); return; }
+    initApp();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
