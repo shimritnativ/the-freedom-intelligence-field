@@ -9,7 +9,13 @@
 // next reply has the right context.
 
 import { sql } from "@vercel/postgres";
-import { getUserBySessionToken, getOrCreateSession, insertMessage } from "../lib/db.js";
+import {
+  getUserBySessionToken,
+  getOrCreateSession,
+  insertMessage,
+  isDayUnlocked,
+  dayUnlockAt,
+} from "../lib/db.js";
 import { PROMPT_VERSION } from "../lib/prompts/index.js";
 
 // Welcome message shown as the Field's first message when the user enters
@@ -79,6 +85,17 @@ export default async function handler(req, res) {
     const targetDay = Number(day);
     if (![1, 2, 3].includes(targetDay)) {
       return res.status(400).json({ error: "invalid_day" });
+    }
+
+    // Progressive-unlock gate: preview-tier users can only switch into a day
+    // once it's unlocked. Day 1 always unlocked; Day 2 at first_login_at +
+    // 24h; Day 3 at +48h. Full-tier (Unlimited) members bypass this check.
+    if (user.tier === "preview" && !isDayUnlocked(user, targetDay)) {
+      const unlockAt = dayUnlockAt(user, targetDay);
+      return res.status(423).json({
+        error: "day_locked",
+        unlocksAt: unlockAt ? unlockAt.toISOString() : null,
+      });
     }
 
     // last_completed_day = targetDay - 1 means current_day will be targetDay.
