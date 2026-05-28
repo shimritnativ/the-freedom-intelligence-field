@@ -4,12 +4,12 @@
 //
 // Auth: same session-token pattern as /api/chat. CORS gated to ALLOWED_ORIGINS.
 // Cost: ~$0.006/minute of audio (Whisper-1). Per-call cost is capped by the
-// client-side 60s recording limit.
+// client-side 5-minute recording limit (~3¢/clip worst case).
 
 import { getUserBySessionToken } from "../lib/db.js";
 
-// Allow up to 10MB request body. A 60s WebM/Opus clip base64-encoded is
-// well under 1MB; this leaves headroom for higher-bitrate codecs (Safari mp4).
+// Allow up to 10MB request body. A 5-minute WebM/Opus clip base64-encoded is
+// roughly 1.5MB; this leaves headroom for higher-bitrate codecs (Safari mp4).
 export const config = {
   api: { bodyParser: { sizeLimit: "10mb" } }
 };
