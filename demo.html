@@ -193,6 +193,149 @@
     margin-top: 2px;
   }
 
+  /* ===== Your Account modal ===== */
+  .acct-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    z-index: 1000;
+    overflow-y: auto;
+  }
+  .acct-modal {
+    background: #0a0a0a;
+    color: #f0ead6;
+    border-radius: 16px;
+    border: 1px solid rgba(201, 168, 76, 0.2);
+    max-width: 560px;
+    width: 100%;
+    padding: 32px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    position: relative;
+    box-shadow: 0 18px 48px rgba(0,0,0,0.5);
+  }
+  .acct-close {
+    position: absolute; top: 18px; right: 18px;
+    width: 32px; height: 32px;
+    background: transparent;
+    border: 1px solid rgba(201, 168, 76, 0.35);
+    color: #f0ead6;
+    border-radius: 50%;
+    font-size: 14px; line-height: 1;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .acct-close:hover { border-color: #C9A84C; }
+  .acct-eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.15em;
+    color: #C9A84C; text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .acct-title {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 28px;
+    color: #f0ead6;
+    margin-bottom: 28px;
+  }
+  .acct-section-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.2em;
+    color: rgba(240, 234, 214, 0.55);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .acct-section { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid rgba(201, 168, 76, 0.12); }
+  .acct-section:last-child { border-bottom: none; padding-bottom: 0; }
+  .acct-name-row { display: flex; gap: 10px; align-items: stretch; }
+  .acct-name-input {
+    flex: 1;
+    background: #050505;
+    border: 1px solid rgba(201, 168, 76, 0.25);
+    border-radius: 10px;
+    color: #f0ead6;
+    padding: 12px 14px;
+    font-size: 15px;
+    font-family: inherit;
+  }
+  .acct-name-input:focus { outline: none; border-color: #C9A84C; }
+  .acct-save-btn {
+    background: #C9A84C; color: #0a0a0a;
+    border: none; border-radius: 10px;
+    padding: 0 22px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.12em;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+  .acct-save-btn:hover { opacity: 0.9; }
+  .acct-save-btn[disabled] { opacity: 0.45; cursor: default; }
+  .acct-name-help {
+    font-size: 12px; color: rgba(240, 234, 214, 0.55);
+    margin-top: 10px;
+    font-style: italic;
+  }
+  .acct-card {
+    background: rgba(201, 168, 76, 0.04);
+    border: 1px solid rgba(201, 168, 76, 0.25);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 14px;
+  }
+  .acct-card-title {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 19px;
+    color: #f0ead6;
+    margin-bottom: 8px;
+  }
+  .acct-card-meta {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px;
+    color: rgba(240, 234, 214, 0.7);
+  }
+  .acct-status-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; flex-shrink: 0; }
+  .acct-status-dot.expired { background: rgba(240, 234, 214, 0.35); }
+  .acct-remaining { color: #C9A84C; font-weight: 700; }
+  .acct-card-actions { display: flex; gap: 10px; margin-top: 16px; }
+  .acct-btn {
+    flex: 1;
+    background: transparent;
+    color: #f0ead6;
+    border: 1px solid rgba(201, 168, 76, 0.4);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .acct-btn:hover { border-color: #C9A84C; background: rgba(201, 168, 76, 0.05); }
+  .acct-btn.subtle { flex: 0 0 auto; padding: 12px 20px; }
+  .acct-card-desc {
+    font-size: 14px;
+    color: rgba(240, 234, 214, 0.7);
+    line-height: 1.55;
+    margin: 10px 0 16px;
+  }
+  .acct-link {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px;
+    background: rgba(201, 168, 76, 0.04);
+    border: 1px solid rgba(201, 168, 76, 0.18);
+    border-radius: 10px;
+    color: #f0ead6;
+    text-decoration: none;
+    font-size: 14px; font-weight: 600;
+    margin-bottom: 8px;
+    transition: border-color 0.15s ease;
+  }
+  .acct-link:hover { border-color: #C9A84C; }
+  .acct-link-arrow { color: #C9A84C; }
+  :root[data-theme="light"] .acct-overlay { background: rgba(26, 22, 18, 0.5); }
+  :root[data-theme="light"] .acct-modal { background: #1A1612; color: #f0ead6; border-color: rgba(201, 168, 76, 0.3); }
+
   .demo-help {
     margin-top: 8px;
     padding: 12px;
@@ -1164,6 +1307,12 @@ Begin.` },
     loginLoading: false,
     // ===== Mobile chrome state =====
     mobileDrawerOpen: false,
+    // ===== Your Account modal =====
+    accountMenuOpen: false,
+    accountSavingName: false,
+    accountSavedFlash: false,
+    displayName: "",
+    previewEndsAt: null,
     // ===== Re-entry guards (prevent double-submit duplicate messages) =====
     starting: false,
     creatingChat: false,
@@ -1347,6 +1496,17 @@ Begin.` },
     if (res.status === 410) return { expired: true };
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Could not load state");
+    return data;
+  }
+  // POST to /api/state to update account fields (currently displayName).
+  async function apiSaveAccount(token, fields) {
+    const res = await fetch(API_BASE + "/state", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-session-token": token },
+      body: JSON.stringify(fields || {})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not save");
     return data;
   }
   async function apiChat(token, message) {
@@ -1559,6 +1719,7 @@ Begin.` },
         </div>
 
         <div class="sidebar-aux">
+          <button id="account-btn" type="button" title="Your account">Your Account</button>
           <button id="logout-btn" type="button" title="Sign out">Log out</button>
           <button id="reset-conv-btn" type="button" title="Clear all conversations and start over">Reset conversations</button>
         </div>
@@ -1572,6 +1733,110 @@ Begin.` },
           </div>
         </div>
       </aside>
+    `;
+  }
+
+  // ===== Your Account modal =====
+  const YEARLY_UPGRADE_URL = "https://www.shimritnativ.com/offers/ZM2sfLwN";
+  const CANCEL_BILLING_URL = "https://www.shimritnativ.com/settings/cards";
+  const SHIMRIT_ABOUT_URL = "https://www.shimritnativ.com/about";
+
+  function formatTimeRemaining(ms) {
+    if (!ms || ms <= 0) return "Window complete";
+    const totalMinutes = Math.floor(ms / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours >= 24) {
+      const days = Math.floor(hours / 24);
+      const remHours = hours % 24;
+      return `${days}d ${remHours}h remaining`;
+    }
+    if (hours > 0) return `${hours}h ${minutes}m remaining`;
+    return `${minutes}m remaining`;
+  }
+
+  function renderAccountModal() {
+    if (!state.accountMenuOpen) return "";
+    const isFull = state.tier === "full";
+    const displayName = state.displayName || "";
+    const previewActive = state.previewEndsAt && new Date(state.previewEndsAt).getTime() > Date.now();
+    const previewRemainingMs = state.previewEndsAt
+      ? Math.max(0, new Date(state.previewEndsAt).getTime() - Date.now())
+      : 0;
+    const showResetCard = !isFull && state.previewEndsAt;
+
+    const unlimitedBlock = isFull
+      ? `
+        <div class="acct-card">
+          <div class="acct-card-title">The Field — Unlimited</div>
+          <div class="acct-card-meta">
+            <span class="acct-status-dot"></span>
+            <span>Monthly · Active</span>
+          </div>
+          <div class="acct-card-actions">
+            <a class="acct-btn" href="${YEARLY_UPGRADE_URL}" target="_blank" rel="noopener noreferrer">Upgrade to Yearly ↗</a>
+            <a class="acct-btn subtle" href="${CANCEL_BILLING_URL}" target="_blank" rel="noopener noreferrer">Cancel</a>
+          </div>
+        </div>`
+      : `
+        <div class="acct-card">
+          <div class="acct-card-title">The Field — Unlimited</div>
+          <div class="acct-card-desc">Continue the work. Unlimited conversations with the Field, plus the six guided processes — mind, heart, and body, anytime.</div>
+          <div class="acct-card-actions">
+            <a class="acct-btn" href="${UNLIMITED_URL}" target="_blank" rel="noopener noreferrer">Unlock The Field ↗</a>
+          </div>
+        </div>`;
+
+    const resetBlock = showResetCard
+      ? `
+        <div class="acct-card">
+          <div class="acct-card-title">The 72-Hour Power Reset</div>
+          <div class="acct-card-meta">
+            <span class="acct-status-dot ${previewActive ? "" : "expired"}"></span>
+            <span>${previewActive ? "Active" : "Window complete"}</span>
+            ${previewActive ? `<span>·</span><span class="acct-remaining" id="acct-remaining">${escapeHtml(formatTimeRemaining(previewRemainingMs))}</span>` : ""}
+          </div>
+        </div>`
+      : "";
+
+    return `
+      <div class="acct-overlay" id="acct-overlay">
+        <div class="acct-modal" role="dialog" aria-modal="true" aria-labelledby="acct-title">
+          <button class="acct-close" id="acct-close-btn" type="button" aria-label="Close">✕</button>
+          <div class="acct-eyebrow">Master Your Path</div>
+          <div class="acct-title" id="acct-title">Your Account</div>
+
+          <div class="acct-section">
+            <div class="acct-section-label">Name</div>
+            <form class="acct-name-row" id="acct-name-form" autocomplete="off">
+              <input class="acct-name-input" id="acct-name-input" type="text" maxlength="80" value="${escapeHtml(displayName)}" placeholder="Your name" />
+              <button class="acct-save-btn" type="submit" ${state.accountSavingName ? "disabled" : ""}>
+                ${state.accountSavingName ? "Saving…" : (state.accountSavedFlash ? "Saved" : "Save")}
+              </button>
+            </form>
+            <div class="acct-name-help">The Field will call you this in your conversations.</div>
+          </div>
+
+          <div class="acct-section">
+            <div class="acct-section-label">Subscriptions</div>
+            ${resetBlock}
+            ${unlimitedBlock}
+          </div>
+
+          <div class="acct-section">
+            <div class="acct-section-label">Useful Links</div>
+            <a class="acct-link" href="https://api.leadconnectorhq.com/widget/bookings/connectcall-masteryourpath" target="_blank" rel="noopener noreferrer">
+              Book a complimentary call <span class="acct-link-arrow" aria-hidden="true">↗</span>
+            </a>
+            <a class="acct-link" href="https://www.shimritnativ.com/myp-programs" target="_blank" rel="noopener noreferrer">
+              Explore all MYP Programs <span class="acct-link-arrow" aria-hidden="true">↗</span>
+            </a>
+            <a class="acct-link" href="${SHIMRIT_ABOUT_URL}" target="_blank" rel="noopener noreferrer">
+              Learn more about Shimrit <span class="acct-link-arrow" aria-hidden="true">↗</span>
+            </a>
+          </div>
+        </div>
+      </div>
     `;
   }
 
@@ -1747,6 +2012,7 @@ Begin.` },
           </main>
         </div>
         ${renderMobileOverlay()}
+        ${renderAccountModal()}
       `;
       document.getElementById("entry-form").addEventListener("submit", onStartSubmit);
       // Restore + persist drafts on the entry form too.
@@ -1797,6 +2063,7 @@ Begin.` },
           </main>
         </div>
         ${renderMobileOverlay()}
+        ${renderAccountModal()}
       `;
       renderMessages();
       document.getElementById("input").addEventListener("input", onInputChange);
@@ -1868,6 +2135,7 @@ Begin.` },
           </main>
         </div>
         ${renderMobileOverlay()}
+        ${renderAccountModal()}
       `;
       renderUnlimitedMessages();
       document.getElementById("input").addEventListener("input", onInputChange);
@@ -1931,6 +2199,19 @@ Begin.` },
     if (logoutBtn) logoutBtn.addEventListener("click", onLogout);
     const resetConvBtn = document.getElementById("reset-conv-btn");
     if (resetConvBtn) resetConvBtn.addEventListener("click", onResetConversations);
+    const accountBtn = document.getElementById("account-btn");
+    if (accountBtn) accountBtn.addEventListener("click", onAccountOpen);
+    // Account modal wiring (only present when state.accountMenuOpen)
+    const acctOverlay = document.getElementById("acct-overlay");
+    if (acctOverlay) {
+      acctOverlay.addEventListener("click", (e) => {
+        if (e.target === acctOverlay) onAccountClose();
+      });
+    }
+    const acctCloseBtn = document.getElementById("acct-close-btn");
+    if (acctCloseBtn) acctCloseBtn.addEventListener("click", onAccountClose);
+    const acctNameForm = document.getElementById("acct-name-form");
+    if (acctNameForm) acctNameForm.addEventListener("submit", onAccountSaveName);
     const unlSearch = document.getElementById("unl-search-input");
     if (unlSearch) {
       // Update ONLY the chat list as the user types — full render would
@@ -2140,6 +2421,9 @@ Begin.` },
       state.sessionToken = data.sessionToken;
       saveToken(data.sessionToken);
       state.tier = data.tier || "preview";
+      state.displayName = data.displayName || "";
+      state.previewEndsAt = data.previewEndsAt || null;
+      state.timeRemainingMs = data.timeRemainingMs;
       state.loginLoading = false;
       state.loginStep = "email";
       state.loginError = "";
@@ -2181,6 +2465,46 @@ Begin.` },
   }
   function onLogout() { _demoClearAndReset("Sign out?"); }
   function onResetConversations() { _demoClearAndReset("Clear all conversations and start over?"); }
+
+  // ===== Account modal handlers =====
+  function onAccountOpen() {
+    state.accountMenuOpen = true;
+    state.accountSavedFlash = false;
+    state.mobileDrawerOpen = false;
+    render();
+  }
+  function onAccountClose() {
+    state.accountMenuOpen = false;
+    state.accountSavingName = false;
+    state.accountSavedFlash = false;
+    render();
+  }
+  async function onAccountSaveName(e) {
+    if (e) e.preventDefault();
+    if (state.accountSavingName) return;
+    const input = document.getElementById("acct-name-input");
+    const name = input ? String(input.value || "").trim().slice(0, 80) : "";
+    state.accountSavingName = true;
+    state.accountSavedFlash = false;
+    render();
+    try {
+      const data = await apiSaveAccount(state.sessionToken, { displayName: name });
+      state.displayName = (data && data.displayName) || name;
+      state.accountSavingName = false;
+      state.accountSavedFlash = true;
+      render();
+      setTimeout(() => {
+        if (!state.accountMenuOpen) return;
+        state.accountSavedFlash = false;
+        render();
+      }, 1800);
+    } catch (err) {
+      state.accountSavingName = false;
+      state.accountSavedFlash = false;
+      alert("Could not save your name. Please try again.");
+      render();
+    }
+  }
 
   async function onStartSubmit(e) {
     e.preventDefault();
@@ -2319,7 +2643,9 @@ Begin.` },
   }
 
   // ===== Voice input =====
-  const MAX_RECORDING_MS = 60000;
+  // 5 minutes — matches app.html. Whisper accepts up to 25mb so a 5-min
+  // Opus clip (~1.5mb base64) has plenty of headroom.
+  const MAX_RECORDING_MS = 5 * 60 * 1000;
   const voiceState = {
     mediaRecorder: null, audioChunks: [], stream: null, mimeType: "",
     startedAt: 0, timerInterval: null, autoStopTimer: null, indicatorEl: null
@@ -2404,7 +2730,7 @@ Begin.` },
     if (!composer) return;
     voiceState.indicatorEl = document.createElement("div");
     voiceState.indicatorEl.className = "recording-indicator";
-    voiceState.indicatorEl.innerHTML = '<span class="red-dot"></span><span class="rec-time">0:00</span> / 1:00';
+    voiceState.indicatorEl.innerHTML = '<span class="red-dot"></span><span class="rec-time">0:00</span> / 5:00';
     composer.appendChild(voiceState.indicatorEl);
   }
 
@@ -2869,6 +3195,8 @@ Begin.` },
       state.currentDay = data.currentDay || 1;
       state.lastCompletedDay = data.lastCompletedDay || 0;
       state.timeRemainingMs = data.timeRemainingMs;
+      state.displayName = data.displayName || state.displayName;
+      state.previewEndsAt = data.previewEndsAt || state.previewEndsAt;
       // Filter to messages for the CURRENT day only. Each day is its own
       // thread in the demo. Falls back to all messages if no day metadata
       // is present (older sessions).
