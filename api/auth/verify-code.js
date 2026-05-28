@@ -74,6 +74,7 @@ export default async function handler(req, res) {
       sessionToken: sessionToken,
       tier: userRow.tier,
       displayName: userRow.display_name || null,
+      email: userRow.email,
       currentDay: resolveActiveDay(userRow),
       timeRemainingMs: timeRemainingMs(userRow),
       dayUnlocks: buildDayUnlocks(userRow),
