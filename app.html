@@ -525,6 +525,26 @@
     color: var(--gold);
     text-transform: uppercase;
   }
+  /* Tiny "save your work" CTA shown only on Day 3 — discrete companion to the
+     day-chip. Same chip silhouette but slightly subtler to keep the chip
+     primary. */
+  .save-work-btn {
+    margin-left: 8px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: transparent;
+    border: 1px solid var(--gold-line);
+    font-size: 10px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--text);
+    text-transform: uppercase;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .save-work-btn:hover { border-color: var(--gold); background: var(--gold-soft); }
 
   .messages-wrap {
     flex: 1;
@@ -1894,6 +1914,213 @@ Begin.` },
     return `${minutes}m remaining`;
   }
 
+  // ===== Export your work — PDF =====
+  // Pulls all-days conversation from /api/state, builds branded HTML, and
+  // renders it to a PDF with html2pdf.js (loaded lazily on first click so it
+  // doesn't slow down initial page load for visitors who never export).
+  const RESET_DAY_TITLES = { 1: "State Reset", 2: "Decision", 3: "Action" };
+  const HTML2PDF_CDN = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+
+  // Cache the loaded library across multiple export clicks.
+  let html2pdfPromise = null;
+  function loadHtml2Pdf() {
+    if (window.html2pdf) return Promise.resolve(window.html2pdf);
+    if (html2pdfPromise) return html2pdfPromise;
+    html2pdfPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = HTML2PDF_CDN;
+      script.async = true;
+      script.onload = () => resolve(window.html2pdf);
+      script.onerror = () => {
+        html2pdfPromise = null;
+        reject(new Error("html2pdf_load_failed"));
+      };
+      document.head.appendChild(script);
+    });
+    return html2pdfPromise;
+  }
+
+  async function onExportWorkClick(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!state.sessionToken) return;
+    // Show a quick "Preparing…" state on whichever button was clicked.
+    const btn = e && e.currentTarget;
+    const originalLabel = btn ? btn.innerHTML : null;
+    if (btn) { btn.disabled = true; btn.innerHTML = "Preparing…"; }
+    try {
+      const [data, html2pdf] = await Promise.all([
+        apiState(state.sessionToken),
+        loadHtml2Pdf(),
+      ]);
+      if (data && data.expired) {
+        alert("Your access window has closed.");
+        return;
+      }
+      const msgs = (data && data.messages) || [];
+      const htmlString = buildResetExportHtml(msgs, state.displayName);
+
+      // html2pdf needs a real DOM node; render into an off-screen wrapper at
+      // A4 page width so the layout matches what the user will see in the PDF.
+      const container = document.createElement("div");
+      container.innerHTML = htmlString;
+      container.style.position = "absolute";
+      container.style.left = "-9999px";
+      container.style.top = "0";
+      container.style.width = "180mm"; // A4 width minus margins
+      document.body.appendChild(container);
+
+      const filename = "freedom-intelligence-field-" + new Date().toISOString().slice(0, 10) + ".pdf";
+      try {
+        await html2pdf().set({
+          margin: [15, 15, 18, 15],
+          filename: filename,
+          image: { type: "jpeg", quality: 0.95 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: "#FFFFFF" },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+          pagebreak: { mode: ["css", "legacy"] },
+        }).from(container).save();
+      } finally {
+        document.body.removeChild(container);
+      }
+    } catch (err) {
+      console.error("export_failed", err);
+      alert("Could not save your work right now. Please try again in a moment.");
+    } finally {
+      if (btn && originalLabel != null) { btn.disabled = false; btn.innerHTML = originalLabel; }
+    }
+  }
+
+  function buildResetExportHtml(messages, displayName) {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    const owner = displayName ? escapeHtml(displayName) + "'s" : "Your";
+
+    const byDay = { 1: [], 2: [], 3: [] };
+    messages.forEach(m => {
+      const d = Number(m.dayAtSend);
+      if (d === 1 || d === 2 || d === 3) byDay[d].push(m);
+    });
+
+    // Convert the AI's markdown output (**bold**, _italic_, lists, paragraphs)
+    // into inline-styled HTML appropriate for PDF rendering. Mirrors the
+    // in-app renderMarkdown logic so PDF output matches the chat exactly.
+    function renderMessageBodyHtml(content) {
+      let html = escapeHtml(content);
+      // Inline marks. Order matters: bold before italic so ** isn't partially
+      // consumed by single-asterisk italic.
+      html = html.replace(/\*\*([^\n*]+?)\*\*/g, "<strong>$1</strong>");
+      html = html.replace(/__([^\n_]+?)__/g, "<strong>$1</strong>");
+      html = html.replace(/(^|[^*])\*([^\n*]+?)\*(?!\*)/g, "$1<em>$2</em>");
+      html = html.replace(/(^|[^_])_([^\n_]+?)_(?!_)/g, "$1<em>$2</em>");
+      html = html.replace(/`([^`\n]+?)`/g, '<code style="background:rgba(201,168,76,0.12); padding:1px 5px; border-radius:3px; font-family:Menlo,Consolas,monospace; font-size:0.92em;">$1</code>');
+
+      // Block parsing: paragraphs, line breaks, bullet & numbered lists.
+      const lines = html.split("\n");
+      const blocks = [];
+      let para = [];
+      let listType = null;
+      let listItems = [];
+      const flushPara = () => {
+        if (para.length > 0) {
+          blocks.push('<p style="margin:0 0 8px 0;">' + para.join("<br/>") + '</p>');
+          para = [];
+        }
+      };
+      const flushList = () => {
+        if (listType && listItems.length > 0) {
+          const tag = listType === "ul" ? "ul" : "ol";
+          blocks.push('<' + tag + ' style="margin:6px 0 10px 0; padding-left:22px;">' +
+            listItems.map(i => '<li style="margin-bottom:4px;">' + i + '</li>').join("") +
+            '</' + tag + '>');
+          listItems = [];
+          listType = null;
+        }
+      };
+      for (const rawLine of lines) {
+        const trimmed = rawLine.trim();
+        const ulMatch = rawLine.match(/^\s*[-*]\s+(.+)$/);
+        const olMatch = rawLine.match(/^\s*\d+\.\s+(.+)$/);
+        if (ulMatch) {
+          flushPara();
+          if (listType !== "ul") { flushList(); listType = "ul"; }
+          listItems.push(ulMatch[1]);
+        } else if (olMatch) {
+          flushPara();
+          if (listType !== "ol") { flushList(); listType = "ol"; }
+          listItems.push(olMatch[1]);
+        } else if (trimmed === "") {
+          flushPara();
+          flushList();
+        } else {
+          flushList();
+          para.push(rawLine);
+        }
+      }
+      flushPara();
+      flushList();
+      return blocks.join("");
+    }
+
+    function messageBlock(m) {
+      const speaker = m.role === "user" ? "You" : "The Field";
+      const speakerColor = m.role === "user" ? "#1A1612" : "#9A6E10";
+      let content = String(m.content || "").replace(/\[\[button:[^\]]+\]\]/g, "").trim();
+      if (!content) return "";
+      const body = renderMessageBodyHtml(content);
+      return `
+        <div style="margin:0 0 18px 0; page-break-inside:avoid;">
+          <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-weight:700; font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:${speakerColor}; margin-bottom:5px;">${speaker}</div>
+          <div style="font-family:Georgia,'Times New Roman',serif; font-size:13px; line-height:1.65; color:#1A1612;">${body}</div>
+        </div>`;
+    }
+
+    let daysHtml = "";
+    let anyContent = false;
+    for (const d of [1, 2, 3]) {
+      if (byDay[d].length === 0) continue;
+      anyContent = true;
+      const msgsHtml = byDay[d].map(messageBlock).join("");
+      daysHtml += `
+        <div style="${d === 1 ? "" : "page-break-before:always;"} padding-top:${d === 1 ? "8px" : "20px"};">
+          <div style="border-bottom:1.5px solid #C9A84C; padding-bottom:10px; margin-bottom:22px;">
+            <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.22em; color:#C9A84C; text-transform:uppercase;">Day ${d}</div>
+            <div style="font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:26px; color:#1A1612; margin-top:4px;">${RESET_DAY_TITLES[d]}</div>
+          </div>
+          ${msgsHtml}
+        </div>`;
+    }
+
+    const emptyBlock = `<div style="text-align:center; color:rgba(26,22,18,0.55); padding:60px 20px; font-family:Georgia,'Times New Roman',serif; font-style:italic;">No conversations recorded yet. Come back after a session.</div>`;
+
+    // Upsell to Unlimited — preview tier only. Full-tier members already
+    // have unlimited access; showing them this would be confusing. The URL
+    // is displayed on a separate line so it works on paper, and wrapped in
+    // an anchor so PDF readers can make it tappable on phones.
+    const upsellBlock = (state.tier === "preview") ? `
+      <div style="margin:36px 0 18px; padding:26px 24px; background:rgba(201,168,76,0.06); border:1.5px solid #C9A84C; border-radius:12px; text-align:center; page-break-inside:avoid;">
+        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.22em; color:#C9A84C; text-transform:uppercase; margin-bottom:12px;">The Field — Unlimited</div>
+        <div style="font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:24px; color:#1A1612; margin-bottom:10px;">Continue the work.</div>
+        <div style="font-family:Georgia,'Times New Roman',serif; font-size:14px; color:rgba(26,22,18,0.75); line-height:1.6; max-width:480px; margin:0 auto 18px;">Unlimited conversations with the Field, plus the six guided processes &mdash; mind, heart, and body, anytime.</div>
+        <a href="${escapeHtml(UNLIMITED_URL)}" style="display:inline-block; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.12em; color:#1A1612; text-transform:uppercase; text-decoration:none; padding:11px 22px; background:#C9A84C; border-radius:8px;">Unlock The Field</a>
+        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:11px; color:rgba(26,22,18,0.55); margin-top:14px; word-break:break-all;">${escapeHtml(UNLIMITED_URL.replace(/^https?:\/\//, ""))}</div>
+      </div>` : "";
+
+    return `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; color:#1A1612; background:#FFFFFF;">
+        <div style="text-align:center; padding:24px 20px 28px;">
+          <div style="font-size:10px; font-weight:700; letter-spacing:0.22em; color:#C9A84C; text-transform:uppercase;">Master Your Path</div>
+          <div style="font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:30px; color:#1A1612; margin-top:10px; line-height:1.25;">${owner}<br/>Freedom Intelligence Field</div>
+          <div style="font-size:13px; color:rgba(26,22,18,0.65); margin-top:14px;">72-Hour Power Reset</div>
+          <div style="font-size:11px; color:rgba(26,22,18,0.4); margin-top:6px; letter-spacing:0.04em;">Saved ${escapeHtml(dateStr)}</div>
+        </div>
+        ${anyContent ? daysHtml : emptyBlock}
+        ${upsellBlock}
+        <div style="text-align:center; padding:28px 20px 14px; margin-top:${state.tier === "preview" ? "20" : "30"}px; border-top:1px solid rgba(26,22,18,0.15);">
+          <div style="font-family:Georgia,'Times New Roman',serif; font-size:11px; color:rgba(26,22,18,0.5); font-style:italic; line-height:1.6;">A record of your work with the Freedom Intelligence Field<br/>Master Your Path</div>
+        </div>
+      </div>`;
+  }
+
   function renderAccountModal() {
     if (!state.accountMenuOpen) return "";
     const isFull = state.tier === "full";
@@ -1972,6 +2199,16 @@ Begin.` },
             ${unlimitedBlock}
           </div>
           ` : ""}
+
+          <div class="acct-section">
+            <div class="acct-section-label">Your Work</div>
+            <button class="acct-link" id="acct-export-btn" type="button" style="background: rgba(201, 168, 76, 0.08); cursor: pointer; font-family: inherit; text-align: left; width: 100%;">
+              Download as PDF <span class="acct-link-arrow" aria-hidden="true">↓</span>
+            </button>
+            <div class="acct-name-help" style="margin-top: 8px; line-height: 1.5;">
+              Saves a beautifully formatted PDF of all your Reset conversations — easy to read on your phone, save to Google Drive, or share with someone you trust.
+            </div>
+          </div>
 
           <div class="acct-section">
             <div class="acct-section-label">Useful Links</div>
@@ -2202,6 +2439,7 @@ Begin.` },
               </div>
               <div>
                 <div class="day-chip">${DAY_META[state.currentDay - 1].label} · ${DAY_META[state.currentDay - 1].theme}</div>
+                ${state.currentDay === 3 ? `<button class="save-work-btn" id="save-work-btn" type="button" title="Download your conversations">Save your work <span aria-hidden="true">↓</span></button>` : ""}
               </div>
             </div>
             <div class="messages-wrap" id="messages-wrap">
@@ -2236,6 +2474,8 @@ Begin.` },
       }
       const messagesWrap = document.getElementById("messages-wrap");
       if (messagesWrap) messagesWrap.addEventListener("click", onSpeakerClick);
+      const saveWorkBtn = document.getElementById("save-work-btn");
+      if (saveWorkBtn) saveWorkBtn.addEventListener("click", onExportWorkClick);
       restoreDraftIntoInput();
       setTimeout(() => { if (!state.searchOpen) document.getElementById("input")?.focus(); }, 50);
     } else if (state.view === "unlimited-chat") {
@@ -2377,6 +2617,8 @@ Begin.` },
       state.accountMenuOpen = false;
       onLogout();
     });
+    const acctExportBtn = document.getElementById("acct-export-btn");
+    if (acctExportBtn) acctExportBtn.addEventListener("click", onExportWorkClick);
     const unlSearch = document.getElementById("unl-search-input");
     if (unlSearch) {
       // Update ONLY the chat list as the user types — full render would
