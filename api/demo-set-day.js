@@ -13,8 +13,6 @@ import {
   getUserBySessionToken,
   getOrCreateSession,
   insertMessage,
-  isDayUnlocked,
-  dayUnlockAt,
 } from "../lib/db.js";
 import { PROMPT_VERSION } from "../lib/prompts/index.js";
 
@@ -87,16 +85,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "invalid_day" });
     }
 
-    // Progressive-unlock gate: preview-tier users can only switch into a day
-    // once it's unlocked. Day 1 always unlocked; Day 2 at first_login_at +
-    // 24h; Day 3 at +48h. Full-tier (Unlimited) members bypass this check.
-    if (user.tier === "preview" && !isDayUnlocked(user, targetDay)) {
-      const unlockAt = dayUnlockAt(user, targetDay);
-      return res.status(423).json({
-        error: "day_locked",
-        unlocksAt: unlockAt ? unlockAt.toISOString() : null,
-      });
-    }
+    // Note: this endpoint does NOT enforce the progressive-unlock gate. The
+    // real protection lives in resolveActiveDay() — even if user.current_day
+    // is bumped to 3 here, the chat endpoint caps the active day at the
+    // highest unlocked day, so a real customer still cannot consume a locked
+    // day's prompt or messages. This endpoint stays permissive so demo
+    // testers can hop freely between days for QA. The sidebar UI in app.html
+    // is what prevents real customers from clicking a locked day in the first
+    // place — the data-day attribute is omitted on locked items.
 
     // last_completed_day = targetDay - 1 means current_day will be targetDay.
     const lastCompleted = targetDay - 1;
