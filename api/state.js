@@ -9,6 +9,7 @@ import {
   fetchConversation,
   resolveActiveDay,
   timeRemainingMs,
+  buildDayUnlocks,
 } from "../lib/db.js";
 
 function applyCors(req, res) {
@@ -47,6 +48,10 @@ export default async function handler(req, res) {
       timeRemainingMs: timeRemainingMs(user),
       tier: user.tier,
       lastCompletedDay: user.last_completed_day,
+      dayUnlocks: buildDayUnlocks(user),
+      firstLoginAt: user.first_login_at,
+      previewEndsAt: user.preview_ends_at,
+      displayName: user.display_name || null,
       messages: messages.map((m) => ({
         role: m.role,
         content: m.content,
