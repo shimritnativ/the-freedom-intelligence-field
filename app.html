@@ -229,6 +229,10 @@
   .sidebar-cta-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 12px; background: var(--gold-soft); border: 1px solid var(--gold-line); border-radius: 8px; color: var(--text); text-decoration: none; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; transition: border-color 0.15s ease, background 0.15s ease; }
   .sidebar-cta-btn:hover { border-color: var(--gold); }
   .sidebar-cta-arrow { color: var(--gold); font-size: 11px; line-height: 1; flex-shrink: 0; }
+  /* Sidebar auxiliary actions — log out / reset */
+  .sidebar-aux { display: flex; gap: 14px; padding: 10px 4px 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; color: var(--text-dim); }
+  .sidebar-aux button { background: none; border: none; padding: 0; color: inherit; font-family: inherit; font-size: inherit; cursor: pointer; text-align: left; }
+  .sidebar-aux button:hover { color: var(--text); text-decoration: underline; }
 
   .sidebar-footer {
     margin-top: 12px;
@@ -1486,8 +1490,6 @@ Begin.` },
           }).join("")}
         </div>
 
-        ${state.sessionToken ? `<button class="reset-btn" id="reset-btn">Reset conversation</button>` : ""}
-
         <div class="sidebar-divider"></div>
         <div class="sidebar-label">The Field — Unlimited</div>
 
@@ -1552,6 +1554,10 @@ Begin.` },
             <span>Explore all MYP Programs</span>
             <span class="sidebar-cta-arrow" aria-hidden="true">↗</span>
           </a>
+        </div>
+
+        <div class="sidebar-aux">
+          <button id="logout-btn" type="button" title="Sign out of The Field">Log out</button>
         </div>
 
         <div class="sidebar-footer">
@@ -1718,8 +1724,8 @@ Begin.` },
           <main class="main">
             <div class="main-header">
               <div>
-                <div class="main-header-title">Begin a test conversation</div>
-                <div class="main-header-sub">Demo build</div>
+                <div class="main-header-title">Welcome to The Field</div>
+                <div class="main-header-sub">72-Hour Power Reset</div>
               </div>
             </div>
             <div class="entry-screen">
@@ -1763,7 +1769,7 @@ Begin.` },
             <div class="main-header">
               <div>
                 <div class="main-header-title">${DAY_META[state.currentDay - 1].label} · ${DAY_META[state.currentDay - 1].theme}</div>
-                <div class="main-header-sub">Demo · Backend reports current day = ${state.currentDay}</div>
+                <div class="main-header-sub">72-Hour Power Reset</div>
               </div>
               <div>
                 <div class="day-chip">${DAY_META[state.currentDay - 1].label} · ${DAY_META[state.currentDay - 1].theme}</div>
@@ -1918,6 +1924,8 @@ Begin.` },
     document.querySelectorAll(".process-menu-item").forEach(el => {
       el.addEventListener("click", () => onProcessPick(el.dataset.process));
     });
+    const logoutBtn = document.getElementById("logout-btn");
+    if (logoutBtn) logoutBtn.addEventListener("click", onLogout);
     const unlSearch = document.getElementById("unl-search-input");
     if (unlSearch) {
       // Update ONLY the chat list as the user types — full render would
@@ -2145,6 +2153,26 @@ Begin.` },
     render();
   }
 
+  // Clear the session and return the visitor to the login screen.
+  function onLogout() {
+    if (!confirm("Sign out of The Field?")) return;
+    clearToken();
+    state.sessionToken = null;
+    state.messages = [];
+    state.unlimitedSessions = [];
+    state.activeUnlimitedId = null;
+    state.unlimitedMessages = [];
+    state.searchOpen = false;
+    state.searchQuery = "";
+    state.processMenuOpen = false;
+    state.view = "login";
+    state.loginStep = "email";
+    state.loginEmail = "";
+    state.loginError = "";
+    state.loginLoading = false;
+    render();
+  }
+
   async function onStartSubmit(e) {
     e.preventDefault();
     // Re-entry guard. The first await below is apiStart — without this flag,
@@ -2232,7 +2260,7 @@ Begin.` },
       render();
       maybeAutoplayLastAssistant();
     } catch (err) {
-      state.messages.push({ role: "assistant", content: "Demo error: " + (err.message || "could not send.") });
+      state.messages.push({ role: "assistant", content: "Something went wrong: " + (err.message || "could not send.") });
       state.loading = false;
       renderMessages();
     }
@@ -2263,7 +2291,7 @@ Begin.` },
       state.loading = false;
       render();
     } catch (err) {
-      state.messages.push({ role: "assistant", content: "Demo error: " + (err.message || "could not switch day.") });
+      state.messages.push({ role: "assistant", content: "Something went wrong: " + (err.message || "could not switch day.") });
       state.loading = false;
       renderMessages();
     }
