@@ -77,6 +77,7 @@ export default async function handler(req, res) {
       firstLoginAt: user.first_login_at,
       previewEndsAt: user.preview_ends_at,
       displayName: user.display_name || null,
+      email: user.email,
       messages: messages.map((m) => ({
         role: m.role,
         content: m.content,
