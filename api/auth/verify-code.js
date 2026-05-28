@@ -13,6 +13,8 @@ import {
   getOrCreateSession,
   timeRemainingMs,
   resolveActiveDay,
+  recordFirstLogin,
+  buildDayUnlocks,
 } from "../../lib/db.js";
 
 const MAX_ATTEMPTS = 5;
@@ -58,14 +60,25 @@ export default async function handler(req, res) {
 
     await consumeLoginCode(active.id);
     await getOrCreateSession(member.id);
+
+    // First login? Set first_login_at and (for preview tier) start the 96h
+    // window from now. Idempotent for repeat logins — the function only
+    // writes when first_login_at is null. We refresh the user row from the
+    // return value so downstream calls see the new clock.
+    const refreshed = await recordFirstLogin(member.id);
+    const userRow = refreshed || member;
+
     const sessionToken = issueSessionToken(member.id);
 
     return res.status(200).json({
       sessionToken: sessionToken,
-      tier: member.tier,
-      displayName: member.display_name || null,
-      currentDay: resolveActiveDay(member),
-      timeRemainingMs: timeRemainingMs(member),
+      tier: userRow.tier,
+      displayName: userRow.display_name || null,
+      currentDay: resolveActiveDay(userRow),
+      timeRemainingMs: timeRemainingMs(userRow),
+      dayUnlocks: buildDayUnlocks(userRow),
+      firstLoginAt: userRow.first_login_at,
+      previewEndsAt: userRow.preview_ends_at,
     });
   } catch (err) {
     console.error("verify_code_error", { message: err?.message });
