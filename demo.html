@@ -201,6 +201,7 @@
     padding: 24px;
     z-index: 1000;
     overflow-y: auto;
+    animation: acctFadeIn 0.24s ease-out;
   }
   .acct-modal {
     background: #0a0a0a;
@@ -213,7 +214,35 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     position: relative;
     box-shadow: 0 18px 48px rgba(0,0,0,0.5);
+    animation: acctSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1);
   }
+  @keyframes acctFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes acctSlideUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .acct-overlay, .acct-modal { animation: none; }
+  }
+  .acct-signed-in {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: rgba(240, 234, 214, 0.6);
+    margin-top: 14px;
+  }
+  .acct-signed-in-email { color: rgba(240, 234, 214, 0.85); font-weight: 600; word-break: break-all; }
+  .acct-signout-row { display: flex; justify-content: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(201, 168, 76, 0.12); }
+  .acct-signout-btn {
+    background: transparent;
+    color: rgba(240, 234, 214, 0.7);
+    border: 1px solid rgba(201, 168, 76, 0.25);
+    border-radius: 10px;
+    padding: 11px 22px;
+    font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+  .acct-signout-btn:hover { color: #f0ead6; border-color: #C9A84C; }
   .acct-close {
     position: absolute; top: 18px; right: 18px;
     width: 32px; height: 32px;
@@ -1313,6 +1342,7 @@ Begin.` },
     accountSavedFlash: false,
     displayName: "",
     previewEndsAt: null,
+    userEmail: "",
     // ===== Re-entry guards (prevent double-submit duplicate messages) =====
     starting: false,
     creatingChat: false,
@@ -1815,6 +1845,12 @@ Begin.` },
               </button>
             </form>
             <div class="acct-name-help">The Field will call you this in your conversations.</div>
+            ${state.userEmail ? `
+              <div class="acct-signed-in">
+                <span>Signed in as</span>
+                <span class="acct-signed-in-email">${escapeHtml(state.userEmail)}</span>
+              </div>
+            ` : ""}
           </div>
 
           <div class="acct-section">
@@ -1834,6 +1870,10 @@ Begin.` },
             <a class="acct-link" href="${SHIMRIT_ABOUT_URL}" target="_blank" rel="noopener noreferrer">
               Learn more about Shimrit <span class="acct-link-arrow" aria-hidden="true">↗</span>
             </a>
+          </div>
+
+          <div class="acct-signout-row">
+            <button class="acct-signout-btn" id="acct-signout-btn" type="button">Sign out</button>
           </div>
         </div>
       </div>
@@ -2212,6 +2252,11 @@ Begin.` },
     if (acctCloseBtn) acctCloseBtn.addEventListener("click", onAccountClose);
     const acctNameForm = document.getElementById("acct-name-form");
     if (acctNameForm) acctNameForm.addEventListener("submit", onAccountSaveName);
+    const acctSignoutBtn = document.getElementById("acct-signout-btn");
+    if (acctSignoutBtn) acctSignoutBtn.addEventListener("click", () => {
+      state.accountMenuOpen = false;
+      onLogout();
+    });
     const unlSearch = document.getElementById("unl-search-input");
     if (unlSearch) {
       // Update ONLY the chat list as the user types — full render would
@@ -2423,6 +2468,7 @@ Begin.` },
       state.tier = data.tier || "preview";
       state.displayName = data.displayName || "";
       state.previewEndsAt = data.previewEndsAt || null;
+      state.userEmail = data.email || state.loginEmail || "";
       state.timeRemainingMs = data.timeRemainingMs;
       state.loginLoading = false;
       state.loginStep = "email";
@@ -3197,6 +3243,7 @@ Begin.` },
       state.timeRemainingMs = data.timeRemainingMs;
       state.displayName = data.displayName || state.displayName;
       state.previewEndsAt = data.previewEndsAt || state.previewEndsAt;
+      state.userEmail = data.email || state.userEmail;
       // Filter to messages for the CURRENT day only. Each day is its own
       // thread in the demo. Falls back to all messages if no day metadata
       // is present (older sessions).
