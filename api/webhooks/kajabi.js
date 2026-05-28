@@ -19,17 +19,25 @@ import {
   revokeEntitlementByEmail,
 } from "../../lib/db.js";
 
-// Kajabi's payload shape varies; pull the member email from the common places.
+// Kajabi's payload shape: { event, payload: { member_email, member_id, ... } }.
+// Check the nested payload first (real Kajabi), then top-level (other systems).
 function extractEmail(body) {
   if (!body || typeof body !== "object") return null;
+  const p = (body.payload && typeof body.payload === "object") ? body.payload : {};
   const candidates = [
+    // Kajabi's real shape (nested under payload)
+    p.member_email,
+    p.email,
+    p.member && p.member.email,
+    p.contact && p.contact.email,
+    p.customer && p.customer.email,
+    // Other shapes
     body.email,
     body.member_email,
     body.member && body.member.email,
     body.contact && body.contact.email,
     body.customer && body.customer.email,
     body.data && body.data.email,
-    body.payload && body.payload.email,
   ];
   for (const c of candidates) {
     if (typeof c === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.trim())) {
@@ -41,14 +49,22 @@ function extractEmail(body) {
 
 function extractMemberId(body) {
   if (!body || typeof body !== "object") return null;
+  const p = (body.payload && typeof body.payload === "object") ? body.payload : {};
   const candidates = [
+    // Kajabi's real shape (nested under payload)
+    p.member_id,
+    p.member && p.member.id,
+    p.contact && p.contact.id,
+    // Other shapes
     body.member_id,
     body.member && body.member.id,
     body.contact && body.contact.id,
     body.data && body.data.member_id,
   ];
   for (const c of candidates) {
-    if (c != null && String(c).trim()) return String(c).trim();
+    if (c != null && String(c).trim() !== "" && String(c).trim() !== "0") {
+      return String(c).trim();
+    }
   }
   return null;
 }
