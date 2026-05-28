@@ -441,9 +441,56 @@
   .sidebar-cta-btn:hover { border-color: var(--gold); }
   .sidebar-cta-arrow { color: var(--gold); font-size: 11px; line-height: 1; flex-shrink: 0; }
   /* Sidebar auxiliary actions — log out / reset */
-  .sidebar-aux { display: flex; gap: 14px; padding: 10px 4px 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; color: var(--text-dim); }
-  .sidebar-aux button { background: none; border: none; padding: 0; color: inherit; font-family: inherit; font-size: inherit; cursor: pointer; text-align: left; }
-  .sidebar-aux button:hover { color: var(--text); text-decoration: underline; }
+  /* Account + Log out — centered pill buttons. Gold-filled "Your account"
+     reads as a primary action; dark-filled "Log out" reads as secondary +
+     destructive so accidental logouts are less likely. */
+  .sidebar-aux {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 4px 0;
+    flex-wrap: wrap;
+  }
+  .sidebar-aux button {
+    padding: 8px 18px;
+    border-radius: 999px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    transition: opacity 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+  .sidebar-aux button#account-btn {
+    background: var(--gold);
+    color: var(--bg);
+    font-weight: 700;
+  }
+  .sidebar-aux button#account-btn:hover { opacity: 0.9; }
+  .sidebar-aux button#logout-btn,
+  .sidebar-aux button#reset-conv-btn {
+    background: rgba(0, 0, 0, 0.5);
+    color: var(--text);
+    border: 1px solid var(--gold-line);
+  }
+  .sidebar-aux button#logout-btn:hover,
+  .sidebar-aux button#reset-conv-btn:hover {
+    border-color: var(--gold);
+    background: rgba(0, 0, 0, 0.65);
+  }
+  :root[data-theme="light"] .sidebar-aux button#logout-btn,
+  :root[data-theme="light"] .sidebar-aux button#reset-conv-btn {
+    background: #1A1612;
+    color: #F0EAD6;
+    border-color: transparent;
+  }
+  :root[data-theme="light"] .sidebar-aux button#logout-btn:hover,
+  :root[data-theme="light"] .sidebar-aux button#reset-conv-btn:hover {
+    background: #2C2521;
+    border-color: transparent;
+  }
 
   .sidebar-footer {
     margin-top: 12px;
@@ -514,6 +561,8 @@
     margin-top: 2px;
   }
   .day-chip {
+    display: inline-block;
+    vertical-align: middle;
     padding: 6px 12px;
     border-radius: 20px;
     background: var(--gold-soft);
@@ -2203,7 +2252,7 @@ Begin.` },
           <div class="acct-section">
             <div class="acct-section-label">Your Work</div>
             <button class="acct-link" id="acct-export-btn" type="button" style="background: rgba(201, 168, 76, 0.08); cursor: pointer; font-family: inherit; text-align: left; width: 100%;">
-              Download as PDF <span class="acct-link-arrow" aria-hidden="true">↓</span>
+              Export your conversations <span class="acct-link-arrow" aria-hidden="true">↓</span>
             </button>
             <div class="acct-name-help" style="margin-top: 8px; line-height: 1.5;">
               Saves a beautifully formatted PDF of all your Reset conversations — easy to read on your phone, save to Google Drive, or share with someone you trust.
@@ -2439,7 +2488,7 @@ Begin.` },
               </div>
               <div>
                 <div class="day-chip">${DAY_META[state.currentDay - 1].label} · ${DAY_META[state.currentDay - 1].theme}</div>
-                ${state.currentDay === 3 ? `<button class="save-work-btn" id="save-work-btn" type="button" title="Download your conversations">Save your work <span aria-hidden="true">↓</span></button>` : ""}
+                ${state.currentDay === 3 ? `<button class="save-work-btn" id="save-work-btn" type="button" title="Download your conversations">Export your conversations <span aria-hidden="true">↓</span></button>` : ""}
               </div>
             </div>
             <div class="messages-wrap" id="messages-wrap">
