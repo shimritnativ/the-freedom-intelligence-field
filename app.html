@@ -78,10 +78,16 @@
     flex-shrink: 0;
   }
 
+  html, body { height: 100%; overflow: hidden; }
   #app {
     display: flex;
     flex-direction: column;
+    /* 100vh on iOS Safari includes the URL bar area, so the layout becomes
+       taller than the visible region and the top bar scrolls off-screen. The
+       dvh (dynamic viewport) unit adjusts as the browser chrome shows/hides.
+       Older browsers fall back to vh. */
     height: 100vh;
+    height: 100dvh;
     width: 100%;
     overflow: hidden;
   }
@@ -524,6 +530,10 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    /* iOS momentum scrolling — without this, touch scroll can get "stuck"
+       inside the messages container on mobile Safari. */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
     padding: 24px 0;
   }
   .messages-wrap::-webkit-scrollbar { width: 6px; }
@@ -994,7 +1004,9 @@
   @media (max-width: 560px) {
     #app {
       height: 100vh;
+      height: 100dvh;
       max-height: 100vh;
+      max-height: 100dvh;
       overflow: hidden;
     }
 
@@ -1037,7 +1049,9 @@
     }
     .mobile-overlay.open { opacity: 1; pointer-events: auto; }
 
-    /* Top bar (always visible on mobile) */
+    /* Top bar (always visible on mobile). Position sticky + z-index keeps it
+       pinned even if iOS Safari momentarily lets the layout shift while the
+       address bar collapses/expands. */
     .mobile-top-bar {
       display: flex;
       align-items: center;
@@ -1047,6 +1061,9 @@
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
       min-height: 52px;
+      position: sticky;
+      top: 0;
+      z-index: 60;
     }
     .mobile-menu-btn,
     .mobile-theme-btn {
