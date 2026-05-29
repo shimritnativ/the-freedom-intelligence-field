@@ -2159,108 +2159,94 @@ Begin.` },
     return `${minutes}m remaining`;
   }
 
-  // ===== Export your work — PDF =====
+  // ===== Export your work — native browser print =====
   // Pulls all-days conversation from /api/state, builds branded HTML, and
-  // renders it to a PDF with html2pdf.js (loaded lazily on first click so it
-  // doesn't slow down initial page load for visitors who never export).
+  // opens it in a hidden iframe with window.print(). The browser's native
+  // print dialog appears with "Save as PDF" pre-selected as destination.
+  // Uses the browser's built-in PDF engine so rendering is always correct
+  // — fonts, page breaks, colors, layout all native. Works on every browser
+  // including iOS Safari (Save to Files).
   const RESET_DAY_TITLES = { 1: "State Reset", 2: "Decision", 3: "Action" };
-  const HTML2PDF_CDN = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-
-  // Cache the loaded library across multiple export clicks.
-  let html2pdfPromise = null;
-  function loadHtml2Pdf() {
-    if (window.html2pdf) return Promise.resolve(window.html2pdf);
-    if (html2pdfPromise) return html2pdfPromise;
-    html2pdfPromise = new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = HTML2PDF_CDN;
-      script.async = true;
-      script.onload = () => resolve(window.html2pdf);
-      script.onerror = () => {
-        html2pdfPromise = null;
-        reject(new Error("html2pdf_load_failed"));
-      };
-      document.head.appendChild(script);
-    });
-    return html2pdfPromise;
-  }
 
   async function onExportWorkClick(e) {
     if (e && e.preventDefault) e.preventDefault();
     if (!state.sessionToken) return;
-    // Show a quick "Preparing…" state on whichever button was clicked.
     const btn = e && e.currentTarget;
     const originalLabel = btn ? btn.innerHTML : null;
     if (btn) { btn.disabled = true; btn.innerHTML = "Preparing…"; }
     try {
-      const [data, html2pdf] = await Promise.all([
-        apiState(state.sessionToken),
-        loadHtml2Pdf(),
-      ]);
+      const data = await apiState(state.sessionToken);
       if (data && data.expired) {
         alert("Your access window has closed.");
         return;
       }
       const msgs = (data && data.messages) || [];
       const htmlString = buildResetExportHtml(msgs, state.displayName);
-
-      // html2pdf needs a real DOM node. The container sits invisibly on the
-      // page (opacity 0) so the user doesn't see a flash of the PDF content,
-      // but html2canvas's onclone callback bumps the cloned copy back to full
-      // opacity so the capture isn't all-white. Unique id lets onclone find
-      // the right element to unhide.
-      const containerId = "pdf-export-" + Date.now();
-      const container = document.createElement("div");
-      container.id = containerId;
-      container.innerHTML = htmlString;
-      container.style.position = "fixed";
-      container.style.top = "0";
-      container.style.left = "0";
-      container.style.width = "180mm"; // A4 width minus margins
-      container.style.opacity = "0";
-      container.style.pointerEvents = "none";
-      container.style.zIndex = "-1";
-      container.style.background = "#FFFFFF";
-      document.body.appendChild(container);
-      // Give the browser two frames to compute layout before html2canvas reads it.
-      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-
-      const filename = "freedom-intelligence-field-" + new Date().toISOString().slice(0, 10) + ".pdf";
-      try {
-        await html2pdf().set({
-          margin: [15, 15, 18, 15],
-          filename: filename,
-          image: { type: "jpeg", quality: 0.95 },
-          html2canvas: {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: "#FFFFFF",
-            // CRITICAL: html2canvas otherwise honors the container's opacity:0
-            // and renders every pixel as transparent (= blank white PDF). The
-            // onclone callback runs on the document html2canvas actually
-            // renders, so we unhide the clone there. The on-page container
-            // stays invisible to the user.
-            onclone: function (clonedDoc) {
-              const el = clonedDoc.getElementById(containerId);
-              if (el) {
-                el.style.opacity = "1";
-                el.style.position = "static";
-                el.style.zIndex = "auto";
-              }
-            },
-          },
-          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-          pagebreak: { mode: ["css", "legacy"] },
-        }).from(container).save();
-      } finally {
-        document.body.removeChild(container);
-      }
+      const dateSuffix = new Date().toISOString().slice(0, 10);
+      const docTitle = "freedom-intelligence-field-" + dateSuffix;
+      await openPrintDialog(htmlString, docTitle);
     } catch (err) {
       console.error("export_failed", err);
       alert("Could not save your work right now. Please try again in a moment.");
     } finally {
       if (btn && originalLabel != null) { btn.disabled = false; btn.innerHTML = originalLabel; }
     }
+  }
+
+  // Create a hidden iframe, write the branded HTML into it, wait for it to
+  // load, then trigger the browser's print dialog from inside the iframe.
+  // The document.title becomes the default filename the browser suggests
+  // when the user picks "Save as PDF".
+  function openPrintDialog(htmlString, docTitle) {
+    return new Promise((resolve) => {
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "fixed";
+      iframe.style.right = "0";
+      iframe.style.bottom = "0";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "0";
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      doc.open();
+      doc.write(
+        "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>" +
+        escapeHtml(docTitle) +
+        "</title><style>" +
+        "@page { size: A4; margin: 15mm 15mm 18mm 15mm; }" +
+        "body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }" +
+        "</style></head><body>" +
+        htmlString +
+        "</body></html>"
+      );
+      doc.close();
+
+      // Wait for the iframe content (and any fonts) to be fully ready
+      // before calling print(), otherwise the first call may render blank.
+      const triggerPrint = () => {
+        try {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        } catch (err) {
+          console.error("print_failed", err);
+        }
+        // Give the browser a moment to open the print dialog before
+        // removing the iframe (some browsers cancel the dialog if the
+        // source is removed too quickly).
+        setTimeout(() => {
+          if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+          resolve();
+        }, 2000);
+      };
+      if (doc.readyState === "complete") {
+        setTimeout(triggerPrint, 200);
+      } else {
+        iframe.addEventListener("load", () => setTimeout(triggerPrint, 200), { once: true });
+        // Safety timeout in case load never fires.
+        setTimeout(triggerPrint, 1200);
+      }
+    });
   }
 
   function buildResetExportHtml(messages, displayName) {
