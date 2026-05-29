@@ -2043,11 +2043,16 @@ Begin.` },
       const htmlString = buildResetExportHtml(msgs, state.displayName);
       const container = document.createElement("div");
       container.innerHTML = htmlString;
-      container.style.position = "absolute";
-      container.style.left = "-9999px";
+      container.style.position = "fixed";
       container.style.top = "0";
+      container.style.left = "0";
       container.style.width = "180mm";
+      container.style.opacity = "0";
+      container.style.pointerEvents = "none";
+      container.style.zIndex = "-99999";
+      container.style.background = "#FFFFFF";
       document.body.appendChild(container);
+      await new Promise(r => setTimeout(r, 50));
       const filename = "freedom-intelligence-field-" + new Date().toISOString().slice(0, 10) + ".pdf";
       try {
         await html2pdf().set({
