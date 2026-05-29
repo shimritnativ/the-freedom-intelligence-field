@@ -2204,15 +2204,23 @@ Begin.` },
       const msgs = (data && data.messages) || [];
       const htmlString = buildResetExportHtml(msgs, state.displayName);
 
-      // html2pdf needs a real DOM node; render into an off-screen wrapper at
-      // A4 page width so the layout matches what the user will see in the PDF.
+      // html2pdf needs a real DOM node. We render into a hidden wrapper at A4
+      // width — using position:fixed + opacity:0 instead of left:-9999px so
+      // html2canvas can actually capture the content. (Off-screen elements
+      // sometimes render as blank pages.)
       const container = document.createElement("div");
       container.innerHTML = htmlString;
-      container.style.position = "absolute";
-      container.style.left = "-9999px";
+      container.style.position = "fixed";
       container.style.top = "0";
+      container.style.left = "0";
       container.style.width = "180mm"; // A4 width minus margins
+      container.style.opacity = "0";
+      container.style.pointerEvents = "none";
+      container.style.zIndex = "-99999";
+      container.style.background = "#FFFFFF";
       document.body.appendChild(container);
+      // Give the browser a tick to compute layout before html2canvas reads it.
+      await new Promise(r => setTimeout(r, 50));
 
       const filename = "freedom-intelligence-field-" + new Date().toISOString().slice(0, 10) + ".pdf";
       try {
