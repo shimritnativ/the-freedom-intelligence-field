@@ -81,6 +81,7 @@ export default async function handler(req, res) {
       messages: messages.map((m) => ({
         role: m.role,
         content: m.content,
+        dayAtSend: m.day_at_send,
       })),
     });
   } catch (err) {
