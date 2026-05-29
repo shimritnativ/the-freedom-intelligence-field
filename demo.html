@@ -636,6 +636,55 @@
   .msg-cta-btn:active { transform: scale(0.98); }
   .msg-cta-arrow { font-size: 14px; line-height: 1; }
 
+  /* MP3 audio download card (Day 3 Living Power Declaration) */
+  .mp3-card {
+    display: block;
+    margin: 14px 0 4px;
+    border-radius: 14px;
+    border: 1px solid var(--gold-line);
+    background: var(--gold-soft);
+    padding: 14px 16px;
+    max-width: 420px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  .mp3-card-inner { display: flex; align-items: center; gap: 14px; }
+  .mp3-orb {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mp3-orb.loading {
+    background: transparent;
+    border: 2px solid var(--gold-line);
+    border-top-color: var(--gold);
+    animation: mp3spin 0.9s linear infinite;
+  }
+  .mp3-orb.ready { background: var(--gold); color: var(--bg); }
+  .mp3-orb.error { background: transparent; border: 2px solid var(--text-mute); }
+  .mp3-orb-arrow { font-size: 18px; font-weight: 700; line-height: 1; }
+  @keyframes mp3spin { to { transform: rotate(360deg); } }
+  .mp3-info { flex: 1; min-width: 0; }
+  .mp3-title { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.35; }
+  .mp3-meta { font-size: 11px; color: var(--text-dim); margin-top: 3px; letter-spacing: 0.02em; }
+  .mp3-download-btn {
+    padding: 8px 16px;
+    background: var(--gold);
+    color: var(--bg);
+    border: none;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s ease;
+  }
+  .mp3-download-btn:hover { opacity: 0.9; }
+  .mp3-download-btn:disabled { opacity: 0.5; cursor: default; }
+
   .typing {
     display: flex; gap: 5px; align-items: center;
     padding: 12px 16px;
@@ -1657,8 +1706,6 @@ Begin.` },
     let html = escapeHtml(String(text || ""));
 
     // CTA button syntax: [[button:Label|https://url]] -> in-brand gold button.
-    // escapeHtml has already run, so Label/URL arrive as safe text. Only
-    // http(s) destinations are allowed; quotes are encoded before the href.
     html = html.replace(/\[\[button:([^|\]]+)\|([^\]]+)\]\]/g, function (m, label, url) {
       const u = String(url).trim();
       if (!/^https?:\/\//i.test(u)) return label.trim();
@@ -1666,6 +1713,24 @@ Begin.` },
       return '<a class="msg-cta-btn" href="' + safeHref + '" target="_blank" rel="noopener noreferrer">'
         + label.trim()
         + '<span class="msg-cta-arrow" aria-hidden="true">→</span></a>';
+    });
+
+    // MP3 audio download syntax: [[mp3:Title|Text to speak]]. Renders a
+    // loading card; processMp3Cards() auto-fires /api/speak after render.
+    html = html.replace(/\[\[mp3:([^|\]]+)\|([\s\S]+?)\]\]/g, function (m, title, text) {
+      const t = title.trim();
+      const txt = text.trim();
+      if (!t || !txt) return "";
+      try {
+        const b64Text = btoa(unescape(encodeURIComponent(txt)));
+        return '<div class="mp3-card" data-mp3-title="' + t.replace(/"/g, "&quot;") + '" data-mp3-text-b64="' + b64Text + '">'
+          + '<div class="mp3-card-inner">'
+          + '<div class="mp3-orb loading" aria-hidden="true"></div>'
+          + '<div class="mp3-info">'
+          + '<div class="mp3-title">Generating in Shimrit’s voice…</div>'
+          + '<div class="mp3-meta">about 3 seconds</div>'
+          + '</div></div></div>';
+      } catch (e) { return ""; }
     });
 
     // Inline formatting. Order matters: bold before italic so ** doesn't
@@ -1723,6 +1788,79 @@ Begin.` },
     flushList();
 
     return blocks.join("");
+  }
+
+  // ===== MP3 audio card generation =====
+  const mp3BlobCache = new Map();
+  function processMp3Cards() {
+    document.querySelectorAll(".mp3-card:not(.mp3-processed)").forEach(card => {
+      card.classList.add("mp3-processed");
+      const title = card.getAttribute("data-mp3-title") || "Your audio";
+      const b64 = card.getAttribute("data-mp3-text-b64") || "";
+      let text = "";
+      try { text = decodeURIComponent(escape(atob(b64))); } catch (e) { text = ""; }
+      if (!text || !state.sessionToken) { renderMp3CardError(card, title); return; }
+      generateMp3Audio(card, title, text);
+    });
+  }
+  async function generateMp3Audio(card, title, text) {
+    try {
+      const res = await fetch(API_BASE + "/speak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken },
+        body: JSON.stringify({ text })
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || ("speak_" + res.status));
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      mp3BlobCache.set(card, url);
+      const audio = new Audio();
+      audio.preload = "metadata";
+      const durationSec = await new Promise(resolve => {
+        audio.addEventListener("loadedmetadata", () => resolve(Math.round(audio.duration || 0)), { once: true });
+        audio.addEventListener("error", () => resolve(0), { once: true });
+        audio.src = url;
+        setTimeout(() => resolve(Math.round(audio.duration || 0)), 4000);
+      });
+      renderMp3CardReady(card, title, url, durationSec);
+    } catch (err) {
+      console.error("mp3_generation_failed", err);
+      renderMp3CardError(card, title);
+    }
+  }
+  function renderMp3CardReady(card, title, url, durationSec) {
+    const meta = durationSec > 0 ? (durationSec + " seconds · Shimrit’s voice · MP3") : "Shimrit’s voice · MP3";
+    const filename = (title || "audio").replace(/[^a-z0-9-_]+/gi, "-").replace(/^-+|-+$/g, "") + ".mp3";
+    card.innerHTML =
+      '<div class="mp3-card-inner">' +
+        '<div class="mp3-orb ready" aria-hidden="true"><span class="mp3-orb-arrow">↓</span></div>' +
+        '<div class="mp3-info">' +
+          '<div class="mp3-title">' + escapeHtml(title) + '</div>' +
+          '<div class="mp3-meta">' + escapeHtml(meta) + '</div>' +
+        '</div>' +
+        '<button type="button" class="mp3-download-btn" data-mp3-filename="' + escapeHtml(filename) + '">Download</button>' +
+      '</div>';
+    const btn = card.querySelector(".mp3-download-btn");
+    if (btn) {
+      btn.addEventListener("click", () => {
+        const a = document.createElement("a");
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      });
+    }
+  }
+  function renderMp3CardError(card, title) {
+    card.innerHTML =
+      '<div class="mp3-card-inner">' +
+        '<div class="mp3-orb error" aria-hidden="true"></div>' +
+        '<div class="mp3-info">' +
+          '<div class="mp3-title">' + escapeHtml(title) + '</div>' +
+          '<div class="mp3-meta">Audio not available right now. Refresh to try again.</div>' +
+        '</div>' +
+      '</div>';
   }
 
   // ===== Renderers =====
@@ -1996,7 +2134,10 @@ Begin.` },
     function messageBlock(m) {
       const speaker = m.role === "user" ? "You" : "The Field";
       const speakerColor = m.role === "user" ? "#1A1612" : "#9A6E10";
-      let content = String(m.content || "").replace(/\[\[button:[^\]]+\]\]/g, "").trim();
+      let content = String(m.content || "")
+        .replace(/\[\[button:[^\]]+\]\]/g, "")
+        .replace(/\[\[mp3:[^|\]]+\|[\s\S]+?\]\]/g, "")
+        .trim();
       if (!content) return "";
       const body = renderMessageBodyHtml(content);
       return `
@@ -2633,6 +2774,8 @@ Begin.` },
     wrap.innerHTML = html;
     const wrapper = document.getElementById("messages-wrap");
     if (wrapper) wrapper.scrollTop = wrapper.scrollHeight;
+    // Scan any newly rendered [[mp3:...]] cards and start audio generation.
+    processMp3Cards();
   }
 
   // ===== Mobile chrome handlers =====
