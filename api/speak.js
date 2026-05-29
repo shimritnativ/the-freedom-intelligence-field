@@ -27,9 +27,11 @@ function applyCors(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-session-token");
 }
 
-// Cap text length to prevent runaway costs. A 1000-char reply is already
-// generous for a single AI message and protects against accidental spam.
-const MAX_TEXT_LENGTH = 1500;
+// Cap text length to prevent runaway costs. The Day 3 Living Power
+// Declaration runs ~60-90 seconds of spoken audio (~600-1200 chars) and we
+// leave headroom for participant message TTS and slightly longer Day 3
+// declarations. 2500 chars is roughly 3 minutes max at ~10 chars/sec.
+const MAX_TEXT_LENGTH = 2500;
 
 export default async function handler(req, res) {
   applyCors(req, res);
