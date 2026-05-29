@@ -2041,7 +2041,9 @@ Begin.` },
       if (data && data.expired) { alert("Your access window has closed."); return; }
       const msgs = (data && data.messages) || [];
       const htmlString = buildResetExportHtml(msgs, state.displayName);
+      const containerId = "pdf-export-" + Date.now();
       const container = document.createElement("div");
+      container.id = containerId;
       container.innerHTML = htmlString;
       container.style.position = "fixed";
       container.style.top = "0";
@@ -2049,17 +2051,29 @@ Begin.` },
       container.style.width = "180mm";
       container.style.opacity = "0";
       container.style.pointerEvents = "none";
-      container.style.zIndex = "-99999";
+      container.style.zIndex = "-1";
       container.style.background = "#FFFFFF";
       document.body.appendChild(container);
-      await new Promise(r => setTimeout(r, 50));
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
       const filename = "freedom-intelligence-field-" + new Date().toISOString().slice(0, 10) + ".pdf";
       try {
         await html2pdf().set({
           margin: [15, 15, 18, 15],
           filename: filename,
           image: { type: "jpeg", quality: 0.95 },
-          html2canvas: { scale: 2, useCORS: true, backgroundColor: "#FFFFFF" },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: "#FFFFFF",
+            onclone: function (clonedDoc) {
+              const el = clonedDoc.getElementById(containerId);
+              if (el) {
+                el.style.opacity = "1";
+                el.style.position = "static";
+                el.style.zIndex = "auto";
+              }
+            },
+          },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
           pagebreak: { mode: ["css", "legacy"] },
         }).from(container).save();
