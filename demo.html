@@ -3035,7 +3035,14 @@ Begin.` },
   }
 
   function onInputKeyDown(e) {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSendClick(); }
+    if (e.key !== "Enter" || e.shiftKey) return;
+    // On mobile (touch devices), Enter inserts a line break instead of
+    // sending — matches iMessage/WhatsApp expectations. Desktop sends on
+    // Enter as before.
+    const isMobile = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+    if (isMobile) return;
+    e.preventDefault();
+    onSendClick();
   }
 
   async function onSendClick() {
