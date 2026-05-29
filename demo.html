@@ -1148,7 +1148,8 @@
       z-index: 60;
     }
     .mobile-menu-btn,
-    .mobile-theme-btn {
+    .mobile-theme-btn,
+    .mobile-export-btn {
       width: 36px; height: 36px;
       background: transparent;
       border: 1px solid var(--gold-line);
@@ -1161,7 +1162,9 @@
       cursor: pointer;
     }
     .mobile-menu-btn:active,
-    .mobile-theme-btn:active { background: var(--gold-soft); }
+    .mobile-theme-btn:active,
+    .mobile-export-btn:active { background: var(--gold-soft); }
+    .mobile-export-btn svg { width: 18px; height: 18px; }
 
     /* At-a-glance section indicator: DAY 1 / 2 / 3 or UNLIMITED. */
     .mobile-section-pill {
@@ -2327,6 +2330,17 @@ Begin.` },
       pillStyle = "unlimited";
     }
 
+    const showMobileExport = state.view === "chat" && state.currentDay === 3;
+    const exportBtn = showMobileExport
+      ? `<button class="mobile-export-btn" id="mobile-export-btn" type="button" aria-label="Export your conversations" title="Export your conversations">
+           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+             <polyline points="7 10 12 15 17 10"/>
+             <line x1="12" y1="15" x2="12" y2="3"/>
+           </svg>
+         </button>`
+      : "";
+
     return `
       <div class="mobile-top-bar">
         <button class="mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Open menu">☰</button>
@@ -2338,6 +2352,7 @@ Begin.` },
             <span class="mobile-brand-sub">${escapeHtml(subtitle)}</span>
           </div>
         </div>
+        ${exportBtn}
         <button class="mobile-theme-btn" id="mobile-theme-btn" type="button" aria-label="Toggle theme">${themeIcon}</button>
       </div>
     `;
@@ -2637,6 +2652,8 @@ Begin.` },
     if (mobileMenuBtn) mobileMenuBtn.addEventListener("click", onMobileMenuClick);
     const mobileThemeBtn = document.getElementById("mobile-theme-btn");
     if (mobileThemeBtn) mobileThemeBtn.addEventListener("click", onThemeToggle);
+    const mobileExportBtn = document.getElementById("mobile-export-btn");
+    if (mobileExportBtn) mobileExportBtn.addEventListener("click", onExportWorkClick);
     const mobileOverlay = document.getElementById("mobile-overlay");
     if (mobileOverlay) mobileOverlay.addEventListener("click", onMobileOverlayClick);
     const mobileNewChat = document.getElementById("mobile-new-chat-btn");
