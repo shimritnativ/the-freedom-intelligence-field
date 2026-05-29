@@ -69,18 +69,29 @@ export default async function handler(req, res) {
     }
 
     // ElevenLabs TTS endpoint. Returns audio/mpeg bytes directly.
-    // Using eleven_flash_v2_5: supports 32 languages including Hebrew, low
-    // latency, and works with cloned voices like Shimrit's. Matches our
-    // Whisper auto-detect flow so the AI can answer in any language the
-    // participant speaks and the response is read back in that language.
+    //
+    // Model choice: eleven_multilingual_v2 — highest-quality model in the
+    // catalog, with the most natural intonation and prosody. It is slower
+    // than flash_v2_5 (~5s vs ~2s for a typical message) but the audio is
+    // dramatically less robotic. Worth the latency for a brand voice that
+    // members will keep and listen to daily. Supports 29 languages including
+    // Hebrew, so the auto-detect language flow still works.
+    //
+    // Voice settings, tuned for Shimrit's grounded/warm register:
+    //   stability 0.40 — lower than default 0.5 to allow more emotional
+    //     range and natural inflection without drifting from her voice.
+    //   similarity_boost 0.85 — high so the audio stays close to her
+    //     actual vocal character (lower values let the model improvise).
+    //   style 0.25 — slight expression. Higher values get theatrical.
+    //   use_speaker_boost true — sharpens the cloned voice's presence.
     const ttsUrl = `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`;
     const ttsBody = {
       text: cleanText,
-      model_id: "eleven_flash_v2_5",
+      model_id: "eleven_multilingual_v2",
       voice_settings: {
-        stability: 0.5,
-        similarity_boost: 0.75,
-        style: 0.0,
+        stability: 0.40,
+        similarity_boost: 0.85,
+        style: 0.25,
         use_speaker_boost: true
       }
     };
