@@ -2045,17 +2045,18 @@ Begin.` },
       const container = document.createElement("div");
       container.id = containerId;
       container.innerHTML = htmlString;
-      container.style.position = "fixed";
-      container.style.top = "0";
+      container.style.position = "absolute";
+      container.style.top = "-99999px";
       container.style.left = "0";
       container.style.width = "180mm";
-      container.style.opacity = "0";
-      container.style.pointerEvents = "none";
-      container.style.zIndex = "-1";
       container.style.background = "#FFFFFF";
+      container.style.pointerEvents = "none";
       document.body.appendChild(container);
-      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      await new Promise(r => setTimeout(r, 300));
       const filename = "freedom-intelligence-field-" + new Date().toISOString().slice(0, 10) + ".pdf";
+      const containerHeightPx = container.scrollHeight || container.offsetHeight || 1000;
+      const containerWidthPx = container.scrollWidth || container.offsetWidth || 680;
+      console.log("PDF export: container dimensions =", containerWidthPx, "x", containerHeightPx);
       try {
         await html2pdf().set({
           margin: [15, 15, 18, 15],
@@ -2064,13 +2065,21 @@ Begin.` },
           html2canvas: {
             scale: 2,
             useCORS: true,
+            allowTaint: true,
             backgroundColor: "#FFFFFF",
+            logging: true,
+            width: containerWidthPx,
+            height: containerHeightPx,
+            windowWidth: containerWidthPx,
+            windowHeight: containerHeightPx,
             onclone: function (clonedDoc) {
               const el = clonedDoc.getElementById(containerId);
               if (el) {
-                el.style.opacity = "1";
                 el.style.position = "static";
-                el.style.zIndex = "auto";
+                el.style.top = "auto";
+                el.style.left = "auto";
+                el.style.opacity = "1";
+                el.style.visibility = "visible";
               }
             },
           },
