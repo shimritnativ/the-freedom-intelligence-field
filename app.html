@@ -3248,7 +3248,15 @@ Begin.` },
   }
 
   function onInputKeyDown(e) {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSendClick(); }
+    if (e.key !== "Enter" || e.shiftKey) return;
+    // On mobile (touch devices with no fine pointer), Enter inserts a line
+    // break — matches user expectations from iMessage / WhatsApp where the
+    // Return key newlines and the send arrow sends. On desktop, Enter still
+    // sends (the explicit pattern people learn from chat apps).
+    const isMobile = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+    if (isMobile) return; // let the browser insert a newline naturally
+    e.preventDefault();
+    onSendClick();
   }
 
   async function onSendClick() {
