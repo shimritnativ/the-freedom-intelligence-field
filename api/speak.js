@@ -33,6 +33,33 @@ function applyCors(req, res) {
 // declarations. 2500 chars is roughly 3 minutes max at ~10 chars/sec.
 const MAX_TEXT_LENGTH = 2500;
 
+// Prepare assistant text for natural spoken delivery in Shimrit's voice.
+// Without this preprocessing the TTS engine reads literal underscores and
+// the in-app CTA tokens character-by-character ("underscore underscore",
+// "double bracket button colon...") which sounds robotic and broken.
+function prepareTextForTts(text) {
+  let prepared = String(text || "");
+
+  // 1. Strip [[mp3:Title|Text]] tokens entirely — they exist only to render
+  //    the in-app audio card; nothing in them should be spoken.
+  prepared = prepared.replace(/\[\[mp3:[^|\]]+\|[\s\S]+?\]\]/g, "");
+
+  // 2. Replace [[button:Label|URL]] with just the Label so the spoken
+  //    transcript still mentions the call to action without reading the URL.
+  prepared = prepared.replace(/\[\[button:([^|\]]+)\|[^\]]+\]\]/g, "$1");
+
+  // 3. Fill-in-the-blank: any run of 2+ underscores becomes a deliberate
+  //    spoken pause so the listener can silently complete the sentence in
+  //    their own voice. ElevenLabs multilingual_v2 + turbo_v2_5 honor the
+  //    <break time="..."/> SSML tag (max 3s).
+  prepared = prepared.replace(/_{2,}/g, '<break time="1.2s"/>');
+
+  // 4. Normalize whitespace left over from token removal.
+  prepared = prepared.replace(/\s{2,}/g, " ").trim();
+
+  return prepared;
+}
+
 export default async function handler(req, res) {
   applyCors(req, res);
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -60,7 +87,10 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "missing_text" });
     }
 
-    const cleanText = text.trim();
+    // Preprocess for natural spoken delivery (pauses, token stripping).
+    // Length cap applies AFTER preprocessing since SSML break tags add a
+    // handful of chars but the spoken length is what matters for cost.
+    const cleanText = prepareTextForTts(text);
     if (cleanText.length === 0) {
       return res.status(400).json({ error: "empty_text" });
     }
