@@ -2019,7 +2019,10 @@ Begin.` },
       const data = await apiState(state.sessionToken);
       if (data && data.expired) { alert("Your access window has closed."); return; }
       const msgs = (data && data.messages) || [];
-      const htmlString = buildResetExportHtml(msgs, state.displayName);
+      // Use server-reported tier so the Unlimited upsell appears for preview
+      // members even when state.tier is out of sync (demo defaults to full).
+      const exportTier = (data && data.tier) || state.tier;
+      const htmlString = buildResetExportHtml(msgs, state.displayName, exportTier);
       const dateSuffix = new Date().toISOString().slice(0, 10);
       const docTitle = "freedom-intelligence-field-" + dateSuffix;
       await openPrintDialog(htmlString, docTitle);
@@ -2073,7 +2076,8 @@ Begin.` },
     });
   }
 
-  function buildResetExportHtml(messages, displayName) {
+  function buildResetExportHtml(messages, displayName, tier) {
+    const effectiveTier = tier || state.tier;
     const now = new Date();
     const dateStr = now.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
     const owner = displayName ? escapeHtml(displayName) + "'s" : "Your";
@@ -2166,7 +2170,7 @@ Begin.` },
         </div>`;
     }
     const emptyBlock = `<div style="text-align:center; color:rgba(26,22,18,0.55); padding:60px 20px; font-family:Georgia,'Times New Roman',serif; font-style:italic;">No conversations recorded yet. Come back after a session.</div>`;
-    const upsellBlock = (state.tier === "preview") ? `
+    const upsellBlock = (effectiveTier === "preview") ? `
       <div style="margin:36px 0 18px; padding:26px 24px; background:rgba(201,168,76,0.06); border:1.5px solid #C9A84C; border-radius:12px; text-align:center; page-break-inside:avoid;">
         <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.22em; color:#C9A84C; text-transform:uppercase; margin-bottom:12px;">The Field — Unlimited</div>
         <div style="font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:24px; color:#1A1612; margin-bottom:10px;">Continue the work.</div>
@@ -2184,7 +2188,7 @@ Begin.` },
         </div>
         ${anyContent ? daysHtml : emptyBlock}
         ${upsellBlock}
-        <div style="text-align:center; padding:28px 20px 14px; margin-top:${state.tier === "preview" ? "20" : "30"}px; border-top:1px solid rgba(26,22,18,0.15);">
+        <div style="text-align:center; padding:28px 20px 14px; margin-top:${effectiveTier === "preview" ? "20" : "30"}px; border-top:1px solid rgba(26,22,18,0.15);">
           <div style="font-family:Georgia,'Times New Roman',serif; font-size:11px; color:rgba(26,22,18,0.5); font-style:italic; line-height:1.6;">A record of your work with the Freedom Intelligence Field<br/>Master Your Path</div>
         </div>
       </div>`;
