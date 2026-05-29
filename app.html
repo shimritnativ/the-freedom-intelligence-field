@@ -1225,6 +1225,8 @@
     .mobile-theme-btn:active,
     .mobile-export-btn:active { background: var(--gold-soft); }
     .mobile-export-btn svg { width: 18px; height: 18px; }
+    .mobile-export-btn .export-spinner { animation: export-spin 0.9s linear infinite; transform-origin: center; }
+    @keyframes export-spin { to { transform: rotate(360deg); } }
 
     /* At-a-glance section indicator: DAY 1 / 2 / 3 or UNLIMITED. */
     .mobile-section-pill {
@@ -2143,7 +2145,7 @@ Begin.` },
   // yearly offer URL changes. Cancel goes to Kajabi's card-management page,
   // which is where customers also stop recurring charges.
   const YEARLY_UPGRADE_URL = "https://www.shimritnativ.com/offers/ZM2sfLwN";
-  const CANCEL_BILLING_URL = "https://www.shimritnativ.com/settings/cards";
+  const CANCEL_BILLING_URL = "https://masteryourpath.thrivecart.com/updateinfo/";
   const SHIMRIT_ABOUT_URL = "https://www.shimritnativ.com/about";
 
   // Friendly "18h 32m remaining" / "2d 4h" countdown for the Reset card.
@@ -2176,7 +2178,16 @@ Begin.` },
     if (!state.sessionToken) return;
     const btn = e && e.currentTarget;
     const originalLabel = btn ? btn.innerHTML : null;
-    if (btn) { btn.disabled = true; btn.innerHTML = "Preparing…"; }
+    if (btn) {
+      btn.disabled = true;
+      // Mobile icon button is only 36x36 — "Preparing…" overflows it.
+      // Show a spinner SVG instead so the loading state stays inside the pill.
+      if (btn.id === "mobile-export-btn") {
+        btn.innerHTML = '<svg class="export-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M21 12a9 9 0 0 0-9-9"/></svg>';
+      } else {
+        btn.innerHTML = "Preparing…";
+      }
+    }
     try {
       const data = await apiState(state.sessionToken);
       if (data && data.expired) {
@@ -2231,20 +2242,32 @@ Begin.` },
 
       // Wait for the iframe content (and any fonts) to be fully ready
       // before calling print(), otherwise the first call may render blank.
+      let cleaned = false;
+      const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        resolve();
+      };
       const triggerPrint = () => {
         try {
+          // Listen for afterprint so we keep the iframe alive for the entire
+          // duration of the print dialog. iOS Safari shows an "Allow auto-
+          // print?" warning on repeated exports; if we remove the iframe on
+          // a fixed timer, by the time the user taps Allow the iframe is
+          // already gone and the preview shows blank.
+          try {
+            iframe.contentWindow.addEventListener("afterprint", cleanup, { once: true });
+          } catch (err) { /* iframe may not support events; rely on timeout */ }
           iframe.contentWindow.focus();
           iframe.contentWindow.print();
         } catch (err) {
           console.error("print_failed", err);
         }
-        // Give the browser a moment to open the print dialog before
-        // removing the iframe (some browsers cancel the dialog if the
-        // source is removed too quickly).
-        setTimeout(() => {
-          if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-          resolve();
-        }, 2000);
+        // Safety net: remove the iframe after 60s no matter what, so it
+        // doesn't leak if afterprint never fires (some browsers don't fire
+        // it when the user cancels the print dialog).
+        setTimeout(cleanup, 60000);
       };
       if (doc.readyState === "complete") {
         setTimeout(triggerPrint, 200);
