@@ -1165,6 +1165,8 @@
     .mobile-theme-btn:active,
     .mobile-export-btn:active { background: var(--gold-soft); }
     .mobile-export-btn svg { width: 18px; height: 18px; }
+    .mobile-export-btn .export-spinner { animation: export-spin 0.9s linear infinite; transform-origin: center; }
+    @keyframes export-spin { to { transform: rotate(360deg); } }
 
     /* At-a-glance section indicator: DAY 1 / 2 / 3 or UNLIMITED. */
     .mobile-section-pill {
@@ -1992,7 +1994,7 @@ Begin.` },
 
   // ===== Your Account modal =====
   const YEARLY_UPGRADE_URL = "https://www.shimritnativ.com/offers/ZM2sfLwN";
-  const CANCEL_BILLING_URL = "https://www.shimritnativ.com/settings/cards";
+  const CANCEL_BILLING_URL = "https://masteryourpath.thrivecart.com/updateinfo/";
   const SHIMRIT_ABOUT_URL = "https://www.shimritnativ.com/about";
 
   function formatTimeRemaining(ms) {
@@ -2017,7 +2019,14 @@ Begin.` },
     if (!state.sessionToken) return;
     const btn = e && e.currentTarget;
     const originalLabel = btn ? btn.innerHTML : null;
-    if (btn) { btn.disabled = true; btn.innerHTML = "Preparing…"; }
+    if (btn) {
+      btn.disabled = true;
+      if (btn.id === "mobile-export-btn") {
+        btn.innerHTML = '<svg class="export-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M21 12a9 9 0 0 0-9-9"/></svg>';
+      } else {
+        btn.innerHTML = "Preparing…";
+      }
+    }
     try {
       const data = await apiState(state.sessionToken);
       if (data && data.expired) { alert("Your access window has closed."); return; }
@@ -2060,15 +2069,22 @@ Begin.` },
         "</body></html>"
       );
       doc.close();
+      let cleaned = false;
+      const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        resolve();
+      };
       const triggerPrint = () => {
         try {
+          try {
+            iframe.contentWindow.addEventListener("afterprint", cleanup, { once: true });
+          } catch (err) { /* fallback to timeout */ }
           iframe.contentWindow.focus();
           iframe.contentWindow.print();
         } catch (err) { console.error("print_failed", err); }
-        setTimeout(() => {
-          if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-          resolve();
-        }, 2000);
+        setTimeout(cleanup, 60000);
       };
       if (doc.readyState === "complete") {
         setTimeout(triggerPrint, 200);
