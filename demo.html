@@ -2006,26 +2006,8 @@ Begin.` },
     return `${minutes}m remaining`;
   }
 
-  // ===== Export your work — PDF =====
+  // ===== Export your work — native browser print =====
   const RESET_DAY_TITLES = { 1: "State Reset", 2: "Decision", 3: "Action" };
-  const HTML2PDF_CDN = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-  let html2pdfPromise = null;
-  function loadHtml2Pdf() {
-    if (window.html2pdf) return Promise.resolve(window.html2pdf);
-    if (html2pdfPromise) return html2pdfPromise;
-    html2pdfPromise = new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = HTML2PDF_CDN;
-      script.async = true;
-      script.onload = () => resolve(window.html2pdf);
-      script.onerror = () => {
-        html2pdfPromise = null;
-        reject(new Error("html2pdf_load_failed"));
-      };
-      document.head.appendChild(script);
-    });
-    return html2pdfPromise;
-  }
 
   async function onExportWorkClick(e) {
     if (e && e.preventDefault) e.preventDefault();
@@ -2034,67 +2016,61 @@ Begin.` },
     const originalLabel = btn ? btn.innerHTML : null;
     if (btn) { btn.disabled = true; btn.innerHTML = "Preparing…"; }
     try {
-      const [data, html2pdf] = await Promise.all([
-        apiState(state.sessionToken),
-        loadHtml2Pdf(),
-      ]);
+      const data = await apiState(state.sessionToken);
       if (data && data.expired) { alert("Your access window has closed."); return; }
       const msgs = (data && data.messages) || [];
       const htmlString = buildResetExportHtml(msgs, state.displayName);
-      const containerId = "pdf-export-" + Date.now();
-      const container = document.createElement("div");
-      container.id = containerId;
-      container.innerHTML = htmlString;
-      container.style.position = "absolute";
-      container.style.top = "-99999px";
-      container.style.left = "0";
-      container.style.width = "180mm";
-      container.style.background = "#FFFFFF";
-      container.style.pointerEvents = "none";
-      document.body.appendChild(container);
-      await new Promise(r => setTimeout(r, 300));
-      const filename = "freedom-intelligence-field-" + new Date().toISOString().slice(0, 10) + ".pdf";
-      const containerHeightPx = container.scrollHeight || container.offsetHeight || 1000;
-      const containerWidthPx = container.scrollWidth || container.offsetWidth || 680;
-      console.log("PDF export: container dimensions =", containerWidthPx, "x", containerHeightPx);
-      try {
-        await html2pdf().set({
-          margin: [15, 15, 18, 15],
-          filename: filename,
-          image: { type: "jpeg", quality: 0.95 },
-          html2canvas: {
-            scale: 2,
-            useCORS: true,
-            allowTaint: true,
-            backgroundColor: "#FFFFFF",
-            logging: true,
-            width: containerWidthPx,
-            height: containerHeightPx,
-            windowWidth: containerWidthPx,
-            windowHeight: containerHeightPx,
-            onclone: function (clonedDoc) {
-              const el = clonedDoc.getElementById(containerId);
-              if (el) {
-                el.style.position = "static";
-                el.style.top = "auto";
-                el.style.left = "auto";
-                el.style.opacity = "1";
-                el.style.visibility = "visible";
-              }
-            },
-          },
-          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-          pagebreak: { mode: ["css", "legacy"] },
-        }).from(container).save();
-      } finally {
-        document.body.removeChild(container);
-      }
+      const dateSuffix = new Date().toISOString().slice(0, 10);
+      const docTitle = "freedom-intelligence-field-" + dateSuffix;
+      await openPrintDialog(htmlString, docTitle);
     } catch (err) {
       console.error("export_failed", err);
       alert("Could not save your work right now. Please try again in a moment.");
     } finally {
       if (btn && originalLabel != null) { btn.disabled = false; btn.innerHTML = originalLabel; }
     }
+  }
+
+  function openPrintDialog(htmlString, docTitle) {
+    return new Promise((resolve) => {
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "fixed";
+      iframe.style.right = "0";
+      iframe.style.bottom = "0";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "0";
+      document.body.appendChild(iframe);
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      doc.open();
+      doc.write(
+        "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>" +
+        escapeHtml(docTitle) +
+        "</title><style>" +
+        "@page { size: A4; margin: 15mm 15mm 18mm 15mm; }" +
+        "body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }" +
+        "</style></head><body>" +
+        htmlString +
+        "</body></html>"
+      );
+      doc.close();
+      const triggerPrint = () => {
+        try {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        } catch (err) { console.error("print_failed", err); }
+        setTimeout(() => {
+          if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+          resolve();
+        }, 2000);
+      };
+      if (doc.readyState === "complete") {
+        setTimeout(triggerPrint, 200);
+      } else {
+        iframe.addEventListener("load", () => setTimeout(triggerPrint, 200), { once: true });
+        setTimeout(triggerPrint, 1200);
+      }
+    });
   }
 
   function buildResetExportHtml(messages, displayName) {
