@@ -2204,11 +2204,14 @@ Begin.` },
       const msgs = (data && data.messages) || [];
       const htmlString = buildResetExportHtml(msgs, state.displayName);
 
-      // html2pdf needs a real DOM node. We render into a hidden wrapper at A4
-      // width — using position:fixed + opacity:0 instead of left:-9999px so
-      // html2canvas can actually capture the content. (Off-screen elements
-      // sometimes render as blank pages.)
+      // html2pdf needs a real DOM node. The container sits invisibly on the
+      // page (opacity 0) so the user doesn't see a flash of the PDF content,
+      // but html2canvas's onclone callback bumps the cloned copy back to full
+      // opacity so the capture isn't all-white. Unique id lets onclone find
+      // the right element to unhide.
+      const containerId = "pdf-export-" + Date.now();
       const container = document.createElement("div");
+      container.id = containerId;
       container.innerHTML = htmlString;
       container.style.position = "fixed";
       container.style.top = "0";
@@ -2216,11 +2219,11 @@ Begin.` },
       container.style.width = "180mm"; // A4 width minus margins
       container.style.opacity = "0";
       container.style.pointerEvents = "none";
-      container.style.zIndex = "-99999";
+      container.style.zIndex = "-1";
       container.style.background = "#FFFFFF";
       document.body.appendChild(container);
-      // Give the browser a tick to compute layout before html2canvas reads it.
-      await new Promise(r => setTimeout(r, 50));
+      // Give the browser two frames to compute layout before html2canvas reads it.
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
       const filename = "freedom-intelligence-field-" + new Date().toISOString().slice(0, 10) + ".pdf";
       try {
@@ -2228,7 +2231,24 @@ Begin.` },
           margin: [15, 15, 18, 15],
           filename: filename,
           image: { type: "jpeg", quality: 0.95 },
-          html2canvas: { scale: 2, useCORS: true, backgroundColor: "#FFFFFF" },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: "#FFFFFF",
+            // CRITICAL: html2canvas otherwise honors the container's opacity:0
+            // and renders every pixel as transparent (= blank white PDF). The
+            // onclone callback runs on the document html2canvas actually
+            // renders, so we unhide the clone there. The on-page container
+            // stays invisible to the user.
+            onclone: function (clonedDoc) {
+              const el = clonedDoc.getElementById(containerId);
+              if (el) {
+                el.style.opacity = "1";
+                el.style.position = "static";
+                el.style.zIndex = "auto";
+              }
+            },
+          },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
           pagebreak: { mode: ["css", "legacy"] },
         }).from(container).save();
