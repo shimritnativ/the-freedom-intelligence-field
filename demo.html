@@ -1733,15 +1733,66 @@ Begin.` },
     if (!res.ok) throw new Error(data.error || "Could not save");
     return data;
   }
+  // Wraps a chat fetch with one automatic retry on transient failures (5xx,
+  // 408, network drop). Retry pause = 800ms. 4xx responses pass through.
+  async function chatFetchWithRetry(doFetch) {
+    const attempts = 2;
+    const delayMs = 800;
+    let lastErr;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        const res = await doFetch();
+        const transient = res.status === 408 || (res.status >= 500 && res.status < 600);
+        if (transient && i < attempts - 1) {
+          await new Promise(r => setTimeout(r, delayMs));
+          continue;
+        }
+        return res;
+      } catch (err) {
+        lastErr = err;
+        if (i < attempts - 1) {
+          await new Promise(r => setTimeout(r, delayMs));
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw lastErr;
+  }
+
+  function chatErrorMessage(err) {
+    const raw = String((err && err.message) || "").toLowerCase();
+    if (!raw) return "The Field could not respond just now. Please try again.";
+    if (raw.includes("rate") || raw.includes("too_many")) {
+      return "Too many messages in a short time. Please wait a minute, then continue.";
+    }
+    if (raw.includes("timeout") || raw.includes("timed out") || raw === "408") {
+      return "That message took longer than expected. Please try again.";
+    }
+    if (raw.includes("overload") || raw === "529" || raw.includes("anthropic")) {
+      return "The Field is briefly overloaded. Please try again in a moment.";
+    }
+    if (raw.includes("server") || raw.startsWith("5") || raw.includes("internal")) {
+      return "The Field's servers hit a snag. Please try again in a moment.";
+    }
+    if (raw.includes("network") || raw.includes("failed to fetch") || raw.includes("offline")) {
+      return "Connection interrupted. Check your internet and try again.";
+    }
+    if (raw === "could not send" || raw === "could_not_send") {
+      return "The Field could not respond just now. Please try again.";
+    }
+    return "Something went wrong: " + raw;
+  }
+
   async function apiChat(token, message) {
-    const res = await fetch(API_BASE + "/chat", {
+    const res = await chatFetchWithRetry(() => fetch(API_BASE + "/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-session-token": token },
       body: JSON.stringify({ message })
-    });
+    }));
     if (res.status === 410) return { expired: true };
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Could not send");
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || ("server_" + res.status));
     return data;
   }
   async function apiSetDay(token, day) {
@@ -3575,9 +3626,13 @@ Begin.` },
     return data;
   }
   async function apiUnlimitedChat(sessionId, message) {
-    const res = await fetch(API_BASE + "/unlimited/chat", { method: "POST", headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken }, body: JSON.stringify({ sessionId, message }) });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "could_not_send");
+    const res = await chatFetchWithRetry(() => fetch(API_BASE + "/unlimited/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken },
+      body: JSON.stringify({ sessionId, message })
+    }));
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || ("server_" + res.status));
     return data;
   }
 
@@ -3800,7 +3855,7 @@ Begin.` },
       render();
       maybeAutoplayLastUnlimitedAssistant();
     } catch (err) {
-      state.unlimitedMessages.push({ role: "assistant", content: "Something went wrong. Try again in a moment." });
+      state.unlimitedMessages.push({ role: "assistant", content: chatErrorMessage(err) });
       state.loading = false;
       renderUnlimitedMessages();
     }
