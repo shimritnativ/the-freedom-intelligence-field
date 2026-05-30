@@ -3853,6 +3853,9 @@ Begin.` },
     wrap.innerHTML = html;
     const wrapper = document.getElementById("messages-wrap");
     if (wrapper) wrapper.scrollTop = wrapper.scrollHeight;
+    // Fire audio generation for any [[mp3:...]] tokens in Unlimited processes
+    // (Frequency Calibration, Desired Outcome Snapshot, Root Pattern Release).
+    processMp3Cards();
   }
 
   function onUnlimitedKeyDown(e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onUnlimitedSendClick(); } }
