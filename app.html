@@ -2043,17 +2043,38 @@ Begin.` },
   }
 
   // ===== MP3 audio card generation =====
-  // After renderMessages(), scan any .mp3-card elements that haven't been
-  // processed yet and fire /api/speak to generate the audio in Shimrit's
-  // voice. Once the audio arrives, swap the card from loading state to
-  // ready state with a Download button.
-  const mp3BlobCache = new Map(); // cardId -> objectURL (released on logout)
+  // Each [[mp3:Title|Text]] token renders as a loading card. After
+  // renderMessages() runs we scan for any cards that haven't been processed
+  // yet and fire /api/speak to generate the audio in Shimrit's voice. Once
+  // the audio arrives we swap the card from loading state into the inline
+  // player UI.
+  //
+  // CRITICAL: renderMessages() replaces wrap.innerHTML wholesale on every
+  // new message, which DESTROYS any "ready" cards built in renderMp3CardReady
+  // along with the rest of the DOM. To survive re-renders, we cache the
+  // generated blob URL and duration keyed by the token's base64 text (which
+  // is stable across renders for the same token). When processMp3Cards
+  // re-mounts a card after a re-render, it checks the cache first and
+  // restores the player immediately, never re-firing /api/speak. We also
+  // dedupe simultaneous in-flight fetches via mp3InFlight so two cards
+  // pointing at the same text share one request.
+  const mp3BlobCache = new Map(); // b64Text -> { url, duration, title }
+  const mp3InFlight = new Map(); // b64Text -> Promise<{ url, duration, title }>
 
   function processMp3Cards() {
     document.querySelectorAll(".mp3-card:not(.mp3-processed)").forEach(card => {
       card.classList.add("mp3-processed");
       const title = card.getAttribute("data-mp3-title") || "Your audio";
       const b64 = card.getAttribute("data-mp3-text-b64") || "";
+
+      // Cache hit: this exact text was generated already. Render the player
+      // straight away from the cached blob — no /api/speak call needed.
+      const cached = b64 ? mp3BlobCache.get(b64) : null;
+      if (cached) {
+        renderMp3CardReady(card, cached.title || title, cached.url, cached.duration);
+        return;
+      }
+
       let text = "";
       try {
         text = decodeURIComponent(escape(atob(b64)));
@@ -2064,41 +2085,65 @@ Begin.` },
         renderMp3CardError(card, title);
         return;
       }
-      generateMp3Audio(card, title, text);
+      generateMp3Audio(card, title, text, b64);
     });
   }
 
-  async function generateMp3Audio(card, title, text) {
+  async function generateMp3Audio(card, title, text, cacheKey) {
     try {
-      const res = await fetch(API_BASE + "/speak", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken },
-        body: JSON.stringify({ text })
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || ("speak_" + res.status));
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      mp3BlobCache.set(card, url);
+      // If another card is already generating this same audio, await its
+      // promise instead of firing a duplicate request. This protects against
+      // the common case where renderMessages re-mounts the same MP3 token
+      // before the first /api/speak call has come back.
+      let inflight = cacheKey ? mp3InFlight.get(cacheKey) : null;
+      if (!inflight) {
+        inflight = (async () => {
+          const res = await fetch(API_BASE + "/speak", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken },
+            body: JSON.stringify({ text })
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body.error || ("speak_" + res.status));
+          }
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
 
-      // Probe duration by loading the audio element. If it fails (e.g.
-      // unsupported metadata), fall back to a generic label.
-      const audio = new Audio();
-      audio.preload = "metadata";
-      const durationSec = await new Promise(resolve => {
-        const onLoaded = () => resolve(Math.round(audio.duration || 0));
-        const onErr = () => resolve(0);
-        audio.addEventListener("loadedmetadata", onLoaded, { once: true });
-        audio.addEventListener("error", onErr, { once: true });
-        audio.src = url;
-        setTimeout(() => resolve(Math.round(audio.duration || 0)), 4000);
-      });
-      renderMp3CardReady(card, title, url, durationSec);
+          // Probe duration via a hidden Audio element. The 4-second timeout
+          // protects against browsers that never fire loadedmetadata.
+          const probe = new Audio();
+          probe.preload = "metadata";
+          const durationSec = await new Promise(resolve => {
+            const onLoaded = () => resolve(Math.round(probe.duration || 0));
+            const onErr = () => resolve(0);
+            probe.addEventListener("loadedmetadata", onLoaded, { once: true });
+            probe.addEventListener("error", onErr, { once: true });
+            probe.src = url;
+            setTimeout(() => resolve(Math.round(probe.duration || 0)), 4000);
+          });
+          return { url, duration: durationSec, title };
+        })();
+        if (cacheKey) mp3InFlight.set(cacheKey, inflight);
+      }
+
+      const result = await inflight;
+
+      // Save into the long-lived cache so future re-renders skip the API.
+      if (cacheKey) mp3BlobCache.set(cacheKey, result);
+
+      renderMp3CardReady(card, result.title || title, result.url, result.duration);
     } catch (err) {
       console.error("mp3_generation_failed", err);
+      // Allow a future card mount to retry by clearing the in-flight marker.
+      if (cacheKey) mp3InFlight.delete(cacheKey);
       renderMp3CardError(card, title);
+    } finally {
+      // Once the in-flight promise resolves, clear it so the long-lived
+      // mp3BlobCache becomes the single source of truth from here on.
+      if (cacheKey && mp3InFlight.get(cacheKey) && mp3BlobCache.has(cacheKey)) {
+        mp3InFlight.delete(cacheKey);
+      }
     }
   }
 
