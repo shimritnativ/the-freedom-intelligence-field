@@ -684,7 +684,7 @@
     border: 1px solid var(--gold-line);
     background: var(--gold-soft);
     padding: 14px 16px;
-    max-width: 420px;
+    max-width: 440px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
   .mp3-card-inner {
@@ -728,7 +728,7 @@
     letter-spacing: 0.02em;
   }
   .mp3-download-btn {
-    padding: 8px 16px;
+    padding: 8px 14px;
     background: var(--gold);
     color: var(--bg);
     border: none;
@@ -736,7 +736,7 @@
     font-family: inherit;
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     cursor: pointer;
     white-space: nowrap;
@@ -744,6 +744,112 @@
   }
   .mp3-download-btn:hover { opacity: 0.9; }
   .mp3-download-btn:disabled { opacity: 0.5; cursor: default; }
+
+  /* Inline player UI — top row has play button + title + download; bottom row
+     has the scrubber, time, and speed pills. */
+  .mp3-player { display: flex; flex-direction: column; gap: 10px; }
+  .mp3-player-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .mp3-play-btn {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: none;
+    background: var(--gold);
+    color: var(--bg);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.15s ease;
+  }
+  .mp3-play-btn:hover { opacity: 0.9; }
+  .mp3-play-btn svg { width: 16px; height: 16px; display: block; }
+  .mp3-player-title {
+    flex: 1; min-width: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mp3-scrubber-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .mp3-scrubber {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--gold-line);
+    border-radius: 999px;
+    outline: none;
+    cursor: pointer;
+    margin: 0;
+  }
+  .mp3-scrubber::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--gold);
+    cursor: pointer;
+    border: none;
+  }
+  .mp3-scrubber::-moz-range-thumb {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--gold);
+    cursor: pointer;
+    border: none;
+  }
+  .mp3-time {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    min-width: 84px;
+    text-align: right;
+  }
+  .mp3-speed-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .mp3-speed-group {
+    display: inline-flex;
+    gap: 4px;
+    background: transparent;
+    padding: 0;
+    border-radius: 999px;
+  }
+  .mp3-speed-btn {
+    padding: 5px 12px;
+    background: transparent;
+    border: 1px solid var(--gold-line);
+    color: var(--text-dim);
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .mp3-speed-btn:hover { color: var(--text); border-color: var(--gold); }
+  .mp3-speed-btn.active {
+    background: var(--gold);
+    color: var(--bg);
+    border-color: var(--gold);
+  }
 
   .typing {
     display: flex; gap: 5px; align-items: center;
@@ -1937,23 +2043,118 @@ Begin.` },
   }
 
   function renderMp3CardReady(card, title, url, durationSec) {
-    const durLabel = durationSec > 0 ? (durationSec + " seconds") : "Shimrit’s voice";
-    const meta = durationSec > 0
-      ? (durationSec + " seconds · Shimrit’s voice · MP3")
-      : "Shimrit’s voice · MP3";
     const filename = (title || "audio").replace(/[^a-z0-9-_]+/gi, "-").replace(/^-+|-+$/g, "") + ".mp3";
+    const totalLabel = formatMp3Time(durationSec);
+    // Inline player layout: top row = play button + title + download.
+    // Middle row = scrubber + time. Bottom row = speed pills.
     card.innerHTML =
-      '<div class="mp3-card-inner">' +
-        '<div class="mp3-orb ready" aria-hidden="true"><span class="mp3-orb-arrow">↓</span></div>' +
-        '<div class="mp3-info">' +
-          '<div class="mp3-title">' + escapeHtml(title) + '</div>' +
-          '<div class="mp3-meta">' + escapeHtml(meta) + '</div>' +
+      '<div class="mp3-player">' +
+        '<div class="mp3-player-top">' +
+          '<button type="button" class="mp3-play-btn" aria-label="Play">' +
+            '<svg class="mp3-icon-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>' +
+            '<svg class="mp3-icon-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="display:none"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>' +
+          '</button>' +
+          '<div class="mp3-player-title">' + escapeHtml(title) + '</div>' +
+          '<button type="button" class="mp3-download-btn">Download</button>' +
         '</div>' +
-        '<button type="button" class="mp3-download-btn" data-mp3-url="' + url + '" data-mp3-filename="' + escapeHtml(filename) + '">Download</button>' +
+        '<div class="mp3-scrubber-row">' +
+          '<input type="range" class="mp3-scrubber" min="0" max="1000" value="0" step="1" aria-label="Seek" />' +
+          '<div class="mp3-time"><span class="mp3-time-cur">0:00</span> / <span class="mp3-time-total">' + escapeHtml(totalLabel) + '</span></div>' +
+        '</div>' +
+        '<div class="mp3-speed-row">' +
+          '<div class="mp3-speed-group" role="group" aria-label="Playback speed">' +
+            '<button type="button" class="mp3-speed-btn active" data-speed="1">1×</button>' +
+            '<button type="button" class="mp3-speed-btn" data-speed="1.5">1.5×</button>' +
+            '<button type="button" class="mp3-speed-btn" data-speed="2">2×</button>' +
+          '</div>' +
+          '<div class="mp3-voice-label" style="font-size:11px;color:var(--text-dim);letter-spacing:0.02em;">Shimrit’s voice · MP3</div>' +
+        '</div>' +
+        '<audio class="mp3-audio" src="' + url + '" preload="metadata"></audio>' +
       '</div>';
-    const btn = card.querySelector(".mp3-download-btn");
-    if (btn) {
+
+    wireMp3Player(card, url, filename);
+  }
+
+  function formatMp3Time(sec) {
+    sec = Math.max(0, Math.floor(sec || 0));
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  function wireMp3Player(card, url, filename) {
+    const audio = card.querySelector(".mp3-audio");
+    const playBtn = card.querySelector(".mp3-play-btn");
+    const iconPlay = card.querySelector(".mp3-icon-play");
+    const iconPause = card.querySelector(".mp3-icon-pause");
+    const scrubber = card.querySelector(".mp3-scrubber");
+    const curEl = card.querySelector(".mp3-time-cur");
+    const totalEl = card.querySelector(".mp3-time-total");
+    const downloadBtn = card.querySelector(".mp3-download-btn");
+    const speedBtns = card.querySelectorAll(".mp3-speed-btn");
+
+    if (!audio) return;
+
+    // Play / pause toggle.
+    playBtn.addEventListener("click", () => {
+      if (audio.paused) {
+        // Pause any other audio elements that may be playing.
+        document.querySelectorAll(".mp3-audio").forEach(a => { if (a !== audio) a.pause(); });
+        audio.play();
+      } else {
+        audio.pause();
+      }
+    });
+    audio.addEventListener("play", () => {
+      iconPlay.style.display = "none";
+      iconPause.style.display = "block";
+      playBtn.setAttribute("aria-label", "Pause");
+    });
+    audio.addEventListener("pause", () => {
+      iconPlay.style.display = "block";
+      iconPause.style.display = "none";
+      playBtn.setAttribute("aria-label", "Play");
+    });
+    audio.addEventListener("ended", () => {
+      iconPlay.style.display = "block";
+      iconPause.style.display = "none";
+      playBtn.setAttribute("aria-label", "Play");
+      scrubber.value = 0;
+      curEl.textContent = "0:00";
+    });
+
+    // Update scrubber + time as audio plays.
+    audio.addEventListener("loadedmetadata", () => {
+      if (audio.duration && isFinite(audio.duration)) {
+        totalEl.textContent = formatMp3Time(audio.duration);
+      }
+    });
+    audio.addEventListener("timeupdate", () => {
+      if (!audio.duration || !isFinite(audio.duration)) return;
+      const pct = (audio.currentTime / audio.duration) * 1000;
+      scrubber.value = Math.round(pct);
+      curEl.textContent = formatMp3Time(audio.currentTime);
+    });
+    // Scrub.
+    scrubber.addEventListener("input", () => {
+      if (!audio.duration || !isFinite(audio.duration)) return;
+      const pct = Number(scrubber.value) / 1000;
+      audio.currentTime = pct * audio.duration;
+    });
+
+    // Speed pills.
+    speedBtns.forEach(btn => {
       btn.addEventListener("click", () => {
+        const rate = parseFloat(btn.getAttribute("data-speed")) || 1;
+        audio.playbackRate = rate;
+        speedBtns.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+      });
+    });
+
+    // Download.
+    if (downloadBtn) {
+      downloadBtn.addEventListener("click", () => {
         const a = document.createElement("a");
         a.href = url;
         a.download = filename;
