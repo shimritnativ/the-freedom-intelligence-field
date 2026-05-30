@@ -2,6 +2,12 @@
   "functions": {
     "api/speak.js": {
       "maxDuration": 60
+    },
+    "api/chat.js": {
+      "maxDuration": 60
+    },
+    "api/unlimited/chat.js": {
+      "maxDuration": 60
     }
   }
 }
