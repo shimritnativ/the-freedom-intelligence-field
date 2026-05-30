@@ -4173,6 +4173,12 @@ Begin.` },
     wrap.innerHTML = html;
     const wrapper = document.getElementById("messages-wrap");
     if (wrapper) wrapper.scrollTop = wrapper.scrollHeight;
+    // Scan any newly rendered [[mp3:...]] cards and start audio generation.
+    // Frequency Calibration, Desired Outcome Snapshot, Root Pattern Release
+    // and any future Unlimited process that emits an MP3 token relies on this
+    // call to actually fire /api/speak — without it the card sits in loading
+    // state forever.
+    processMp3Cards();
   }
 
   function onUnlimitedKeyDown(e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onUnlimitedSendClick(); } }
