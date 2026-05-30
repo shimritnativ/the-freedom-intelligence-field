@@ -1904,44 +1904,72 @@ Begin.` },
   }
 
   // ===== MP3 audio card generation =====
-  const mp3BlobCache = new Map();
+  // renderMessages replaces innerHTML wholesale on every new message, which
+  // destroys "ready" MP3 cards. We cache the blob URL keyed by the token's
+  // base64 text so re-mounts can restore the player without re-firing
+  // /api/speak. mp3InFlight dedupes parallel fetches of the same audio.
+  const mp3BlobCache = new Map(); // b64Text -> { url, duration, title }
+  const mp3InFlight = new Map(); // b64Text -> Promise<{ url, duration, title }>
+
   function processMp3Cards() {
     document.querySelectorAll(".mp3-card:not(.mp3-processed)").forEach(card => {
       card.classList.add("mp3-processed");
       const title = card.getAttribute("data-mp3-title") || "Your audio";
       const b64 = card.getAttribute("data-mp3-text-b64") || "";
+
+      const cached = b64 ? mp3BlobCache.get(b64) : null;
+      if (cached) {
+        renderMp3CardReady(card, cached.title || title, cached.url, cached.duration);
+        return;
+      }
+
       let text = "";
       try { text = decodeURIComponent(escape(atob(b64))); } catch (e) { text = ""; }
       if (!text || !state.sessionToken) { renderMp3CardError(card, title); return; }
-      generateMp3Audio(card, title, text);
+      generateMp3Audio(card, title, text, b64);
     });
   }
-  async function generateMp3Audio(card, title, text) {
+
+  async function generateMp3Audio(card, title, text, cacheKey) {
     try {
-      const res = await fetch(API_BASE + "/speak", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken },
-        body: JSON.stringify({ text })
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || ("speak_" + res.status));
+      let inflight = cacheKey ? mp3InFlight.get(cacheKey) : null;
+      if (!inflight) {
+        inflight = (async () => {
+          const res = await fetch(API_BASE + "/speak", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken },
+            body: JSON.stringify({ text })
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body.error || ("speak_" + res.status));
+          }
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const probe = new Audio();
+          probe.preload = "metadata";
+          const durationSec = await new Promise(resolve => {
+            probe.addEventListener("loadedmetadata", () => resolve(Math.round(probe.duration || 0)), { once: true });
+            probe.addEventListener("error", () => resolve(0), { once: true });
+            probe.src = url;
+            setTimeout(() => resolve(Math.round(probe.duration || 0)), 4000);
+          });
+          return { url, duration: durationSec, title };
+        })();
+        if (cacheKey) mp3InFlight.set(cacheKey, inflight);
       }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      mp3BlobCache.set(card, url);
-      const audio = new Audio();
-      audio.preload = "metadata";
-      const durationSec = await new Promise(resolve => {
-        audio.addEventListener("loadedmetadata", () => resolve(Math.round(audio.duration || 0)), { once: true });
-        audio.addEventListener("error", () => resolve(0), { once: true });
-        audio.src = url;
-        setTimeout(() => resolve(Math.round(audio.duration || 0)), 4000);
-      });
-      renderMp3CardReady(card, title, url, durationSec);
+
+      const result = await inflight;
+      if (cacheKey) mp3BlobCache.set(cacheKey, result);
+      renderMp3CardReady(card, result.title || title, result.url, result.duration);
     } catch (err) {
       console.error("mp3_generation_failed", err);
+      if (cacheKey) mp3InFlight.delete(cacheKey);
       renderMp3CardError(card, title);
+    } finally {
+      if (cacheKey && mp3InFlight.get(cacheKey) && mp3BlobCache.has(cacheKey)) {
+        mp3InFlight.delete(cacheKey);
+      }
     }
   }
   function renderMp3CardReady(card, title, url, durationSec) {
