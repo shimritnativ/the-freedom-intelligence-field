@@ -640,16 +640,18 @@
     font-family: Georgia, "Times New Roman", serif;
   }
   /* Markdown rendering inside assistant messages */
-  .msg-row.assistant .msg p { margin: 0 0 0.7em 0; }
-  .msg-row.assistant .msg p:last-child { margin-bottom: 0; }
+  .msg p { margin: 0 0 0.7em 0; }
+  .msg p:last-child { margin-bottom: 0; }
   .msg-row.assistant .msg strong { font-weight: 700; color: var(--text); }
   .msg-row.assistant .msg em { font-style: italic; }
   .msg-row.assistant .msg code { background: var(--gold-soft); padding: 1px 6px; border-radius: 4px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.9em; color: var(--gold); }
-  .msg-row.assistant .msg ul, .msg-row.assistant .msg ol { margin: 0.4em 0 0.7em 1.4em; padding: 0; }
-  .msg-row.assistant .msg li { margin-bottom: 0.35em; line-height: 1.6; }
-  .msg-row.assistant .msg li:last-child { margin-bottom: 0; }
-  .msg-row.assistant .msg ul li { list-style-type: disc; }
-  .msg-row.assistant .msg ol li { list-style-type: decimal; }
+  /* List + paragraph styling applies to both user and assistant messages
+     so users typing `- one` get real bullets, not silent list markup. */
+  .msg ul, .msg ol { margin: 0.4em 0 0.7em 1.4em; padding: 0; }
+  .msg li { margin-bottom: 0.35em; line-height: 1.6; }
+  .msg li:last-child { margin-bottom: 0; }
+  .msg ul li { list-style-type: disc; }
+  .msg ol li { list-style-type: decimal; }
   /* In-brand CTA button, rendered from [[button:Label|url]] in AI messages. */
   .msg-cta-btn {
     display: inline-flex;
