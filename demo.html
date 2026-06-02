@@ -1830,6 +1830,19 @@ Begin.` },
   function renderMarkdown(text) {
     let html = escapeHtml(String(text || ""));
 
+    // Direct download syntax: [[download:Label|URL|filename]] -> gold button
+    // with HTML5 download attribute. Must be processed BEFORE [[button:...]]
+    // so the three-part token is not partially matched by the two-part regex.
+    html = html.replace(/\[\[download:([^|\]]+)\|([^|\]]+)\|([^\]]+)\]\]/g, function (m, label, url, filename) {
+      const u = String(url).trim();
+      if (!/^(https?:\/\/|\/)/i.test(u)) return label.trim();
+      const safeHref = u.replace(/"/g, "%22");
+      const safeName = String(filename).trim().replace(/"/g, "");
+      return '<a class="msg-cta-btn" href="' + safeHref + '" download="' + safeName + '">'
+        + label.trim()
+        + '<span class="msg-cta-arrow" aria-hidden="true">↓</span></a>';
+    });
+
     // CTA button syntax: [[button:Label|https://url]] -> in-brand gold button.
     html = html.replace(/\[\[button:([^|\]]+)\|([^\]]+)\]\]/g, function (m, label, url) {
       const u = String(url).trim();
