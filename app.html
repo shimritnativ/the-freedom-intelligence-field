@@ -1954,6 +1954,62 @@ Begin.` },
     return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
+  // Minimal renderer for USER-typed messages. Supports bullets (- or *),
+  // numbered lists (1.), and paragraph breaks from blank lines, but
+  // deliberately NOT inline tokens (no [[button:...]] / [[mp3:...]] /
+  // [[download:...]]), NOT links, NOT bold/italic — user-controlled
+  // content must never be able to inject CTAs, audio cards, or HTML.
+  // escapeHtml runs first; only the block-level list/paragraph patterns
+  // become real HTML.
+  function renderUserMessage(text) {
+    const safe = escapeHtml(String(text || ""));
+    const lines = safe.split("\n");
+    const blocks = [];
+    let paragraph = [];
+    let listType = null;
+    let listItems = [];
+
+    function flushParagraph() {
+      if (paragraph.length > 0) {
+        blocks.push("<p>" + paragraph.join("<br>") + "</p>");
+        paragraph = [];
+      }
+    }
+    function flushList() {
+      if (listType && listItems.length > 0) {
+        blocks.push("<" + listType + ">" + listItems.map(i => "<li>" + i + "</li>").join("") + "</" + listType + ">");
+        listItems = [];
+        listType = null;
+      }
+    }
+
+    for (const rawLine of lines) {
+      const ulMatch = rawLine.match(/^\s*[-*]\s+(.+)$/);
+      const olMatch = rawLine.match(/^\s*\d+\.\s+(.+)$/);
+      const trimmed = rawLine.trim();
+
+      if (ulMatch) {
+        flushParagraph();
+        if (listType !== "ul") { flushList(); listType = "ul"; }
+        listItems.push(ulMatch[1]);
+      } else if (olMatch) {
+        flushParagraph();
+        if (listType !== "ol") { flushList(); listType = "ol"; }
+        listItems.push(olMatch[1]);
+      } else if (trimmed === "") {
+        flushParagraph();
+        flushList();
+      } else {
+        flushList();
+        paragraph.push(rawLine);
+      }
+    }
+    flushParagraph();
+    flushList();
+
+    return blocks.join("");
+  }
+
   // Light markdown renderer for assistant messages. Supports bold (**x**),
   // italic (*x*, _x_), inline code (`x`), bullet lists (-, *), numbered
   // lists (1.), paragraphs, and line breaks. Escapes HTML first to prevent
@@ -3345,7 +3401,7 @@ Begin.` },
       if (m.role === "user") {
         return `
           <div class="msg-row ${m.role}">
-            <div class="msg">${escapeHtml(m.content)}</div>
+            <div class="msg">${renderUserMessage(m.content)}</div>
           </div>
         `;
       }
@@ -4193,7 +4249,7 @@ Begin.` },
       return;
     }
     let html = state.unlimitedMessages.map((m, i) => {
-      if (m.role === "user") return '<div class="msg-row user"><div class="msg">' + escapeHtml(m.content) + '</div></div>';
+      if (m.role === "user") return '<div class="msg-row user"><div class="msg">' + renderUserMessage(m.content) + '</div></div>';
       return '<div class="msg-row assistant"><div class="msg">' + renderMarkdown(m.content) + '</div>'
         + '<button class="speak-btn" data-unl-msg-index="' + i + '" type="button" aria-label="Play in Shimrit\'s voice">'
         + '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/><path d="M14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>'
