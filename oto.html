@@ -14,9 +14,46 @@
      It is embedded via the /preview URL further down.
      ============================================================ -->
 
-<style>
 
 <script async src="//thrivecart.com/embed/v1/thrivecart.js" data-thrivecart-querystring="coupon_cache=false"></script>
+
+<style>
+
+
+/* ===== MOBILE RESPONSIVE ===== */
+@media (max-width: 600px){
+  .ns{ font-size: 20px; }
+  .ns section{ padding: 44px 0; }
+  .ns .wrap, .ns .wrap-wide{ padding: 0 18px; }
+
+  .ns .eyebrow{ font-size: 13px; letter-spacing: .2em; }
+  .ns .alert{ padding: 18px 16px; font-size: 15px; }
+  .ns .alert strong{ font-size: 22px; letter-spacing: .1em; }
+
+  .ns .lead{ font-size: 1.15em; }
+  .ns .offer-card{ padding: 30px 22px; }
+  .ns .offer-card li{ font-size: 1.05em; }
+  .ns .price-now{ font-size: 50px; }
+
+  /* full-width, easy-to-tap buttons */
+  .ns .btn{ display:block; width:100%; padding:18px 16px; font-size:15px; letter-spacing:.04em; }
+
+  /* readable testimonials + numbered list */
+  .ns .quote p{ font-size: 1.08em; }
+  .ns .included h3{ font-size: 22px; padding-left: 54px !important; }
+  .ns .num{ width: 40px; height: 40px; font-size: 17px; }
+
+  /* value stack fits small screens */
+  .ns .stack .row{ padding: 14px 14px; gap: 10px; }
+  .ns .stack .row span:first-child{ font-size: 1em; }
+  .ns .stack .row .val{ font-size: 14px; }
+  .ns .stack .final span:first-child{ font-size: 1.15em; }
+  .ns .stack .final .val{ font-size: 1.3em; }
+}
+@media (max-width: 380px){
+  .ns{ font-size: 19px; }
+  .ns h1{ font-size: 30px; }
+}
 
 /* ---- Force this block to span the full browser width, ignoring
         ThriveCart's centered/max-width container ---- */
