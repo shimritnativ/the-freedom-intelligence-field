@@ -1551,7 +1551,7 @@
     "What is the one move you will take in the next 24 hours?"
   ];
   // Upgrade destination for Reset-tier members — the Field Unlimited offer.
-  const UNLIMITED_URL = "http://shimritnativ.com/the-freedom-intelligence-field";
+  const UNLIMITED_URL = "http://go.shimritnativ.com/the-field";
 
   // Entitlement tier passed in by the Kajabi page via ?tier=full|preview.
   // When present it wins over the backend tier and the review toggle — this is
@@ -1907,6 +1907,12 @@ Begin.` },
   function chatErrorMessage(err) {
     const raw = String((err && err.message) || "").toLowerCase();
     if (!raw) return "The Field could not respond just now. Please try again.";
+    if (raw === "unlimited_locked" || raw === "server_403") {
+      return "The Field Unlimited is included with the full subscription. Your current tier does not include Unlimited access. Open Your Account to upgrade.";
+    }
+    if (raw === "reset_expired" || raw === "server_410") {
+      return "Your 72-Hour Power Reset window has ended. The Field Unlimited continues the work if you would like to keep going.";
+    }
     if (raw.includes("rate") || raw.includes("too_many")) {
       return "Too many messages in a short time. Please wait a minute, then continue.";
     }
