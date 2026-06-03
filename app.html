@@ -906,6 +906,87 @@
     border-top: 1px solid var(--border);
     padding: 16px 28px 20px;
   }
+
+  /* ===== Expired Reset state =====
+     Shown when a preview-tier user's 96h Power Reset window has elapsed.
+     Their conversation history remains visible (so they can re-read and
+     export it from the Account modal) but new chat is blocked. */
+  .expired-banner {
+    margin: 18px auto 4px;
+    max-width: 680px;
+    padding: 18px 22px;
+    background: var(--gold-soft);
+    border: 1px solid var(--gold-line);
+    border-radius: 14px;
+    text-align: center;
+  }
+  .expired-banner-title {
+    margin: 0 0 6px;
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 18px;
+    color: var(--gold);
+    line-height: 1.3;
+  }
+  .expired-banner-text {
+    margin: 0 0 14px;
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1.55;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  .expired-banner-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 22px;
+    background: var(--gold);
+    color: var(--bg);
+    border-radius: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: opacity 0.15s ease;
+  }
+  .expired-banner-btn:hover { opacity: 0.9; }
+  .expired-composer-card {
+    border-top: 1px solid var(--border);
+    padding: 22px 28px 24px;
+    text-align: center;
+    background: var(--bg);
+  }
+  .expired-composer-card-text {
+    color: var(--text-dim);
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 14px;
+    margin: 0 0 14px;
+  }
+  .expired-composer-card-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 24px;
+    background: var(--gold);
+    color: var(--bg);
+    border-radius: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: opacity 0.15s ease;
+  }
+  .expired-composer-card-btn:hover { opacity: 0.9; }
+  @media (max-width: 560px) {
+    .expired-banner { margin: 12px 14px 4px; padding: 16px 18px; }
+    .expired-banner-title { font-size: 16px; }
+    .expired-composer-card { padding: 16px 18px 18px; }
+  }
   .composer {
     max-width: 760px; margin: 0 auto;
     background: var(--panel);
@@ -2379,6 +2460,41 @@ Begin.` },
   // Unlimited is unlocked only for full-tier (Unlimited) members. Reset-tier
   // members see the locked upgrade card in its place.
   function unlimitedUnlocked() { return state.tier === "full"; }
+
+  // True when a preview-tier user's 96-hour Power Reset window has elapsed.
+  // Full-tier users never expire. Used to swap the Reset composer for an
+  // upgrade card and prepend a banner above the conversation explaining
+  // the locked state. The expired view keeps the conversation visible so
+  // the participant can re-read and export it from the Account modal.
+  function isResetExpired() {
+    if (state.tier !== "preview") return false;
+    if (!state.previewEndsAt) return false;
+    return new Date(state.previewEndsAt).getTime() <= Date.now();
+  }
+
+  // Markup for the gold banner that sits at the top of the conversation
+  // when the Reset window has elapsed. Mounted by renderMessages().
+  function renderExpiredBanner() {
+    return '<div class="expired-banner">'
+      + '<h3 class="expired-banner-title">Your 72-Hour Power Reset window has ended</h3>'
+      + '<p class="expired-banner-text">Continue the work inside The Field Unlimited. Your full conversation history stays here. You can re-read it any time and download it from Your Account.</p>'
+      + '<a class="expired-banner-btn" href="' + UNLIMITED_URL + '" target="_blank" rel="noopener noreferrer">'
+      + 'Upgrade to The Field Unlimited <span aria-hidden="true">→</span>'
+      + '</a>'
+      + '</div>';
+  }
+
+  // Markup that replaces the composer-wrap when the Reset window has
+  // elapsed. Same gold CTA, no input. Returns a complete <div> ready to
+  // drop into the chat view template in place of the composer.
+  function renderExpiredComposerCard() {
+    return '<div class="expired-composer-card">'
+      + '<p class="expired-composer-card-text">Your Reset window has ended. New chat is locked.</p>'
+      + '<a class="expired-composer-card-btn" href="' + UNLIMITED_URL + '" target="_blank" rel="noopener noreferrer">'
+      + 'Continue with The Field Unlimited <span aria-hidden="true">→</span>'
+      + '</a>'
+      + '</div>';
+  }
   function lockIconSvg() {
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
   }
@@ -3159,6 +3275,7 @@ Begin.` },
             <div class="messages-wrap" id="messages-wrap">
               <div class="messages" id="messages"></div>
             </div>
+            ${isResetExpired() ? renderExpiredComposerCard() : `
             <div class="composer-wrap">
               <div class="composer">
                 <textarea id="input" rows="1" placeholder="Interact with The Field"></textarea>
@@ -3172,15 +3289,23 @@ Begin.` },
               </div>
               <div class="composer-note">Your conversation is private. No one else has access to it.</div>
             </div>
+            `}
           </main>
         </div>
         ${renderMobileOverlay()}
         ${renderAccountModal()}
       `;
       renderMessages();
-      document.getElementById("input").addEventListener("input", onInputChange);
-      document.getElementById("input").addEventListener("keydown", onInputKeyDown);
-      document.getElementById("send-btn").addEventListener("click", onSendClick);
+      // Composer-bound handlers are no-ops when the Reset window has elapsed
+      // (the composer is replaced by an upgrade card and has no #input or
+      // #send-btn). Guard each binding so we don't crash before render().
+      const inputEl = document.getElementById("input");
+      const sendBtn = document.getElementById("send-btn");
+      if (inputEl) {
+        inputEl.addEventListener("input", onInputChange);
+        inputEl.addEventListener("keydown", onInputKeyDown);
+      }
+      if (sendBtn) sendBtn.addEventListener("click", onSendClick);
       const micBtn = document.getElementById("mic-btn");
       if (micBtn) {
         if (!micSupported()) micBtn.style.display = "none";
@@ -3432,6 +3557,13 @@ Begin.` },
           <div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
         </div>
       `;
+    }
+    // Prepend the expired banner at the top of the conversation so the
+    // participant sees the locked state immediately on load. The full
+    // conversation stays visible underneath so they can re-read and
+    // export it from the Account modal.
+    if (isResetExpired()) {
+      html = renderExpiredBanner() + html;
     }
     wrap.innerHTML = html;
     const wrapper = document.getElementById("messages-wrap");
