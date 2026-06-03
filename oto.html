@@ -118,6 +118,14 @@
 /* ---- VSL ---- */
 .ns .vsl{position:relative;width:100%;max-width:820px;margin:0 auto;aspect-ratio:16/9;border-radius:14px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.35);background:#000;}
 .ns .vsl iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+/* ---- VSL facade: clean cover, no YouTube badge until play ---- */
+.ns .vsl{cursor:pointer;}
+.ns .vsl .vsl-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}
+.ns .vsl .vsl-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,18,16,.05),rgba(20,18,16,.42));}
+.ns .vsl .vsl-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:88px;height:88px;border-radius:50%;background:linear-gradient(180deg,var(--gold-soft),var(--gold));box-shadow:0 10px 30px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;transition:transform .15s ease,box-shadow .15s ease;}
+.ns .vsl:hover .vsl-play{transform:translate(-50%,-50%) scale(1.07);box-shadow:0 14px 38px rgba(0,0,0,.55);}
+.ns .vsl .vsl-play:after{content:"";display:block;margin-left:6px;border-style:solid;border-width:15px 0 15px 25px;border-color:transparent transparent transparent #141210;}
+@media(max-width:600px){.ns .vsl .vsl-play{width:70px;height:70px;}.ns .vsl .vsl-play:after{border-width:12px 0 12px 20px;}}
 
 /* ---- Bullet lists in body ---- */
 .ns .checklist{list-style:none;padding:0;margin:0 auto 1.4em;max-width:680px;}
@@ -285,8 +293,11 @@
       <div class="eyebrow on-dark lead-eyebrow">Watch This Before You Close This Page</div>
       <h2 style="font-size:clamp(20px,2.6vw,28px);font-weight:500;">The 72-Hour Reset Is Only The Beginning</h2>
       <p class="lead" style="max-width:720px;margin:0 auto 30px;">In this short video, I&rsquo;ll show you why the reset is just the start, and how The NOW Shift helps you keep moving when the old pattern tries to return.</p>
-      <div class="vsl">
-        <iframe width="560" height="315" src="https://www.youtube.com/embed/DytwZqHWwSE?si=M8HLYbU-KTlXxT9T" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+      <div class="vsl" data-yt="DytwZqHWwSE">
+        <!-- To use your own cover image, replace the src below with your uploaded URL (e.g. an ImgBB link). -->
+        <img class="vsl-poster" src="https://i.ytimg.com/vi/DytwZqHWwSE/maxresdefault.jpg" onerror="this.src='https://i.ytimg.com/vi/DytwZqHWwSE/hqdefault.jpg'" alt="Watch this before you close this page">
+        <div class="vsl-overlay"></div>
+        <div class="vsl-play" role="button" aria-label="Play video"></div>
       </div>
       <div class="btn-row"><a href="#ns-final" class="js-accept btn">Yes, I Want The NOW Shift For &euro;197</a></div>
     </div>
@@ -513,6 +524,12 @@
     a.addEventListener('click',function(e){
       var t=document.getElementById('ns-final');
       if(t){e.preventDefault();t.scrollIntoView({behavior:'smooth',block:'start'});}
+    });
+  });
+  document.querySelectorAll('.ns .vsl[data-yt]').forEach(function(v){
+    v.addEventListener('click',function(){
+      var id=v.getAttribute('data-yt');
+      v.innerHTML='<iframe src="https://www.youtube.com/embed/'+id+'?autoplay=1&rel=0&modestbranding=1&playsinline=1" title="The NOW Shift" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>';
     });
   });
 })();
