@@ -1618,7 +1618,12 @@
   "use strict";
 
   const API_BASE = "/api";
-  const STORAGE_KEY = "tfif_demo_session_v1";
+  // app.html (real customer flow) uses its own storage bucket so it never
+  // collides with demo.html's anonymous sessions. If the same browser visits
+  // demo.html first and then app.html, the demo session token in
+  // tfif_demo_session_v1 cannot bleed into the real customer experience.
+  // demo.html keeps the original "tfif_demo_session_v1" key.
+  const STORAGE_KEY = "tfif_session_v1";
   const ANON_KEY = "tfif_demo_anon_id";
   const THEME_KEY = "tfif_theme_v1";
   const DAY_META = [
@@ -1733,7 +1738,12 @@ Begin.` },
     messages: [],
     loading: false,
     error: null,
-    view: "entry",
+    // app.html is the real-customer entry point — there is no anonymous
+    // demo flow here. Default view is "login" so any visit without a valid
+    // session lands on the email + 6-digit-code login screen. The legacy
+    // "entry" view (anonymous name input) still exists in the file as dead
+    // code but is unreachable. demo.html keeps the anonymous flow for testing.
+    view: "login",
     autoplay: (function () {
       try { return localStorage.getItem("tfif_autoplay_v1") === "1"; } catch (e) { return false; }
     })(),
@@ -3808,7 +3818,7 @@ Begin.` },
       clearDraft("entry_name");
       render();
       const chatData = await apiChat(state.sessionToken, opening);
-      if (chatData.expired) { state.view = "entry"; state.error = "Window expired."; state.loading = false; render(); return; }
+      if (chatData.expired) { state.view = "login"; state.error = "Window expired."; state.loading = false; render(); return; }
       state.messages.push({ role: "assistant", content: chatData.reply });
       state.currentDay = chatData.currentDay;
       state.loading = false;
@@ -3817,7 +3827,7 @@ Begin.` },
     } catch (err) {
       state.error = err.message || "Could not start.";
       state.loading = false;
-      state.view = "entry";
+      state.view = "login";
       render();
     } finally {
       state.starting = false;
@@ -3921,7 +3931,7 @@ Begin.` },
     state.currentDay = 1;
     state.lastCompletedDay = 0;
     state.messages = [];
-    state.view = "entry";
+    state.view = "login";
     // Purge any saved drafts so the fresh session starts clean.
     try {
       for (let i = localStorage.length - 1; i >= 0; i--) {
@@ -4492,7 +4502,7 @@ Begin.` },
   async function loadFullState() {
     try {
       const data = await apiState(state.sessionToken);
-      if (data.expired) { state.view = "entry"; render(); return; }
+      if (data.expired) { state.view = "login"; render(); return; }
       state.currentDay = data.currentDay || 1;
       state.lastCompletedDay = data.lastCompletedDay || 0;
       state.timeRemainingMs = data.timeRemainingMs;
