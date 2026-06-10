@@ -1758,6 +1758,12 @@ Begin.` },
     // Set from the backend tier at /api/start; the sidebar toggle overrides it
     // for review until real Kajabi entitlements are wired in.
     tier: URL_TIER || "preview",
+    // 'monthly' | 'yearly' | null. Drives the Your Account modal copy and
+    // CTAs for full-tier members. Null = unknown plan — UI falls back to the
+    // monthly layout (with Upgrade to Yearly + Cancel buttons) so existing
+    // customers see the same thing they always have until the next webhook
+    // updates their record.
+    subscriptionPlan: null,
     // ===== Email + 6-digit-code login state =====
     loginStep: "email",   // 'email' | 'code'
     loginEmail: "",
@@ -2967,17 +2973,27 @@ Begin.` },
     const showResetCard = !isFull && (state.firstLoginAt || state.previewEndsAt);
 
     // Unlimited block: subscription state if owned, CTA if not.
+    // For owned: yearly subscribers see "Yearly · Active" with one Manage
+    // subscription link (no upgrade button since they're already at top tier).
+    // Monthly subscribers see the original layout: Upgrade to Yearly + Cancel.
+    // Unknown plan (null) defaults to monthly layout so existing customers
+    // never lose buttons during the rollout window.
+    const isYearly = state.subscriptionPlan === "yearly";
+    const planLabel = isYearly ? "Yearly · Active" : "Monthly · Active";
+    const unlimitedOwnedActions = isYearly
+      ? `<a class="acct-btn subtle" href="${CANCEL_BILLING_URL}" target="_blank" rel="noopener noreferrer">Manage subscription ↗</a>`
+      : `<a class="acct-btn" href="${YEARLY_UPGRADE_URL}" target="_blank" rel="noopener noreferrer">Upgrade to Yearly ↗</a>
+         <a class="acct-btn subtle" href="${CANCEL_BILLING_URL}" target="_blank" rel="noopener noreferrer">Cancel</a>`;
     const unlimitedBlock = isFull
       ? `
         <div class="acct-card">
           <div class="acct-card-title">The Field — Unlimited</div>
           <div class="acct-card-meta">
             <span class="acct-status-dot"></span>
-            <span>Monthly · Active</span>
+            <span>${planLabel}</span>
           </div>
           <div class="acct-card-actions">
-            <a class="acct-btn" href="${YEARLY_UPGRADE_URL}" target="_blank" rel="noopener noreferrer">Upgrade to Yearly ↗</a>
-            <a class="acct-btn subtle" href="${CANCEL_BILLING_URL}" target="_blank" rel="noopener noreferrer">Cancel</a>
+            ${unlimitedOwnedActions}
           </div>
         </div>`
       : `
@@ -3696,6 +3712,7 @@ Begin.` },
       state.sessionToken = data.sessionToken;
       saveToken(data.sessionToken);
       state.tier = data.tier || "preview";
+      state.subscriptionPlan = data.subscriptionPlan || null;
       state.dayUnlocks = data.dayUnlocks || state.dayUnlocks;
       state.firstLoginAt = data.firstLoginAt || null;
       state.previewEndsAt = data.previewEndsAt || null;
@@ -4520,6 +4537,11 @@ Begin.` },
       // to the existing client value rather than silently downgrading.
       if (data.tier === "full" || data.tier === "preview") {
         state.tier = data.tier;
+      }
+      // Same rehydration discipline for subscription plan so the Your
+      // Account modal shows the right copy after a monthly to yearly upgrade.
+      if (data.subscriptionPlan === "monthly" || data.subscriptionPlan === "yearly") {
+        state.subscriptionPlan = data.subscriptionPlan;
       }
       // Filter to messages for the CURRENT day only. Each day is its own
       // thread in the demo. Falls back to all messages if no day metadata
