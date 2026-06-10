@@ -73,6 +73,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       sessionToken: sessionToken,
       tier: userRow.tier,
+      subscriptionPlan: userRow.subscription_plan || null,
       displayName: userRow.display_name || null,
       email: userRow.email,
       currentDay: resolveActiveDay(userRow),
