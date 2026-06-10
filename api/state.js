@@ -72,6 +72,7 @@ export default async function handler(req, res) {
       currentDay: resolveActiveDay(user),
       timeRemainingMs: timeRemainingMs(user),
       tier: user.tier,
+      subscriptionPlan: user.subscription_plan || null,
       lastCompletedDay: user.last_completed_day,
       dayUnlocks: buildDayUnlocks(user),
       firstLoginAt: user.first_login_at,
