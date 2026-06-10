@@ -3743,6 +3743,15 @@ Begin.` },
     state.accountSavedFlash = false;
     state.mobileDrawerOpen = false; // close drawer if it was open
     render();
+    // Silent background refresh so the modal always shows the current tier,
+    // subscription plan, and reset window. Without this, a user who just
+    // upgraded from monthly to yearly would still see the old plan label
+    // until they reloaded the page. Failures are swallowed on purpose: if
+    // the call fails (network, expired session), the modal keeps showing the
+    // cached values rather than flashing an error in the user's face.
+    if (state.sessionToken) {
+      loadFullState().catch(function () { /* swallow */ });
+    }
   }
   function onAccountClose() {
     state.accountMenuOpen = false;
