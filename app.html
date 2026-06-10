@@ -4511,6 +4511,16 @@ Begin.` },
       state.previewEndsAt = data.previewEndsAt || state.previewEndsAt;
       state.displayName = data.displayName || state.displayName;
       state.userEmail = data.email || state.userEmail;
+      // CRITICAL: rehydrate tier from the server on every page open.
+      // Without this, state.tier resets to its default ("preview") on every
+      // page load and never reflects entitlement changes (e.g. a customer
+      // who buys Unlimited after their first login would keep seeing the
+      // expired Reset state until they manually logged out and back in).
+      // Trust whatever the server says: if data.tier is missing, fall back
+      // to the existing client value rather than silently downgrading.
+      if (data.tier === "full" || data.tier === "preview") {
+        state.tier = data.tier;
+      }
       // Filter to messages for the CURRENT day only. Each day is its own
       // thread in the demo. Falls back to all messages if no day metadata
       // is present (older sessions).
