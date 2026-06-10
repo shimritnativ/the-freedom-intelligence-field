@@ -85,6 +85,10 @@ export default async function handler(req, res) {
   const body = req.body || {};
   const grant = (req.query && req.query.grant) || "";   // 'full' | 'preview'
   const revoke = !!(req.query && req.query.revoke);
+  // Optional &plan=monthly or &plan=yearly on activation URLs. Lets the Your
+  // Account modal render the right copy and CTAs without a separate API call
+  // back to ThriveCart. Ignored for revoke events.
+  const plan = (req.query && req.query.plan) || "";
   const email = extractEmail(body);
   const externalId = (body && (body.id || body.event_id)) || null;
 
@@ -111,6 +115,7 @@ export default async function handler(req, res) {
         email: email,
         tier: grant,
         kajabiMemberId: extractMemberId(body),
+        subscriptionPlan: plan,
       });
     }
 
