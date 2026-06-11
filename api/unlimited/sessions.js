@@ -31,18 +31,30 @@ export default async function handler(req, res) {
     const user = await getUserBySessionToken(token);
     if (!user) return res.status(401).json({ error: "unauthorized" });
 
+    // Tier gate: real Kajabi members on preview tier blocked; anonymous
+    // demo accounts (kajabi_entitled = false) bypass so demo testing works.
+    if (user.tier !== "full" && user.kajabi_entitled === true) {
+      return res.status(403).json({ error: "unlimited_locked" });
+    }
+
     if (req.method === "GET") {
-      // List the user's Unlimited sessions, most recent first.
+      // List the user's Unlimited sessions.
+      // Pinned chats sort to the top (most recently pinned first), then
+      // unpinned chats by recency. Matches the sidebar render order in
+      // app.html so the client can render straight from the response.
       const { rows } = await sql`
         SELECT
           id,
           title,
           started_at,
           last_message_at,
-          metadata
+          metadata,
+          pinned_at
         FROM sessions
         WHERE user_id = ${user.id} AND session_type = 'unlimited'
-        ORDER BY COALESCE(last_message_at, started_at) DESC
+        ORDER BY
+          pinned_at DESC NULLS LAST,
+          COALESCE(last_message_at, started_at) DESC
         LIMIT 100
       `;
       return res.status(200).json({
@@ -52,6 +64,7 @@ export default async function handler(req, res) {
           startedAt: r.started_at,
           lastMessageAt: r.last_message_at,
           metadata: r.metadata || {},
+          pinnedAt: r.pinned_at,
         })),
       });
     }
@@ -67,7 +80,7 @@ export default async function handler(req, res) {
       const { rows } = await sql`
         INSERT INTO sessions (user_id, session_type, title, metadata)
         VALUES (${user.id}, 'unlimited', ${newTitle}, ${newMetadata})
-        RETURNING id, title, started_at, last_message_at, metadata
+        RETURNING id, title, started_at, last_message_at, metadata, pinned_at
       `;
       const row = rows[0];
       return res.status(200).json({
@@ -77,6 +90,7 @@ export default async function handler(req, res) {
           startedAt: row.started_at,
           lastMessageAt: row.last_message_at,
           metadata: row.metadata || {},
+          pinnedAt: row.pinned_at,
         },
       });
     }
