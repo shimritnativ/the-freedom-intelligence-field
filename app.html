@@ -1196,7 +1196,7 @@
 
   /* Reset section collapsible — now visibly GOLD so it stands apart from the
      chat list below it. Matches the .sidebar-cta-btn family. */
-  .reset-section-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px; padding: 11px 14px; background: rgba(201, 168, 76, 0.22); border: 1px solid rgba(201, 168, 76, 0.55); border-radius: 8px; cursor: pointer; color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 12px; transition: background 0.15s ease, border-color 0.15s ease; }
+  .reset-section-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px; padding: 10px 14px; background: rgba(201, 168, 76, 0.22); border: 1px solid rgba(201, 168, 76, 0.55); border-radius: 8px; cursor: pointer; color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; margin-bottom: 12px; transition: background 0.15s ease, border-color 0.15s ease; }
   .reset-section-toggle:hover { border-color: var(--gold); background: rgba(201, 168, 76, 0.32); }
   .reset-section-toggle.expanded { background: rgba(201, 168, 76, 0.3); border-color: var(--gold); }
   .reset-section-label { flex: 1; text-align: left; }
@@ -1213,6 +1213,10 @@
   .confirm-btn--cancel:hover { background: rgba(0,0,0,0.08); }
   .confirm-btn--danger { background: #C03A2B; color: #FFFFFF; border-color: #C03A2B; }
   .confirm-btn--danger:hover { background: #A52F22; border-color: #A52F22; }
+  .confirm-btn--save { background: var(--gold); color: #1F1B12; border-color: var(--gold); }
+  .confirm-btn--save:hover { background: #B8951F; border-color: #B8951F; }
+  .rename-modal-input { width: 100%; padding: 12px 14px; background: var(--bg); border: 1px solid var(--gold-line); border-radius: 8px; color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 15px; outline: none; margin-bottom: 20px; box-sizing: border-box; }
+  .rename-modal-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.15); }
 
   /* Guided-process dropdown in the Unlimited section */
   .process-menu { margin-bottom: 10px; }
@@ -2637,6 +2641,35 @@ Begin.` },
       </div>
     `;
   }
+  // Renders the rename modal overlay when state.renamingChatId is set.
+  // Reliable across desktop and mobile — no fighting with click handlers on
+  // the chat list, and the input is unambiguously the only interactive
+  // element on screen so focus and typing always work.
+  function renderRenameModal() {
+    if (!state.renamingChatId) return "";
+    return `
+      <div class="confirm-overlay" id="rename-modal-overlay">
+        <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="rename-title">
+          <div class="confirm-title" id="rename-title">Rename conversation</div>
+          <form id="rename-modal-form">
+            <input
+              id="rename-modal-input"
+              type="text"
+              value="${escapeHtml(state.renamingChatDraft || "")}"
+              maxlength="200"
+              class="rename-modal-input"
+              autocomplete="off"
+              autocapitalize="sentences"
+            />
+            <div class="confirm-actions">
+              <button class="confirm-btn confirm-btn--cancel" type="button" id="rename-cancel-btn">Cancel</button>
+              <button class="confirm-btn confirm-btn--save" type="submit" id="rename-save-btn">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+  }
   // Renders the delete confirmation overlay when state.deleteConfirmChatId
   // is set. Returns empty string otherwise so it costs nothing in the DOM.
   function renderDeleteConfirmModal() {
@@ -2831,15 +2864,12 @@ Begin.` },
             const recent = filtered.filter(s => !s.pinnedAt);
             const renderItem = (s) => {
               const isActive = s.id === state.activeUnlimitedId;
-              const isRenaming = state.renamingChatId === s.id;
               return `
                 <div class="unl-chat-item ${isActive ? "active" : ""} ${s.pinnedAt ? "pinned" : ""}" data-unl-id="${s.id}">
                   ${s.pinnedAt ? '<span class="unl-chat-pin" aria-hidden="true">' + pinIconSvg() + '</span>' : ""}
                   <div class="unl-chat-body">
-                    ${isRenaming
-                      ? `<input class="unl-chat-rename-input" type="text" value="${escapeHtml(state.renamingChatDraft)}" data-rename-id="${s.id}" />`
-                      : `<div class="unl-chat-title">${escapeHtml(s.title || "New chat")}</div>`}
-                    ${isRenaming ? "" : `<div class="unl-chat-time">${escapeHtml(formatRelativeTime(s.lastMessageAt || s.startedAt))}</div>`}
+                    <div class="unl-chat-title">${escapeHtml(s.title || "New chat")}</div>
+                    <div class="unl-chat-time">${escapeHtml(formatRelativeTime(s.lastMessageAt || s.startedAt))}</div>
                   </div>
                   <button class="unl-chat-menu-btn" data-chat-menu-id="${s.id}" data-chat-menu-origin="sidebar" type="button" aria-label="Chat options">
                     ${dotsIconSvg()}
@@ -3505,6 +3535,7 @@ Begin.` },
         ${renderMobileOverlay()}
         ${renderAccountModal()}
         ${renderDeleteConfirmModal()}
+        ${renderRenameModal()}
         ${renderFloatingChatMenu()}
       `;
       document.getElementById("entry-form").addEventListener("submit", onStartSubmit);
@@ -3561,6 +3592,7 @@ Begin.` },
         ${renderMobileOverlay()}
         ${renderAccountModal()}
         ${renderDeleteConfirmModal()}
+        ${renderRenameModal()}
         ${renderFloatingChatMenu()}
       `;
       renderMessages();
@@ -3651,6 +3683,7 @@ Begin.` },
         ${renderMobileOverlay()}
         ${renderAccountModal()}
         ${renderDeleteConfirmModal()}
+        ${renderRenameModal()}
         ${renderFloatingChatMenu()}
       `;
       renderUnlimitedMessages();
@@ -3753,6 +3786,7 @@ Begin.` },
     wireResetSectionToggle();
     wireChatMenus();
     wireDeleteConfirm();
+    wireRenameModal();
     wireOutsideMenuClose();
   }
 
@@ -3826,26 +3860,32 @@ Begin.` },
         else if (action === "delete") onChatDeleteRequest(id);
       });
     });
-    // Inline rename input handlers
-    document.querySelectorAll(".unl-chat-rename-input").forEach(input => {
-      const id = input.dataset.renameId;
-      // Stop both mousedown and click so the parent .unl-chat-item handler
-      // doesn't think you're trying to switch chats while you're editing.
-      input.addEventListener("mousedown", (e) => e.stopPropagation());
-      input.addEventListener("click", (e) => e.stopPropagation());
-      input.addEventListener("touchstart", (e) => e.stopPropagation(), { passive: true });
+  }
+
+  // Rename modal: cancel, save, click outside, Enter, Escape
+  function wireRenameModal() {
+    const overlay = document.getElementById("rename-modal-overlay");
+    if (overlay) {
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) onChatRenameCancel();
+      });
+    }
+    const form = document.getElementById("rename-modal-form");
+    if (form) {
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        onChatRenameSubmit();
+      });
+    }
+    const input = document.getElementById("rename-modal-input");
+    if (input) {
       input.addEventListener("input", (e) => { state.renamingChatDraft = e.target.value; });
       input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") { e.preventDefault(); onChatRenameSubmit(id, input.value); }
-        else if (e.key === "Escape") { e.preventDefault(); onChatRenameCancel(); }
+        if (e.key === "Escape") { e.preventDefault(); onChatRenameCancel(); }
       });
-      // Blur saves whatever's in the input. Use a small delay so clicks on
-      // other UI fire BEFORE the save happens (prevents racy double-renders).
-      input.addEventListener("blur", () => {
-        const val = input.value;
-        setTimeout(() => onChatRenameSubmit(id, val), 50);
-      });
-    });
+    }
+    const cancelBtn = document.getElementById("rename-cancel-btn");
+    if (cancelBtn) cancelBtn.addEventListener("click", onChatRenameCancel);
   }
 
   // Delete confirmation modal wiring
@@ -4825,26 +4865,40 @@ Begin.` },
     }
   }
 
-  // ===== Rename: inline edit =====
-  function onChatRenameStart(chatId) {
+  // ===== Rename =====
+  // We use a styled overlay prompt for reliability across desktop and mobile.
+  // Inline edit kept fighting with the chat-item click handler in some
+  // browsers and on touch devices — focus would get stolen and typing
+  // wouldn't register. The overlay is bulletproof and works the same
+  // everywhere.
+  async function onChatRenameStart(chatId) {
     const session = state.unlimitedSessions.find(s => s.id === chatId);
     if (!session) return;
-    state.renamingChatId = chatId;
-    state.renamingChatDraft = session.title || "";
+    // Close the floating menu before showing the rename modal so it doesn't
+    // overlap visually.
     state.openChatMenuId = null;
     state.openChatMenuOrigin = null;
+    state.renamingChatId = chatId;
+    state.renamingChatDraft = session.title || "";
     render();
-    // Focus the input after the DOM updates
+    // Focus + select the modal input on the next tick. Synchronous focus
+    // sometimes loses to whatever click event is still bubbling.
     setTimeout(function () {
-      const input = document.querySelector('[data-rename-id="' + chatId + '"]');
+      const input = document.getElementById("rename-modal-input");
       if (input) { input.focus(); input.select(); }
     }, 30);
   }
-  async function onChatRenameSubmit(chatId, newTitle) {
-    const trimmed = (newTitle || "").trim();
-    if (trimmed.length === 0) { onChatRenameCancel(); return; }
+  async function onChatRenameSubmit() {
+    const chatId = state.renamingChatId;
+    if (!chatId) return;
+    const input = document.getElementById("rename-modal-input");
+    const value = input ? input.value : state.renamingChatDraft;
+    const trimmed = (value || "").trim();
     const original = state.unlimitedSessions.find(s => s.id === chatId);
-    if (!original || trimmed === (original.title || "")) { onChatRenameCancel(); return; }
+    if (trimmed.length === 0 || !original || trimmed === (original.title || "")) {
+      onChatRenameCancel();
+      return;
+    }
     // Optimistic update so the new title shows immediately
     const idx = state.unlimitedSessions.findIndex(s => s.id === chatId);
     if (idx >= 0) {
@@ -4859,7 +4913,6 @@ Begin.` },
       render();
     } catch (e) {
       console.error("rename_failed", e);
-      // Roll back the optimistic title on failure
       if (idx >= 0 && original) {
         state.unlimitedSessions[idx] = Object.assign({}, state.unlimitedSessions[idx], { title: original.title });
         render();
