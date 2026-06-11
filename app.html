@@ -1158,11 +1158,49 @@
   .unl-chat-body { flex: 1; min-width: 0; }
   .unl-chat-title { font-size: 11px; color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-weight: 500; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .unl-chat-time { font-size: 9px; color: var(--text-mute); margin-top: 2px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-  .unl-chat-rename-input { width: 100%; background: var(--panel); border: 1px solid var(--gold); border-radius: 4px; color: var(--text); padding: 4px 6px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; outline: none; }
-  /* contentEditable title in rename mode — same layout as the read-only
-     title but with a gold border and focus ring so the user knows it's live. */
-  .unl-chat-title.editing { white-space: normal; overflow: visible; text-overflow: clip; background: var(--panel); border: 1px solid var(--gold); border-radius: 4px; padding: 3px 6px; outline: none; cursor: text; user-select: text; -webkit-user-select: text; caret-color: var(--gold); }
-  .unl-chat-title.editing:focus { box-shadow: 0 0 0 2px rgba(201, 168, 76, 0.25); }
+  /* Calm rename modal. Warm cream, italic serif title, soft fade-in. */
+  .rename-overlay { position: fixed; inset: 0; background: rgba(31, 27, 18, 0.45); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; z-index: 9100; padding: 24px; animation: rename-fade 0.18s ease-out; }
+  .rename-modal { background: var(--bg); border: 1px solid rgba(201, 168, 76, 0.35); border-radius: 18px; padding: 36px 36px 28px; max-width: 460px; width: 100%; box-shadow: 0 24px 60px rgba(0,0,0,0.35); animation: rename-rise 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
+  .rename-eyebrow { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.32em; color: var(--gold); margin-bottom: 10px; }
+  .rename-title { font-family: Georgia, "Times New Roman", serif; font-style: italic; font-size: 22px; line-height: 1.3; color: var(--text); margin-bottom: 26px; opacity: 0.85; }
+  .rename-input { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(201, 168, 76, 0.4); border-radius: 0; color: var(--text); font-family: Georgia, "Times New Roman", serif; font-style: italic; font-size: 20px; padding: 8px 2px 12px; outline: none; box-sizing: border-box; transition: border-color 0.2s ease; }
+  .rename-input::placeholder { color: var(--text-mute); font-style: italic; opacity: 0.6; }
+  .rename-input:focus { border-bottom-color: var(--gold); }
+  .rename-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 24px; }
+  .rename-btn { padding: 9px 18px; border-radius: 8px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; border: 1px solid transparent; transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease; }
+  .rename-btn--cancel { background: transparent; color: var(--text-mute); border-color: transparent; }
+  .rename-btn--cancel:hover { color: var(--text); }
+  .rename-btn--save { background: transparent; color: var(--gold); border-color: rgba(201, 168, 76, 0.5); }
+  .rename-btn--save:hover { background: rgba(201, 168, 76, 0.12); border-color: var(--gold); }
+  @keyframes rename-fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes rename-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ===== Welcome view (Unlimited members' landing on every app open) ===== */
+  .welcome-main { display: flex; align-items: center; justify-content: center; padding: 40px 28px; overflow-y: auto; }
+  .welcome-wrap { max-width: 880px; width: 100%; text-align: center; padding: 20px 0 40px; animation: welcome-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+  .welcome-eyebrow { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.32em; color: var(--gold); margin-bottom: 28px; opacity: 0.85; }
+  .welcome-greeting { font-family: Georgia, "Times New Roman", serif; font-style: italic; font-weight: 400; font-size: 44px; line-height: 1.15; color: var(--text); margin: 0 0 22px; }
+  .welcome-divider { width: 80px; height: 1.5px; background: var(--gold); margin: 0 auto 56px; opacity: 0.7; }
+  .welcome-quote-label { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.3em; color: var(--text-mute); margin-bottom: 22px; }
+  .welcome-quote { font-family: Georgia, "Times New Roman", serif; font-style: italic; font-weight: 400; font-size: 28px; line-height: 1.45; color: var(--text); margin: 0 auto 18px; max-width: 720px; opacity: 0.92; }
+  .welcome-quote-source { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-style: italic; font-size: 13px; color: var(--text-mute); margin-bottom: 56px; }
+  .welcome-prompt { font-family: Georgia, "Times New Roman", serif; font-style: italic; font-size: 19px; color: var(--text-mute); margin-bottom: 28px; opacity: 0.9; }
+  .welcome-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 880px; margin: 0 auto; }
+  .welcome-card { position: relative; padding: 22px 22px 26px; background: var(--bg); border: 1px solid rgba(201, 168, 76, 0.25); border-radius: 14px; cursor: pointer; text-align: left; font-family: inherit; transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+  .welcome-card:hover { border-color: var(--gold); background: rgba(201, 168, 76, 0.06); transform: translateY(-2px); }
+  .welcome-card-title { font-family: Georgia, "Times New Roman", serif; font-style: italic; font-size: 17px; color: var(--text); margin-bottom: 6px; }
+  .welcome-card-desc { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 12px; color: var(--text-mute); line-height: 1.4; padding-right: 18px; }
+  .welcome-card-arrow { position: absolute; right: 18px; bottom: 18px; color: var(--gold); font-size: 18px; transition: transform 0.18s ease; }
+  .welcome-card:hover .welcome-card-arrow { transform: translateX(3px); }
+  @keyframes welcome-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @media (max-width: 720px) {
+    .welcome-cards { grid-template-columns: 1fr; gap: 10px; }
+    .welcome-greeting { font-size: 32px; }
+    .welcome-quote { font-size: 22px; }
+    .welcome-prompt { font-size: 17px; }
+    .welcome-divider { margin-bottom: 40px; }
+    .welcome-quote-source { margin-bottom: 40px; }
+  }
   .unl-chat-empty { padding: 10px 8px; font-size: 11px; color: var(--text-mute); font-style: italic; font-family: Georgia, serif; }
   .unl-pin-limit-error { margin-top: 6px; padding: 8px 10px; background: rgba(220, 80, 80, 0.12); border: 1px solid rgba(220, 80, 80, 0.4); border-radius: 6px; color: #C03A2B; font-size: 10px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-style: italic; }
 
@@ -1706,6 +1744,57 @@
     { label: "Day 2", theme: "Decision" },
     { label: "Day 3", theme: "Action" }
   ];
+
+  // ===== Daily quotes =====
+  // 30 curated lines pulled from Shimrit's voice anchors and the methodology.
+  // One rotates daily based on UTC epoch-day, so everyone with the same
+  // calendar date sees the same quote regardless of timezone. To add or
+  // edit, just modify this array — getDailyQuote handles the rest.
+  const DAILY_QUOTES = [
+    { text: "What you declare here is not a wish. It is a remembering.", source: "Human Instrument® Methodology" },
+    { text: "The decision becomes real through what you do next.", source: "Decision Alignment" },
+    { text: "Your worthiness has not declined. It cannot.", source: "Worthy to Receive" },
+    { text: "Alignment is not agreement. It is conscious relationship.", source: "The Alignment of Three" },
+    { text: "You are a divine being, one with the source of all supply.", source: "Worthy to Receive" },
+    { text: "The mind is a tool, not the master.", source: "The Alignment of Three" },
+    { text: "The heart knows before the mind feels safe.", source: "The Alignment of Three" },
+    { text: "Let us return the lead back to you.", source: "The Field" },
+    { text: "What is true underneath the noise?", source: "The Field" },
+    { text: "The decision does not need more time. It needs alignment. Then action.", source: "Decision Alignment" },
+    { text: "You can only receive at the level you believe you deserve.", source: "Worthy to Receive" },
+    { text: "Worthiness is not earned. It is remembered.", source: "Worthy to Receive" },
+    { text: "You were born completely worthy. Nothing has changed.", source: "Worthy to Receive" },
+    { text: "Only the concept has been distorted. And concepts can be changed.", source: "Identity Upgrade" },
+    { text: "Mirror before you move. Always.", source: "The Field" },
+    { text: "The instrument runs patterns. The participant directs.", source: "Human Instrument® Methodology" },
+    { text: "The body gives information. It does not automatically get the final authority.", source: "The Alignment of Three" },
+    { text: "Awareness is the beginning. Movement is the reset.", source: "72-Hour Power Reset" },
+    { text: "You are not here to collect more information. You are here to become more available.", source: "The Field" },
+    { text: "Self-mastery is not a concept. It is how you live.", source: "Master Your Path" },
+    { text: "Freedom is a skill. It compounds in real time.", source: "Skill of Freedom" },
+    { text: "Where awareness needs to become behavior, that is where the pattern usually wins.", source: "72-Hour Power Reset" },
+    { text: "Bring one active loop and let the process do the work.", source: "The Field" },
+    { text: "Identity is upstream of action. Action is upstream of result.", source: "Identity Upgrade" },
+    { text: "The work becomes real when you can return to it tomorrow.", source: "The Field" },
+    { text: "You don't outgrow patterns by understanding them. You outgrow them by moving.", source: "Pattern Release" },
+    { text: "Your current state is not your final state.", source: "Frequency Calibration" },
+    { text: "Receiving is a practice. Begin where you are.", source: "Worthy to Receive" },
+    { text: "What would the version of you who already chose this do today?", source: "Identity Upgrade" },
+    { text: "The Field guides. You decide. You move.", source: "The Field" }
+  ];
+  function getDailyQuote() {
+    // Same quote for everyone on the same UTC day. % length wraps around so
+    // the rotation is stable even if the array grows over time.
+    const epochDay = Math.floor(Date.now() / 86400000);
+    return DAILY_QUOTES[epochDay % DAILY_QUOTES.length];
+  }
+  function formatTodayLong() {
+    // "Wednesday · June 11" — matches the eyebrow style in the mockup.
+    const d = new Date();
+    const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    return days[d.getDay()] + " · " + months[d.getMonth()] + " " + d.getDate();
+  }
   const PLACEHOLDERS = [
     "What feels most active right now?",
     "What are you no longer available for?",
@@ -2695,6 +2784,37 @@ Begin.` },
       </div>
     `;
   }
+  // Calm rename modal. The styling is intentionally soft — cream background,
+  // gold focus ring, italic serif title — so it feels like part of the Field
+  // rather than a clipboard popup.
+  function renderRenameModal() {
+    if (!state.renamingChatId) return "";
+    const session = state.unlimitedSessions.find(s => s.id === state.renamingChatId);
+    return `
+      <div class="rename-overlay" id="rename-overlay">
+        <div class="rename-modal" role="dialog" aria-modal="true" aria-labelledby="rename-title">
+          <div class="rename-eyebrow">RENAME</div>
+          <div class="rename-title" id="rename-title">${session ? escapeHtml(session.title || "this conversation") : "this conversation"}</div>
+          <form id="rename-form" autocomplete="off">
+            <input
+              id="rename-modal-input"
+              class="rename-input"
+              type="text"
+              value="${escapeHtml(state.renamingChatDraft || "")}"
+              maxlength="200"
+              autocomplete="off"
+              autocapitalize="sentences"
+              placeholder="Name this conversation"
+            />
+            <div class="rename-actions">
+              <button class="rename-btn rename-btn--cancel" id="rename-cancel-btn" type="button">Cancel</button>
+              <button class="rename-btn rename-btn--save" id="rename-save-btn" type="submit">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+  }
   // Renders the delete confirmation overlay when state.deleteConfirmChatId
   // is set. Returns empty string otherwise so it costs nothing in the DOM.
   function renderDeleteConfirmModal() {
@@ -3575,6 +3695,7 @@ Begin.` },
         ${renderMobileOverlay()}
         ${renderAccountModal()}
         ${renderDeleteConfirmModal()}
+        ${renderRenameModal()}
         ${renderFloatingChatMenu()}
       `;
       document.getElementById("entry-form").addEventListener("submit", onStartSubmit);
@@ -3631,6 +3752,7 @@ Begin.` },
         ${renderMobileOverlay()}
         ${renderAccountModal()}
         ${renderDeleteConfirmModal()}
+        ${renderRenameModal()}
         ${renderFloatingChatMenu()}
       `;
       renderMessages();
@@ -3655,6 +3777,78 @@ Begin.` },
       if (saveWorkBtn) saveWorkBtn.addEventListener("click", onExportWorkClick);
       restoreDraftIntoInput();
       setTimeout(() => { if (!state.searchOpen) document.getElementById("input")?.focus(); }, 50);
+    } else if (state.view === "welcome") {
+      // The Welcome view is the default landing for Unlimited members on
+      // every fresh app open. Replaces the old "auto-resume last chat"
+      // behavior — instead they actively pick what to engage with.
+      const displayName = (state.displayName || "").split(" ")[0];
+      const greeting = displayName ? "Welcome back, " + escapeHtml(displayName) + "." : "Welcome to The Field.";
+      const quote = getDailyQuote();
+      const today = formatTodayLong();
+      const mostRecent = state.unlimitedSessions[0];
+      const continueCardHtml = mostRecent ? `
+        <button class="welcome-card" id="welcome-continue-btn" data-recent-id="${mostRecent.id}" type="button">
+          <div class="welcome-card-title">Continue last conversation</div>
+          <div class="welcome-card-desc">${escapeHtml(mostRecent.title || "New chat")} · ${escapeHtml(formatRelativeTime(mostRecent.lastMessageAt || mostRecent.startedAt))}</div>
+          <span class="welcome-card-arrow">→</span>
+        </button>
+      ` : "";
+      app.innerHTML = `
+        ${renderMobileTopBar()}
+        <div class="main-row">
+          ${renderSidebar()}
+          <main class="main welcome-main">
+            <div class="welcome-wrap">
+              <div class="welcome-eyebrow">YOUR FIELD · ${escapeHtml(today.toUpperCase())}</div>
+              <h1 class="welcome-greeting">${greeting}</h1>
+              <div class="welcome-divider"></div>
+
+              <div class="welcome-quote-label">FROM THE FIELD TODAY</div>
+              <blockquote class="welcome-quote">"${escapeHtml(quote.text)}"</blockquote>
+              <div class="welcome-quote-source">Shimrit Nativ · ${escapeHtml(quote.source)}</div>
+
+              <div class="welcome-prompt">What is alive in you right now?</div>
+
+              <div class="welcome-cards">
+                <button class="welcome-card" id="welcome-newchat-btn" type="button">
+                  <div class="welcome-card-title">Start a conversation</div>
+                  <div class="welcome-card-desc">Begin a new chat with the Field</div>
+                  <span class="welcome-card-arrow">→</span>
+                </button>
+                <button class="welcome-card" id="welcome-process-btn" type="button">
+                  <div class="welcome-card-title">Open a guided process</div>
+                  <div class="welcome-card-desc">Identity, money, decision, more</div>
+                  <span class="welcome-card-arrow">→</span>
+                </button>
+                ${continueCardHtml}
+              </div>
+            </div>
+          </main>
+        </div>
+        ${renderMobileOverlay()}
+        ${renderAccountModal()}
+        ${renderDeleteConfirmModal()}
+        ${renderRenameModal()}
+        ${renderFloatingChatMenu()}
+      `;
+      // Common sidebar wiring (mobile menu, account, logout, theme, etc.)
+      // runs unconditionally at the bottom of render() for every view, so
+      // we don't need a separate helper here. Only welcome-specific action
+      // card wiring goes below.
+      // Welcome action card wiring
+      const newChatBtn = document.getElementById("welcome-newchat-btn");
+      if (newChatBtn) newChatBtn.addEventListener("click", () => onNewChatClick());
+      const processBtn = document.getElementById("welcome-process-btn");
+      if (processBtn) processBtn.addEventListener("click", () => {
+        state.processMenuOpen = true;
+        state.mobileDrawerOpen = true; // ensure sidebar visible on mobile
+        render();
+      });
+      const continueBtn = document.getElementById("welcome-continue-btn");
+      if (continueBtn) continueBtn.addEventListener("click", () => {
+        const id = continueBtn.dataset.recentId;
+        if (id) onUnlimitedChatClick(id);
+      });
     } else if (state.view === "unlimited-chat") {
       if (!unlimitedUnlocked()) {
         app.innerHTML = `
@@ -3721,6 +3915,7 @@ Begin.` },
         ${renderMobileOverlay()}
         ${renderAccountModal()}
         ${renderDeleteConfirmModal()}
+        ${renderRenameModal()}
         ${renderFloatingChatMenu()}
       `;
       renderUnlimitedMessages();
@@ -3823,7 +4018,7 @@ Begin.` },
     wireResetSectionToggle();
     wireChatMenus();
     wireDeleteConfirm();
-    wireInlineRename();
+    wireRenameModal();
     wireOutsideMenuClose();
   }
 
@@ -3903,38 +4098,34 @@ Begin.` },
     });
   }
 
-  // Inline rename: wire up the contentEditable title that onChatRenameStart
-  // has set up. Enter saves, Escape cancels, blur saves (whatever's there).
-  // All these handlers are on the title element itself, so they never clash
-  // with the parent chat-item's click handler.
-  function wireInlineRename() {
+  // Rename modal wiring. Enter saves, Escape cancels, click on the dim
+  // backdrop closes without saving.
+  function wireRenameModal() {
     if (!state.renamingChatId) return;
-    const item = document.querySelector('.unl-chat-item[data-unl-id="' + state.renamingChatId + '"]');
-    if (!item) return;
-    const titleEl = item.querySelector(".unl-chat-title");
-    if (!titleEl) return;
+    const overlay = document.getElementById("rename-overlay");
+    const input = document.getElementById("rename-modal-input");
+    const form = document.getElementById("rename-form");
+    const cancelBtn = document.getElementById("rename-cancel-btn");
     const chatId = state.renamingChatId;
-    titleEl.addEventListener("mousedown", (e) => e.stopPropagation());
-    titleEl.addEventListener("click", (e) => e.stopPropagation());
-    titleEl.addEventListener("touchstart", (e) => e.stopPropagation(), { passive: true });
-    titleEl.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
+    if (overlay) {
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) onChatRenameCancel();
+      });
+    }
+    if (cancelBtn) cancelBtn.addEventListener("click", onChatRenameCancel);
+    if (input) {
+      input.addEventListener("input", (e) => { state.renamingChatDraft = e.target.value; });
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") { e.preventDefault(); onChatRenameCancel(); }
+      });
+    }
+    if (form) {
+      form.addEventListener("submit", (e) => {
         e.preventDefault();
-        const newText = titleEl.textContent;
-        titleEl.blur();
-        onChatRenameSubmit(chatId, newText);
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        titleEl.blur();
-        onChatRenameCancel();
-      }
-    });
-    titleEl.addEventListener("blur", () => {
-      // Only save if we're still in rename mode for this chat. If user hit
-      // Escape, state.renamingChatId was already cleared by Escape handler.
-      if (state.renamingChatId !== chatId) return;
-      onChatRenameSubmit(chatId, titleEl.textContent);
-    });
+        const value = input ? input.value : state.renamingChatDraft;
+        onChatRenameSubmit(chatId, value);
+      });
+    }
   }
 
   // Delete confirmation modal wiring
@@ -4914,13 +5105,11 @@ Begin.` },
     }
   }
 
-  // ===== Inline Rename =====
-  // The title element becomes contentEditable, gets focus + selectAll, and
-  // saves on Enter or blur. Using contentEditable on the existing title
-  // element (instead of replacing it with an <input>) sidesteps every
-  // event-handler clash we hit before — there's no new DOM element for the
-  // parent chat-item click handler to misinterpret, and focus is rock-solid
-  // on every browser.
+  // ===== Rename (modal) =====
+  // Inline edit kept losing the rename war with browser focus quirks and
+  // touch event noise, so we use a small, calm modal instead. Same warm
+  // cream and gold styling as the rest of the Field — feels less like a
+  // system dialog and more like a quiet pause.
   function onChatRenameStart(chatId) {
     const session = state.unlimitedSessions.find(s => s.id === chatId);
     if (!session) return;
@@ -4929,22 +5118,11 @@ Begin.` },
     state.renamingChatId = chatId;
     state.renamingChatDraft = session.title || "";
     render();
-    // After render, find the title element for this chat and make it editable.
-    // Synchronous DOM lookup — render() is sync so the element is there now.
-    const item = document.querySelector('.unl-chat-item[data-unl-id="' + chatId + '"]');
-    if (!item) return;
-    const titleEl = item.querySelector(".unl-chat-title");
-    if (!titleEl) return;
-    titleEl.setAttribute("contenteditable", "true");
-    titleEl.classList.add("editing");
-    titleEl.dataset.renameId = chatId;
-    titleEl.focus();
-    // Select all text so user can immediately type to replace
-    const range = document.createRange();
-    range.selectNodeContents(titleEl);
-    const selection = window.getSelection();
-    selection.removeAllRanges();
-    selection.addRange(range);
+    // Synchronous focus + select on the modal input. No setTimeout needed
+    // because render() is sync and the input is unambiguously the only
+    // interactive surface on screen.
+    const input = document.getElementById("rename-modal-input");
+    if (input) { input.focus(); input.select(); }
   }
   async function onChatRenameSubmit(chatId, newTitle) {
     const trimmed = (newTitle || "").trim();
@@ -5217,7 +5395,11 @@ Begin.` },
         return Number(m.dayAtSend) === Number(state.currentDay);
       });
       state.messages = filtered.length > 0 ? filtered : allMessages;
-      state.view = "chat";
+      // Landing view by tier:
+      //   full:    Welcome view (quote of the day + action cards). They
+      //            actively pick what to do — no auto-resume of a stale chat.
+      //   preview: Direct to Day 1/2/3 of the Reset (their current practice).
+      state.view = state.tier === "full" ? "welcome" : "chat";
       render();
     } catch (err) {
       clearToken();
