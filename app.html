@@ -1159,6 +1159,10 @@
   .unl-chat-title { font-size: 11px; color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-weight: 500; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .unl-chat-time { font-size: 9px; color: var(--text-mute); margin-top: 2px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
   .unl-chat-rename-input { width: 100%; background: var(--panel); border: 1px solid var(--gold); border-radius: 4px; color: var(--text); padding: 4px 6px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; outline: none; }
+  /* contentEditable title in rename mode — same layout as the read-only
+     title but with a gold border and focus ring so the user knows it's live. */
+  .unl-chat-title.editing { white-space: normal; overflow: visible; text-overflow: clip; background: var(--panel); border: 1px solid var(--gold); border-radius: 4px; padding: 3px 6px; outline: none; cursor: text; user-select: text; -webkit-user-select: text; caret-color: var(--gold); }
+  .unl-chat-title.editing:focus { box-shadow: 0 0 0 2px rgba(201, 168, 76, 0.25); }
   .unl-chat-empty { padding: 10px 8px; font-size: 11px; color: var(--text-mute); font-style: italic; font-family: Georgia, serif; }
   .unl-pin-limit-error { margin-top: 6px; padding: 8px 10px; background: rgba(220, 80, 80, 0.12); border: 1px solid rgba(220, 80, 80, 0.4); border-radius: 6px; color: #C03A2B; font-size: 10px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-style: italic; }
 
@@ -1461,7 +1465,8 @@
     }
     .mobile-menu-btn,
     .mobile-theme-btn,
-    .mobile-export-btn {
+    .mobile-export-btn,
+    .mobile-chat-menu-btn {
       width: 36px; height: 36px;
       background: transparent;
       border: 1px solid var(--gold-line);
@@ -1472,11 +1477,18 @@
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
       cursor: pointer;
+      padding: 0;
     }
     .mobile-menu-btn:active,
     .mobile-theme-btn:active,
-    .mobile-export-btn:active { background: var(--gold-soft); }
+    .mobile-export-btn:active,
+    .mobile-chat-menu-btn:active { background: var(--gold-soft); }
     .mobile-export-btn svg { width: 18px; height: 18px; }
+    .mobile-chat-menu-btn svg { width: 20px; height: 20px; }
+    /* The chat-header version of the 3-dot menu lives in the main pane on
+       desktop. On mobile the same action is on the top bar, so hide the
+       desktop one to avoid duplicate entry points. */
+    .header-chat-menu-btn { display: none; }
     .mobile-export-btn .export-spinner { animation: export-spin 0.9s linear infinite; transform-origin: center; }
     @keyframes export-spin { to { transform: rotate(360deg); } }
 
@@ -1882,11 +1894,53 @@ Begin.` },
   function loadToken() { try { return localStorage.getItem(STORAGE_KEY); } catch (e) { return null; } }
   function saveToken(t) { try { localStorage.setItem(STORAGE_KEY, t); } catch (e) {} }
   function clearToken() { try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(ANON_KEY); } catch (e) {} }
-  function loadTheme() { try { return localStorage.getItem(THEME_KEY) || "dark"; } catch (e) { return "dark"; } }
+  // Returns the system's preferred color scheme. Falls back to dark if the
+  // browser doesn't support the media query.
+  function getSystemTheme() {
+    try {
+      return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
+    } catch (e) { return "dark"; }
+  }
+  // Theme load order:
+  //   1. Explicit user preference stored in localStorage (their toggle wins)
+  //   2. System preference (prefers-color-scheme)
+  //   3. Dark as final fallback
+  // This means a brand new visitor immediately gets the look their device is
+  // already running in, and an existing user who manually picked light/dark
+  // keeps their choice across sessions.
+  function loadTheme() {
+    try {
+      const stored = localStorage.getItem(THEME_KEY);
+      if (stored === "dark" || stored === "light") return stored;
+    } catch (e) {}
+    return getSystemTheme();
+  }
+  // Save only when the change is user-initiated. System-driven changes do NOT
+  // overwrite the stored preference, so a user who picked light stays light
+  // even if their device flips to dark mode later.
   function saveTheme(t) { try { localStorage.setItem(THEME_KEY, t); } catch (e) {} }
-  function applyTheme(theme) {
+  function applyTheme(theme, options) {
     document.documentElement.setAttribute("data-theme", theme);
-    saveTheme(theme);
+    const persist = !options || options.persist !== false;
+    if (persist) saveTheme(theme);
+  }
+  // Subscribe to system theme changes. Only auto-update the website if the
+  // user has NOT explicitly chosen a theme yet (no stored preference).
+  // Called once in init().
+  function subscribeSystemTheme() {
+    if (!window.matchMedia) return;
+    let mq;
+    try { mq = window.matchMedia("(prefers-color-scheme: dark)"); } catch (e) { return; }
+    const onChange = () => {
+      let hasManualPref = false;
+      try { hasManualPref = !!localStorage.getItem(THEME_KEY); } catch (e) {}
+      if (hasManualPref) return; // Respect explicit user choice
+      applyTheme(mq.matches ? "dark" : "light", { persist: false });
+    };
+    if (mq.addEventListener) mq.addEventListener("change", onChange);
+    else if (mq.addListener) mq.addListener(onChange); // Safari < 14
   }
 
   // ===== Composer draft persistence =====
@@ -2641,35 +2695,6 @@ Begin.` },
       </div>
     `;
   }
-  // Renders the rename modal overlay when state.renamingChatId is set.
-  // Reliable across desktop and mobile — no fighting with click handlers on
-  // the chat list, and the input is unambiguously the only interactive
-  // element on screen so focus and typing always work.
-  function renderRenameModal() {
-    if (!state.renamingChatId) return "";
-    return `
-      <div class="confirm-overlay" id="rename-modal-overlay">
-        <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="rename-title">
-          <div class="confirm-title" id="rename-title">Rename conversation</div>
-          <form id="rename-modal-form">
-            <input
-              id="rename-modal-input"
-              type="text"
-              value="${escapeHtml(state.renamingChatDraft || "")}"
-              maxlength="200"
-              class="rename-modal-input"
-              autocomplete="off"
-              autocapitalize="sentences"
-            />
-            <div class="confirm-actions">
-              <button class="confirm-btn confirm-btn--cancel" type="button" id="rename-cancel-btn">Cancel</button>
-              <button class="confirm-btn confirm-btn--save" type="submit" id="rename-save-btn">Save</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    `;
-  }
   // Renders the delete confirmation overlay when state.deleteConfirmChatId
   // is set. Returns empty string otherwise so it costs nothing in the DOM.
   function renderDeleteConfirmModal() {
@@ -3345,8 +3370,10 @@ Begin.` },
   // pill (DAY 1 / 2 / 3 or UNLIMITED — at-a-glance "you are here") + brand text
   // (active section title + product subtitle) + theme toggle.
   function renderMobileTopBar() {
-    const currentTheme = document.documentElement.getAttribute("data-theme") || "dark";
-    const themeIcon = currentTheme === "dark" ? "☀" : "☾";
+    // Theme now follows the device's system preference automatically (see
+    // subscribeSystemTheme), so the mobile top bar no longer needs its own
+    // toggle button. We reuse that slot for the 3-dot chat menu when the
+    // user is viewing an Unlimited chat.
 
     // Default = entry view (about to start Day 1).
     let title = "Day 1: State Reset";
@@ -3394,7 +3421,20 @@ Begin.` },
           </div>
         </div>
         ${exportBtn}
-        <button class="mobile-theme-btn" id="mobile-theme-btn" type="button" aria-label="Toggle theme">${themeIcon}</button>
+        ${(function () {
+          // When the user is in an Unlimited chat, the top-bar slot becomes
+          // a 3-dot menu for Rename / Pin / Delete on the active chat. The
+          // chat-header version of this button is hidden on mobile via CSS
+          // because the top bar is the more thumb-reachable surface.
+          if (state.view !== "unlimited-chat") return "";
+          const active = state.unlimitedSessions.find(s => s.id === state.activeUnlimitedId);
+          if (!active) return "";
+          return `
+            <button class="mobile-chat-menu-btn" data-chat-menu-id="${active.id}" data-chat-menu-origin="header" type="button" aria-label="Chat options">
+              ${dotsIconSvg()}
+            </button>
+          `;
+        })()}
       </div>
     `;
   }
@@ -3535,7 +3575,6 @@ Begin.` },
         ${renderMobileOverlay()}
         ${renderAccountModal()}
         ${renderDeleteConfirmModal()}
-        ${renderRenameModal()}
         ${renderFloatingChatMenu()}
       `;
       document.getElementById("entry-form").addEventListener("submit", onStartSubmit);
@@ -3592,7 +3631,6 @@ Begin.` },
         ${renderMobileOverlay()}
         ${renderAccountModal()}
         ${renderDeleteConfirmModal()}
-        ${renderRenameModal()}
         ${renderFloatingChatMenu()}
       `;
       renderMessages();
@@ -3683,7 +3721,6 @@ Begin.` },
         ${renderMobileOverlay()}
         ${renderAccountModal()}
         ${renderDeleteConfirmModal()}
-        ${renderRenameModal()}
         ${renderFloatingChatMenu()}
       `;
       renderUnlimitedMessages();
@@ -3786,7 +3823,7 @@ Begin.` },
     wireResetSectionToggle();
     wireChatMenus();
     wireDeleteConfirm();
-    wireRenameModal();
+    wireInlineRename();
     wireOutsideMenuClose();
   }
 
@@ -3806,21 +3843,25 @@ Begin.` },
   function wireUnlimitedChatItems() {
     document.querySelectorAll(".unl-chat-item").forEach(el => {
       el.addEventListener("click", (e) => {
-        // Ignore clicks on the menu button, dropdown, or the rename input
+        // Ignore clicks on the menu button, floating dropdown, or anywhere
+        // inside the editable title while a rename is in progress.
         if (e.target.closest('[data-chat-menu-id]')) return;
         if (e.target.closest('[data-menu-dropdown]')) return;
-        if (e.target.closest('.unl-chat-rename-input')) return;
+        if (e.target.closest('.unl-chat-title.editing')) return;
+        // Skip entirely when this chat is being renamed — prevents any
+        // accidental navigation while the user is editing.
+        if (state.renamingChatId === el.dataset.unlId) return;
         onUnlimitedChatClick(el.dataset.unlId);
       });
       // Long-press for mobile: 500ms hold opens the menu
       let pressTimer = null;
       el.addEventListener("touchstart", (e) => {
         if (e.target.closest('[data-chat-menu-id]')) return;
-        if (e.target.closest('.unl-chat-rename-input')) return;
+        if (e.target.closest('.unl-chat-title.editing')) return;
+        if (state.renamingChatId === el.dataset.unlId) return;
         const chatId = el.dataset.unlId;
         pressTimer = setTimeout(() => {
           onChatMenuToggle(chatId, "sidebar");
-          // Haptic feedback if supported
           if (navigator.vibrate) navigator.vibrate(10);
         }, 500);
       }, { passive: true });
@@ -3862,30 +3903,38 @@ Begin.` },
     });
   }
 
-  // Rename modal: cancel, save, click outside, Enter, Escape
-  function wireRenameModal() {
-    const overlay = document.getElementById("rename-modal-overlay");
-    if (overlay) {
-      overlay.addEventListener("click", (e) => {
-        if (e.target === overlay) onChatRenameCancel();
-      });
-    }
-    const form = document.getElementById("rename-modal-form");
-    if (form) {
-      form.addEventListener("submit", (e) => {
+  // Inline rename: wire up the contentEditable title that onChatRenameStart
+  // has set up. Enter saves, Escape cancels, blur saves (whatever's there).
+  // All these handlers are on the title element itself, so they never clash
+  // with the parent chat-item's click handler.
+  function wireInlineRename() {
+    if (!state.renamingChatId) return;
+    const item = document.querySelector('.unl-chat-item[data-unl-id="' + state.renamingChatId + '"]');
+    if (!item) return;
+    const titleEl = item.querySelector(".unl-chat-title");
+    if (!titleEl) return;
+    const chatId = state.renamingChatId;
+    titleEl.addEventListener("mousedown", (e) => e.stopPropagation());
+    titleEl.addEventListener("click", (e) => e.stopPropagation());
+    titleEl.addEventListener("touchstart", (e) => e.stopPropagation(), { passive: true });
+    titleEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
         e.preventDefault();
-        onChatRenameSubmit();
-      });
-    }
-    const input = document.getElementById("rename-modal-input");
-    if (input) {
-      input.addEventListener("input", (e) => { state.renamingChatDraft = e.target.value; });
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") { e.preventDefault(); onChatRenameCancel(); }
-      });
-    }
-    const cancelBtn = document.getElementById("rename-cancel-btn");
-    if (cancelBtn) cancelBtn.addEventListener("click", onChatRenameCancel);
+        const newText = titleEl.textContent;
+        titleEl.blur();
+        onChatRenameSubmit(chatId, newText);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        titleEl.blur();
+        onChatRenameCancel();
+      }
+    });
+    titleEl.addEventListener("blur", () => {
+      // Only save if we're still in rename mode for this chat. If user hit
+      // Escape, state.renamingChatId was already cleared by Escape handler.
+      if (state.renamingChatId !== chatId) return;
+      onChatRenameSubmit(chatId, titleEl.textContent);
+    });
   }
 
   // Delete confirmation modal wiring
@@ -4865,41 +4914,45 @@ Begin.` },
     }
   }
 
-  // ===== Rename =====
-  // We use a styled overlay prompt for reliability across desktop and mobile.
-  // Inline edit kept fighting with the chat-item click handler in some
-  // browsers and on touch devices — focus would get stolen and typing
-  // wouldn't register. The overlay is bulletproof and works the same
-  // everywhere.
-  async function onChatRenameStart(chatId) {
+  // ===== Inline Rename =====
+  // The title element becomes contentEditable, gets focus + selectAll, and
+  // saves on Enter or blur. Using contentEditable on the existing title
+  // element (instead of replacing it with an <input>) sidesteps every
+  // event-handler clash we hit before — there's no new DOM element for the
+  // parent chat-item click handler to misinterpret, and focus is rock-solid
+  // on every browser.
+  function onChatRenameStart(chatId) {
     const session = state.unlimitedSessions.find(s => s.id === chatId);
     if (!session) return;
-    // Close the floating menu before showing the rename modal so it doesn't
-    // overlap visually.
     state.openChatMenuId = null;
     state.openChatMenuOrigin = null;
     state.renamingChatId = chatId;
     state.renamingChatDraft = session.title || "";
     render();
-    // Focus + select the modal input on the next tick. Synchronous focus
-    // sometimes loses to whatever click event is still bubbling.
-    setTimeout(function () {
-      const input = document.getElementById("rename-modal-input");
-      if (input) { input.focus(); input.select(); }
-    }, 30);
+    // After render, find the title element for this chat and make it editable.
+    // Synchronous DOM lookup — render() is sync so the element is there now.
+    const item = document.querySelector('.unl-chat-item[data-unl-id="' + chatId + '"]');
+    if (!item) return;
+    const titleEl = item.querySelector(".unl-chat-title");
+    if (!titleEl) return;
+    titleEl.setAttribute("contenteditable", "true");
+    titleEl.classList.add("editing");
+    titleEl.dataset.renameId = chatId;
+    titleEl.focus();
+    // Select all text so user can immediately type to replace
+    const range = document.createRange();
+    range.selectNodeContents(titleEl);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
   }
-  async function onChatRenameSubmit() {
-    const chatId = state.renamingChatId;
-    if (!chatId) return;
-    const input = document.getElementById("rename-modal-input");
-    const value = input ? input.value : state.renamingChatDraft;
-    const trimmed = (value || "").trim();
+  async function onChatRenameSubmit(chatId, newTitle) {
+    const trimmed = (newTitle || "").trim();
     const original = state.unlimitedSessions.find(s => s.id === chatId);
     if (trimmed.length === 0 || !original || trimmed === (original.title || "")) {
       onChatRenameCancel();
       return;
     }
-    // Optimistic update so the new title shows immediately
     const idx = state.unlimitedSessions.findIndex(s => s.id === chatId);
     if (idx >= 0) {
       state.unlimitedSessions[idx] = Object.assign({}, state.unlimitedSessions[idx], { title: trimmed });
@@ -5289,7 +5342,11 @@ Begin.` },
   }
 
   function init() {
-    applyTheme(loadTheme());
+    // Initial theme = stored preference (if any) → system preference → dark.
+    // persist:false so we don't accidentally lock in the system value as a
+    // "user preference" the user never actually made.
+    applyTheme(loadTheme(), { persist: false });
+    subscribeSystemTheme();
     applyFontScale(state.fontScale);
     if (EMBED_MODE) { startEmbedGate(); return; }
     initApp();
