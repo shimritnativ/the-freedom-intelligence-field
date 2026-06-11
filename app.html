@@ -1162,42 +1162,45 @@
   .unl-chat-empty { padding: 10px 8px; font-size: 11px; color: var(--text-mute); font-style: italic; font-family: Georgia, serif; }
   .unl-pin-limit-error { margin-top: 6px; padding: 8px 10px; background: rgba(220, 80, 80, 0.12); border: 1px solid rgba(220, 80, 80, 0.4); border-radius: 6px; color: #C03A2B; font-size: 10px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-style: italic; }
 
-  /* 3-dot menu trigger button (sidebar + header) */
-  .unl-chat-menu-btn, .header-chat-menu-btn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; padding: 0; background: transparent; border: none; color: var(--text-mute); cursor: pointer; opacity: 0; transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+  /* 3-dot menu trigger button (sidebar). Always visible on mobile so long-press
+     is discoverable. On desktop, fade-in on hover keeps the list visually calm. */
+  .unl-chat-menu-btn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; padding: 0; background: transparent; border: none; color: var(--text-mute); cursor: pointer; opacity: 0; transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
   .unl-chat-item:hover .unl-chat-menu-btn,
   .unl-chat-item.active .unl-chat-menu-btn { opacity: 1; }
-  .unl-chat-menu-btn:hover, .header-chat-menu-btn:hover { color: var(--gold); background: rgba(0,0,0,0.15); }
-  .unl-chat-menu-btn svg, .header-chat-menu-btn svg { width: 16px; height: 16px; }
-  /* On touch devices, always show the dot button so long-press is discoverable */
-  @media (hover: none) {
-    .unl-chat-menu-btn { opacity: 1; }
+  .unl-chat-menu-btn:hover { color: var(--gold); background: rgba(0,0,0,0.18); }
+  .unl-chat-menu-btn svg { width: 16px; height: 16px; }
+  /* Touch devices have no hover, so always show the menu button. Also bumped
+     the tap target to 32px for thumb-friendly hits. */
+  @media (hover: none), (pointer: coarse), (max-width: 900px) {
+    .unl-chat-menu-btn { opacity: 1; width: 32px; height: 32px; right: 4px; }
+    .unl-chat-menu-btn svg { width: 18px; height: 18px; }
+    .unl-chat-item { padding-right: 40px; }
   }
-  /* Header-anchored variant sits next to the chat title, always visible */
-  .header-chat-menu-btn { position: static; transform: none; opacity: 1; width: 32px; height: 32px; color: var(--text); }
+
+  /* Header-anchored chat menu button — always visible, both desktop and mobile */
+  .header-chat-menu-btn { width: 36px; height: 36px; padding: 0; background: transparent; border: 1px solid var(--gold-line); border-radius: 8px; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s ease, border-color 0.15s ease; }
+  .header-chat-menu-btn:hover { background: var(--gold-soft); border-color: var(--gold); }
   .header-chat-menu-btn svg { width: 20px; height: 20px; }
-  .main-header-actions { position: relative; }
+  .main-header-actions { position: relative; display: flex; align-items: center; gap: 8px; }
   /* Header lays out title and actions side by side */
   .main-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 
-  /* Dropdown menu (used by both sidebar and header triggers) */
-  .chat-menu-dropdown { position: absolute; right: 0; top: calc(100% + 4px); min-width: 180px; background: #FAF6EC; border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,0.18); padding: 4px; z-index: 100; }
-  .chat-menu-dropdown--sidebar { right: 4px; top: 36px; }
-  .chat-menu-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; background: transparent; border: none; cursor: pointer; border-radius: 8px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; color: #1F1B12; text-align: left; transition: background 0.1s ease; }
+  /* Floating chat menu (body-level fixed position so it never gets clipped) */
+  .floating-chat-menu { position: fixed; min-width: 180px; background: #FAF6EC; border: 1px solid rgba(0,0,0,0.1); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.25); padding: 4px; z-index: 9999; }
+  .chat-menu-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 14px; background: transparent; border: none; cursor: pointer; border-radius: 8px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 14px; font-weight: 500; color: #1F1B12; text-align: left; transition: background 0.1s ease; }
   .chat-menu-item:hover { background: rgba(0,0,0,0.06); }
   .chat-menu-item--danger { color: #C03A2B; }
   .chat-menu-item--danger:hover { background: rgba(192, 58, 43, 0.08); }
-  .chat-menu-icon { display: inline-flex; width: 16px; height: 16px; }
+  .chat-menu-icon { display: inline-flex; width: 18px; height: 18px; align-items: center; justify-content: center; }
   .chat-menu-icon svg { width: 16px; height: 16px; }
-  .chat-menu-sub { margin-left: auto; font-style: italic; font-size: 10px; color: rgba(31, 27, 18, 0.5); }
-  .chat-menu-item--danger .chat-menu-sub { color: rgba(192, 58, 43, 0.6); }
 
-  /* Reset section collapsible (Unlimited members only) */
-  .reset-section-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 10px 12px; background: rgba(0,0,0,0.12); border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; cursor: pointer; color: var(--text-mute); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 8px; transition: background 0.15s ease, color 0.15s ease; }
-  .reset-section-toggle:hover { background: rgba(0,0,0,0.18); color: var(--text); }
-  .reset-section-toggle.expanded { color: var(--text); }
+  /* Reset section collapsible — now visibly GOLD so it stands apart from the
+     chat list below it. Matches the .sidebar-cta-btn family. */
+  .reset-section-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px; padding: 11px 14px; background: rgba(201, 168, 76, 0.22); border: 1px solid rgba(201, 168, 76, 0.55); border-radius: 8px; cursor: pointer; color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 12px; transition: background 0.15s ease, border-color 0.15s ease; }
+  .reset-section-toggle:hover { border-color: var(--gold); background: rgba(201, 168, 76, 0.32); }
+  .reset-section-toggle.expanded { background: rgba(201, 168, 76, 0.3); border-color: var(--gold); }
   .reset-section-label { flex: 1; text-align: left; }
   .reset-section-caret { color: var(--gold); font-size: 11px; }
-  .reset-section-sub { font-size: 10px; color: var(--text-mute); font-style: italic; font-family: Georgia, serif; padding: 0 12px 12px; margin-top: -4px; }
 
   /* Delete confirmation modal */
   .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 9000; padding: 20px; }
@@ -1216,9 +1219,9 @@
   .process-menu-btn {
     width: 100%;
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    padding: 9px 12px;
-    background: var(--gold-soft);
-    border: 1px solid var(--gold-line);
+    padding: 11px 14px;
+    background: rgba(201, 168, 76, 0.22);
+    border: 1px solid rgba(201, 168, 76, 0.55);
     border-radius: 8px;
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -1228,9 +1231,9 @@
     cursor: pointer;
     transition: border-color 0.15s ease, background 0.15s ease;
   }
-  .process-menu-btn:hover { border-color: var(--gold); }
+  .process-menu-btn:hover { border-color: var(--gold); background: rgba(201, 168, 76, 0.32); }
   .process-menu.open .process-menu-btn {
-    border-color: var(--gold-line);
+    border-color: var(--gold);
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
   }
@@ -1819,6 +1822,11 @@ Begin.` },
     // Which surface the open menu is anchored to: 'sidebar' or 'header'.
     // Lets the dropdown position itself relative to the correct trigger.
     openChatMenuOrigin: null,
+    // Pixel position (relative to viewport) for the floating chat menu. We
+    // render the menu as position:fixed at body-level so it can escape the
+    // .unl-chat-list overflow:auto clipping. The position is recalculated
+    // every time the menu opens, anchored to the trigger button's rect.
+    menuPosition: { top: 0, left: 0 },
     // Inline rename: when set, the chat title becomes a text input. Saving
     // (Enter / blur) commits via PATCH; Escape cancels.
     renamingChatId: null,
@@ -2601,6 +2609,34 @@ Begin.` },
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
   }
   // 3-dot kebab icon for the chat options menu trigger.
+  // Renders the chat 3-dot menu as a floating fixed-position dropdown so it
+  // can escape the .unl-chat-list overflow:auto clipping that was hiding it
+  // when opened from a chat near the bottom of the list. Position is
+  // calculated from the trigger button's getBoundingClientRect() at click
+  // time and stashed in state.menuPosition.
+  function renderFloatingChatMenu() {
+    if (!state.openChatMenuId) return "";
+    const session = state.unlimitedSessions.find(s => s.id === state.openChatMenuId);
+    if (!session) return "";
+    const pos = state.menuPosition || { top: 100, left: 100 };
+    const isPinned = !!session.pinnedAt;
+    return `
+      <div class="floating-chat-menu" style="top: ${pos.top}px; left: ${pos.left}px;" data-menu-dropdown="1">
+        <button class="chat-menu-item" data-menu-action="rename" data-chat-id="${session.id}" type="button">
+          <span class="chat-menu-icon">${pencilIconSvg()}</span>
+          <span>Rename</span>
+        </button>
+        <button class="chat-menu-item" data-menu-action="${isPinned ? "unpin" : "pin"}" data-chat-id="${session.id}" type="button">
+          <span class="chat-menu-icon">${pinIconSvg()}</span>
+          <span>${isPinned ? "Unpin" : "Pin"}</span>
+        </button>
+        <button class="chat-menu-item chat-menu-item--danger" data-menu-action="delete" data-chat-id="${session.id}" type="button">
+          <span class="chat-menu-icon">${trashIconSvg()}</span>
+          <span>Delete</span>
+        </button>
+      </div>
+    `;
+  }
   // Renders the delete confirmation overlay when state.deleteConfirmChatId
   // is set. Returns empty string otherwise so it costs nothing in the DOM.
   function renderDeleteConfirmModal() {
@@ -2647,7 +2683,6 @@ Begin.` },
         <button class="chat-menu-item" data-menu-action="${isPinned ? "unpin" : "pin"}" data-chat-id="${session.id}" type="button">
           <span class="chat-menu-icon">${pinIconSvg()}</span>
           <span>${isPinned ? "Unpin" : "Pin"}</span>
-          ${isPinned ? "" : '<span class="chat-menu-sub">moves to top</span>'}
         </button>
         <button class="chat-menu-item chat-menu-item--danger" data-menu-action="delete" data-chat-id="${session.id}" type="button">
           <span class="chat-menu-icon">${trashIconSvg()}</span>
@@ -2713,7 +2748,6 @@ Begin.` },
                 <span class="reset-section-label">The 72-Hour Power Reset</span>
                 <span class="reset-section-caret">${expanded ? "▾" : "▸"}</span>
               </button>
-              ${expanded ? "" : "<div class='reset-section-sub'>Window complete · click to revisit</div>"}
             `;
           }
           return `<div class="sidebar-label">The 72-Hour Power Reset</div>`;
@@ -2797,7 +2831,6 @@ Begin.` },
             const recent = filtered.filter(s => !s.pinnedAt);
             const renderItem = (s) => {
               const isActive = s.id === state.activeUnlimitedId;
-              const isMenuOpen = state.openChatMenuId === s.id && state.openChatMenuOrigin === "sidebar";
               const isRenaming = state.renamingChatId === s.id;
               return `
                 <div class="unl-chat-item ${isActive ? "active" : ""} ${s.pinnedAt ? "pinned" : ""}" data-unl-id="${s.id}">
@@ -2811,7 +2844,6 @@ Begin.` },
                   <button class="unl-chat-menu-btn" data-chat-menu-id="${s.id}" data-chat-menu-origin="sidebar" type="button" aria-label="Chat options">
                     ${dotsIconSvg()}
                   </button>
-                  ${isMenuOpen ? renderChatMenuDropdown(s, "sidebar") : ""}
                 </div>
               `;
             };
@@ -3473,6 +3505,7 @@ Begin.` },
         ${renderMobileOverlay()}
         ${renderAccountModal()}
         ${renderDeleteConfirmModal()}
+        ${renderFloatingChatMenu()}
       `;
       document.getElementById("entry-form").addEventListener("submit", onStartSubmit);
       // Restore + persist drafts on the entry form too.
@@ -3528,6 +3561,7 @@ Begin.` },
         ${renderMobileOverlay()}
         ${renderAccountModal()}
         ${renderDeleteConfirmModal()}
+        ${renderFloatingChatMenu()}
       `;
       renderMessages();
       // Composer-bound handlers are no-ops when the Reset window has elapsed
@@ -3578,9 +3612,6 @@ Begin.` },
             ? "Last active " + formatRelativeTime(activeUnl.lastMessageAt)
             : "Started " + formatRelativeTime(activeUnl.startedAt))
         : "";
-      const headerMenuOpen = activeUnl
-        && state.openChatMenuId === activeUnl.id
-        && state.openChatMenuOrigin === "header";
       app.innerHTML = `
         ${renderMobileTopBar()}
         <div class="main-row">
@@ -3596,7 +3627,6 @@ Begin.` },
                   <button class="header-chat-menu-btn" data-chat-menu-id="${activeUnl.id}" data-chat-menu-origin="header" type="button" aria-label="Chat options">
                     ${dotsIconSvg()}
                   </button>
-                  ${headerMenuOpen ? renderChatMenuDropdown(activeUnl, "header") : ""}
                 </div>
               ` : ""}
             </div>
@@ -3621,6 +3651,7 @@ Begin.` },
         ${renderMobileOverlay()}
         ${renderAccountModal()}
         ${renderDeleteConfirmModal()}
+        ${renderFloatingChatMenu()}
       `;
       renderUnlimitedMessages();
       document.getElementById("input").addEventListener("input", onInputChange);
@@ -3778,12 +3809,15 @@ Begin.` },
       btn.addEventListener("click", (e) => {
         const id = btn.dataset.chatMenuId;
         const origin = btn.dataset.chatMenuOrigin || "sidebar";
-        onChatMenuToggle(id, origin, e);
+        // Pass the button itself so positioning math uses its rect even
+        // when the click bubbles from an inner SVG and currentTarget shifts.
+        onChatMenuToggle(id, origin, e, btn);
       });
     });
     document.querySelectorAll("[data-menu-action]").forEach(btn => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
+        e.preventDefault();
         const action = btn.dataset.menuAction;
         const id = btn.dataset.chatId;
         if (action === "rename") onChatRenameStart(id);
@@ -3795,13 +3829,22 @@ Begin.` },
     // Inline rename input handlers
     document.querySelectorAll(".unl-chat-rename-input").forEach(input => {
       const id = input.dataset.renameId;
+      // Stop both mousedown and click so the parent .unl-chat-item handler
+      // doesn't think you're trying to switch chats while you're editing.
+      input.addEventListener("mousedown", (e) => e.stopPropagation());
+      input.addEventListener("click", (e) => e.stopPropagation());
+      input.addEventListener("touchstart", (e) => e.stopPropagation(), { passive: true });
       input.addEventListener("input", (e) => { state.renamingChatDraft = e.target.value; });
       input.addEventListener("keydown", (e) => {
         if (e.key === "Enter") { e.preventDefault(); onChatRenameSubmit(id, input.value); }
         else if (e.key === "Escape") { e.preventDefault(); onChatRenameCancel(); }
       });
-      input.addEventListener("blur", () => onChatRenameSubmit(id, input.value));
-      input.addEventListener("click", (e) => e.stopPropagation());
+      // Blur saves whatever's in the input. Use a small delay so clicks on
+      // other UI fire BEFORE the save happens (prevents racy double-renders).
+      input.addEventListener("blur", () => {
+        const val = input.value;
+        setTimeout(() => onChatRenameSubmit(id, val), 50);
+      });
     });
   }
 
@@ -4743,7 +4786,9 @@ Begin.` },
 
   // ===== Chat 3-dot menu open/close =====
   // Clicking the dots toggles the dropdown. Clicking anywhere else closes it.
-  function onChatMenuToggle(chatId, origin, evt) {
+  // triggerEl is the button that was clicked; used to position the floating
+  // dropdown next to it using getBoundingClientRect().
+  function onChatMenuToggle(chatId, origin, evt, triggerEl) {
     if (evt) { evt.stopPropagation(); evt.preventDefault(); }
     if (state.openChatMenuId === chatId && state.openChatMenuOrigin === origin) {
       state.openChatMenuId = null;
@@ -4751,6 +4796,24 @@ Begin.` },
     } else {
       state.openChatMenuId = chatId;
       state.openChatMenuOrigin = origin;
+      // Calculate where to anchor the floating dropdown.
+      const btn = triggerEl || (evt && evt.currentTarget);
+      if (btn && btn.getBoundingClientRect) {
+        const rect = btn.getBoundingClientRect();
+        const menuWidth = 180;
+        const menuHeight = 144; // approx — 3 items at ~48px each
+        // Default: drop below + align right edge of menu with right edge of trigger
+        let top = rect.bottom + 4;
+        let left = rect.right - menuWidth;
+        // Flip up if too close to viewport bottom
+        if (top + menuHeight > window.innerHeight - 10) {
+          top = rect.top - menuHeight - 4;
+        }
+        // Clamp left so menu never bleeds off-screen
+        if (left < 10) left = 10;
+        if (left + menuWidth > window.innerWidth - 10) left = window.innerWidth - menuWidth - 10;
+        state.menuPosition = { top: top, left: left };
+      }
     }
     render();
   }
