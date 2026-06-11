@@ -1147,13 +1147,69 @@
   .unl-search-wrap.open { display: block; }
   .unl-search-wrap input { width: 100%; background: var(--panel); border: 1px solid var(--gold-line); color: var(--text); padding: 7px 10px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; border-radius: 6px; outline: none; }
   .unl-search-wrap input::placeholder { color: var(--text-mute); }
-  .unl-chat-list { max-height: 280px; overflow-y: auto; }
-  .unl-chat-item { padding: 8px 10px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; border: 1px solid transparent; transition: background 0.15s ease, border-color 0.15s ease; }
+  .unl-chat-list { max-height: 320px; overflow-y: auto; }
+  .unl-chat-section-label { font-size: 8px; font-weight: 700; letter-spacing: 0.15em; color: var(--text-mute); padding: 8px 10px 4px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; text-transform: uppercase; }
+  .unl-chat-item { position: relative; padding: 8px 32px 8px 10px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; border: 1px solid transparent; transition: background 0.15s ease, border-color 0.15s ease; display: flex; align-items: center; gap: 6px; }
   .unl-chat-item:hover { background: var(--gold-soft); }
   .unl-chat-item.active { background: var(--gold-soft); border-color: var(--gold-line); }
+  .unl-chat-item.pinned { padding-left: 6px; }
+  .unl-chat-pin { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; color: var(--gold); flex-shrink: 0; }
+  .unl-chat-pin svg { width: 12px; height: 12px; }
+  .unl-chat-body { flex: 1; min-width: 0; }
   .unl-chat-title { font-size: 11px; color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-weight: 500; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .unl-chat-time { font-size: 9px; color: var(--text-mute); margin-top: 2px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .unl-chat-rename-input { width: 100%; background: var(--panel); border: 1px solid var(--gold); border-radius: 4px; color: var(--text); padding: 4px 6px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; outline: none; }
   .unl-chat-empty { padding: 10px 8px; font-size: 11px; color: var(--text-mute); font-style: italic; font-family: Georgia, serif; }
+  .unl-pin-limit-error { margin-top: 6px; padding: 8px 10px; background: rgba(220, 80, 80, 0.12); border: 1px solid rgba(220, 80, 80, 0.4); border-radius: 6px; color: #C03A2B; font-size: 10px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-style: italic; }
+
+  /* 3-dot menu trigger button (sidebar + header) */
+  .unl-chat-menu-btn, .header-chat-menu-btn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; padding: 0; background: transparent; border: none; color: var(--text-mute); cursor: pointer; opacity: 0; transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+  .unl-chat-item:hover .unl-chat-menu-btn,
+  .unl-chat-item.active .unl-chat-menu-btn { opacity: 1; }
+  .unl-chat-menu-btn:hover, .header-chat-menu-btn:hover { color: var(--gold); background: rgba(0,0,0,0.15); }
+  .unl-chat-menu-btn svg, .header-chat-menu-btn svg { width: 16px; height: 16px; }
+  /* On touch devices, always show the dot button so long-press is discoverable */
+  @media (hover: none) {
+    .unl-chat-menu-btn { opacity: 1; }
+  }
+  /* Header-anchored variant sits next to the chat title, always visible */
+  .header-chat-menu-btn { position: static; transform: none; opacity: 1; width: 32px; height: 32px; color: var(--text); }
+  .header-chat-menu-btn svg { width: 20px; height: 20px; }
+  .main-header-actions { position: relative; }
+  /* Header lays out title and actions side by side */
+  .main-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+
+  /* Dropdown menu (used by both sidebar and header triggers) */
+  .chat-menu-dropdown { position: absolute; right: 0; top: calc(100% + 4px); min-width: 180px; background: #FAF6EC; border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,0.18); padding: 4px; z-index: 100; }
+  .chat-menu-dropdown--sidebar { right: 4px; top: 36px; }
+  .chat-menu-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; background: transparent; border: none; cursor: pointer; border-radius: 8px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; color: #1F1B12; text-align: left; transition: background 0.1s ease; }
+  .chat-menu-item:hover { background: rgba(0,0,0,0.06); }
+  .chat-menu-item--danger { color: #C03A2B; }
+  .chat-menu-item--danger:hover { background: rgba(192, 58, 43, 0.08); }
+  .chat-menu-icon { display: inline-flex; width: 16px; height: 16px; }
+  .chat-menu-icon svg { width: 16px; height: 16px; }
+  .chat-menu-sub { margin-left: auto; font-style: italic; font-size: 10px; color: rgba(31, 27, 18, 0.5); }
+  .chat-menu-item--danger .chat-menu-sub { color: rgba(192, 58, 43, 0.6); }
+
+  /* Reset section collapsible (Unlimited members only) */
+  .reset-section-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 10px 12px; background: rgba(0,0,0,0.12); border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; cursor: pointer; color: var(--text-mute); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 8px; transition: background 0.15s ease, color 0.15s ease; }
+  .reset-section-toggle:hover { background: rgba(0,0,0,0.18); color: var(--text); }
+  .reset-section-toggle.expanded { color: var(--text); }
+  .reset-section-label { flex: 1; text-align: left; }
+  .reset-section-caret { color: var(--gold); font-size: 11px; }
+  .reset-section-sub { font-size: 10px; color: var(--text-mute); font-style: italic; font-family: Georgia, serif; padding: 0 12px 12px; margin-top: -4px; }
+
+  /* Delete confirmation modal */
+  .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 9000; padding: 20px; }
+  .confirm-modal { background: var(--bg); border: 1px solid var(--gold-line); border-radius: 16px; padding: 28px 28px 22px; max-width: 420px; width: 100%; box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+  .confirm-title { font-family: Georgia, serif; font-size: 22px; color: var(--text); margin-bottom: 12px; }
+  .confirm-body { font-size: 14px; color: var(--text-mute); margin-bottom: 24px; line-height: 1.5; }
+  .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .confirm-btn { padding: 10px 18px; border-radius: 8px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: background 0.15s ease, border-color 0.15s ease; }
+  .confirm-btn--cancel { background: transparent; color: var(--text); border-color: var(--gold-line); }
+  .confirm-btn--cancel:hover { background: rgba(0,0,0,0.08); }
+  .confirm-btn--danger { background: #C03A2B; color: #FFFFFF; border-color: #C03A2B; }
+  .confirm-btn--danger:hover { background: #A52F22; border-color: #A52F22; }
 
   /* Guided-process dropdown in the Unlimited section */
   .process-menu { margin-bottom: 10px; }
@@ -1752,6 +1808,28 @@ Begin.` },
     activeUnlimitedId: null,
     unlimitedMessages: [],
     searchOpen: false,
+    // Sidebar Reset section is collapsed by default for full-tier members
+    // (the Reset is behind them; the Unlimited library is their daily work).
+    // Preview-tier members always see it expanded since it IS their current
+    // practice. initApp/loadFullState/verify-code set this based on tier.
+    resetSectionExpanded: true,
+    // Which chat's 3-dot menu is currently open (null = none).
+    // Used for both the sidebar list AND the chat header menu.
+    openChatMenuId: null,
+    // Which surface the open menu is anchored to: 'sidebar' or 'header'.
+    // Lets the dropdown position itself relative to the correct trigger.
+    openChatMenuOrigin: null,
+    // Inline rename: when set, the chat title becomes a text input. Saving
+    // (Enter / blur) commits via PATCH; Escape cancels.
+    renamingChatId: null,
+    renamingChatDraft: "",
+    // Delete confirmation modal: when set, a small overlay asks "Delete this
+    // conversation?" Yes hits DELETE; No clears the field. Avoids one-tap
+    // destruction of real customer work.
+    deleteConfirmChatId: null,
+    // Transient error shown when pinning hits the 5-pin cap. Cleared by the
+    // next user action or after a 4-second auto-dismiss.
+    pinLimitError: "",
     searchQuery: "",
     processMenuOpen: false,
     // 'preview' = Reset-tier member (Unlimited locked); 'full' = Unlimited member.
@@ -2522,6 +2600,62 @@ Begin.` },
   function lockIconSvg() {
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
   }
+  // 3-dot kebab icon for the chat options menu trigger.
+  // Renders the delete confirmation overlay when state.deleteConfirmChatId
+  // is set. Returns empty string otherwise so it costs nothing in the DOM.
+  function renderDeleteConfirmModal() {
+    if (!state.deleteConfirmChatId) return "";
+    const session = state.unlimitedSessions.find(s => s.id === state.deleteConfirmChatId);
+    const title = session ? (session.title || "this conversation") : "this conversation";
+    return `
+      <div class="confirm-overlay" id="delete-confirm-overlay">
+        <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+          <div class="confirm-title" id="confirm-title">Delete this conversation?</div>
+          <div class="confirm-body">"${escapeHtml(title)}" will be permanently removed. This cannot be undone.</div>
+          <div class="confirm-actions">
+            <button class="confirm-btn confirm-btn--cancel" id="delete-cancel-btn" type="button">Cancel</button>
+            <button class="confirm-btn confirm-btn--danger" id="delete-confirm-btn" type="button">Delete</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  function dotsIconSvg() {
+    return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+  }
+  // Filled pin icon for the pinned-chat indicator and the Pin menu option.
+  function pinIconSvg() {
+    return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14.7 3.3c-.4-.4-1-.4-1.4 0L8 8.6 5.4 8C4.7 7.8 4 8.5 4.2 9.2l1.5 4.5L3 16.4c-.4.4-.4 1 0 1.4l3.2 3.2c.4.4 1 .4 1.4 0l2.7-2.7 4.5 1.5c.7.2 1.4-.5 1.2-1.2L15.4 16l5.3-5.3c.4-.4.4-1 0-1.4l-6-6z"/></svg>';
+  }
+  function pencilIconSvg() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>';
+  }
+  function trashIconSvg() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
+  }
+  // Render the 3-dot menu dropdown for a chat. Used in both the sidebar list
+  // and the chat header. origin = "sidebar" | "header" — affects positioning
+  // class so the dropdown anchors next to the right trigger.
+  function renderChatMenuDropdown(session, origin) {
+    const isPinned = !!session.pinnedAt;
+    return `
+      <div class="chat-menu-dropdown chat-menu-dropdown--${origin}" data-menu-dropdown="1">
+        <button class="chat-menu-item" data-menu-action="rename" data-chat-id="${session.id}" type="button">
+          <span class="chat-menu-icon">${pencilIconSvg()}</span>
+          <span>Rename</span>
+        </button>
+        <button class="chat-menu-item" data-menu-action="${isPinned ? "unpin" : "pin"}" data-chat-id="${session.id}" type="button">
+          <span class="chat-menu-icon">${pinIconSvg()}</span>
+          <span>${isPinned ? "Unpin" : "Pin"}</span>
+          ${isPinned ? "" : '<span class="chat-menu-sub">moves to top</span>'}
+        </button>
+        <button class="chat-menu-item chat-menu-item--danger" data-menu-action="delete" data-chat-id="${session.id}" type="button">
+          <span class="chat-menu-icon">${trashIconSvg()}</span>
+          <span>Delete</span>
+        </button>
+      </div>
+    `;
+  }
 
   // ===== Progressive day unlock helpers =====
   // dayUnlocks comes from /auth/verify-code and /api/state. Map shape:
@@ -2566,8 +2700,25 @@ Begin.` },
           </div>
         </div>
 
-        <div class="sidebar-label">The 72-Hour Power Reset</div>
-        <div class="day-list">
+        ${(function () {
+          // Full-tier members get a collapsible Reset section: the Reset is
+          // behind them, the Unlimited library is their daily work. Preview
+          // members see the Days expanded by default because the Reset IS
+          // their current practice.
+          const isFullTier = state.tier === "full";
+          const expanded = !isFullTier || state.resetSectionExpanded;
+          if (isFullTier) {
+            return `
+              <button class="reset-section-toggle ${expanded ? "expanded" : ""}" id="reset-section-toggle" type="button" aria-expanded="${expanded}">
+                <span class="reset-section-label">The 72-Hour Power Reset</span>
+                <span class="reset-section-caret">${expanded ? "▾" : "▸"}</span>
+              </button>
+              ${expanded ? "" : "<div class='reset-section-sub'>Window complete · click to revisit</div>"}
+            `;
+          }
+          return `<div class="sidebar-label">The 72-Hour Power Reset</div>`;
+        })()}
+        <div class="day-list" ${state.tier === "full" && !state.resetSectionExpanded ? 'style="display:none"' : ""}>
           ${DAY_META.map((d, i) => {
             const dayNum = i + 1;
             const unlocked = isDayUnlocked(dayNum);
@@ -2639,14 +2790,44 @@ Begin.` },
             if (filtered.length === 0) {
               return '<div class="unl-chat-empty">' + (state.searchQuery ? "No matches." : "No conversations yet.") + '</div>';
             }
-            return filtered.map(s => `
-              <div class="unl-chat-item ${s.id === state.activeUnlimitedId ? "active" : ""}" data-unl-id="${s.id}">
-                <div class="unl-chat-title">${escapeHtml(s.title || "New chat")}</div>
-                <div class="unl-chat-time">${escapeHtml(formatRelativeTime(s.lastMessageAt || s.startedAt))}</div>
-              </div>
-            `).join("");
+            // Split into pinned (rendered first under a PINNED label) and
+            // unpinned (under RECENT). Backend already sorts pinned first so
+            // this just slices the array at the boundary.
+            const pinned = filtered.filter(s => !!s.pinnedAt);
+            const recent = filtered.filter(s => !s.pinnedAt);
+            const renderItem = (s) => {
+              const isActive = s.id === state.activeUnlimitedId;
+              const isMenuOpen = state.openChatMenuId === s.id && state.openChatMenuOrigin === "sidebar";
+              const isRenaming = state.renamingChatId === s.id;
+              return `
+                <div class="unl-chat-item ${isActive ? "active" : ""} ${s.pinnedAt ? "pinned" : ""}" data-unl-id="${s.id}">
+                  ${s.pinnedAt ? '<span class="unl-chat-pin" aria-hidden="true">' + pinIconSvg() + '</span>' : ""}
+                  <div class="unl-chat-body">
+                    ${isRenaming
+                      ? `<input class="unl-chat-rename-input" type="text" value="${escapeHtml(state.renamingChatDraft)}" data-rename-id="${s.id}" />`
+                      : `<div class="unl-chat-title">${escapeHtml(s.title || "New chat")}</div>`}
+                    ${isRenaming ? "" : `<div class="unl-chat-time">${escapeHtml(formatRelativeTime(s.lastMessageAt || s.startedAt))}</div>`}
+                  </div>
+                  <button class="unl-chat-menu-btn" data-chat-menu-id="${s.id}" data-chat-menu-origin="sidebar" type="button" aria-label="Chat options">
+                    ${dotsIconSvg()}
+                  </button>
+                  ${isMenuOpen ? renderChatMenuDropdown(s, "sidebar") : ""}
+                </div>
+              `;
+            };
+            let html = "";
+            if (pinned.length > 0) {
+              html += '<div class="unl-chat-section-label">PINNED</div>';
+              html += pinned.map(renderItem).join("");
+            }
+            if (recent.length > 0) {
+              if (pinned.length > 0) html += '<div class="unl-chat-section-label">RECENT</div>';
+              html += recent.map(renderItem).join("");
+            }
+            return html;
           })()}
         </div>
+        ${state.pinLimitError ? `<div class="unl-pin-limit-error">${escapeHtml(state.pinLimitError)}</div>` : ""}
         ` : `
         <div class="unlimited-card">
           <div class="unlimited-lock">${lockIconSvg()}</div>
@@ -2657,6 +2838,23 @@ Begin.` },
         `}
 
         <div class="sidebar-cta">
+          ${(function () {
+            // Access Portal links to the member's Kajabi membership site.
+            // URL depends on what they own:
+            //   tier=full     -> Unlimited Field product page (full library)
+            //   tier=preview  -> 72-Hour Power Reset product page
+            // We can't know which one a Reset member is in without an extra
+            // call to Kajabi, so we use tier as the proxy: full == Unlimited.
+            const portalUrl = state.tier === "full"
+              ? "https://www.shimritnativ.com/products/the-freedom-intelligence-field"
+              : "https://www.shimritnativ.com/products/the-power-reset";
+            return `
+              <a class="sidebar-cta-btn" href="${portalUrl}" target="_blank" rel="noopener noreferrer">
+                <span>Access Portal</span>
+                <span class="sidebar-cta-arrow" aria-hidden="true">↗</span>
+              </a>
+            `;
+          })()}
           <a class="sidebar-cta-btn" href="https://api.leadconnectorhq.com/widget/bookings/connectcall-masteryourpath" target="_blank" rel="noopener noreferrer">
             <span>Book a complimentary call</span>
             <span class="sidebar-cta-arrow" aria-hidden="true">↗</span>
@@ -3274,6 +3472,7 @@ Begin.` },
         </div>
         ${renderMobileOverlay()}
         ${renderAccountModal()}
+        ${renderDeleteConfirmModal()}
       `;
       document.getElementById("entry-form").addEventListener("submit", onStartSubmit);
       // Restore + persist drafts on the entry form too.
@@ -3328,6 +3527,7 @@ Begin.` },
         </div>
         ${renderMobileOverlay()}
         ${renderAccountModal()}
+        ${renderDeleteConfirmModal()}
       `;
       renderMessages();
       // Composer-bound handlers are no-ops when the Reset window has elapsed
@@ -3378,6 +3578,9 @@ Begin.` },
             ? "Last active " + formatRelativeTime(activeUnl.lastMessageAt)
             : "Started " + formatRelativeTime(activeUnl.startedAt))
         : "";
+      const headerMenuOpen = activeUnl
+        && state.openChatMenuId === activeUnl.id
+        && state.openChatMenuOrigin === "header";
       app.innerHTML = `
         ${renderMobileTopBar()}
         <div class="main-row">
@@ -3388,6 +3591,14 @@ Begin.` },
                 <div class="main-header-title">${escapeHtml(headerTitle)}</div>
                 ${headerSub ? `<div class="main-header-sub">${escapeHtml(headerSub)}</div>` : ""}
               </div>
+              ${activeUnl ? `
+                <div class="main-header-actions">
+                  <button class="header-chat-menu-btn" data-chat-menu-id="${activeUnl.id}" data-chat-menu-origin="header" type="button" aria-label="Chat options">
+                    ${dotsIconSvg()}
+                  </button>
+                  ${headerMenuOpen ? renderChatMenuDropdown(activeUnl, "header") : ""}
+                </div>
+              ` : ""}
             </div>
             <div class="messages-wrap" id="messages-wrap">
               <div class="messages" id="messages"></div>
@@ -3409,6 +3620,7 @@ Begin.` },
         </div>
         ${renderMobileOverlay()}
         ${renderAccountModal()}
+        ${renderDeleteConfirmModal()}
       `;
       renderUnlimitedMessages();
       document.getElementById("input").addEventListener("input", onInputChange);
@@ -3507,33 +3719,118 @@ Begin.` },
       }
     }
     wireUnlimitedChatItems();
+    wireResetSectionToggle();
+    wireChatMenus();
+    wireDeleteConfirm();
+    wireOutsideMenuClose();
   }
 
   // Re-render just the .unl-chat-list section. Used by search input changes
-  // so the search input keeps focus while the list filters live.
+  // so the search input keeps focus while the list filters live. Falls back
+  // to a full render() if the structure is too complex to patch (rename in
+  // progress, menu open, etc).
   function renderUnlimitedChatList() {
-    const wrap = document.querySelector(".unl-chat-list");
-    if (!wrap) return;
-    const filtered = state.searchQuery
-      ? state.unlimitedSessions.filter(s => (s.title || "").toLowerCase().includes(state.searchQuery.toLowerCase()))
-      : state.unlimitedSessions;
-    if (filtered.length === 0) {
-      wrap.innerHTML = '<div class="unl-chat-empty">' + (state.searchQuery ? "No matches." : "No conversations yet.") + '</div>';
-    } else {
-      wrap.innerHTML = filtered.map(s => `
-        <div class="unl-chat-item ${s.id === state.activeUnlimitedId ? "active" : ""}" data-unl-id="${s.id}">
-          <div class="unl-chat-title">${escapeHtml(s.title || "New chat")}</div>
-          <div class="unl-chat-time">${escapeHtml(formatRelativeTime(s.lastMessageAt || s.startedAt))}</div>
-        </div>
-      `).join("");
+    if (state.openChatMenuId || state.renamingChatId) {
+      // Don't partial-render when interactive UI is mounted — would unmount it.
+      render();
+      return;
     }
-    wireUnlimitedChatItems();
+    render();
   }
 
   function wireUnlimitedChatItems() {
     document.querySelectorAll(".unl-chat-item").forEach(el => {
-      el.addEventListener("click", () => onUnlimitedChatClick(el.dataset.unlId));
+      el.addEventListener("click", (e) => {
+        // Ignore clicks on the menu button, dropdown, or the rename input
+        if (e.target.closest('[data-chat-menu-id]')) return;
+        if (e.target.closest('[data-menu-dropdown]')) return;
+        if (e.target.closest('.unl-chat-rename-input')) return;
+        onUnlimitedChatClick(el.dataset.unlId);
+      });
+      // Long-press for mobile: 500ms hold opens the menu
+      let pressTimer = null;
+      el.addEventListener("touchstart", (e) => {
+        if (e.target.closest('[data-chat-menu-id]')) return;
+        if (e.target.closest('.unl-chat-rename-input')) return;
+        const chatId = el.dataset.unlId;
+        pressTimer = setTimeout(() => {
+          onChatMenuToggle(chatId, "sidebar");
+          // Haptic feedback if supported
+          if (navigator.vibrate) navigator.vibrate(10);
+        }, 500);
+      }, { passive: true });
+      const cancelPress = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
+      el.addEventListener("touchend", cancelPress);
+      el.addEventListener("touchmove", cancelPress);
+      el.addEventListener("touchcancel", cancelPress);
     });
+  }
+
+  // Reset section collapse/expand toggle (Unlimited members only)
+  function wireResetSectionToggle() {
+    const btn = document.getElementById("reset-section-toggle");
+    if (btn) btn.addEventListener("click", onResetSectionToggle);
+  }
+
+  // 3-dot menu buttons (both sidebar and header) and their dropdown items
+  function wireChatMenus() {
+    document.querySelectorAll("[data-chat-menu-id]").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const id = btn.dataset.chatMenuId;
+        const origin = btn.dataset.chatMenuOrigin || "sidebar";
+        onChatMenuToggle(id, origin, e);
+      });
+    });
+    document.querySelectorAll("[data-menu-action]").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const action = btn.dataset.menuAction;
+        const id = btn.dataset.chatId;
+        if (action === "rename") onChatRenameStart(id);
+        else if (action === "pin") onChatPinToggle(id, true);
+        else if (action === "unpin") onChatPinToggle(id, false);
+        else if (action === "delete") onChatDeleteRequest(id);
+      });
+    });
+    // Inline rename input handlers
+    document.querySelectorAll(".unl-chat-rename-input").forEach(input => {
+      const id = input.dataset.renameId;
+      input.addEventListener("input", (e) => { state.renamingChatDraft = e.target.value; });
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); onChatRenameSubmit(id, input.value); }
+        else if (e.key === "Escape") { e.preventDefault(); onChatRenameCancel(); }
+      });
+      input.addEventListener("blur", () => onChatRenameSubmit(id, input.value));
+      input.addEventListener("click", (e) => e.stopPropagation());
+    });
+  }
+
+  // Delete confirmation modal wiring
+  function wireDeleteConfirm() {
+    const overlay = document.getElementById("delete-confirm-overlay");
+    if (overlay) {
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) onChatDeleteCancel();
+      });
+    }
+    const cancelBtn = document.getElementById("delete-cancel-btn");
+    if (cancelBtn) cancelBtn.addEventListener("click", onChatDeleteCancel);
+    const confirmBtn = document.getElementById("delete-confirm-btn");
+    if (confirmBtn) confirmBtn.addEventListener("click", onChatDeleteConfirm);
+  }
+
+  // Click anywhere outside an open menu closes it
+  function wireOutsideMenuClose() {
+    if (!state.openChatMenuId) return;
+    const handler = (e) => {
+      if (e.target.closest('[data-chat-menu-id]')) return;
+      if (e.target.closest('[data-menu-dropdown]')) return;
+      closeAllChatMenus();
+      document.removeEventListener("click", handler);
+    };
+    // Attach on the next tick so the click that opened the menu doesn't
+    // immediately close it.
+    setTimeout(() => document.addEventListener("click", handler), 50);
   }
 
   // Skeleton placeholder shown while a chat's messages stream in. Widths
@@ -3713,6 +4010,8 @@ Begin.` },
       saveToken(data.sessionToken);
       state.tier = data.tier || "preview";
       state.subscriptionPlan = data.subscriptionPlan || null;
+      // Match the loadFullState rule: collapsed for full, expanded for preview.
+      state.resetSectionExpanded = state.tier !== "full";
       state.dayUnlocks = data.dayUnlocks || state.dayUnlocks;
       state.firstLoginAt = data.firstLoginAt || null;
       state.previewEndsAt = data.previewEndsAt || null;
@@ -4243,6 +4542,43 @@ Begin.` },
     if (!res.ok) throw new Error(data.error || "could_not_load");
     return data;
   }
+  // Rename a chat. `title` is the new title; trimmed and validated server-side.
+  async function apiRenameUnlimited(id, title) {
+    const res = await fetch(API_BASE + "/unlimited/session?id=" + encodeURIComponent(id), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken },
+      body: JSON.stringify({ title: title })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "could_not_rename");
+    return data.session;
+  }
+  // Pin (true) or unpin (false) a chat. Server enforces the 5-pin limit and
+  // returns 409 pin_limit_reached if you try to pin a 6th.
+  async function apiPinUnlimited(id, pin) {
+    const res = await fetch(API_BASE + "/unlimited/session?id=" + encodeURIComponent(id), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken },
+      body: JSON.stringify({ pin: !!pin })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const err = new Error(data.error || "could_not_pin");
+      err.code = data.error;
+      err.limit = data.limit;
+      throw err;
+    }
+    return data.session;
+  }
+  async function apiDeleteUnlimited(id) {
+    const res = await fetch(API_BASE + "/unlimited/session?id=" + encodeURIComponent(id), {
+      method: "DELETE",
+      headers: { "x-session-token": state.sessionToken }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "could_not_delete");
+    return data;
+  }
   async function apiUnlimitedChat(sessionId, message) {
     const res = await chatFetchWithRetry(() => fetch(API_BASE + "/unlimited/chat", {
       method: "POST",
@@ -4399,6 +4735,152 @@ Begin.` },
     render();
   }
 
+  // ===== Reset section collapse/expand (Unlimited members only) =====
+  function onResetSectionToggle() {
+    state.resetSectionExpanded = !state.resetSectionExpanded;
+    render();
+  }
+
+  // ===== Chat 3-dot menu open/close =====
+  // Clicking the dots toggles the dropdown. Clicking anywhere else closes it.
+  function onChatMenuToggle(chatId, origin, evt) {
+    if (evt) { evt.stopPropagation(); evt.preventDefault(); }
+    if (state.openChatMenuId === chatId && state.openChatMenuOrigin === origin) {
+      state.openChatMenuId = null;
+      state.openChatMenuOrigin = null;
+    } else {
+      state.openChatMenuId = chatId;
+      state.openChatMenuOrigin = origin;
+    }
+    render();
+  }
+  function closeAllChatMenus() {
+    if (state.openChatMenuId || state.openChatMenuOrigin) {
+      state.openChatMenuId = null;
+      state.openChatMenuOrigin = null;
+      render();
+    }
+  }
+
+  // ===== Rename: inline edit =====
+  function onChatRenameStart(chatId) {
+    const session = state.unlimitedSessions.find(s => s.id === chatId);
+    if (!session) return;
+    state.renamingChatId = chatId;
+    state.renamingChatDraft = session.title || "";
+    state.openChatMenuId = null;
+    state.openChatMenuOrigin = null;
+    render();
+    // Focus the input after the DOM updates
+    setTimeout(function () {
+      const input = document.querySelector('[data-rename-id="' + chatId + '"]');
+      if (input) { input.focus(); input.select(); }
+    }, 30);
+  }
+  async function onChatRenameSubmit(chatId, newTitle) {
+    const trimmed = (newTitle || "").trim();
+    if (trimmed.length === 0) { onChatRenameCancel(); return; }
+    const original = state.unlimitedSessions.find(s => s.id === chatId);
+    if (!original || trimmed === (original.title || "")) { onChatRenameCancel(); return; }
+    // Optimistic update so the new title shows immediately
+    const idx = state.unlimitedSessions.findIndex(s => s.id === chatId);
+    if (idx >= 0) {
+      state.unlimitedSessions[idx] = Object.assign({}, state.unlimitedSessions[idx], { title: trimmed });
+    }
+    state.renamingChatId = null;
+    state.renamingChatDraft = "";
+    render();
+    try {
+      const updated = await apiRenameUnlimited(chatId, trimmed);
+      if (idx >= 0) state.unlimitedSessions[idx] = Object.assign({}, state.unlimitedSessions[idx], updated);
+      render();
+    } catch (e) {
+      console.error("rename_failed", e);
+      // Roll back the optimistic title on failure
+      if (idx >= 0 && original) {
+        state.unlimitedSessions[idx] = Object.assign({}, state.unlimitedSessions[idx], { title: original.title });
+        render();
+      }
+    }
+  }
+  function onChatRenameCancel() {
+    state.renamingChatId = null;
+    state.renamingChatDraft = "";
+    render();
+  }
+
+  // ===== Pin / Unpin =====
+  async function onChatPinToggle(chatId, pin) {
+    state.openChatMenuId = null;
+    state.openChatMenuOrigin = null;
+    render();
+    try {
+      const updated = await apiPinUnlimited(chatId, pin);
+      const idx = state.unlimitedSessions.findIndex(s => s.id === chatId);
+      if (idx >= 0) state.unlimitedSessions[idx] = Object.assign({}, state.unlimitedSessions[idx], updated);
+      // Re-sort: pinned (newest first) then unpinned (most recent first)
+      state.unlimitedSessions.sort(function (a, b) {
+        if (a.pinnedAt && !b.pinnedAt) return -1;
+        if (!a.pinnedAt && b.pinnedAt) return 1;
+        if (a.pinnedAt && b.pinnedAt) return new Date(b.pinnedAt) - new Date(a.pinnedAt);
+        const aT = new Date(a.lastMessageAt || a.startedAt).getTime();
+        const bT = new Date(b.lastMessageAt || b.startedAt).getTime();
+        return bT - aT;
+      });
+      state.pinLimitError = "";
+      render();
+    } catch (e) {
+      if (e && e.code === "pin_limit_reached") {
+        state.pinLimitError = "You can pin up to " + (e.limit || 5) + " chats. Unpin one first.";
+        render();
+        setTimeout(function () {
+          if (state.pinLimitError) { state.pinLimitError = ""; render(); }
+        }, 4000);
+      } else {
+        console.error("pin_failed", e);
+      }
+    }
+  }
+
+  // ===== Delete: open confirmation, then commit on confirm =====
+  function onChatDeleteRequest(chatId) {
+    state.deleteConfirmChatId = chatId;
+    state.openChatMenuId = null;
+    state.openChatMenuOrigin = null;
+    render();
+  }
+  function onChatDeleteCancel() {
+    state.deleteConfirmChatId = null;
+    render();
+  }
+  async function onChatDeleteConfirm() {
+    const chatId = state.deleteConfirmChatId;
+    if (!chatId) return;
+    state.deleteConfirmChatId = null;
+    render();
+    try {
+      await apiDeleteUnlimited(chatId);
+      // Remove from local list. If the deleted chat was active, fall back to
+      // the new most-recent chat (if any) or back to the unlimited landing.
+      const wasActive = state.activeUnlimitedId === chatId;
+      state.unlimitedSessions = state.unlimitedSessions.filter(s => s.id !== chatId);
+      if (wasActive) {
+        if (state.unlimitedSessions.length > 0) {
+          await onUnlimitedChatClick(state.unlimitedSessions[0].id);
+        } else {
+          state.activeUnlimitedId = null;
+          state.unlimitedMessages = [];
+          render();
+        }
+      } else {
+        render();
+      }
+    } catch (e) {
+      console.error("delete_failed", e);
+      alert("Could not delete that conversation. Try again.");
+    }
+  }
+
   async function onUnlimitedChatClick(sessionId) {
     if (!sessionId) return;
     state.mobileDrawerOpen = false;
@@ -4552,6 +5034,11 @@ Begin.` },
       if (data.subscriptionPlan === "monthly" || data.subscriptionPlan === "yearly") {
         state.subscriptionPlan = data.subscriptionPlan;
       }
+      // Reset section default: collapsed for Unlimited members (the Reset is
+      // behind them, the Field library is the daily work), expanded for
+      // preview members (the Reset IS their current practice). User toggling
+      // overrides on next click.
+      state.resetSectionExpanded = state.tier !== "full";
       // Filter to messages for the CURRENT day only. Each day is its own
       // thread in the demo. Falls back to all messages if no day metadata
       // is present (older sessions).
