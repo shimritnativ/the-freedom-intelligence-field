@@ -239,16 +239,16 @@
     animation: acctFadeIn 0.24s ease-out;
   }
   .acct-modal {
-    background: #0a0a0a;
-    color: #f0ead6;
+    background: var(--sidebar-bg);
+    color: var(--text);
     border-radius: 16px;
-    border: 1px solid rgba(201, 168, 76, 0.2);
+    border: 1px solid var(--gold-line);
     max-width: 520px;
     width: 100%;
     padding: 26px 28px 22px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     position: relative;
-    box-shadow: 0 18px 48px rgba(0,0,0,0.5);
+    box-shadow: var(--shadow);
     animation: acctSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1);
   }
   @keyframes acctFadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -262,15 +262,15 @@
   /* Signed-in line + sign-out footer */
   .acct-signed-in {
     display: flex; align-items: center; gap: 8px;
-    font-size: 12px; color: rgba(240, 234, 214, 0.6);
+    font-size: 12px; color: var(--text-dim);
     margin-top: 14px;
   }
-  .acct-signed-in-email { color: rgba(240, 234, 214, 0.85); font-weight: 600; word-break: break-all; }
+  .acct-signed-in-email { color: var(--text); font-weight: 600; word-break: break-all; opacity: 0.9; }
   .acct-signout-row { display: flex; justify-content: center; margin-top: 8px; }
   .acct-signout-btn {
     background: transparent;
-    color: rgba(240, 234, 214, 0.7);
-    border: 1px solid rgba(201, 168, 76, 0.25);
+    color: var(--text-dim);
+    border: 1px solid var(--gold-line);
     border-radius: 10px;
     padding: 11px 22px;
     font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
@@ -278,53 +278,53 @@
     cursor: pointer;
     transition: color 0.15s ease, border-color 0.15s ease;
   }
-  .acct-signout-btn:hover { color: #f0ead6; border-color: #C9A84C; }
+  .acct-signout-btn:hover { color: var(--text); border-color: var(--gold); }
   .acct-close {
     position: absolute; top: 14px; right: 14px;
     width: 30px; height: 30px;
-    background: rgba(10, 10, 10, 0.85);
-    border: 1px solid rgba(201, 168, 76, 0.35);
-    color: #f0ead6;
+    background: var(--panel);
+    border: 1px solid var(--gold-line);
+    color: var(--text);
     border-radius: 50%;
     font-size: 13px; line-height: 1;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
   }
-  .acct-close:hover { border-color: #C9A84C; }
+  .acct-close:hover { border-color: var(--gold); }
   .acct-eyebrow {
     font-size: 11px; font-weight: 700; letter-spacing: 0.15em;
-    color: #C9A84C; text-transform: uppercase;
+    color: var(--gold); text-transform: uppercase;
     margin-bottom: 4px;
   }
   .acct-title {
     font-family: Georgia, "Times New Roman", serif;
     font-style: italic;
     font-size: 24px;
-    color: #f0ead6;
+    color: var(--text);
     margin-bottom: 20px;
   }
   .acct-section-label {
     font-size: 10px; font-weight: 700; letter-spacing: 0.2em;
-    color: rgba(240, 234, 214, 0.55);
+    color: var(--text-dim);
     text-transform: uppercase;
     margin-bottom: 10px;
   }
-  .acct-section { margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid rgba(201, 168, 76, 0.12); }
+  .acct-section { margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
   .acct-section:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
   .acct-name-row { display: flex; gap: 10px; align-items: stretch; }
   .acct-name-input {
     flex: 1;
-    background: #050505;
-    border: 1px solid rgba(201, 168, 76, 0.25);
+    background: var(--bg);
+    border: 1px solid var(--gold-line);
     border-radius: 10px;
-    color: #f0ead6;
+    color: var(--text);
     padding: 12px 14px;
     font-size: 15px;
     font-family: inherit;
   }
-  .acct-name-input:focus { outline: none; border-color: #C9A84C; }
+  .acct-name-input:focus { outline: none; border-color: var(--gold); }
   .acct-save-btn {
-    background: #C9A84C; color: #0a0a0a;
+    background: var(--gold); color: var(--bg);
     border: none; border-radius: 10px;
     padding: 0 22px;
     font-size: 12px; font-weight: 700; letter-spacing: 0.12em;
@@ -334,13 +334,13 @@
   .acct-save-btn:hover { opacity: 0.9; }
   .acct-save-btn[disabled] { opacity: 0.45; cursor: default; }
   .acct-name-help {
-    font-size: 12px; color: rgba(240, 234, 214, 0.55);
+    font-size: 12px; color: var(--text-dim);
     margin-top: 10px;
     font-style: italic;
   }
   .acct-card {
-    background: rgba(201, 168, 76, 0.04);
-    border: 1px solid rgba(201, 168, 76, 0.25);
+    background: var(--gold-soft);
+    border: 1px solid var(--gold-line);
     border-radius: 12px;
     padding: 16px 18px;
     margin-bottom: 10px;
@@ -350,23 +350,23 @@
     font-family: Georgia, "Times New Roman", serif;
     font-style: italic;
     font-size: 18px;
-    color: #f0ead6;
+    color: var(--text);
     margin-bottom: 6px;
   }
   .acct-card-meta {
     display: flex; align-items: center; gap: 8px;
     font-size: 13px;
-    color: rgba(240, 234, 214, 0.7);
+    color: var(--text-dim);
   }
   .acct-status-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; flex-shrink: 0; }
-  .acct-status-dot.expired { background: rgba(240, 234, 214, 0.35); }
-  .acct-remaining { color: #C9A84C; font-weight: 700; }
+  .acct-status-dot.expired { background: var(--text-mute); }
+  .acct-remaining { color: var(--gold); font-weight: 700; }
   .acct-card-actions { display: flex; gap: 10px; margin-top: 16px; }
   .acct-btn {
     flex: 1;
     background: transparent;
-    color: #f0ead6;
-    border: 1px solid rgba(201, 168, 76, 0.4);
+    color: var(--text);
+    border: 1px solid var(--gold-line);
     border-radius: 10px;
     padding: 12px 14px;
     font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
@@ -377,32 +377,32 @@
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     transition: border-color 0.15s ease, background 0.15s ease;
   }
-  .acct-btn:hover { border-color: #C9A84C; background: rgba(201, 168, 76, 0.05); }
+  .acct-btn:hover { border-color: var(--gold); background: var(--gold-soft); }
   .acct-btn.subtle { flex: 0 0 auto; padding: 12px 20px; }
   .acct-card-desc {
     font-size: 14px;
-    color: rgba(240, 234, 214, 0.7);
+    color: var(--text-dim);
     line-height: 1.55;
     margin: 10px 0 16px;
   }
   .acct-link {
     display: flex; align-items: center; justify-content: space-between;
     padding: 11px 14px;
-    background: rgba(201, 168, 76, 0.04);
-    border: 1px solid rgba(201, 168, 76, 0.18);
+    background: var(--gold-soft);
+    border: 1px solid var(--gold-line);
     border-radius: 10px;
-    color: #f0ead6;
+    color: var(--text);
     text-decoration: none;
     font-size: 14px; font-weight: 600;
     margin-bottom: 6px;
     transition: border-color 0.15s ease;
   }
   .acct-link:last-child { margin-bottom: 0; }
-  .acct-link:hover { border-color: #C9A84C; }
-  .acct-link-arrow { color: #C9A84C; }
-  /* Light theme overrides — match the existing sidebar light variant. */
-  :root[data-theme="light"] .acct-overlay { background: rgba(26, 22, 18, 0.5); }
-  :root[data-theme="light"] .acct-modal { background: #1A1612; color: #f0ead6; border-color: rgba(201, 168, 76, 0.3); }
+  .acct-link:hover { border-color: var(--gold); }
+  .acct-link-arrow { color: var(--gold); }
+  /* No light-mode override needed — .acct-modal now uses theme variables
+     (var(--sidebar-bg), var(--text), var(--gold-line)) so the modal flips
+     automatically when the system or session theme changes. */
 
   .demo-help {
     margin-top: 8px;
@@ -2000,41 +2000,34 @@ Begin.` },
         : "light";
     } catch (e) { return "dark"; }
   }
-  // Theme load order:
-  //   1. Explicit user preference stored in localStorage (their toggle wins)
-  //   2. System preference (prefers-color-scheme)
-  //   3. Dark as final fallback
-  // This means a brand new visitor immediately gets the look their device is
-  // already running in, and an existing user who manually picked light/dark
-  // keeps their choice across sessions.
+  // Theme always follows the device's system preference. The desktop sidebar
+  // theme toggle still works as a SESSION-only override (no persistence), so
+  // someone can flip light/dark for a single visit if they want. On the next
+  // system change or next page load, the system preference wins again.
+  //
+  // We deliberately clear any legacy stored preference here so previously
+  // toggled users immediately start following system again. If we kept it,
+  // anyone who toggled before would stay locked on whichever theme they had
+  // picked, which defeats the goal of "follow the device."
   function loadTheme() {
-    try {
-      const stored = localStorage.getItem(THEME_KEY);
-      if (stored === "dark" || stored === "light") return stored;
-    } catch (e) {}
+    try { localStorage.removeItem(THEME_KEY); } catch (e) {}
     return getSystemTheme();
   }
-  // Save only when the change is user-initiated. System-driven changes do NOT
-  // overwrite the stored preference, so a user who picked light stays light
-  // even if their device flips to dark mode later.
-  function saveTheme(t) { try { localStorage.setItem(THEME_KEY, t); } catch (e) {} }
+  // Session-only saves (no localStorage). Kept as a function for the
+  // existing call sites; just becomes a no-op.
+  function saveTheme(t) { /* intentionally no-op — theme follows system */ }
   function applyTheme(theme, options) {
     document.documentElement.setAttribute("data-theme", theme);
-    const persist = !options || options.persist !== false;
-    if (persist) saveTheme(theme);
   }
-  // Subscribe to system theme changes. Only auto-update the website if the
-  // user has NOT explicitly chosen a theme yet (no stored preference).
-  // Called once in init().
+  // Subscribe to system theme changes. Always updates the website to match
+  // the device. Fires in real time when the user's phone or computer flips
+  // between light and dark mode (e.g., iOS auto-switching at sunset).
   function subscribeSystemTheme() {
     if (!window.matchMedia) return;
     let mq;
     try { mq = window.matchMedia("(prefers-color-scheme: dark)"); } catch (e) { return; }
     const onChange = () => {
-      let hasManualPref = false;
-      try { hasManualPref = !!localStorage.getItem(THEME_KEY); } catch (e) {}
-      if (hasManualPref) return; // Respect explicit user choice
-      applyTheme(mq.matches ? "dark" : "light", { persist: false });
+      applyTheme(mq.matches ? "dark" : "light");
     };
     if (mq.addEventListener) mq.addEventListener("change", onChange);
     else if (mq.addListener) mq.addListener(onChange); // Safari < 14
