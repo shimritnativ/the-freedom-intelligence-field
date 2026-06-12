@@ -1335,6 +1335,161 @@
   }
   .process-menu-item:first-child { border-top: none; }
   .process-menu-item:hover { background: var(--gold-soft); color: var(--text); }
+  /* Category dropdown items: name on the left, process count on the right. */
+  .process-menu-category {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .process-menu-category.active {
+    background: var(--gold-soft);
+    color: var(--text);
+  }
+  .process-menu-count {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+  /* ===== Category view (the Field's library) ===== */
+  .category-main {
+    flex: 1;
+    display: flex;
+    min-width: 0;
+    overflow-y: auto;
+    background: var(--bg);
+  }
+  .category-view {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 60px 40px 80px;
+    width: 100%;
+    animation: cat-fade 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes cat-fade {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .category-eyebrow {
+    text-align: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.32em;
+    color: var(--text-mute);
+    margin-bottom: 18px;
+    text-transform: uppercase;
+  }
+  .category-title {
+    text-align: center;
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 56px;
+    font-weight: 400;
+    color: var(--text);
+    margin: 0 0 18px;
+    line-height: 1.12;
+  }
+  .category-divider {
+    width: 80px;
+    height: 1.5px;
+    background: var(--gold);
+    margin: 0 auto 28px;
+    opacity: 0.7;
+  }
+  .category-tagline {
+    text-align: center;
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 19px;
+    color: var(--text-dim);
+    margin: 0 auto 52px;
+    line-height: 1.5;
+    max-width: 620px;
+  }
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 36px;
+  }
+  .category-card {
+    position: relative;
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: rgba(201, 168, 76, 0.04);
+    border: 1px solid var(--gold-line);
+    border-radius: 14px;
+    padding: 28px 28px 36px;
+    cursor: pointer;
+    font-family: inherit;
+    color: inherit;
+    transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+  }
+  .category-card:hover {
+    border-color: var(--gold);
+    background: rgba(201, 168, 76, 0.10);
+    transform: translateY(-2px);
+  }
+  .category-card--coming-soon {
+    cursor: default;
+    opacity: 0.5;
+  }
+  .category-card--coming-soon:hover {
+    border-color: var(--gold-line);
+    background: rgba(201, 168, 76, 0.04);
+    transform: none;
+  }
+  .category-card-eyebrow {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    color: var(--gold);
+    margin-bottom: 14px;
+    text-transform: uppercase;
+  }
+  .category-card-title {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 22px;
+    color: var(--text);
+    margin-bottom: 10px;
+    line-height: 1.3;
+  }
+  .category-card-desc {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.55;
+    padding-right: 22px;
+  }
+  .category-card-arrow {
+    position: absolute;
+    right: 24px;
+    bottom: 22px;
+    color: var(--gold);
+    font-size: 18px;
+    line-height: 1;
+  }
+  .category-footer {
+    text-align: center;
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--text-mute);
+    margin-top: 12px;
+  }
+  @media (max-width: 720px) {
+    .category-grid { grid-template-columns: 1fr; }
+    .category-title { font-size: 36px; }
+    .category-tagline { font-size: 16px; }
+    .category-view { padding: 30px 18px 60px; }
+    .category-card { padding: 22px 22px 28px; }
+  }
 
   /* Tier preview toggle — review control until Kajabi entitlements are wired */
   .tier-toggle { display: flex; gap: 4px; margin-bottom: 12px; padding: 3px; background: var(--gold-soft); border: 1px solid var(--gold-line); border-radius: 8px; }
@@ -1931,6 +2086,90 @@ I am here to work with my sense of worthiness in a specific area of life, to sur
 Guide me through Worthy to Receive now.
 Begin.` },
   ];
+  // ===== Process categories =====
+  // Mirrors the Kajabi taxonomy. Built processes reference DEMO_PROCESSES by
+  // key; coming-soon entries are visible but not clickable. The category view
+  // in the main pane reads from this — the Field's library lives here.
+  const PROCESS_CATEGORIES = [
+    {
+      key: "daily-rituals",
+      name: "Daily Rituals",
+      tagline: "Anchor the morning. Return to center at night.",
+      processes: [
+        { processKey: "morning-activation", name: "Morning Activation", steps: 4, time: "5 MIN", desc: "Set the day's frequency in five minutes." },
+        { processKey: "evening-reset", name: "Evening Reset", steps: 3, time: "10-15 MIN", desc: "Complete the day. Send forward what you choose." }
+      ]
+    },
+    {
+      key: "vision-creation",
+      name: "Vision & Creation",
+      tagline: "For seeing it clearly before you build it.",
+      processes: [
+        { processKey: "desired-outcome-snapshot", name: "Desired Outcome Snapshot", steps: 6, time: "25-30 MIN", desc: "See the current pattern. Reverse-engineer the outcome." },
+        { processKey: "grand-vision", name: "Grand Vision", steps: 3, time: "30-45 MIN", desc: "Receive true desires. Crystallize your Declaration." },
+        { name: "Goal Setting / Setting the Destination", comingSoon: true },
+        { name: "The Creative Process", comingSoon: true }
+      ]
+    },
+    {
+      key: "alignment-decisions",
+      name: "Alignment & Decisions",
+      tagline: "Mind, heart, and body in conscious agreement.",
+      processes: [
+        { processKey: "decision-alignment", name: "Decision Alignment", steps: 5, time: "20-30 MIN", desc: "Bring mind, heart, and body into alignment around one decision." },
+        { processKey: "frequency-booster", name: "The Frequency Booster", steps: 3, time: "10-15 MIN", desc: "Shift your state from contracted to expanded." },
+        { name: "Three-Level Alignment Check", comingSoon: true }
+      ]
+    },
+    {
+      key: "identity-self-concept",
+      name: "Identity & Self-Concept",
+      tagline: "Who you remember yourself to be.",
+      processes: [
+        { processKey: "identity-upgrade", name: "Identity Upgrade", steps: 6, time: "30-40 MIN", desc: "Resign the old identity. Anchor the new one." },
+        { processKey: "worthy-to-receive", name: "Worthy to Receive", steps: 5, time: "25-35 MIN", desc: "Reclaim your capacity to receive." }
+      ]
+    },
+    {
+      key: "emotional-mastery",
+      name: "Emotional Mastery",
+      tagline: "Where the familiar pattern lives. And how to outgrow it.",
+      processes: [
+        { processKey: "emotional-addiction-release", name: "Emotional Addiction Release", steps: 5, time: "25-35 MIN", desc: "Name the loop. Rewire it in real time." },
+        { processKey: "root-pattern-release", name: "Root Pattern Release", steps: 6, time: "30-40 MIN", desc: "Trace the pattern to its root. Release the charge." }
+      ]
+    },
+    {
+      key: "prosperity-abundance",
+      name: "Prosperity & Abundance",
+      tagline: "For receiving. For building containers. For letting prosperity flow through.",
+      processes: [
+        { processKey: "prosperity-code", name: "The Prosperity Code", steps: 4, time: "25-35 MIN", desc: "Align all four centers with the flow of prosperity." },
+        { processKey: "abundance-projection", name: "Abundance Projection", steps: 4, time: "25-35 MIN", desc: "Project specific amounts. Act as the prosperous self now." },
+        { processKey: "financial-thermostat-reset", name: "The Financial Thermostat Reset", steps: 8, time: "30-40 MIN", desc: "Name the set point. Raise the bar. Install the new standard." }
+      ]
+    },
+    {
+      key: "non-physical-realm",
+      name: "The Non-Physical Realm",
+      tagline: "Dimensions where information arrives before form.",
+      processes: [
+        { processKey: "dream-reading", name: "Dream Reading", steps: 4, time: "20-30 MIN", desc: "Receive what your dream is showing you." },
+        { processKey: "frequency-calibration", name: "Frequency Calibration", steps: 5, time: "25-35 MIN", desc: "Train the new frequency until it becomes the default." },
+        { name: "Time and Dimension", comingSoon: true }
+      ]
+    },
+    {
+      key: "path-leadership",
+      name: "Path & Leadership",
+      tagline: "For carrying the work into the world.",
+      processes: [
+        { name: "Master Your Path", comingSoon: true },
+        { name: "Leadership and Collective Empowerment", comingSoon: true },
+        { name: "Relationships / Couples", comingSoon: true }
+      ]
+    }
+  ];
 
   const state = {
     sessionToken: null,
@@ -1992,6 +2231,10 @@ Begin.` },
     pinLimitError: "",
     searchQuery: "",
     processMenuOpen: false,
+    // Which category is currently being viewed in the main pane when
+    // state.view === "category". null = no category selected (defaults to
+    // the first one when the view opens).
+    activeCategoryKey: null,
     // 'preview' = Reset-tier member (Unlimited locked); 'full' = Unlimited member.
     // Set from the backend tier at /api/start; the sidebar toggle overrides it
     // for review until real Kajabi entitlements are wired in.
@@ -3024,8 +3267,11 @@ Begin.` },
             <span class="process-menu-caret">${state.processMenuOpen ? "▴" : "▾"}</span>
           </button>
           <div class="process-menu-list">
-            ${DEMO_PROCESSES.map(p => `
-              <div class="process-menu-item" data-process="${p.key}">${escapeHtml(p.name)}</div>
+            ${PROCESS_CATEGORIES.map(c => `
+              <div class="process-menu-item process-menu-category${state.activeCategoryKey === c.key && state.view === "category" ? " active" : ""}" data-category="${c.key}">
+                <span>${escapeHtml(c.name)}</span>
+                <span class="process-menu-count">${c.processes.length}</span>
+              </div>
             `).join("")}
           </div>
         </div>
@@ -3830,6 +4076,28 @@ Begin.` },
       if (saveWorkBtn) saveWorkBtn.addEventListener("click", onExportWorkClick);
       restoreDraftIntoInput();
       setTimeout(() => { if (!state.searchOpen) document.getElementById("input")?.focus(); }, 50);
+    } else if (state.view === "category") {
+      // The Category view shows one category from the library at a time:
+      // its title, tagline, and process cards. Clicking a card kicks off a
+      // guided Unlimited chat via onProcessPick (same flow as the old flat
+      // dropdown). Sidebar stays mounted so the user can switch categories
+      // or jump back to the Reset / a chat at any time.
+      app.innerHTML = `
+        ${renderMobileTopBar()}
+        <div class="main-row">
+          ${renderSidebar()}
+          ${renderCategoryView()}
+        </div>
+        ${renderMobileOverlay()}
+        ${renderAccountModal()}
+        ${renderDeleteConfirmModal()}
+        ${renderRenameModal()}
+        ${renderFloatingChatMenu()}
+      `;
+      // Wire the process cards: each one starts the matching guided process.
+      document.querySelectorAll(".category-card[data-process]").forEach(btn => {
+        btn.addEventListener("click", () => onProcessPick(btn.dataset.process));
+      });
     } else if (state.view === "welcome") {
       // The Welcome view is the default landing for Unlimited members on
       // every fresh app open. Replaces the old "auto-resume last chat"
@@ -3893,9 +4161,9 @@ Begin.` },
       if (newChatBtn) newChatBtn.addEventListener("click", () => onNewChatClick());
       const processBtn = document.getElementById("welcome-process-btn");
       if (processBtn) processBtn.addEventListener("click", () => {
-        state.processMenuOpen = true;
-        state.mobileDrawerOpen = true; // ensure sidebar visible on mobile
-        render();
+        // Drop straight into the first category of the library. The user
+        // can browse the rest from the sidebar dropdown.
+        onCategoryClick(PROCESS_CATEGORIES[0].key);
       });
       const continueBtn = document.getElementById("welcome-continue-btn");
       if (continueBtn) continueBtn.addEventListener("click", () => {
@@ -4028,8 +4296,11 @@ Begin.` },
     if (magBtn) magBtn.addEventListener("click", onMagnifierClick);
     const processMenuBtn = document.getElementById("process-menu-btn");
     if (processMenuBtn) processMenuBtn.addEventListener("click", onProcessMenuToggle);
-    document.querySelectorAll(".process-menu-item").forEach(el => {
-      el.addEventListener("click", () => onProcessPick(el.dataset.process));
+    // Dropdown items are now CATEGORIES (data-category) — clicking one opens
+    // the category view in the main pane. Process selection happens there,
+    // on a card click that fires onProcessPick.
+    document.querySelectorAll(".process-menu-category").forEach(el => {
+      el.addEventListener("click", () => onCategoryClick(el.dataset.category));
     });
     const logoutBtn = document.getElementById("logout-btn");
     if (logoutBtn) logoutBtn.addEventListener("click", onLogout);
@@ -4224,6 +4495,45 @@ Begin.` },
         <div class="skeleton-line" style="width: 80%"></div>
         <div class="skeleton-line" style="width: 50%"></div>
       </div>
+    `;
+  }
+
+  // Render the Category view in the main pane. Shows the active category's
+  // title, tagline, and process cards. Real processes are buttons that fire
+  // onProcessPick(processKey) to start a guided chat — same flow as the old
+  // dropdown. Coming-soon entries render as static, dimmed cards.
+  function renderCategoryView() {
+    const category = PROCESS_CATEGORIES.find(c => c.key === state.activeCategoryKey) || PROCESS_CATEGORIES[0];
+    if (!category) return "";
+    const cards = category.processes.map(p => {
+      if (p.comingSoon) {
+        return `
+          <div class="category-card category-card--coming-soon">
+            <div class="category-card-eyebrow">Coming Soon</div>
+            <div class="category-card-title">${escapeHtml(p.name)}</div>
+          </div>
+        `;
+      }
+      return `
+        <button class="category-card" data-process="${p.processKey}" type="button">
+          <div class="category-card-eyebrow">${p.steps} Steps · ${escapeHtml(p.time)}</div>
+          <div class="category-card-title">${escapeHtml(p.name)}</div>
+          <div class="category-card-desc">${escapeHtml(p.desc)}</div>
+          <span class="category-card-arrow" aria-hidden="true">→</span>
+        </button>
+      `;
+    }).join("");
+    return `
+      <main class="main category-main">
+        <div class="category-view">
+          <div class="category-eyebrow">A Category of The Field</div>
+          <h1 class="category-title">${escapeHtml(category.name)}</h1>
+          <div class="category-divider"></div>
+          <div class="category-tagline">${escapeHtml(category.tagline)}</div>
+          <div class="category-grid">${cards}</div>
+          <div class="category-footer">Choose a process to begin · the Field will guide you from there.</div>
+        </div>
+      </main>
     `;
   }
 
@@ -5061,6 +5371,19 @@ Begin.` },
   // Start a new Unlimited chat already bound to a guided process. Mirrors
   // onNewChatClick, then auto-sends an activation message so The Field
   // delivers the process opening.
+  // Click handler for a category row in the sidebar dropdown. Opens the
+  // category view in the main pane, where the user picks an actual process.
+  // Sidebar stays mounted so other categories remain one click away.
+  function onCategoryClick(categoryKey) {
+    const cat = PROCESS_CATEGORIES.find(c => c.key === categoryKey);
+    if (!cat) return;
+    state.activeCategoryKey = categoryKey;
+    state.view = "category";
+    state.processMenuOpen = false;
+    state.mobileDrawerOpen = false;
+    render();
+  }
+
   async function onProcessPick(processKey) {
     if (state.creatingChat) return;
     const proc = DEMO_PROCESSES.find(p => p.key === processKey);
