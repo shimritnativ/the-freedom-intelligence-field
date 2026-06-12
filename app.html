@@ -4,6 +4,24 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>The Freedom Intelligence Field</title>
+
+<!-- Open Graph (WhatsApp, iMessage, LinkedIn, Slack, Facebook) -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="The Freedom Intelligence Field" />
+<meta property="og:title" content="The Freedom Intelligence Field" />
+<meta property="og:description" content="The AI-guided field that walks with you through The 72-Hour Power Reset and beyond. Mind, heart, and body, in conscious alignment." />
+<meta property="og:url" content="https://thefieldai.app/" />
+<meta property="og:image" content="https://thefieldai.app/og-image.png" />
+
+<!-- Twitter / X Card -->
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="The Freedom Intelligence Field" />
+<meta name="twitter:description" content="The AI-guided field that walks with you through The 72-Hour Power Reset and beyond." />
+<meta name="twitter:image" content="https://thefieldai.app/og-image.png" />
+
+<!-- Plain SEO fallback (Google snippet, email apps without OG) -->
+<meta name="description" content="The AI-guided field that walks with you through The 72-Hour Power Reset and beyond. Mind, heart, and body, in conscious alignment." />
+
 <link rel="icon" type="image/png" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" />
 <link rel="apple-touch-icon" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" />
 
@@ -256,6 +274,11 @@
     from { opacity: 0; transform: translateY(14px); }
     to { opacity: 1; transform: translateY(0); }
   }
+  /* Modifier classes used by re-renders (e.g., the silent background state
+     refresh that fires when the modal opens) to suppress the entrance
+     animation. Without these, the modal flickers every time render() runs
+     while it's open. */
+  .acct-overlay--no-anim, .acct-modal--no-anim { animation: none; }
   @media (prefers-reduced-motion: reduce) {
     .acct-overlay, .acct-modal { animation: none; }
   }
@@ -1729,6 +1752,22 @@
 <script>
 (function () {
   "use strict";
+
+  // Belt-and-suspenders redirect from the legacy Vercel URL to the
+  // production domain. The vercel.json redirects also cover this at the
+  // edge, but Vercel's auto-generated .vercel.app subdomain sometimes
+  // doesn't honor host-matched rules the same way. This JS check runs
+  // before any app code so anyone who still hits the old URL is
+  // immediately bounced to the clean domain with their query string
+  // intact. No-op when the host is already correct.
+  try {
+    var legacyHost = "the-freedom-intelligence-field.vercel.app";
+    if (window.location.hostname === legacyHost) {
+      var target = "https://thefieldai.app/" + (window.location.search || "") + (window.location.hash || "");
+      window.location.replace(target);
+      return; // Stop executing the app — we're navigating away
+    }
+  } catch (e) { /* fall through and run normally */ }
 
   const API_BASE = "/api";
   // app.html (real customer flow) uses its own storage bucket so it never
@@ -3424,8 +3463,8 @@ Begin.` },
       : "";
 
     return `
-      <div class="acct-overlay" id="acct-overlay">
-        <div class="acct-modal" role="dialog" aria-modal="true" aria-labelledby="acct-title">
+      <div class="acct-overlay${state.accountJustOpened ? "" : " acct-overlay--no-anim"}" id="acct-overlay">
+        <div class="acct-modal${state.accountJustOpened ? "" : " acct-modal--no-anim"}" role="dialog" aria-modal="true" aria-labelledby="acct-title">
           <button class="acct-close" id="acct-close-btn" type="button" aria-label="Close">✕</button>
           <div class="acct-eyebrow">Master Your Path</div>
           <div class="acct-title" id="acct-title">Your Account</div>
@@ -3467,6 +3506,19 @@ Begin.` },
 
           <div class="acct-section">
             <div class="acct-section-label">Useful Links</div>
+            ${(function () {
+              // Access Portal URL switches based on tier — same logic as the
+              // sidebar Access Portal button. Unlimited members land on the
+              // Field portal page; Reset members land on the Reset portal.
+              const portalUrl = state.tier === "full"
+                ? "https://www.shimritnativ.com/products/the-freedom-intelligence-field"
+                : "https://www.shimritnativ.com/products/the-power-reset";
+              return `
+                <a class="acct-link" href="${portalUrl}" target="_blank" rel="noopener noreferrer">
+                  Access Portal <span class="acct-link-arrow" aria-hidden="true">↗</span>
+                </a>
+              `;
+            })()}
             <a class="acct-link" href="https://api.leadconnectorhq.com/widget/bookings/connectcall-masteryourpath" target="_blank" rel="noopener noreferrer">
               Book a complimentary call <span class="acct-link-arrow" aria-hidden="true">↗</span>
             </a>
@@ -4365,13 +4417,19 @@ Begin.` },
     state.accountMenuOpen = true;
     state.accountSavedFlash = false;
     state.mobileDrawerOpen = false; // close drawer if it was open
+    // accountJustOpened controls whether the modal entrance animation plays
+    // on this render. We set it true here so the first render shows the
+    // slide-in animation, then flip it to false immediately after, so any
+    // subsequent render triggered by the silent background refresh below
+    // does NOT re-trigger the animation. That re-trigger was the visible
+    // 1-second flicker users were noticing every time they opened the modal.
+    state.accountJustOpened = true;
     render();
+    state.accountJustOpened = false;
     // Silent background refresh so the modal always shows the current tier,
     // subscription plan, and reset window. Without this, a user who just
     // upgraded from monthly to yearly would still see the old plan label
-    // until they reloaded the page. Failures are swallowed on purpose: if
-    // the call fails (network, expired session), the modal keeps showing the
-    // cached values rather than flashing an error in the user's face.
+    // until they reloaded the page. Failures are swallowed on purpose.
     if (state.sessionToken) {
       loadFullState().catch(function () { /* swallow */ });
     }
