@@ -10,6 +10,12 @@
       "maxDuration": 60
     }
   },
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/app.html"
+    }
+  ],
   "headers": [
     {
       "source": "/(app|demo|embed)\\.html",
