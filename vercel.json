@@ -16,6 +16,30 @@
       "destination": "/app.html"
     }
   ],
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "the-freedom-intelligence-field.vercel.app"
+        }
+      ],
+      "destination": "https://thefieldai.app/",
+      "permanent": true
+    },
+    {
+      "source": "/app.html",
+      "has": [
+        {
+          "type": "host",
+          "value": "the-freedom-intelligence-field.vercel.app"
+        }
+      ],
+      "destination": "https://thefieldai.app/",
+      "permanent": true
+    }
+  ],
   "headers": [
     {
       "source": "/(app|demo|embed)\\.html",
