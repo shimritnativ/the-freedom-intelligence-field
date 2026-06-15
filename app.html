@@ -171,6 +171,20 @@
     margin-bottom: 12px;
     padding: 0 4px;
   }
+  /* Prominent gold eyebrow used to anchor a section above its dropdown
+     (e.g. "YOUR 72-HOUR JOURNEY" above the Reset toggle). Same shape as
+     sidebar-label but tighter tracking and gold color so it reads as an
+     intentional section title, not a quiet hint. */
+  .sidebar-section-eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    color: var(--gold);
+    text-transform: uppercase;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-weight: 700;
+    margin-bottom: 10px;
+    padding: 0 4px;
+  }
   .day-list {
     display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px;
   }
@@ -3201,10 +3215,18 @@ Begin.` },
           // behind them, the Unlimited library is their daily work. Preview
           // members see the Days expanded by default because the Reset IS
           // their current practice.
+          //
+          // The "YOUR 72-HOUR JOURNEY" eyebrow above the toggle anchors the
+          // dropdown to its section. Without it the dropdown button reads
+          // as a floating element under the brand mark; with it the whole
+          // block reads as one intentional section. Preview members keep
+          // their existing label (the Days are their current work, so the
+          // label IS their section header).
           const isFullTier = state.tier === "full";
           const expanded = !isFullTier || state.resetSectionExpanded;
           if (isFullTier) {
             return `
+              <div class="sidebar-section-eyebrow">YOUR 72-HOUR JOURNEY</div>
               <button class="reset-section-toggle ${expanded ? "expanded" : ""}" id="reset-section-toggle" type="button" aria-expanded="${expanded}">
                 <span class="reset-section-label">The 72-Hour Power Reset</span>
                 <span class="reset-section-caret">${expanded ? "▾" : "▸"}</span>
