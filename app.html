@@ -3812,6 +3812,23 @@ Begin.` },
       subtitle = "The Field — Unlimited";
       pillLabel = "UNLIMITED";
       pillStyle = "unlimited";
+    } else if (state.view === "welcome") {
+      // Welcome view is the calm landing for Unlimited members. No day pill,
+      // no Reset framing — just the brand. The session pill stays empty so
+      // the top bar reads cleanly: hamburger, brand, nothing else.
+      title = "The Freedom Intelligence Field";
+      subtitle = "Master Your Path";
+      pillLabel = "";
+      pillStyle = "";
+    } else if (state.view === "category") {
+      // Category view shows one section of the library. The pill becomes
+      // "LIBRARY" (unlimited-coloured) and the title becomes the category
+      // name so the participant always sees where they are.
+      const cat = PROCESS_CATEGORIES.find(c => c.key === state.activeCategoryKey);
+      title = cat ? cat.name : "The Field Library";
+      subtitle = "The Field — Library";
+      pillLabel = "LIBRARY";
+      pillStyle = "unlimited";
     }
 
     // Day 3 only: show a small download icon in the mobile top bar that
@@ -3831,7 +3848,7 @@ Begin.` },
     return `
       <div class="mobile-top-bar">
         <button class="mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Open menu">☰</button>
-        <span class="mobile-section-pill mobile-section-${pillStyle}">${escapeHtml(pillLabel)}</span>
+        ${pillLabel ? `<span class="mobile-section-pill mobile-section-${pillStyle}">${escapeHtml(pillLabel)}</span>` : ""}
         <div class="mobile-brand">
           <img src="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" alt="Master Your Path" />
           <div class="mobile-brand-text">
