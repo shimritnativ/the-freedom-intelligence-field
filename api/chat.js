@@ -196,7 +196,9 @@ export default async function handler(req, res) {
 
 This participant is already a full-tier member of The Freedom Intelligence Field Unlimited. They have full access to the Field beyond the 72-Hour Power Reset.
 
-At the end of the session, after the final Day Record, do NOT include the upgrade invitation paragraph (anything along the lines of "If you already know this is a space you want to keep working with", "the full Freedom Intelligence Field is open for you now", "Click below to learn more", or any other CTA copy aimed at a non-member). Do NOT include the [[button:Join The Field Unlimited|...]] token. They already have it.
+At the end of the session, after the final Day Record, do NOT include the upgrade invitation paragraph (anything along the lines of "If you already know this is a space you want to keep working with", "the full Freedom Intelligence Field is open for you now", "What you just experienced is a fraction of what lives inside The Unlimited Freedom Intelligence Field", "Click below to learn more", or any other CTA copy aimed at a non-member). Do NOT include any upgrade button at the end of the session — including but not limited to [[button:Join The Field Unlimited|...]] and [[button:Join The Unlimited Freedom Intelligence Field|...]] and any other variant of an "Join / Upgrade / Unlock The Field" button. They already have it.
+
+IMPORTANT: This override does NOT remove the Moving Energy Beyond the Senses Meditation button on Day 3. That button is a meditation reference, not an upgrade pitch, and remains intact for all tiers.
 
 Replace the upgrade invitation and the button with this brief closing instead, on its own line:
 
