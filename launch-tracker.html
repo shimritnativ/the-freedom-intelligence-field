@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Field — Launch Tracker</title>
+<style>
+  :root {
+    --bg: #F7F1E1;
+    --panel: #FFFFFF;
+    --panel-2: #FAF6E8;
+    --text: #1A1612;
+    --text-dim: rgba(26, 22, 18, 0.65);
+    --text-mute: rgba(26, 22, 18, 0.4);
+    --gold: #9A6E10;
+    --gold-soft: rgba(154, 110, 16, 0.07);
+    --gold-line: rgba(154, 110, 16, 0.2);
+    --gold-strong: rgba(154, 110, 16, 0.4);
+    --border: rgba(26, 22, 18, 0.08);
+    --success: #2D6B3A;
+    --success-soft: rgba(45, 107, 58, 0.08);
+    --warning: #9A5A10;
+    --danger: #A82A2A;
+    --danger-soft: rgba(168, 42, 42, 0.08);
+    --shadow: 0 6px 24px rgba(26, 22, 18, 0.06), 0 1px 4px rgba(26, 22, 18, 0.04);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    min-height: 100vh;
+  }
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 28px 80px;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 38px;
+  }
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.28em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 42px;
+    font-weight: 400;
+    margin: 0 0 12px;
+    color: var(--text);
+    line-height: 1.15;
+  }
+  .divider {
+    width: 60px;
+    height: 1.5px;
+    background: var(--gold);
+    margin: 0 auto 14px;
+    opacity: 0.7;
+  }
+  .subtitle {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--text-dim);
+    max-width: 520px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 38px;
+  }
+  .summary-card {
+    background: var(--panel);
+    border: 1px solid var(--gold-line);
+    border-radius: 12px;
+    padding: 18px 18px 20px;
+    box-shadow: var(--shadow);
+  }
+  .summary-card-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .summary-card-value {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 26px;
+    font-weight: 400;
+    color: var(--text);
+    line-height: 1.1;
+  }
+  .summary-card-value.profit { color: var(--success); }
+  .summary-card-value.loss { color: var(--danger); }
+  .summary-card-sub {
+    font-size: 11px;
+    color: var(--text-mute);
+    margin-top: 4px;
+  }
+  section {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px 28px 24px;
+    margin-bottom: 22px;
+    box-shadow: var(--shadow);
+  }
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .section-title {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 22px;
+    color: var(--text);
+    margin: 0;
+    line-height: 1.3;
+  }
+  .section-pill {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    color: var(--gold);
+    text-transform: uppercase;
+    background: var(--gold-soft);
+    border: 1px solid var(--gold-line);
+    border-radius: 999px;
+    padding: 4px 11px;
+  }
+  .section-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.55;
+    margin: 0 0 22px;
+    max-width: 720px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .field-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+  .field input {
+    width: 100%;
+    padding: 9px 12px;
+    background: var(--panel-2);
+    border: 1px solid var(--gold-line);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .field input:focus {
+    outline: none;
+    border-color: var(--gold);
+    background: var(--panel);
+  }
+  .field input[readonly] {
+    background: var(--gold-soft);
+    color: var(--text);
+    font-weight: 600;
+    cursor: default;
+  }
+  .field input[readonly]:focus {
+    border-color: var(--gold-line);
+    background: var(--gold-soft);
+  }
+  .field-hint {
+    font-size: 10px;
+    color: var(--text-mute);
+    font-style: italic;
+  }
+  .funnel {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .funnel-row {
+    display: grid;
+    grid-template-columns: 160px 1fr 80px;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+  }
+  .funnel-label {
+    font-size: 12px;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .funnel-bar {
+    height: 22px;
+    background: var(--gold-soft);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid var(--gold-line);
+  }
+  .funnel-bar-fill {
+    height: 100%;
+    background: var(--gold);
+    transition: width 0.3s ease;
+  }
+  .funnel-value {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 600;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .funnel-rate {
+    font-size: 10px;
+    color: var(--text-mute);
+    text-align: right;
+    margin-top: 1px;
+    font-variant-numeric: tabular-nums;
+  }
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .status-pill.green {
+    background: var(--success-soft);
+    color: var(--success);
+  }
+  .status-pill.yellow {
+    background: var(--gold-soft);
+    color: var(--gold);
+  }
+  .status-pill.red {
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+  .actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+  }
+  button {
+    background: transparent;
+    border: 1px solid var(--gold-line);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  button:hover {
+    border-color: var(--gold);
+    background: var(--gold-soft);
+  }
+  button.primary {
+    background: var(--gold);
+    color: var(--panel);
+    border-color: var(--gold);
+  }
+  button.primary:hover {
+    background: var(--text);
+    border-color: var(--text);
+  }
+  .footer {
+    text-align: center;
+    margin-top: 40px;
+    padding-top: 28px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-mute);
+    font-style: italic;
+  }
+  .footer strong { color: var(--text-dim); font-style: normal; font-weight: 600; }
+  .save-indicator {
+    position: fixed;
+    bottom: 22px;
+    right: 22px;
+    background: var(--gold);
+    color: var(--panel);
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    z-index: 100;
+  }
+  .save-indicator.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  @media (max-width: 720px) {
+    .wrap { padding: 28px 16px 60px; }
+    h1 { font-size: 30px; }
+    .summary-row { grid-template-columns: repeat(2, 1fr); }
+    .grid, .grid-3 { grid-template-columns: 1fr; }
+    .funnel-row { grid-template-columns: 110px 1fr 60px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">MASTER YOUR PATH</div>
+  <h1>The Field — Launch Tracker</h1>
+  <div class="divider"></div>
+  <div class="subtitle">A living dashboard for the pre-launch and full launch of the 72-Hour Power Reset. All numbers persist in this browser. Update freely.</div>
+</header>
+
+<div class="summary-row">
+  <div class="summary-card">
+    <div class="summary-card-label">Total Spent</div>
+    <div class="summary-card-value" id="sum-spent">€0</div>
+    <div class="summary-card-sub" id="sum-spent-sub">All costs combined</div>
+  </div>
+  <div class="summary-card">
+    <div class="summary-card-label">Total Revenue</div>
+    <div class="summary-card-value" id="sum-revenue">€0</div>
+    <div class="summary-card-sub" id="sum-revenue-sub">Reset + Unlimited</div>
+  </div>
+  <div class="summary-card">
+    <div class="summary-card-label">Net P&amp;L</div>
+    <div class="summary-card-value" id="sum-pnl">€0</div>
+    <div class="summary-card-sub" id="sum-pnl-sub">Revenue minus spend</div>
+  </div>
+  <div class="summary-card">
+    <div class="summary-card-label">Launch Status</div>
+    <div class="summary-card-value" style="font-size: 18px; padding-top: 4px;">
+      <span class="status-pill" id="sum-status">—</span>
+    </div>
+    <div class="summary-card-sub" id="sum-status-sub">Updates with the numbers</div>
+  </div>
+</div>
+
+<section>
+  <div class="section-head">
+    <h2 class="section-title">Pre-launch — past and current clients</h2>
+    <span class="section-pill">€4.5 Power Reset</span>
+  </div>
+  <p class="section-desc">298 people in the WhatsApp sequence at 50% off. The sequence is 2 initial messages plus a follow-up. Update the response counts as people come back to you, and the purchase count as ThriveCart sends notifications.</p>
+
+  <div class="grid">
+    <div class="field">
+      <label class="field-label" for="pre-people">People in the sequence</label>
+      <input type="number" id="pre-people" value="298" min="0" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="pre-msgs-per">Messages per person</label>
+      <input type="number" id="pre-msgs-per" value="3" min="1" step="1" />
+      <div class="field-hint">2 initial messages + 1 follow-up</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="pre-msg-cost">Cost per WhatsApp message (€)</label>
+      <input type="number" id="pre-msg-cost" value="0.05" min="0" step="0.001" />
+      <div class="field-hint">Check GHL billing for the exact rate</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="pre-msg-total">Total messages sent</label>
+      <input type="number" id="pre-msg-total" readonly />
+    </div>
+    <div class="field">
+      <label class="field-label" for="pre-msg-cost-total">Total WhatsApp cost (€)</label>
+      <input type="number" id="pre-msg-cost-total" readonly />
+    </div>
+    <div class="field">
+      <label class="field-label" for="pre-ghl-cost">Go High Level prorated cost (€)</label>
+      <input type="number" id="pre-ghl-cost" value="0" min="0" step="0.01" />
+      <div class="field-hint">Monthly fee × portion of month for this campaign</div>
+    </div>
+  </div>
+
+  <h3 style="font-family: Georgia, serif; font-style: italic; font-size: 18px; color: var(--text); margin: 24px 0 4px;">Pre-launch conversion funnel</h3>
+  <div class="funnel" id="pre-funnel"></div>
+
+  <div class="grid" style="margin-top: 18px;">
+    <div class="field">
+      <label class="field-label" for="pre-replies">Replies received</label>
+      <input type="number" id="pre-replies" value="0" min="0" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="pre-yes">"YES" responses</label>
+      <input type="number" id="pre-yes" value="0" min="0" />
+      <div class="field-hint">People who asked for the link</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="pre-clicks">Link clicks (if you track)</label>
+      <input type="number" id="pre-clicks" value="0" min="0" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="pre-purchases">Power Reset purchases (€4.5)</label>
+      <input type="number" id="pre-purchases" value="0" min="0" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="pre-reset-price">Reset price (€)</label>
+      <input type="number" id="pre-reset-price" value="4.5" min="0" step="0.01" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="pre-revenue">Pre-launch revenue (€)</label>
+      <input type="number" id="pre-revenue" readonly />
+    </div>
+    <div class="field">
+      <label class="field-label" for="pre-upgrades">Upgrades to Unlimited from pre-launch</label>
+      <input type="number" id="pre-upgrades" value="0" min="0" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="pre-cpa">Cost per Reset customer (€)</label>
+      <input type="number" id="pre-cpa" readonly />
+      <div class="field-hint">Total pre-launch cost ÷ purchases</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <h2 class="section-title">Public launch — broader audience</h2>
+    <span class="section-pill">Full Price</span>
+  </div>
+  <p class="section-desc">The next launch wave. Targeting 2,000+ recipients. Update the numbers as the campaign rolls out so you can compare it back to pre-launch CPA.</p>
+
+  <div class="grid">
+    <div class="field">
+      <label class="field-label" for="launch-people">People in the sequence</label>
+      <input type="number" id="launch-people" value="2000" min="0" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="launch-msgs-per">Messages per person</label>
+      <input type="number" id="launch-msgs-per" value="3" min="1" step="1" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="launch-msg-cost">Cost per WhatsApp message (€)</label>
+      <input type="number" id="launch-msg-cost" value="0.05" min="0" step="0.001" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="launch-msg-total">Total messages sent</label>
+      <input type="number" id="launch-msg-total" readonly />
+    </div>
+    <div class="field">
+      <label class="field-label" for="launch-msg-cost-total">Total WhatsApp cost (€)</label>
+      <input type="number" id="launch-msg-cost-total" readonly />
+    </div>
+    <div class="field">
+      <label class="field-label" for="launch-ad-cost">Paid ads spend (€)</label>
+      <input type="number" id="launch-ad-cost" value="0" min="0" step="0.01" />
+      <div class="field-hint">Meta, Google, etc. if any</div>
+    </div>
+  </div>
+
+  <h3 style="font-family: Georgia, serif; font-style: italic; font-size: 18px; color: var(--text); margin: 24px 0 4px;">Launch conversion funnel</h3>
+  <div class="funnel" id="launch-funnel"></div>
+
+  <div class="grid" style="margin-top: 18px;">
+    <div class="field">
+      <label class="field-label" for="launch-replies">Replies received</label>
+      <input type="number" id="launch-replies" value="0" min="0" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="launch-yes">"YES" responses</label>
+      <input type="number" id="launch-yes" value="0" min="0" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="launch-clicks">Link clicks</label>
+      <input type="number" id="launch-clicks" value="0" min="0" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="launch-purchases">Power Reset purchases</label>
+      <input type="number" id="launch-purchases" value="0" min="0" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="launch-reset-price">Reset price (€)</label>
+      <input type="number" id="launch-reset-price" value="9" min="0" step="0.01" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="launch-revenue">Launch revenue (€)</label>
+      <input type="number" id="launch-revenue" readonly />
+    </div>
+    <div class="field">
+      <label class="field-label" for="launch-upgrades">Upgrades to Unlimited from launch</label>
+      <input type="number" id="launch-upgrades" value="0" min="0" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="launch-cpa">Cost per Reset customer (€)</label>
+      <input type="number" id="launch-cpa" readonly />
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <h2 class="section-title">Unlimited upgrades</h2>
+    <span class="section-pill">Recurring Revenue</span>
+  </div>
+  <p class="section-desc">This is where the real economics live. The Reset gets a member in; the upgrade to Unlimited (€77/month or €777/year) is what makes the launch profitable long-term. Update the totals as people convert.</p>
+
+  <div class="grid-3 grid">
+    <div class="field">
+      <label class="field-label" for="unl-monthly-price">Unlimited monthly price (€)</label>
+      <input type="number" id="unl-monthly-price" value="77" min="0" step="0.01" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="unl-yearly-price">Unlimited yearly price (€)</label>
+      <input type="number" id="unl-yearly-price" value="777" min="0" step="0.01" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="unl-total">Total upgrades so far</label>
+      <input type="number" id="unl-total" readonly />
+      <div class="field-hint">Pre-launch + launch combined</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="unl-monthly-count">On the monthly plan</label>
+      <input type="number" id="unl-monthly-count" value="0" min="0" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="unl-yearly-count">On the yearly plan</label>
+      <input type="number" id="unl-yearly-count" value="0" min="0" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="unl-mrr">Estimated MRR (€)</label>
+      <input type="number" id="unl-mrr" readonly />
+      <div class="field-hint">Monthly recurring revenue</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="unl-arr">Estimated ARR (€)</label>
+      <input type="number" id="unl-arr" readonly />
+      <div class="field-hint">Annualised: MRR × 12 + yearly upgrades</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="unl-conversion">Reset → Unlimited rate (%)</label>
+      <input type="number" id="unl-conversion" readonly />
+    </div>
+    <div class="field">
+      <label class="field-label" for="unl-ltv">Average LTV per Unlimited (€)</label>
+      <input type="number" id="unl-ltv" value="500" min="0" step="0.01" />
+      <div class="field-hint">Typical 6-12 month retention estimate</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <h2 class="section-title">Ongoing operational costs</h2>
+    <span class="section-pill">Monthly</span>
+  </div>
+  <p class="section-desc">The infrastructure that runs the Field. These are paid every month whether you launch or not. Adjust the API estimates after you check your Anthropic and ElevenLabs dashboards.</p>
+
+  <div class="grid grid-3">
+    <div class="field">
+      <label class="field-label" for="op-vercel">Vercel Pro ($/month)</label>
+      <input type="number" id="op-vercel" value="20" min="0" step="0.01" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="op-domain">Domain amortised (€/month)</label>
+      <input type="number" id="op-domain" value="3" min="0" step="0.01" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="op-resend">Resend email ($/month)</label>
+      <input type="number" id="op-resend" value="0" min="0" step="0.01" />
+      <div class="field-hint">Free tier covers most launches</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="op-neon">Neon Postgres ($/month)</label>
+      <input type="number" id="op-neon" value="0" min="0" step="0.01" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="op-anthropic">Anthropic API ($/month)</label>
+      <input type="number" id="op-anthropic" value="0" min="0" step="0.01" />
+      <div class="field-hint">Check Anthropic Console weekly</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="op-elevenlabs">ElevenLabs ($/month)</label>
+      <input type="number" id="op-elevenlabs" value="0" min="0" step="0.01" />
+      <div class="field-hint">Check ElevenLabs billing weekly</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="op-whisper">OpenAI Whisper ($/month)</label>
+      <input type="number" id="op-whisper" value="0" min="0" step="0.01" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="op-ghl">Go High Level ($/month)</label>
+      <input type="number" id="op-ghl" value="0" min="0" step="0.01" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="op-other">Other tools ($/month)</label>
+      <input type="number" id="op-other" value="0" min="0" step="0.01" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="op-fx">EUR per USD (for conversion)</label>
+      <input type="number" id="op-fx" value="0.92" min="0" step="0.001" />
+      <div class="field-hint">Used to convert USD lines to EUR</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="op-monthly-eur">Monthly total (€)</label>
+      <input type="number" id="op-monthly-eur" readonly />
+    </div>
+    <div class="field">
+      <label class="field-label" for="op-launch-portion">Launch-window portion (€)</label>
+      <input type="number" id="op-launch-portion" readonly />
+      <div class="field-hint">2 months of ops included in launch ROI</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <h2 class="section-title">Final math — is it worth doing again?</h2>
+  </div>
+  <p class="section-desc">The numbers that answer your real question. Update everything above, then read the breakeven analysis below.</p>
+
+  <div class="grid grid-3">
+    <div class="field">
+      <label class="field-label" for="final-total-cost">Total spend (€)</label>
+      <input type="number" id="final-total-cost" readonly />
+      <div class="field-hint">Pre-launch + launch + 2 months ops</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="final-total-revenue">Total revenue (€)</label>
+      <input type="number" id="final-total-revenue" readonly />
+      <div class="field-hint">Reset sales + Unlimited LTV</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="final-pnl">Net (€)</label>
+      <input type="number" id="final-pnl" readonly />
+    </div>
+    <div class="field">
+      <label class="field-label" for="final-cpa">Average CPA (€)</label>
+      <input type="number" id="final-cpa" readonly />
+      <div class="field-hint">Total cost ÷ total Reset purchases</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="final-breakeven">Breakeven Unlimited upgrades needed</label>
+      <input type="number" id="final-breakeven" readonly />
+      <div class="field-hint">Given current spend and LTV</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="final-roas">ROAS (revenue ÷ spend)</label>
+      <input type="number" id="final-roas" readonly />
+      <div class="field-hint">Above 1.0 means profitable</div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button id="reset-btn" type="button">Reset all numbers</button>
+    <button id="export-btn" class="primary" type="button">Download snapshot (.json)</button>
+  </div>
+</section>
+
+<div class="footer">
+  <strong>The Field — Launch Tracker</strong> · all data persists in your browser's localStorage · no servers touched · refresh any time
+</div>
+
+</div>
+
+<div class="save-indicator" id="save-indicator">Saved ✓</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const STORAGE_KEY = "field_launch_tracker_v1";
+  const FIELDS = [
+    "pre-people", "pre-msgs-per", "pre-msg-cost", "pre-ghl-cost",
+    "pre-replies", "pre-yes", "pre-clicks", "pre-purchases", "pre-reset-price", "pre-upgrades",
+    "launch-people", "launch-msgs-per", "launch-msg-cost", "launch-ad-cost",
+    "launch-replies", "launch-yes", "launch-clicks", "launch-purchases", "launch-reset-price", "launch-upgrades",
+    "unl-monthly-price", "unl-yearly-price", "unl-monthly-count", "unl-yearly-count", "unl-ltv",
+    "op-vercel", "op-domain", "op-resend", "op-neon", "op-anthropic",
+    "op-elevenlabs", "op-whisper", "op-ghl", "op-other", "op-fx"
+  ];
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) { return null; }
+  }
+  function saveState(s) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) {}
+  }
+  function flashSaved() {
+    const el = document.getElementById("save-indicator");
+    el.classList.add("show");
+    clearTimeout(window._saveTimer);
+    window._saveTimer = setTimeout(() => el.classList.remove("show"), 900);
+  }
+
+  function n(id) {
+    const el = document.getElementById(id);
+    if (!el) return 0;
+    const v = parseFloat(el.value);
+    return isFinite(v) ? v : 0;
+  }
+  function setVal(id, val, decimals) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const d = decimals == null ? 2 : decimals;
+    el.value = isFinite(val) ? val.toFixed(d) : "0.00";
+  }
+  function setInt(id, val) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = Math.round(val || 0);
+  }
+
+  function eur(n, decimals) {
+    const d = decimals == null ? 2 : decimals;
+    return "€" + (isFinite(n) ? n.toFixed(d) : "0.00");
+  }
+
+  function renderFunnel(elId, stages) {
+    const wrap = document.getElementById(elId);
+    if (!wrap) return;
+    const top = stages[0].count || 0;
+    wrap.innerHTML = stages.map((s, i) => {
+      const pct = top > 0 ? Math.max(0, Math.min(100, (s.count / top) * 100)) : 0;
+      const prev = i > 0 ? stages[i - 1].count : top;
+      const rate = prev > 0 ? Math.round((s.count / prev) * 1000) / 10 : 0;
+      return `
+        <div class="funnel-row">
+          <div class="funnel-label">${s.label}</div>
+          <div class="funnel-bar"><div class="funnel-bar-fill" style="width: ${pct}%"></div></div>
+          <div>
+            <div class="funnel-value">${Math.round(s.count)}</div>
+            ${i > 0 ? `<div class="funnel-rate">${rate}%</div>` : ""}
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function setStatus(net) {
+    const pill = document.getElementById("sum-status");
+    const sub = document.getElementById("sum-status-sub");
+    pill.classList.remove("green", "yellow", "red");
+    if (net > 100) {
+      pill.classList.add("green");
+      pill.textContent = "Profitable";
+      sub.textContent = "Revenue is ahead of spend";
+    } else if (net > -100) {
+      pill.classList.add("yellow");
+      pill.textContent = "Around breakeven";
+      sub.textContent = "Within ±€100 of breakeven";
+    } else {
+      pill.classList.add("red");
+      pill.textContent = "Below breakeven";
+      sub.textContent = "Need more upgrades to turn this profitable";
+    }
+  }
+
+  function recalc() {
+    // Pre-launch
+    const prePeople = n("pre-people");
+    const preMsgsPer = n("pre-msgs-per");
+    const preMsgCost = n("pre-msg-cost");
+    const preMsgTotal = prePeople * preMsgsPer;
+    const preWhatsAppCost = preMsgTotal * preMsgCost;
+    setInt("pre-msg-total", preMsgTotal);
+    setVal("pre-msg-cost-total", preWhatsAppCost);
+
+    const prePurchases = n("pre-purchases");
+    const preResetPrice = n("pre-reset-price");
+    const preRevenue = prePurchases * preResetPrice;
+    setVal("pre-revenue", preRevenue);
+
+    const preGhl = n("pre-ghl-cost");
+    const preTotalCost = preWhatsAppCost + preGhl;
+    const preCpa = prePurchases > 0 ? preTotalCost / prePurchases : 0;
+    setVal("pre-cpa", preCpa);
+
+    renderFunnel("pre-funnel", [
+      { label: "Sent",      count: preMsgTotal },
+      { label: "Reached",   count: prePeople },
+      { label: "Replied",   count: n("pre-replies") },
+      { label: "Said YES",  count: n("pre-yes") },
+      { label: "Clicked",   count: n("pre-clicks") },
+      { label: "Purchased", count: prePurchases }
+    ]);
+
+    // Launch
+    const launchPeople = n("launch-people");
+    const launchMsgsPer = n("launch-msgs-per");
+    const launchMsgCost = n("launch-msg-cost");
+    const launchMsgTotal = launchPeople * launchMsgsPer;
+    const launchWhatsAppCost = launchMsgTotal * launchMsgCost;
+    setInt("launch-msg-total", launchMsgTotal);
+    setVal("launch-msg-cost-total", launchWhatsAppCost);
+
+    const launchPurchases = n("launch-purchases");
+    const launchResetPrice = n("launch-reset-price");
+    const launchRevenue = launchPurchases * launchResetPrice;
+    setVal("launch-revenue", launchRevenue);
+
+    const launchAds = n("launch-ad-cost");
+    const launchTotalCost = launchWhatsAppCost + launchAds;
+    const launchCpa = launchPurchases > 0 ? launchTotalCost / launchPurchases : 0;
+    setVal("launch-cpa", launchCpa);
+
+    renderFunnel("launch-funnel", [
+      { label: "Sent",      count: launchMsgTotal },
+      { label: "Reached",   count: launchPeople },
+      { label: "Replied",   count: n("launch-replies") },
+      { label: "Said YES",  count: n("launch-yes") },
+      { label: "Clicked",   count: n("launch-clicks") },
+      { label: "Purchased", count: launchPurchases }
+    ]);
+
+    // Unlimited
+    const unlMonthlyPrice = n("unl-monthly-price");
+    const unlYearlyPrice = n("unl-yearly-price");
+    const unlMonthlyCount = n("unl-monthly-count");
+    const unlYearlyCount = n("unl-yearly-count");
+    const unlTotal = unlMonthlyCount + unlYearlyCount;
+    setInt("unl-total", unlTotal);
+
+    const mrr = unlMonthlyCount * unlMonthlyPrice;
+    const arr = (mrr * 12) + (unlYearlyCount * unlYearlyPrice);
+    setVal("unl-mrr", mrr);
+    setVal("unl-arr", arr);
+
+    const totalPurchases = prePurchases + launchPurchases;
+    const conversionRate = totalPurchases > 0 ? (unlTotal / totalPurchases) * 100 : 0;
+    setVal("unl-conversion", conversionRate, 1);
+
+    const ltv = n("unl-ltv");
+    const unlimitedRevenue = unlTotal * ltv;
+
+    // Ops
+    const fx = n("op-fx") || 1;
+    const opMonthlyUsd = n("op-vercel") + n("op-resend") + n("op-neon") +
+                         n("op-anthropic") + n("op-elevenlabs") + n("op-whisper") +
+                         n("op-ghl") + n("op-other");
+    const opMonthlyEur = (opMonthlyUsd * fx) + n("op-domain");
+    setVal("op-monthly-eur", opMonthlyEur);
+    const opLaunchPortion = opMonthlyEur * 2;
+    setVal("op-launch-portion", opLaunchPortion);
+
+    // Totals
+    const totalSpend = preTotalCost + launchTotalCost + opLaunchPortion;
+    const totalRevenue = preRevenue + launchRevenue + unlimitedRevenue;
+    const pnl = totalRevenue - totalSpend;
+    const cpa = totalPurchases > 0 ? totalSpend / totalPurchases : 0;
+    const breakevenUpgrades = ltv > 0 ? Math.ceil((totalSpend - preRevenue - launchRevenue) / ltv) : 0;
+    const roas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
+
+    setVal("final-total-cost", totalSpend);
+    setVal("final-total-revenue", totalRevenue);
+    setVal("final-pnl", pnl);
+    setVal("final-cpa", cpa);
+    setInt("final-breakeven", Math.max(0, breakevenUpgrades));
+    setVal("final-roas", roas);
+
+    // Summary cards
+    document.getElementById("sum-spent").textContent = eur(totalSpend, 0);
+    document.getElementById("sum-revenue").textContent = eur(totalRevenue, 0);
+    const pnlEl = document.getElementById("sum-pnl");
+    pnlEl.textContent = (pnl >= 0 ? "+" : "") + eur(pnl, 0).replace("€", "€");
+    pnlEl.classList.remove("profit", "loss");
+    if (pnl > 0) pnlEl.classList.add("profit");
+    if (pnl < 0) pnlEl.classList.add("loss");
+    setStatus(pnl);
+  }
+
+  function persist() {
+    const state = {};
+    FIELDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) state[id] = el.value;
+    });
+    saveState(state);
+    flashSaved();
+  }
+
+  function hydrate() {
+    const state = loadState();
+    if (!state) return;
+    FIELDS.forEach(id => {
+      if (state[id] != null) {
+        const el = document.getElementById(id);
+        if (el) el.value = state[id];
+      }
+    });
+  }
+
+  function wire() {
+    FIELDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener("input", () => { recalc(); persist(); });
+    });
+
+    document.getElementById("reset-btn").addEventListener("click", () => {
+      if (!confirm("Reset all numbers to defaults? This will clear what you've entered.")) return;
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    });
+
+    document.getElementById("export-btn").addEventListener("click", () => {
+      const state = loadState() || {};
+      state._exportedAt = new Date().toISOString();
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "field-launch-snapshot-" + new Date().toISOString().slice(0, 10) + ".json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  hydrate();
+  wire();
+  recalc();
+})();
+</script>
+
+</body>
+</html>
