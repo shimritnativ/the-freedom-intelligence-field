@@ -175,7 +175,41 @@ export default async function handler(req, res) {
       }
     }
 
-    const systemPrompt = getSystemPromptForDay(day) + priorDayContext;
+    // Full-tier override. The Day 2 and Day 3 prompts close with an
+    // upgrade invitation + [[button:Join The Field Unlimited|...]] token
+    // aimed at preview-tier customers (the typical 72-Hour Reset journey).
+    // For members who already paid for Unlimited and are revisiting the
+    // Reset, pitching the upgrade in the closing moment after the Living
+    // Power Declaration reads as tone-deaf marketing — they already have
+    // what they're being asked to buy. We inject a small override at
+    // runtime telling the Field to skip the upgrade invitation and close
+    // with a brief acknowledgment that they're already in the Field.
+    //
+    // The override is intentionally additive (appended at the end of the
+    // system prompt) so it takes precedence over the default closing
+    // described in the day prompts. The day prompts themselves stay
+    // simple and don't need to know about this branching.
+    const fullTierOverride = user.tier === "full"
+      ? `
+
+## OVERRIDE — FULL-TIER PARTICIPANT
+
+This participant is already a full-tier member of The Freedom Intelligence Field Unlimited. They have full access to the Field beyond the 72-Hour Power Reset.
+
+At the end of the session, after the final Day Record, do NOT include the upgrade invitation paragraph (anything along the lines of "If you already know this is a space you want to keep working with", "the full Freedom Intelligence Field is open for you now", "Click below to learn more", or any other CTA copy aimed at a non-member). Do NOT include the [[button:Join The Field Unlimited|...]] token. They already have it.
+
+Replace the upgrade invitation and the button with this brief closing instead, on its own line:
+
+"You already know what lives beyond the Reset. Carry the decision, the action, and the declaration into your daily practice in the full Field."
+
+Then close with:
+
+"The session is complete."
+
+This override applies only to the upgrade invitation and button at the end of the session. Everything else in the system prompt remains unchanged.`
+      : "";
+
+    const systemPrompt = getSystemPromptForDay(day) + fullTierOverride + priorDayContext;
     const systemHash = hashSystemPrompt(systemPrompt);
 
     // ----- Persist user message FIRST so it never gets lost -----
