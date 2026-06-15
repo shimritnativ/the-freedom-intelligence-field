@@ -3085,6 +3085,10 @@ Begin.` },
           <span class="chat-menu-icon">${pinIconSvg()}</span>
           <span>${isPinned ? "Unpin" : "Pin"}</span>
         </button>
+        <button class="chat-menu-item" data-menu-action="export" data-chat-id="${session.id}" type="button">
+          <span class="chat-menu-icon">${downloadIconSvg()}</span>
+          <span>Export</span>
+        </button>
         <button class="chat-menu-item chat-menu-item--danger" data-menu-action="delete" data-chat-id="${session.id}" type="button">
           <span class="chat-menu-icon">${trashIconSvg()}</span>
           <span>Delete</span>
@@ -3154,6 +3158,11 @@ Begin.` },
   }
   function trashIconSvg() {
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
+  }
+  // Download icon used by the "Export this conversation" item in the chat
+  // 3-dot menu, and matches the Day 3 Export button visually.
+  function downloadIconSvg() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   }
   // Render the 3-dot menu dropdown for a chat. Used in both the sidebar list
   // and the chat header. origin = "sidebar" | "header" — affects positioning
@@ -3684,6 +3693,226 @@ Begin.` },
       </div>`;
   }
 
+  // ===== Unlimited export — single chat and all conversations =====
+  // Mirrors the Reset export pattern: build branded HTML, drop it into a
+  // hidden iframe, trigger window.print(). Browser renders to PDF natively.
+  // We reuse the markdown-to-HTML conversion and the [[token:...]] stripping
+  // from the Reset export so PDF output matches the chat exactly.
+
+  // Shared helpers extracted so both single-chat and all-conversations
+  // builders can render messages identically.
+  function unlimitedExportRenderMessageBody(content) {
+    let html = escapeHtml(content);
+    html = html.replace(/\*\*([^\n*]+?)\*\*/g, "<strong>$1</strong>");
+    html = html.replace(/__([^\n_]+?)__/g, "<strong>$1</strong>");
+    html = html.replace(/(^|[^*])\*([^\n*]+?)\*(?!\*)/g, "$1<em>$2</em>");
+    html = html.replace(/(^|[^_])_([^\n_]+?)_(?!_)/g, "$1<em>$2</em>");
+    html = html.replace(/`([^`\n]+?)`/g, '<code style="background:rgba(201,168,76,0.12); padding:1px 5px; border-radius:3px; font-family:Menlo,Consolas,monospace; font-size:0.92em;">$1</code>');
+    const lines = html.split("\n");
+    const blocks = [];
+    let para = [];
+    let listType = null;
+    let listItems = [];
+    const flushPara = () => {
+      if (para.length > 0) { blocks.push('<p style="margin:0 0 8px 0;">' + para.join("<br/>") + '</p>'); para = []; }
+    };
+    const flushList = () => {
+      if (listType && listItems.length > 0) {
+        const tag = listType === "ul" ? "ul" : "ol";
+        blocks.push('<' + tag + ' style="margin:6px 0 10px 0; padding-left:22px;">' +
+          listItems.map(i => '<li style="margin-bottom:4px;">' + i + '</li>').join("") + '</' + tag + '>');
+        listItems = []; listType = null;
+      }
+    };
+    for (const rawLine of lines) {
+      const trimmed = rawLine.trim();
+      const ulMatch = rawLine.match(/^\s*[-*]\s+(.+)$/);
+      const olMatch = rawLine.match(/^\s*\d+\.\s+(.+)$/);
+      if (ulMatch) {
+        flushPara();
+        if (listType !== "ul") { flushList(); listType = "ul"; }
+        listItems.push(ulMatch[1]);
+      } else if (olMatch) {
+        flushPara();
+        if (listType !== "ol") { flushList(); listType = "ol"; }
+        listItems.push(olMatch[1]);
+      } else if (trimmed === "") {
+        flushPara(); flushList();
+      } else {
+        flushList(); para.push(rawLine);
+      }
+    }
+    flushPara(); flushList();
+    return blocks.join("");
+  }
+
+  function unlimitedExportMessageBlock(m) {
+    const speaker = m.role === "user" ? "You" : "The Field";
+    const speakerColor = m.role === "user" ? "#1A1612" : "#9A6E10";
+    let content = String(m.content || "")
+      .replace(/\[\[button:[^\]]+\]\]/g, "")
+      .replace(/\[\[download:[^\]]+\]\]/g, "")
+      .replace(/\[\[mp3:[^|\]]+\|[\s\S]+?\]\]/g, "")
+      .trim();
+    if (!content) return "";
+    const body = unlimitedExportRenderMessageBody(content);
+    return `
+      <div style="margin:0 0 18px 0; page-break-inside:avoid;">
+        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-weight:700; font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:${speakerColor}; margin-bottom:5px;">${speaker}</div>
+        <div style="font-family:Georgia,'Times New Roman',serif; font-size:13px; line-height:1.65; color:#1A1612;">${body}</div>
+      </div>`;
+  }
+
+  function unlimitedExportChatHeader(session) {
+    // Render the chat title + dates as a section divider. Matches the Day
+    // dividers in the Reset export visually so the two PDFs feel like one
+    // family of documents.
+    const title = (session && session.title) || "Conversation";
+    const startedAt = session && session.startedAt
+      ? new Date(session.startedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+      : "";
+    const lastAt = session && session.lastMessageAt
+      ? new Date(session.lastMessageAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+      : "";
+    const dateLine = (startedAt && lastAt && startedAt !== lastAt)
+      ? `${startedAt} to ${lastAt}`
+      : (startedAt || lastAt);
+    return `
+      <div style="border-bottom:1.5px solid #C9A84C; padding-bottom:10px; margin-bottom:22px;">
+        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.22em; color:#C9A84C; text-transform:uppercase;">The Field — Unlimited</div>
+        <div style="font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:22px; color:#1A1612; margin-top:4px; line-height:1.25;">${escapeHtml(title)}</div>
+        ${dateLine ? `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:11px; color:rgba(26,22,18,0.55); margin-top:6px; letter-spacing:0.04em;">${escapeHtml(dateLine)}</div>` : ""}
+      </div>`;
+  }
+
+  function unlimitedExportDocumentWrapper(innerHtml, displayName, subtitle) {
+    const owner = displayName ? escapeHtml(displayName) + "'s" : "Your";
+    const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    return `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; color:#1A1612; background:#FFFFFF;">
+        <div style="text-align:center; padding:24px 20px 28px;">
+          <div style="font-size:10px; font-weight:700; letter-spacing:0.22em; color:#C9A84C; text-transform:uppercase;">Master Your Path</div>
+          <div style="font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:30px; color:#1A1612; margin-top:10px; line-height:1.25;">${owner}<br/>Freedom Intelligence Field</div>
+          <div style="font-size:13px; color:rgba(26,22,18,0.65); margin-top:14px;">${escapeHtml(subtitle)}</div>
+          <div style="font-size:11px; color:rgba(26,22,18,0.4); margin-top:6px; letter-spacing:0.04em;">Saved ${escapeHtml(dateStr)}</div>
+        </div>
+        ${innerHtml}
+        <div style="text-align:center; padding:28px 20px 14px; margin-top:30px; border-top:1px solid rgba(26,22,18,0.15);">
+          <div style="font-family:Georgia,'Times New Roman',serif; font-size:11px; color:rgba(26,22,18,0.5); font-style:italic; line-height:1.6;">A record of your work with the Freedom Intelligence Field<br/>Master Your Path</div>
+        </div>
+      </div>`;
+  }
+
+  function buildUnlimitedSingleChatExportHtml(session, messages, displayName) {
+    const msgsHtml = (messages || []).map(unlimitedExportMessageBlock).join("");
+    const emptyBlock = `<div style="text-align:center; color:rgba(26,22,18,0.55); padding:60px 20px; font-family:Georgia,'Times New Roman',serif; font-style:italic;">This conversation has no messages yet.</div>`;
+    const inner = `
+      <div style="padding-top:8px;">
+        ${unlimitedExportChatHeader(session)}
+        ${msgsHtml || emptyBlock}
+      </div>`;
+    return unlimitedExportDocumentWrapper(inner, displayName, "The Field — Unlimited");
+  }
+
+  function buildUnlimitedAllExportHtml(chats, displayName) {
+    if (!chats || chats.length === 0) {
+      const inner = `<div style="text-align:center; color:rgba(26,22,18,0.55); padding:60px 20px; font-family:Georgia,'Times New Roman',serif; font-style:italic;">No conversations recorded yet.</div>`;
+      return unlimitedExportDocumentWrapper(inner, displayName, "The Field — Unlimited");
+    }
+    // Each chat gets its own page-break so they read as separate sections.
+    // Pinned chats first, then recent — same ordering the sidebar uses.
+    const ordered = chats.slice().sort((a, b) => {
+      const ap = a.session && a.session.pinnedAt;
+      const bp = b.session && b.session.pinnedAt;
+      if (ap && !bp) return -1;
+      if (!ap && bp) return 1;
+      if (ap && bp) return new Date(bp).getTime() - new Date(ap).getTime();
+      const aT = new Date((a.session && (a.session.lastMessageAt || a.session.startedAt)) || 0).getTime();
+      const bT = new Date((b.session && (b.session.lastMessageAt || b.session.startedAt)) || 0).getTime();
+      return bT - aT;
+    });
+    const sections = ordered.map((chat, i) => {
+      const msgsHtml = (chat.messages || []).map(unlimitedExportMessageBlock).join("");
+      if (!msgsHtml) return ""; // skip empty chats
+      return `
+        <div style="${i === 0 ? "" : "page-break-before:always;"} padding-top:${i === 0 ? "8px" : "20px"};">
+          ${unlimitedExportChatHeader(chat.session)}
+          ${msgsHtml}
+        </div>`;
+    }).join("");
+    return unlimitedExportDocumentWrapper(sections, displayName, "The Field — Unlimited");
+  }
+
+  async function onExportUnlimitedChatClick(sessionId) {
+    if (!state.sessionToken || !sessionId) return;
+    const session = state.unlimitedSessions.find(s => s.id === sessionId);
+    if (!session) return;
+    state.openChatMenuId = null;
+    state.openChatMenuOrigin = null;
+    render();
+    try {
+      // If this is the currently active chat, use the in-memory messages so
+      // the export reflects exactly what the user sees on screen (including
+      // anything they just sent). Otherwise fetch fresh from the API.
+      let messages;
+      if (state.activeUnlimitedId === sessionId && state.unlimitedMessages.length > 0) {
+        messages = state.unlimitedMessages;
+      } else {
+        const data = await apiLoadUnlimited(sessionId);
+        messages = data.messages || [];
+      }
+      const htmlString = buildUnlimitedSingleChatExportHtml(session, messages, state.displayName);
+      const safeTitle = String(session.title || "conversation").replace(/[^a-z0-9-_]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase();
+      const dateSuffix = new Date().toISOString().slice(0, 10);
+      const docTitle = "field-" + (safeTitle || "conversation") + "-" + dateSuffix;
+      await openPrintDialog(htmlString, docTitle);
+    } catch (err) {
+      console.error("export_unlimited_chat_failed", err);
+      alert("Could not export this conversation right now. Please try again in a moment.");
+    }
+  }
+
+  async function onExportAllUnlimitedClick(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!state.sessionToken) return;
+    if (!state.unlimitedSessions || state.unlimitedSessions.length === 0) {
+      alert("No conversations to export yet. Start one first.");
+      return;
+    }
+    const btn = e && e.currentTarget;
+    const originalLabel = btn ? btn.innerHTML : null;
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = "Preparing…";
+    }
+    try {
+      // Fetch messages for every chat sequentially. This is intentionally
+      // simple — for the typical user (5-30 chats) it completes in a few
+      // seconds. If a future heavy user complains about wait time, we can
+      // add a server-side "/api/unlimited/export-all" that returns
+      // everything in one round-trip.
+      const chats = [];
+      for (const session of state.unlimitedSessions) {
+        try {
+          const data = await apiLoadUnlimited(session.id);
+          chats.push({ session: Object.assign({}, session, data.session || {}), messages: data.messages || [] });
+        } catch (err) {
+          // Skip chats that fail to load rather than failing the whole export.
+          console.warn("export_skip_chat", session.id, err && err.message);
+        }
+      }
+      const htmlString = buildUnlimitedAllExportHtml(chats, state.displayName);
+      const dateSuffix = new Date().toISOString().slice(0, 10);
+      const docTitle = "field-unlimited-conversations-" + dateSuffix;
+      await openPrintDialog(htmlString, docTitle);
+    } catch (err) {
+      console.error("export_all_unlimited_failed", err);
+      alert("Could not export your conversations right now. Please try again in a moment.");
+    } finally {
+      if (btn && originalLabel != null) { btn.disabled = false; btn.innerHTML = originalLabel; }
+    }
+  }
+
   function renderAccountModal() {
     if (!state.accountMenuOpen) return "";
     const isFull = state.tier === "full";
@@ -3775,11 +4004,18 @@ Begin.` },
 
           <div class="acct-section">
             <div class="acct-section-label">Your Work</div>
+            ${isFull ? `
+              <button class="acct-link" id="acct-export-unlimited-btn" type="button" style="background: rgba(201, 168, 76, 0.08); cursor: pointer; font-family: inherit; text-align: left; width: 100%; margin-bottom: 6px;">
+                Export your Field conversations <span class="acct-link-arrow" aria-hidden="true">↓</span>
+              </button>
+            ` : ""}
             <button class="acct-link" id="acct-export-btn" type="button" style="background: rgba(201, 168, 76, 0.08); cursor: pointer; font-family: inherit; text-align: left; width: 100%;">
-              Export your conversations <span class="acct-link-arrow" aria-hidden="true">↓</span>
+              Export your Reset conversations <span class="acct-link-arrow" aria-hidden="true">↓</span>
             </button>
             <div class="acct-name-help" style="margin-top: 8px; line-height: 1.5;">
-              Saves a beautifully formatted PDF of all your Reset conversations — easy to read on your phone, save to Google Drive, or share with someone you trust.
+              ${isFull
+                ? "Saves beautifully formatted PDFs of your work in the Field. Easy to read on your phone, save to Google Drive, or share with someone you trust."
+                : "Saves a beautifully formatted PDF of all your Reset conversations — easy to read on your phone, save to Google Drive, or share with someone you trust."}
             </div>
           </div>
 
@@ -4396,6 +4632,8 @@ Begin.` },
     });
     const acctExportBtn = document.getElementById("acct-export-btn");
     if (acctExportBtn) acctExportBtn.addEventListener("click", onExportWorkClick);
+    const acctExportUnlimitedBtn = document.getElementById("acct-export-unlimited-btn");
+    if (acctExportUnlimitedBtn) acctExportUnlimitedBtn.addEventListener("click", onExportAllUnlimitedClick);
     const unlSearch = document.getElementById("unl-search-input");
     if (unlSearch) {
       // Update ONLY the chat list as the user types — full render would
@@ -4487,6 +4725,7 @@ Begin.` },
         if (action === "rename") onChatRenameStart(id);
         else if (action === "pin") onChatPinToggle(id, true);
         else if (action === "unpin") onChatPinToggle(id, false);
+        else if (action === "export") onExportUnlimitedChatClick(id);
         else if (action === "delete") onChatDeleteRequest(id);
       });
     });
