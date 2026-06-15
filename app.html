@@ -2264,6 +2264,13 @@ Begin.` },
     loginEmail: "",
     loginError: "",
     loginLoading: false,
+    // Tracks the "Resend code" button state on the 6-digit code screen.
+    // "" = idle (shows "Didn't get it? Resend code"), "sending" = in flight,
+    // "sent" = success confirmation (auto-clears back to idle after a moment),
+    // "error" = rate limit or other resend failure. Separate from
+    // loginError/loginLoading so the verify form isn't affected.
+    loginResendStatus: "",
+    loginResendError: "",
     // ===== Mobile chrome state =====
     mobileDrawerOpen: false,
     // ===== Your Account modal =====
@@ -3979,6 +3986,24 @@ Begin.` },
                 ${state.loginError ? `<div class="error-text">${escapeHtml(state.loginError)}</div>` : ""}
                 <button class="btn-primary" type="submit"${state.loginLoading ? " disabled" : ""}>${state.loginLoading ? "Verifying…" : "Verify and enter"}</button>
               </form>
+              ${(function () {
+                // Resend button. Mirrors the "Use a different email" style.
+                // Shows different copy depending on resend status. The backend
+                // already enforces a rate limit (4 codes per 15 minutes per
+                // email) so we don't add an extra client-side cooldown — if
+                // the user spams the button, the API responds with a friendly
+                // "Too many code requests" message that surfaces below.
+                if (state.loginResendStatus === "sending") {
+                  return `<button type="button" class="login-back" disabled>Sending a new code…</button>`;
+                }
+                if (state.loginResendStatus === "sent") {
+                  return `<button type="button" class="login-back" disabled style="color: var(--gold);">A new code is on its way ✓</button>`;
+                }
+                return `
+                  <button type="button" class="login-back" id="login-resend">Didn't get the code? Resend it</button>
+                  ${state.loginResendError ? `<div class="error-text" style="margin-top: 8px;">${escapeHtml(state.loginResendError)}</div>` : ""}
+                `;
+              })()}
               <button type="button" class="login-back" id="login-back">Use a different email</button>
             ` : `
               <div class="entry-title">Enter the Field</div>
@@ -3997,6 +4022,8 @@ Begin.` },
         if (cf) cf.addEventListener("submit", onVerifyCode);
         const cb = document.getElementById("login-back");
         if (cb) cb.addEventListener("click", onLoginBack);
+        const rb = document.getElementById("login-resend");
+        if (rb) rb.addEventListener("click", onResendCode);
         setTimeout(() => { const i = document.getElementById("login-code-input"); if (i) i.focus(); }, 50);
       } else {
         const ef = document.getElementById("login-email-form");
@@ -4758,7 +4785,39 @@ Begin.` },
     state.loginStep = "email";
     state.loginError = "";
     state.loginLoading = false;
+    state.loginResendStatus = "";
+    state.loginResendError = "";
     render();
+  }
+  // Resend the 6-digit code to the same email that was used for the original
+  // request. Used when the member doesn't receive the first code (delayed
+  // delivery, spam folder, etc.). The backend rate-limits at 4 per 15 minutes
+  // per email; if the user hits that, we surface the friendly error inline.
+  // We deliberately do NOT add a client-side cooldown so the user can resend
+  // again right away if they wanted (and the backend lets them). The button
+  // briefly shows a confirmation, then returns to idle.
+  async function onResendCode() {
+    if (!state.loginEmail || state.loginResendStatus === "sending") return;
+    state.loginResendStatus = "sending";
+    state.loginResendError = "";
+    render();
+    try {
+      await apiRequestCode(state.loginEmail);
+      state.loginResendStatus = "sent";
+      render();
+      // Auto-clear the confirmation after a moment so the button is ready
+      // for another use if the new code also doesn't arrive.
+      setTimeout(() => {
+        if (state.loginResendStatus === "sent") {
+          state.loginResendStatus = "";
+          render();
+        }
+      }, 4000);
+    } catch (err) {
+      state.loginResendStatus = "";
+      state.loginResendError = loginErrorMessage(err && err.message);
+      render();
+    }
   }
 
   // ===== Account modal handlers =====
