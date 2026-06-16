@@ -25,6 +25,17 @@
 <link rel="icon" type="image/png" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" />
 <link rel="apple-touch-icon" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" />
 
+<!-- When a member adds the app to their iPhone home screen, these tags
+     make it open like a real native app: no Safari URL bar, custom title,
+     theme-aware status bar. The short title is what appears under the icon
+     on the home screen, so we keep it concise. -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="The Field" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#080808" media="(prefers-color-scheme: dark)" />
+<meta name="theme-color" content="#F7F1E1" media="(prefers-color-scheme: light)" />
+
 <style>
   html[data-theme="dark"] {
     --bg: #080808;
@@ -1282,6 +1293,274 @@
   .reset-section-caret { color: var(--gold); font-size: 11px; }
 
   /* Delete confirmation modal */
+  /* ===== Install on iPhone modal ===== */
+  .install-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9050;
+    padding: 24px;
+    overflow-y: auto;
+    animation: acctFadeIn 0.24s ease-out;
+  }
+  .install-modal {
+    background: var(--sidebar-bg);
+    color: var(--text);
+    border-radius: 18px;
+    border: 1px solid var(--gold-line);
+    max-width: 480px;
+    width: 100%;
+    padding: 30px 32px 26px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    position: relative;
+    box-shadow: var(--shadow);
+    animation: acctSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .install-close {
+    position: absolute; top: 16px; right: 16px;
+    width: 30px; height: 30px;
+    background: var(--panel);
+    border: 1px solid var(--gold-line);
+    color: var(--text);
+    border-radius: 50%;
+    font-size: 13px; line-height: 1;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .install-close:hover { border-color: var(--gold); }
+  .install-eyebrow {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.22em;
+    color: var(--gold); text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .install-title {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 24px;
+    color: var(--text);
+    line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .install-sub {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 13.5px;
+    color: var(--text-dim);
+    line-height: 1.55;
+    margin-bottom: 22px;
+  }
+  .install-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  /* Centered vertical layout — step number + title at the top, description
+     below, then the real iPhone screenshots centered at the bottom of each
+     step. Replaces the previous side-by-side layout with abstract icons. */
+  .install-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 18px 18px 20px;
+    background: var(--gold-soft);
+    border: 1px solid var(--gold-line);
+    border-radius: 12px;
+  }
+  .install-step-head {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .install-step-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--gold);
+    color: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .install-step-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .install-step-desc {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    margin-bottom: 14px;
+    max-width: 360px;
+  }
+  .install-step-images {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+    max-width: 320px;
+  }
+  /* Wrap around each screenshot so we can absolutely-position a pulsing
+     gold ring on top, pointing to exactly where the user should tap. */
+  .install-step-image-wrap {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    line-height: 0;
+  }
+  .install-step-image-wrap--narrow {
+    max-width: 220px;
+  }
+  .install-step-img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 10px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.30);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .install-step-img--wide { width: 100%; }
+  .install-step-img--narrow { max-width: 220px; }
+  /* Gold ring overlay that pulses on top of each screenshot, drawing the
+     eye to the exact tap target. Positioned with left/top percentages on
+     the wrapper so it scales with the image. The transform centers the
+     ring on the coordinate and the box-shadow animation creates a ripple
+     effect outward, like an iOS tap indicator. */
+  .install-step-highlight {
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid #C9A84C;
+    background: transparent;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    animation: install-highlight-pulse 1.6s ease-in-out infinite;
+  }
+  /* Small ring — for the tiny ⋯ menu button on the URL bar. */
+  .install-step-highlight--small {
+    width: 20px;
+    height: 20px;
+    border-width: 1.8px;
+  }
+  /* Medium ring — for menu icons (Share, Add to Home Screen).
+     Sized to the icon itself, not the whole row. */
+  .install-step-highlight--medium {
+    width: 28px;
+    height: 28px;
+    border-width: 2px;
+  }
+  @keyframes install-highlight-pulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(201, 168, 76, 0.55);
+    }
+    50% {
+      box-shadow: 0 0 0 8px rgba(201, 168, 76, 0);
+    }
+  }
+  /* Step 1 "look here" emphasis: the whole row breathes with a soft gold
+     glow so the eye lands on it first. */
+  .install-step--active {
+    animation: install-row-pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes install-row-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(201, 168, 76, 0); border-color: var(--gold-line); }
+    50%      { box-shadow: 0 0 0 4px rgba(201, 168, 76, 0.18); border-color: var(--gold); }
+  }
+  /* Floating "look down here" arrow that hangs below the modal and gently
+     bobs while pulsing in opacity. Anchors the member's eye downward
+     toward where Safari's actual share button lives. */
+  .install-floating-arrow {
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    animation: install-arrow-bob 1.8s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .install-floating-arrow-label {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 12px;
+    color: var(--gold);
+    letter-spacing: 0.02em;
+    background: rgba(201, 168, 76, 0.12);
+    border: 1px solid var(--gold);
+    border-radius: 999px;
+    padding: 5px 14px;
+    white-space: nowrap;
+  }
+  .install-floating-arrow-icon {
+    color: var(--gold);
+    animation: install-arrow-pulse 1.4s ease-in-out infinite;
+  }
+  .install-floating-arrow-icon svg {
+    width: 26px; height: 26px;
+    display: block;
+  }
+  @keyframes install-arrow-bob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(6px); }
+  }
+  @keyframes install-arrow-pulse {
+    0%, 100% { opacity: 0.55; }
+    50%      { opacity: 1; }
+  }
+  /* ===== Install outcome preview — iPhone home-screen mockup ===== */
+  .install-outcome {
+    margin-top: 22px;
+    text-align: center;
+  }
+  .install-outcome-label {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--gold);
+    margin-bottom: 12px;
+    letter-spacing: 0.02em;
+  }
+  /* Real iPhone home screen screenshot — shows the actual Field icon
+     among other recognizable iOS apps. Way more authentic than any
+     hand-drawn mockup since it IS a real home screen. */
+  .install-outcome-image {
+    max-width: 320px;
+    width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+    border-radius: 14px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  /* Respect reduced-motion users — skip the install modal animations. */
+  @media (prefers-reduced-motion: reduce) {
+    .install-step--active,
+    .install-step-highlight {
+      animation: none;
+    }
+  }
+  .install-note {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 11px;
+    color: var(--text-mute);
+    line-height: 1.5;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+  }
+  @media (max-width: 560px) {
+    .install-modal { padding: 24px 22px 20px; }
+    .install-title { font-size: 21px; }
+    .install-step { padding: 12px; gap: 10px; }
+  }
   .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 9000; padding: 20px; }
   .confirm-modal { background: var(--bg); border: 1px solid var(--gold-line); border-radius: 16px; padding: 28px 28px 22px; max-width: 420px; width: 100%; box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
   .confirm-title { font-family: Georgia, serif; font-size: 22px; color: var(--text); margin-bottom: 12px; }
@@ -2421,6 +2700,10 @@ Begin.` },
     // state.view === "category". null = no category selected (defaults to
     // the first one when the view opens).
     activeCategoryKey: null,
+    // Install on iPhone modal. Walks the member through the manual three-
+    // tap flow since iOS blocks programmatic install. Triggered from the
+    // "Install on iPhone" button in the Your Account modal.
+    installModalOpen: false,
     // 'preview' = Reset-tier member (Unlimited locked); 'full' = Unlimited member.
     // Set from the backend tier at /api/start; the sidebar toggle overrides it
     // for review until real Kajabi entitlements are wired in.
@@ -3317,6 +3600,69 @@ Begin.` },
   function dotsIconSvg() {
     return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
   }
+  // ===== Install on iPhone modal =====
+  // iOS doesn't expose a JavaScript API to trigger "Add to Home Screen"
+  // (Apple intentionally blocks programmatic install). The best we can do
+  // is show a beautiful walkthrough explaining the manual flow. This modal
+  // mounts when state.installModalOpen is true.
+  function renderInstallModal() {
+    if (!state.installModalOpen) return "";
+    return `
+      <div class="install-overlay" id="install-overlay">
+        <div class="install-modal" role="dialog" aria-modal="true" aria-labelledby="install-title">
+          <button class="install-close" id="install-close-btn" type="button" aria-label="Close">✕</button>
+          <div class="install-eyebrow">Master Your Path</div>
+          <div class="install-title" id="install-title">Add The Field to your home screen</div>
+          <div class="install-sub">Three quick taps. After that, opening The Field feels like opening any other app on your phone, no Safari URL bar, no scrolling around.</div>
+
+          <div class="install-steps">
+            <div class="install-step install-step--active">
+              <div class="install-step-head">
+                <div class="install-step-num">1</div>
+                <div class="install-step-title">Tap the menu, then tap Share</div>
+              </div>
+              <div class="install-step-desc">At the top right of your screen. A menu opens with Share at the top.</div>
+              <div class="install-step-images">
+                <img src="/screenshots/install-1.jpg" alt="URL bar with menu, share button highlighted" class="install-step-img install-step-img--wide" />
+                <img src="/screenshots/install-2.jpg" alt="Browser menu with Share highlighted" class="install-step-img install-step-img--narrow" />
+              </div>
+            </div>
+
+            <div class="install-step">
+              <div class="install-step-head">
+                <div class="install-step-num">2</div>
+                <div class="install-step-title">Scroll down, tap "Add to Home Screen"</div>
+              </div>
+              <div class="install-step-desc">In the menu that appears.</div>
+              <div class="install-step-images">
+                <img src="/screenshots/install-3.jpg" alt="Share sheet with Add to Home Screen highlighted" class="install-step-img" />
+              </div>
+            </div>
+
+            <div class="install-step">
+              <div class="install-step-head">
+                <div class="install-step-num">3</div>
+                <div class="install-step-title">Tap "Add" in the top right</div>
+              </div>
+              <div class="install-step-desc">The Field's icon lands on your home screen. Done.</div>
+              <div class="install-step-images">
+                <img src="/screenshots/install-4.jpg" alt="Add to Home Screen confirmation showing The Field" class="install-step-img" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Outcome preview: a tiny iPhone home-screen mockup showing
+               exactly where The Field will land after the three steps. This
+               anchors the goal — "I do this, and I get THIS on my phone." -->
+          <div class="install-outcome">
+            <div class="install-outcome-label">And then The Field lands here</div>
+            <img src="/screenshots/install-5.jpg" alt="iPhone home screen showing The Field icon among other apps" class="install-outcome-image" />
+          </div>
+          <div class="install-note">Apple doesn't allow websites to add themselves to your home screen automatically. This is the three-tap manual flow.</div>
+        </div>
+      </div>
+    `;
+  }
   // Filled pin icon for the pinned-chat indicator and the Pin menu option.
   function pinIconSvg() {
     return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14.7 3.3c-.4-.4-1-.4-1.4 0L8 8.6 5.4 8C4.7 7.8 4 8.5 4.2 9.2l1.5 4.5L3 16.4c-.4.4-.4 1 0 1.4l3.2 3.2c.4.4 1 .4 1.4 0l2.7-2.7 4.5 1.5c.7.2 1.4-.5 1.2-1.2L15.4 16l5.3-5.3c.4-.4.4-1 0-1.4l-6-6z"/></svg>';
@@ -3611,6 +3957,16 @@ Begin.` },
             <span>Explore all MYP Programs</span>
             <span class="sidebar-cta-arrow" aria-hidden="true">↗</span>
           </a>
+          <button class="sidebar-cta-btn" id="sidebar-install-btn" type="button" style="font-family: inherit; cursor: pointer; border: 1px solid var(--gold-line);">
+            <span style="display: inline-flex; align-items: center; gap: 7px;">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="6.5" y="2" width="11" height="20" rx="2.2"/>
+                <circle cx="12" cy="18.5" r="0.8" fill="currentColor"/>
+              </svg>
+              <span>Add to Phone Home Screen</span>
+            </span>
+            <span class="sidebar-cta-arrow" aria-hidden="true">↓</span>
+          </button>
         </div>
 
         <div class="sidebar-aux">
@@ -4256,6 +4612,16 @@ Begin.` },
             <a class="acct-link" href="${SHIMRIT_ABOUT_URL}" target="_blank" rel="noopener noreferrer">
               Learn more about Shimrit <span class="acct-link-arrow" aria-hidden="true">↗</span>
             </a>
+            <button class="acct-link" id="acct-install-btn" type="button" style="cursor: pointer; font-family: inherit; text-align: left; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+              <span style="display: inline-flex; align-items: center; gap: 8px;">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="6.5" y="2" width="11" height="20" rx="2.2"/>
+                  <circle cx="12" cy="18.5" r="0.8" fill="currentColor"/>
+                </svg>
+                <span>Add to Phone Home Screen</span>
+              </span>
+              <span class="acct-link-arrow" aria-hidden="true">↓</span>
+            </button>
           </div>
 
           <div class="acct-signout-row">
@@ -4523,6 +4889,7 @@ Begin.` },
         ${renderDeleteConfirmModal()}
         ${renderRenameModal()}
         ${renderFloatingChatMenu()}
+        ${renderInstallModal()}
       `;
       document.getElementById("entry-form").addEventListener("submit", onStartSubmit);
       // Restore + persist drafts on the entry form too.
@@ -4580,6 +4947,7 @@ Begin.` },
         ${renderDeleteConfirmModal()}
         ${renderRenameModal()}
         ${renderFloatingChatMenu()}
+        ${renderInstallModal()}
       `;
       renderMessages();
       // Composer-bound handlers are no-ops when the Reset window has elapsed
@@ -4620,6 +4988,7 @@ Begin.` },
         ${renderDeleteConfirmModal()}
         ${renderRenameModal()}
         ${renderFloatingChatMenu()}
+        ${renderInstallModal()}
       `;
       // Wire the process cards: each one starts the matching guided process.
       document.querySelectorAll(".category-card[data-process]").forEach(btn => {
@@ -4641,6 +5010,7 @@ Begin.` },
         ${renderDeleteConfirmModal()}
         ${renderRenameModal()}
         ${renderFloatingChatMenu()}
+        ${renderInstallModal()}
       `;
       document.querySelectorAll(".library-card[data-category]").forEach(btn => {
         btn.addEventListener("click", () => onCategoryClick(btn.dataset.category));
@@ -4698,6 +5068,7 @@ Begin.` },
         ${renderDeleteConfirmModal()}
         ${renderRenameModal()}
         ${renderFloatingChatMenu()}
+        ${renderInstallModal()}
       `;
       // Common sidebar wiring (mobile menu, account, logout, theme, etc.)
       // runs unconditionally at the bottom of render() for every view, so
@@ -4786,6 +5157,7 @@ Begin.` },
         ${renderDeleteConfirmModal()}
         ${renderRenameModal()}
         ${renderFloatingChatMenu()}
+        ${renderInstallModal()}
       `;
       renderUnlimitedMessages();
       document.getElementById("input").addEventListener("input", onInputChange);
@@ -4876,6 +5248,20 @@ Begin.` },
     if (acctExportBtn) acctExportBtn.addEventListener("click", onExportWorkClick);
     const acctExportUnlimitedBtn = document.getElementById("acct-export-unlimited-btn");
     if (acctExportUnlimitedBtn) acctExportUnlimitedBtn.addEventListener("click", onExportAllUnlimitedClick);
+    const acctInstallBtn = document.getElementById("acct-install-btn");
+    if (acctInstallBtn) acctInstallBtn.addEventListener("click", onInstallOpen);
+    // Sidebar "Add to Home Screen" button — same install modal popup.
+    const sidebarInstallBtn = document.getElementById("sidebar-install-btn");
+    if (sidebarInstallBtn) sidebarInstallBtn.addEventListener("click", onInstallOpen);
+    // Install modal overlay click + close button
+    const installOverlay = document.getElementById("install-overlay");
+    if (installOverlay) {
+      installOverlay.addEventListener("click", (e) => {
+        if (e.target === installOverlay) onInstallClose();
+      });
+    }
+    const installCloseBtn = document.getElementById("install-close-btn");
+    if (installCloseBtn) installCloseBtn.addEventListener("click", onInstallClose);
     const unlSearch = document.getElementById("unl-search-input");
     if (unlSearch) {
       // Update ONLY the chat list as the user types — full render would
@@ -6018,6 +6404,18 @@ Begin.` },
     state.activeCategoryKey = null;
     state.processMenuOpen = false;
     state.mobileDrawerOpen = false;
+    render();
+  }
+  // Install-on-iPhone modal handlers. iOS doesn't expose a JavaScript API
+  // for programmatic "Add to Home Screen" (Apple intentionally blocks it),
+  // so this just opens a walkthrough explaining the manual three-tap flow.
+  function onInstallOpen() {
+    state.installModalOpen = true;
+    state.accountMenuOpen = false; // close the account modal beneath
+    render();
+  }
+  function onInstallClose() {
+    state.installModalOpen = false;
     render();
   }
 
