@@ -1375,6 +1375,166 @@
     overflow-y: auto;
     background: var(--bg);
   }
+  /* ===== Library Hub view (all 8 categories visible at once) ===== */
+  .library-main {
+    flex: 1;
+    display: flex;
+    min-width: 0;
+    overflow-y: auto;
+    background: var(--bg);
+  }
+  .library-view {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 50px 36px 80px;
+    width: 100%;
+    animation: cat-fade 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .library-eyebrow {
+    text-align: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.32em;
+    color: var(--text-mute);
+    margin-bottom: 18px;
+    text-transform: uppercase;
+  }
+  .library-title {
+    text-align: center;
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 48px;
+    font-weight: 400;
+    color: var(--text);
+    margin: 0 0 18px;
+    line-height: 1.12;
+  }
+  .library-divider {
+    width: 72px;
+    height: 1.5px;
+    background: var(--gold);
+    margin: 0 auto 26px;
+    opacity: 0.7;
+  }
+  .library-tagline {
+    text-align: center;
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 17px;
+    color: var(--text-dim);
+    margin: 0 auto 44px;
+    line-height: 1.5;
+    max-width: 540px;
+  }
+  .library-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    margin-bottom: 30px;
+  }
+  .library-card {
+    position: relative;
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: rgba(201, 168, 76, 0.05);
+    border: 1px solid var(--gold-line);
+    border-radius: 14px;
+    padding: 22px 24px 24px;
+    cursor: pointer;
+    font-family: inherit;
+    color: inherit;
+    transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+  }
+  .library-card:hover {
+    border-color: var(--gold);
+    background: rgba(201, 168, 76, 0.10);
+    transform: translateY(-2px);
+  }
+  .library-card--coming-soon {
+    cursor: default;
+    opacity: 0.55;
+  }
+  .library-card--coming-soon:hover {
+    border-color: var(--gold-line);
+    background: rgba(201, 168, 76, 0.05);
+    transform: none;
+  }
+  .library-card-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .library-card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--gold-soft);
+    border: 1px solid var(--gold-line);
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .library-card-icon svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+  }
+  .library-card-title {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 21px;
+    color: var(--text);
+    line-height: 1.25;
+  }
+  .library-card-desc {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 13.5px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    margin-bottom: 16px;
+    padding-right: 8px;
+  }
+  .library-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .library-card-meta {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: var(--gold);
+  }
+  .library-card-meta--coming-soon {
+    color: var(--text-mute);
+  }
+  .library-card-arrow {
+    color: var(--gold);
+    font-size: 16px;
+    line-height: 1;
+  }
+  .library-footer {
+    text-align: center;
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--text-mute);
+    margin-top: 16px;
+  }
+  @media (max-width: 720px) {
+    .library-grid { grid-template-columns: 1fr; }
+    .library-title { font-size: 34px; }
+    .library-tagline { font-size: 15px; }
+    .library-view { padding: 28px 18px 60px; }
+    .library-card { padding: 18px 20px 20px; }
+    .library-card-title { font-size: 19px; }
+  }
   .category-view {
     max-width: 920px;
     margin: 0 auto;
@@ -2113,6 +2273,7 @@ Begin.` },
       key: "daily-rituals",
       name: "Daily Rituals",
       tagline: "Anchor the morning. Return to center at night.",
+      hubDesc: "Begin and complete each day with intention.",
       processes: [
         { processKey: "morning-activation", name: "Morning Activation", steps: 4, time: "5 MIN", desc: "Set the day's frequency in five minutes." },
         { processKey: "evening-reset", name: "Evening Reset", steps: 3, time: "10-15 MIN", desc: "Complete the day. Send forward what you choose." }
@@ -2122,6 +2283,7 @@ Begin.` },
       key: "vision-creation",
       name: "Vision & Creation",
       tagline: "For seeing it clearly before you build it.",
+      hubDesc: "See it clearly before you build it.",
       processes: [
         { processKey: "desired-outcome-snapshot", name: "Desired Outcome Snapshot", steps: 6, time: "25-30 MIN", desc: "See the current pattern. Reverse-engineer the outcome." },
         { processKey: "grand-vision", name: "Grand Vision", steps: 3, time: "30-45 MIN", desc: "Receive true desires. Crystallize your Declaration." },
@@ -2133,6 +2295,7 @@ Begin.` },
       key: "alignment-decisions",
       name: "Alignment & Decisions",
       tagline: "Mind, heart, and body in conscious agreement.",
+      hubDesc: "Mind, heart, and body in conscious agreement.",
       processes: [
         { processKey: "decision-alignment", name: "Decision Alignment", steps: 5, time: "20-30 MIN", desc: "Bring mind, heart, and body into alignment around one decision." },
         { processKey: "frequency-booster", name: "The Frequency Booster", steps: 3, time: "10-15 MIN", desc: "Shift your state from contracted to expanded." },
@@ -2143,6 +2306,7 @@ Begin.` },
       key: "identity-self-concept",
       name: "Identity & Self-Concept",
       tagline: "Who you remember yourself to be.",
+      hubDesc: "Who you remember yourself to be.",
       processes: [
         { processKey: "identity-upgrade", name: "Identity Upgrade", steps: 6, time: "30-40 MIN", desc: "Resign the old identity. Anchor the new one." },
         { processKey: "worthy-to-receive", name: "Worthy to Receive", steps: 5, time: "25-35 MIN", desc: "Reclaim your capacity to receive." }
@@ -2152,6 +2316,7 @@ Begin.` },
       key: "emotional-mastery",
       name: "Emotional Mastery",
       tagline: "Where the familiar pattern lives. And how to outgrow it.",
+      hubDesc: "Outgrow the familiar emotional patterns.",
       processes: [
         { processKey: "emotional-addiction-release", name: "Emotional Addiction Release", steps: 5, time: "25-35 MIN", desc: "Name the loop. Rewire it in real time." },
         { processKey: "root-pattern-release", name: "Root Pattern Release", steps: 6, time: "30-40 MIN", desc: "Trace the pattern to its root. Release the charge." }
@@ -2161,6 +2326,7 @@ Begin.` },
       key: "prosperity-abundance",
       name: "Prosperity & Abundance",
       tagline: "For receiving. For building containers. For letting prosperity flow through.",
+      hubDesc: "Receive, build containers, let prosperity flow.",
       processes: [
         { processKey: "prosperity-code", name: "The Prosperity Code", steps: 4, time: "25-35 MIN", desc: "Align all four centers with the flow of prosperity." },
         { processKey: "abundance-projection", name: "Abundance Projection", steps: 4, time: "25-35 MIN", desc: "Project specific amounts. Act as the prosperous self now." },
@@ -2171,6 +2337,7 @@ Begin.` },
       key: "non-physical-realm",
       name: "The Non-Physical Realm",
       tagline: "Dimensions where information arrives before form.",
+      hubDesc: "Where information arrives before form.",
       processes: [
         { processKey: "dream-reading", name: "Dream Reading", steps: 4, time: "20-30 MIN", desc: "Receive what your dream is showing you." },
         { processKey: "frequency-calibration", name: "Frequency Calibration", steps: 5, time: "25-35 MIN", desc: "Train the new frequency until it becomes the default." },
@@ -2181,6 +2348,7 @@ Begin.` },
       key: "path-leadership",
       name: "Path & Leadership",
       tagline: "For carrying the work into the world.",
+      hubDesc: "Carry the work into the world.",
       processes: [
         { name: "Master Your Path", comingSoon: true },
         { name: "Leadership and Collective Empowerment", comingSoon: true },
@@ -3164,6 +3332,51 @@ Begin.` },
   function downloadIconSvg() {
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   }
+  // ===== Library category icons =====
+  // Eight gold-stroked outline icons, one per category in the Library hub.
+  // Each is paired to its category by key in CATEGORY_ICONS below. Stroke
+  // and size are inherited from the parent so the same SVG works at 18px
+  // in a small card and 24px in a bigger one.
+  function catIconDailyRituals() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>';
+  }
+  function catIconVisionCreation() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  }
+  function catIconAlignmentDecisions() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="5" rx="1"/><rect x="4" y="10" width="16" height="5" rx="1"/><rect x="4" y="17" width="16" height="4" rx="1"/></svg>';
+  }
+  function catIconIdentitySelfConcept() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3"/><path d="M6.5 18.5c1.2-2.4 3.3-4 5.5-4s4.3 1.6 5.5 4"/></svg>';
+  }
+  function catIconEmotionalMastery() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+  }
+  function catIconProsperityAbundance() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.8 9.2c-.5-.7-1.5-1.2-2.8-1.2-1.7 0-3 .9-3 2s1 1.7 3 2 3 .9 3 2-1.3 2-3 2c-1.3 0-2.3-.5-2.8-1.2M12 6.5v11"/></svg>';
+  }
+  function catIconNonPhysicalRealm() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/><path d="M19 4l.5 1.5L21 6l-1.5.5L19 8l-.5-1.5L17 6l1.5-.5z"/></svg>';
+  }
+  function catIconPathLeadership() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h6a3 3 0 0 0 3-3v-2a3 3 0 0 1 3-3v0"/><path d="M16 5h-6a3 3 0 0 0-3 3v2a3 3 0 0 1-3 3v0"/></svg>';
+  }
+  // Map category keys to their icon renderer. Add new categories here when
+  // PROCESS_CATEGORIES grows.
+  const CATEGORY_ICONS = {
+    "daily-rituals": catIconDailyRituals,
+    "vision-creation": catIconVisionCreation,
+    "alignment-decisions": catIconAlignmentDecisions,
+    "identity-self-concept": catIconIdentitySelfConcept,
+    "emotional-mastery": catIconEmotionalMastery,
+    "prosperity-abundance": catIconProsperityAbundance,
+    "non-physical-realm": catIconNonPhysicalRealm,
+    "path-leadership": catIconPathLeadership
+  };
+  function categoryIconSvg(key) {
+    const fn = CATEGORY_ICONS[key];
+    return fn ? fn() : "";
+  }
   // Render the 3-dot menu dropdown for a chat. Used in both the sidebar list
   // and the chat header. origin = "sidebar" | "header" — affects positioning
   // class so the dropdown anchors next to the right trigger.
@@ -4098,6 +4311,14 @@ Begin.` },
       subtitle = "The Field — Library";
       pillLabel = "LIBRARY";
       pillStyle = "unlimited";
+    } else if (state.view === "library") {
+      // Library hub — the all-categories landing page. Different pill text
+      // ("THE LIBRARY") so the member knows they're at the overview, not
+      // already inside a category.
+      title = "Start a guided process";
+      subtitle = "The Field — Library";
+      pillLabel = "THE LIBRARY";
+      pillStyle = "unlimited";
     }
 
     // Day 3 only: show a small download icon in the mobile top bar that
@@ -4404,6 +4625,26 @@ Begin.` },
       document.querySelectorAll(".category-card[data-process]").forEach(btn => {
         btn.addEventListener("click", () => onProcessPick(btn.dataset.process));
       });
+    } else if (state.view === "library") {
+      // The Library Hub — all 8 categories rendered together as cards.
+      // This is the landing page that the Welcome view's "Open a guided
+      // process" card opens. Each category card drills into that category's
+      // detail page (state.view = "category") via onCategoryClick.
+      app.innerHTML = `
+        ${renderMobileTopBar()}
+        <div class="main-row">
+          ${renderSidebar()}
+          ${renderLibraryView()}
+        </div>
+        ${renderMobileOverlay()}
+        ${renderAccountModal()}
+        ${renderDeleteConfirmModal()}
+        ${renderRenameModal()}
+        ${renderFloatingChatMenu()}
+      `;
+      document.querySelectorAll(".library-card[data-category]").forEach(btn => {
+        btn.addEventListener("click", () => onCategoryClick(btn.dataset.category));
+      });
     } else if (state.view === "welcome") {
       // The Welcome view is the default landing for Unlimited members on
       // every fresh app open. Replaces the old "auto-resume last chat"
@@ -4467,9 +4708,10 @@ Begin.` },
       if (newChatBtn) newChatBtn.addEventListener("click", () => onNewChatClick());
       const processBtn = document.getElementById("welcome-process-btn");
       if (processBtn) processBtn.addEventListener("click", () => {
-        // Drop straight into the first category of the library. The user
-        // can browse the rest from the sidebar dropdown.
-        onCategoryClick(PROCESS_CATEGORIES[0].key);
+        // Open the Library Hub showing all 8 categories together. The
+        // member then drills into whichever one calls to them, rather than
+        // being dropped into a category they didn't choose.
+        onLibraryClick();
       });
       const continueBtn = document.getElementById("welcome-continue-btn");
       if (continueBtn) continueBtn.addEventListener("click", () => {
@@ -4841,6 +5083,49 @@ Begin.` },
           <div class="category-tagline">${escapeHtml(category.tagline)}</div>
           <div class="category-grid">${cards}</div>
           <div class="category-footer">Choose a process to begin · the Field will guide you from there.</div>
+        </div>
+      </main>
+    `;
+  }
+
+  // Render the Library Hub view — all 8 categories shown together as cards.
+  // This is what the Welcome view's "Open a guided process" button lands on
+  // (previously it dropped straight into a single category, which felt like
+  // skipping the introduction). Clicking a card from here drills into that
+  // category's detail page via onCategoryClick(key).
+  function renderLibraryView() {
+    const cards = PROCESS_CATEGORIES.map(c => {
+      const builtCount = c.processes.filter(p => !p.comingSoon).length;
+      const totalCount = c.processes.length;
+      const allComingSoon = builtCount === 0;
+      const footer = allComingSoon
+        ? `<div class="library-card-meta library-card-meta--coming-soon">COMING SOON</div>`
+        : `<div class="library-card-meta">${totalCount} ${totalCount === 1 ? "PROCESS" : "PROCESSES"}</div>
+           <div class="library-card-arrow" aria-hidden="true">→</div>`;
+      const tag = allComingSoon ? "div" : "button";
+      const attrs = allComingSoon
+        ? `class="library-card library-card--coming-soon"`
+        : `class="library-card" data-category="${c.key}" type="button"`;
+      return `
+        <${tag} ${attrs}>
+          <div class="library-card-head">
+            <div class="library-card-icon">${categoryIconSvg(c.key)}</div>
+            <div class="library-card-title">${escapeHtml(c.name)}</div>
+          </div>
+          <div class="library-card-desc">${escapeHtml(c.hubDesc || c.tagline || "")}</div>
+          <div class="library-card-footer">${footer}</div>
+        </${tag}>
+      `;
+    }).join("");
+    return `
+      <main class="main library-main">
+        <div class="library-view">
+          <div class="library-eyebrow">The Field Library</div>
+          <h1 class="library-title">Start a guided process</h1>
+          <div class="library-divider"></div>
+          <div class="library-tagline">Each one is a calibrated pathway. Choose the work that meets you where you are.</div>
+          <div class="library-grid">${cards}</div>
+          <div class="library-footer">Choose a category to see the processes inside.</div>
         </div>
       </main>
     `;
@@ -5720,6 +6005,17 @@ Begin.` },
     if (!cat) return;
     state.activeCategoryKey = categoryKey;
     state.view = "category";
+    state.processMenuOpen = false;
+    state.mobileDrawerOpen = false;
+    render();
+  }
+  // Opens the Library Hub — all 8 categories shown together. Used by the
+  // Welcome view's "Open a guided process" card. Members can also reach
+  // individual categories directly from the sidebar dropdown; the hub is
+  // the "see everything at once" entry point.
+  function onLibraryClick() {
+    state.view = "library";
+    state.activeCategoryKey = null;
     state.processMenuOpen = false;
     state.mobileDrawerOpen = false;
     render();
