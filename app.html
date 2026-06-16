@@ -1297,9 +1297,9 @@
   .install-overlay {
     position: fixed; inset: 0;
     background: rgba(0, 0, 0, 0.55);
-    display: flex; align-items: center; justify-content: center;
+    display: flex; align-items: flex-start; justify-content: center;
     z-index: 9050;
-    padding: 24px;
+    padding: 24px 20px;
     overflow-y: auto;
     animation: acctFadeIn 0.24s ease-out;
   }
@@ -1308,22 +1308,23 @@
     color: var(--text);
     border-radius: 18px;
     border: 1px solid var(--gold-line);
-    max-width: 480px;
+    max-width: 780px;
     width: 100%;
-    padding: 30px 32px 26px;
+    padding: 26px 28px 22px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     position: relative;
     box-shadow: var(--shadow);
     animation: acctSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+    margin: auto;
   }
   .install-close {
-    position: absolute; top: 16px; right: 16px;
-    width: 30px; height: 30px;
+    position: absolute; top: 14px; right: 14px;
+    width: 28px; height: 28px;
     background: var(--panel);
     border: 1px solid var(--gold-line);
     color: var(--text);
     border-radius: 50%;
-    font-size: 13px; line-height: 1;
+    font-size: 12px; line-height: 1;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
   }
@@ -1331,38 +1332,39 @@
   .install-eyebrow {
     font-size: 10px; font-weight: 700; letter-spacing: 0.22em;
     color: var(--gold); text-transform: uppercase;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
   .install-title {
     font-family: Georgia, "Times New Roman", serif;
     font-style: italic;
-    font-size: 24px;
+    font-size: 22px;
     color: var(--text);
     line-height: 1.25;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
   }
   .install-sub {
     font-family: Georgia, "Times New Roman", serif;
     font-style: italic;
-    font-size: 13.5px;
+    font-size: 13px;
     color: var(--text-dim);
-    line-height: 1.55;
-    margin-bottom: 22px;
+    line-height: 1.5;
+    margin-bottom: 18px;
   }
   .install-steps {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: 12px;
+    align-items: stretch;
   }
-  /* Centered vertical layout — step number + title at the top, description
-     below, then the real iPhone screenshots centered at the bottom of each
-     step. Replaces the previous side-by-side layout with abstract icons. */
+  /* Three steps sit side-by-side on desktop, stack on mobile. Each step is a
+     compact card with the number + title up top, a short description, and a
+     small screenshot. */
   .install-step {
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 18px 18px 20px;
+    padding: 14px 12px 16px;
     background: var(--gold-soft);
     border: 1px solid var(--gold-line);
     border-radius: 12px;
@@ -1371,39 +1373,40 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    margin-bottom: 6px;
+    gap: 8px;
+    margin-bottom: 4px;
   }
   .install-step-num {
-    width: 28px; height: 28px;
+    width: 24px; height: 24px;
     border-radius: 50%;
     background: var(--gold);
     color: var(--bg);
     display: flex; align-items: center; justify-content: center;
     font-weight: 700;
-    font-size: 13px;
+    font-size: 12px;
     flex-shrink: 0;
   }
   .install-step-title {
-    font-size: 14px;
+    font-size: 12.5px;
     font-weight: 600;
     color: var(--text);
     line-height: 1.3;
   }
   .install-step-desc {
-    font-size: 12.5px;
+    font-size: 11.5px;
     color: var(--text-dim);
-    line-height: 1.5;
-    margin-bottom: 14px;
-    max-width: 360px;
+    line-height: 1.45;
+    margin-bottom: 10px;
+    max-width: 220px;
   }
   .install-step-images {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     align-items: center;
     width: 100%;
-    max-width: 320px;
+    max-width: 170px;
+    margin-top: auto;
   }
   /* Wrap around each screenshot so we can absolutely-position a pulsing
      gold ring on top, pointing to exactly where the user should tap. */
@@ -1425,7 +1428,7 @@
     border: 1px solid rgba(255, 255, 255, 0.06);
   }
   .install-step-img--wide { width: 100%; }
-  .install-step-img--narrow { max-width: 220px; }
+  .install-step-img--narrow { max-width: 130px; }
   /* Gold ring overlay that pulses on top of each screenshot, drawing the
      eye to the exact tap target. Positioned with left/top percentages on
      the wrapper so it scales with the image. The transform centers the
@@ -1514,27 +1517,26 @@
   }
   /* ===== Install outcome preview — iPhone home-screen mockup ===== */
   .install-outcome {
-    margin-top: 22px;
+    margin-top: 18px;
     text-align: center;
   }
   .install-outcome-label {
     font-family: Georgia, "Times New Roman", serif;
     font-style: italic;
-    font-size: 13px;
+    font-size: 12.5px;
     color: var(--gold);
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     letter-spacing: 0.02em;
   }
   /* Real iPhone home screen screenshot — shows the actual Field icon
-     among other recognizable iOS apps. Way more authentic than any
-     hand-drawn mockup since it IS a real home screen. */
+     among other recognizable iOS apps. */
   .install-outcome-image {
-    max-width: 320px;
+    max-width: 220px;
     width: 100%;
     height: auto;
     display: block;
     margin: 0 auto;
-    border-radius: 14px;
+    border-radius: 12px;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
     border: 1px solid rgba(255, 255, 255, 0.06);
   }
@@ -1548,18 +1550,22 @@
   .install-note {
     font-family: Georgia, "Times New Roman", serif;
     font-style: italic;
-    font-size: 11px;
+    font-size: 10.5px;
     color: var(--text-mute);
     line-height: 1.5;
-    margin-top: 18px;
-    padding-top: 14px;
+    margin-top: 14px;
+    padding-top: 12px;
     border-top: 1px solid var(--border);
     text-align: center;
   }
-  @media (max-width: 560px) {
-    .install-modal { padding: 24px 22px 20px; }
-    .install-title { font-size: 21px; }
-    .install-step { padding: 12px; gap: 10px; }
+  @media (max-width: 640px) {
+    .install-modal { padding: 22px 20px 18px; max-width: 420px; }
+    .install-title { font-size: 20px; }
+    .install-steps { grid-template-columns: 1fr; gap: 10px; }
+    .install-step { padding: 12px; }
+    .install-step-images { max-width: 200px; }
+    .install-step-img--narrow { max-width: 170px; }
+    .install-outcome-image { max-width: 200px; }
   }
   .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 9000; padding: 20px; }
   .confirm-modal { background: var(--bg); border: 1px solid var(--gold-line); border-radius: 16px; padding: 28px 28px 22px; max-width: 420px; width: 100%; box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
@@ -3957,7 +3963,7 @@ Begin.` },
             <span>Explore all MYP Programs</span>
             <span class="sidebar-cta-arrow" aria-hidden="true">↗</span>
           </a>
-          <button class="sidebar-cta-btn" id="sidebar-install-btn" type="button" style="font-family: inherit; cursor: pointer; border: 1px solid var(--gold-line);">
+          <button class="sidebar-cta-btn" id="sidebar-install-btn" type="button" style="cursor: pointer;">
             <span style="display: inline-flex; align-items: center; gap: 7px;">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="6.5" y="2" width="11" height="20" rx="2.2"/>
