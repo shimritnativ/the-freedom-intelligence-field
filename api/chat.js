@@ -26,6 +26,7 @@ import {
   timeRemainingMs,
   hashSystemPrompt,
 } from "../lib/db.js";
+import { maybeRecordDayCompletion } from "../lib/dayExtraction.js";
 
 // ============================================================================
 // Constants
@@ -260,7 +261,7 @@ This override applies only to the upgrade invitation and button at the end of th
       console.error("chat_empty_reply", { day, stopReason: result.stop_reason });
       return res.status(502).json({ error: "ai_empty_reply" });
     }
-    await insertMessage({
+    const assistantRow = await insertMessage({
       sessionId: session.id,
       userId: user.id,
       role: "assistant",
@@ -273,6 +274,20 @@ This override applies only to the upgrade invitation and button at the end of th
       dayAtSend: day,
       systemPromptVersion: PROMPT_VERSION,
       systemPromptHash: systemHash,
+    });
+
+    // ----- Day completion auto-extraction -----
+    // If this assistant reply looks like a Day N final output (cheap string
+    // check), fire a Haiku call to extract the structured fields and record
+    // a day_completions row. Never throws — chat reply always reaches the
+    // user. Adds ~1-2s latency ONLY on the final message of a day's session;
+    // the heuristic skips every other message for free.
+    await maybeRecordDayCompletion({
+      assistantMessage: replyText,
+      day,
+      userId: user.id,
+      sessionId: session.id,
+      messageId: assistantRow ? assistantRow.id : null,
     });
 
     // ----- Return only the new reply + state -----
