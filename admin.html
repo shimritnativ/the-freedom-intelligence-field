@@ -37,9 +37,9 @@
     }
     .topbar {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
-      margin-bottom: 28px;
+      margin-bottom: 22px;
       flex-wrap: wrap;
       gap: 12px;
     }
@@ -63,27 +63,74 @@
       color: var(--text-dim);
       text-align: right;
     }
-    .viewer .v-email {
-      color: var(--text);
-      font-weight: 600;
-    }
-    .refresh-btn {
-      display: inline-flex;
+    .viewer .v-email { color: var(--text); font-weight: 600; }
+
+    /* Date range controls */
+    .date-controls {
+      display: flex;
       align-items: center;
-      gap: 6px;
+      flex-wrap: wrap;
+      gap: 8px;
+      background: #FFFFFF;
+      border: 1px solid var(--gold-line);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 22px;
+    }
+    .date-controls-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-right: 4px;
+    }
+    .preset-btn {
       background: transparent;
       border: 1px solid var(--gold-line);
       color: var(--text);
       font-family: inherit;
       font-size: 12px;
       font-weight: 600;
-      padding: 8px 14px;
+      padding: 6px 12px;
       border-radius: 999px;
       cursor: pointer;
-      margin-top: 6px;
-      transition: border-color 0.15s ease, background 0.15s ease;
+      transition: all 0.15s ease;
     }
-    .refresh-btn:hover { border-color: var(--gold); background: var(--gold-soft); }
+    .preset-btn:hover { border-color: var(--gold); background: var(--gold-soft); }
+    .preset-btn.active {
+      background: var(--gold);
+      color: var(--dark);
+      border-color: var(--gold);
+    }
+    .date-input {
+      font-family: inherit;
+      font-size: 12px;
+      padding: 6px 10px;
+      border: 1px solid var(--gold-line);
+      border-radius: 6px;
+      background: #FFFFFF;
+      color: var(--text);
+    }
+    .date-sep { color: var(--text-mute); font-size: 12px; }
+    .apply-btn {
+      background: var(--gold);
+      border: 1px solid var(--gold);
+      color: var(--dark);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .apply-btn:hover { background: #B89232; border-color: #B89232; }
+    .range-summary {
+      margin-left: auto;
+      font-size: 11px;
+      color: var(--text-dim);
+      font-style: italic;
+    }
 
     /* KPI cards */
     .kpi-grid {
@@ -97,6 +144,10 @@
       border: 1px solid var(--gold-line);
       border-radius: 12px;
       padding: 18px 18px 16px;
+    }
+    .kpi.kpi-revenue {
+      background: linear-gradient(135deg, var(--gold-soft) 0%, var(--panel) 100%);
+      border-color: var(--gold);
     }
     .kpi-label {
       font-size: 10px;
@@ -113,13 +164,8 @@
       color: var(--text);
       line-height: 1.1;
     }
-    .kpi-sub {
-      font-size: 11px;
-      color: var(--text-mute);
-      margin-top: 4px;
-    }
+    .kpi-sub { font-size: 11px; color: var(--text-mute); margin-top: 4px; }
 
-    /* Section block */
     .section {
       background: #FFFFFF;
       border: 1px solid var(--gold-line);
@@ -154,34 +200,14 @@
       vertical-align: middle;
     }
 
-    /* Two-column inside sections */
-    .two-col {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 22px;
-    }
-    @media (max-width: 760px) {
-      .two-col { grid-template-columns: 1fr; }
-    }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+    @media (max-width: 760px) { .two-col { grid-template-columns: 1fr; } }
 
-    /* Tables */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    th, td {
-      text-align: left;
-      padding: 10px 12px;
-      border-bottom: 1px solid var(--border);
-    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
     th {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.14em;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      background: var(--panel);
+      font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+      color: var(--text-dim); text-transform: uppercase; background: var(--panel);
     }
     td.num { text-align: right; font-variant-numeric: tabular-nums; }
     th.num { text-align: right; }
@@ -189,115 +215,71 @@
 
     .tier-badge {
       display: inline-block;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      padding: 2px 8px;
-      border-radius: 999px;
-      text-transform: uppercase;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+      padding: 2px 8px; border-radius: 999px; text-transform: uppercase;
     }
     .tier-preview { background: rgba(201, 168, 76, 0.18); color: #8B6F2F; }
     .tier-full { background: rgba(74, 124, 58, 0.18); color: var(--green); }
 
-    /* Completion funnel bars */
     .funnel-row {
-      display: grid;
-      grid-template-columns: 70px 1fr 110px;
-      align-items: center;
-      gap: 14px;
-      padding: 8px 0;
+      display: grid; grid-template-columns: 70px 1fr 110px;
+      align-items: center; gap: 14px; padding: 8px 0;
     }
     .funnel-label { font-weight: 600; font-size: 13px; }
     .funnel-bar-track {
-      height: 14px;
-      background: var(--panel);
-      border-radius: 999px;
-      overflow: hidden;
-      position: relative;
+      height: 14px; background: var(--panel); border-radius: 999px; overflow: hidden;
     }
     .funnel-bar-fill {
       height: 100%;
       background: linear-gradient(90deg, var(--gold) 0%, #B89232 100%);
-      border-radius: 999px;
-      transition: width 0.6s ease;
+      border-radius: 999px; transition: width 0.6s ease;
     }
-    .funnel-stat {
-      text-align: right;
-      font-size: 13px;
-      font-variant-numeric: tabular-nums;
-    }
+    .funnel-stat { text-align: right; font-size: 13px; font-variant-numeric: tabular-nums; }
     .funnel-stat .pct { color: var(--text); font-weight: 600; }
     .funnel-stat .n { color: var(--text-mute); font-size: 11px; }
 
-    /* Sparkline-ish daily signups */
     .signup-row {
-      display: grid;
-      grid-template-columns: 90px 1fr 60px;
-      align-items: center;
-      gap: 10px;
-      padding: 4px 0;
-      font-size: 12px;
+      display: grid; grid-template-columns: 90px 1fr 60px;
+      align-items: center; gap: 10px; padding: 4px 0; font-size: 12px;
     }
-    .signup-bar-track {
-      height: 8px;
-      background: var(--panel);
-      border-radius: 999px;
-      overflow: hidden;
-    }
+    .signup-bar-track { height: 8px; background: var(--panel); border-radius: 999px; overflow: hidden; }
     .signup-bar-fill { height: 100%; background: var(--gold); border-radius: 999px; }
     .signup-row .date { color: var(--text-dim); }
     .signup-row .n { text-align: right; font-weight: 600; }
 
-    /* Auth gates */
     .gate {
-      max-width: 480px;
-      margin: 80px auto;
-      padding: 36px 32px;
-      background: #FFFFFF;
-      border: 1px solid var(--gold-line);
-      border-radius: 16px;
-      text-align: center;
-      box-shadow: var(--shadow);
+      max-width: 480px; margin: 80px auto;
+      padding: 36px 32px; background: #FFFFFF;
+      border: 1px solid var(--gold-line); border-radius: 16px;
+      text-align: center; box-shadow: var(--shadow);
     }
-    .gate h1 {
-      font-size: 22px;
-      margin-bottom: 12px;
-    }
-    .gate p {
-      color: var(--text-dim);
-      margin: 8px 0;
-      font-size: 14px;
-    }
-    .gate a {
-      color: var(--gold);
-      font-weight: 600;
-      text-decoration: none;
-    }
+    .gate h1 { font-size: 22px; margin-bottom: 12px; }
+    .gate p { color: var(--text-dim); margin: 8px 0; font-size: 14px; }
+    .gate a { color: var(--gold); font-weight: 600; text-decoration: none; }
     .gate a:hover { text-decoration: underline; }
 
     .footnote {
-      font-size: 11px;
-      color: var(--text-mute);
-      font-style: italic;
-      margin-top: 12px;
-      line-height: 1.5;
+      font-size: 11px; color: var(--text-mute);
+      font-style: italic; margin-top: 12px; line-height: 1.5;
     }
     .loading {
-      text-align: center;
-      padding: 80px 24px;
-      color: var(--text-dim);
-      font-style: italic;
+      text-align: center; padding: 80px 24px;
+      color: var(--text-dim); font-style: italic;
     }
     .note-box {
-      background: var(--gold-soft);
-      border: 1px solid var(--gold-line);
-      border-radius: 10px;
-      padding: 12px 16px;
-      font-size: 12px;
-      color: var(--text-dim);
-      margin-top: 12px;
+      background: var(--gold-soft); border: 1px solid var(--gold-line);
+      border-radius: 10px; padding: 12px 16px;
+      font-size: 12px; color: var(--text-dim); margin-top: 12px;
     }
     .note-box strong { color: var(--text); }
+    .note-box code {
+      background: #FFFFFF; padding: 2px 6px; border-radius: 4px;
+      font-family: "SF Mono", Monaco, monospace; font-size: 11px;
+    }
+    .empty-state {
+      text-align: center; padding: 24px 12px;
+      color: var(--text-mute); font-style: italic; font-size: 13px;
+    }
   </style>
 </head>
 <body>
@@ -307,7 +289,33 @@
 
   <script>
     const STORAGE_KEY = "tfif_session_v1";
+    const RANGE_STORAGE_KEY = "tfif_admin_range_v1";
     const root = document.getElementById("root");
+
+    // State for the date range picker. Defaults to "since launch" until the
+    // user picks something else. Stored in localStorage so it survives refresh.
+    const state = {
+      preset: "launch", // 'launch' | '7d' | '30d' | 'custom'
+      from: null,       // YYYY-MM-DD (only used when preset === 'custom')
+      to: null,         // YYYY-MM-DD
+      launchDate: "2026-06-15",
+      data: null,
+    };
+
+    try {
+      const saved = JSON.parse(localStorage.getItem(RANGE_STORAGE_KEY) || "{}");
+      if (saved.preset) state.preset = saved.preset;
+      if (saved.from) state.from = saved.from;
+      if (saved.to) state.to = saved.to;
+    } catch {}
+
+    function persistRange() {
+      try {
+        localStorage.setItem(RANGE_STORAGE_KEY, JSON.stringify({
+          preset: state.preset, from: state.from, to: state.to,
+        }));
+      } catch {}
+    }
 
     function escapeHtml(s) {
       return String(s == null ? "" : s)
@@ -318,6 +326,12 @@
     function fmtNum(n) {
       if (n == null) return "0";
       return Number(n).toLocaleString();
+    }
+
+    function fmtEur(cents) {
+      if (cents == null) return "€0";
+      const n = Number(cents) / 100;
+      return "€" + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     function fmtPct(num, denom) {
@@ -343,6 +357,34 @@
       return months + " months ago";
     }
 
+    function todayStr() {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function daysAgoStr(n) {
+      const d = new Date();
+      d.setDate(d.getDate() - n);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function resolveRange() {
+      // Returns { from, to } as YYYY-MM-DD strings based on current preset.
+      switch (state.preset) {
+        case "7d":     return { from: daysAgoStr(7), to: null };
+        case "30d":    return { from: daysAgoStr(30), to: null };
+        case "custom": return { from: state.from || state.launchDate, to: state.to || null };
+        case "launch":
+        default:       return { from: state.launchDate, to: null };
+      }
+    }
+
     function renderGate(message) {
       root.innerHTML = `
         <div class="gate">
@@ -362,8 +404,13 @@
         return;
       }
 
+      const { from, to } = resolveRange();
+      const params = new URLSearchParams();
+      if (from) params.set("from", from);
+      if (to) params.set("to", to);
+
       try {
-        const r = await fetch("/api/admin/metrics", {
+        const r = await fetch("/api/admin/metrics?" + params.toString(), {
           method: "GET",
           headers: { "x-session-token": token },
         });
@@ -380,18 +427,68 @@
           return;
         }
         const data = await r.json();
+        state.data = data;
+        if (data.dateRange && data.dateRange.launchDate) {
+          state.launchDate = data.dateRange.launchDate.slice(0, 10);
+        }
         renderDashboard(data);
       } catch (err) {
         renderGate("Network error. Check your connection and refresh.");
       }
     }
 
+    function onPreset(preset) {
+      state.preset = preset;
+      if (preset !== "custom") {
+        state.from = null; state.to = null;
+      }
+      persistRange();
+      loadMetrics();
+    }
+
+    function onApplyCustom() {
+      const fromEl = document.getElementById("from-date");
+      const toEl = document.getElementById("to-date");
+      state.preset = "custom";
+      state.from = fromEl.value || state.launchDate;
+      state.to = toEl.value || null;
+      persistRange();
+      loadMetrics();
+    }
+
+    function rangeLabel() {
+      const { from, to } = resolveRange();
+      const fromLabel = from === state.launchDate ? "launch (" + fmtDate(state.launchDate + "T00:00:00") + ")" : fmtDate(from + "T00:00:00");
+      const toLabel = to ? fmtDate(to + "T00:00:00") : "now";
+      return `${fromLabel} → ${toLabel}`;
+    }
+
+    function renderControls() {
+      const { from, to } = resolveRange();
+      const fromVal = from || "";
+      const toVal = to || "";
+      return `
+        <div class="date-controls">
+          <span class="date-controls-label">Range</span>
+          <button class="preset-btn ${state.preset === 'launch' ? 'active' : ''}" onclick="onPreset('launch')">Since launch</button>
+          <button class="preset-btn ${state.preset === '7d' ? 'active' : ''}" onclick="onPreset('7d')">Last 7 days</button>
+          <button class="preset-btn ${state.preset === '30d' ? 'active' : ''}" onclick="onPreset('30d')">Last 30 days</button>
+          <span style="margin: 0 4px; color: var(--gold-line);">|</span>
+          <input type="date" id="from-date" class="date-input" value="${escapeHtml(fromVal)}" />
+          <span class="date-sep">to</span>
+          <input type="date" id="to-date" class="date-input" value="${escapeHtml(toVal)}" />
+          <button class="apply-btn" onclick="onApplyCustom()">Apply</button>
+          <span class="range-summary">Showing: ${rangeLabel()} · team excluded</span>
+        </div>
+      `;
+    }
+
     function renderDashboard(d) {
       const c = d.completion || {};
       const w = d.windowState || {};
       const u = d.unlimitedEngagement || {};
+      const tc = d.thrivecart || {};
 
-      // Tier totals
       let resetTotal = 0, unlimitedTotal = 0, unlimitedMonthly = 0, unlimitedAnnual = 0, unlimitedNone = 0;
       (d.tierCounts || []).forEach(t => {
         if (t.tier === "preview") resetTotal += t.n;
@@ -407,11 +504,16 @@
       const maxSignup = (d.signupsByDay || []).reduce((m, r) => Math.max(m, r.n), 0) || 1;
       const signupsByDate = {};
       (d.signupsByDay || []).forEach(r => {
-        const dateKey = r.day;
-        if (!signupsByDate[dateKey]) signupsByDate[dateKey] = 0;
-        signupsByDate[dateKey] += r.n;
+        if (!signupsByDate[r.day]) signupsByDate[r.day] = 0;
+        signupsByDate[r.day] += r.n;
       });
-      const signupDates = Object.keys(signupsByDate).sort().reverse().slice(0, 14);
+      const signupDates = Object.keys(signupsByDate).sort().reverse().slice(0, 21);
+
+      // ThriveCart KPIs
+      const tcSummary = tc.summary || {};
+      const grossCents = Number(tcSummary.gross_cents || 0);
+      const refundCents = Number(tcSummary.refund_cents || 0);
+      const netCents = grossCents - refundCents;
 
       root.innerHTML = `
         <div class="wrap">
@@ -423,9 +525,11 @@
             <div class="viewer">
               <div>Viewing as <span class="v-email">${escapeHtml(d.viewer.email)}</span></div>
               <div>Last refresh: ${new Date(d.asOf).toLocaleTimeString()}</div>
-              <button class="refresh-btn" onclick="loadMetrics()">↻ Refresh</button>
+              <button class="preset-btn" style="margin-top: 6px;" onclick="loadMetrics()">↻ Refresh</button>
             </div>
           </div>
+
+          ${renderControls()}
 
           <!-- KPI strip -->
           <div class="kpi-grid">
@@ -449,51 +553,54 @@
               <div class="kpi-value">${fmtNum(c.d3 || 0)}</div>
               <div class="kpi-sub">${fmtPct(c.d3 || 0, c.total_logged_in || 0)} of logged-in</div>
             </div>
+            ${tc.connected ? `
+              <div class="kpi kpi-revenue">
+                <div class="kpi-label">Net Revenue (ThriveCart)</div>
+                <div class="kpi-value">${fmtEur(netCents)}</div>
+                <div class="kpi-sub">${fmtNum(tcSummary.orders || 0)} orders · ${fmtNum(tcSummary.unique_buyers || 0)} buyers</div>
+              </div>
+            ` : ''}
             <div class="kpi">
               <div class="kpi-label">Unlimited Active (7d)</div>
               <div class="kpi-value">${fmtNum(u.active_users_7d || 0)}</div>
-              <div class="kpi-sub">${fmtNum(u.user_messages_7d || 0)} messages sent</div>
-            </div>
-            <div class="kpi">
-              <div class="kpi-label">Unlimited Active (30d)</div>
-              <div class="kpi-value">${fmtNum(u.active_users_30d || 0)}</div>
-              <div class="kpi-sub">${fmtNum(u.user_messages_30d || 0)} messages sent</div>
+              <div class="kpi-sub">${fmtNum(u.user_messages_7d || 0)} messages</div>
             </div>
           </div>
+
+          ${tc.connected ? renderThrivecartSection(tc) : renderThrivecartNotConnected()}
 
           <!-- Completion funnel + Tier breakdown -->
           <div class="two-col">
             <div class="section">
               <h2><span class="h2-eyebrow">Funnel</span>72-Hour Power Reset completion</h2>
               ${renderFunnel(c)}
-              <div class="footnote">Based on members who have logged in at least once (total logged-in: ${fmtNum(c.total_logged_in || 0)}).</div>
+              <div class="footnote">Based on members who joined in this range and logged in at least once. Total: ${fmtNum(c.total_logged_in || 0)}.</div>
             </div>
             <div class="section">
               <h2><span class="h2-eyebrow">Tier mix</span>Members by tier &amp; plan</h2>
               <table>
                 <thead><tr><th>Tier</th><th>Plan</th><th class="num">Members</th></tr></thead>
                 <tbody>
-                  ${(d.tierCounts || []).map(t => `
-                    <tr>
-                      <td><span class="tier-badge ${t.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(t.tier)}</span></td>
-                      <td>${escapeHtml(t.plan)}</td>
-                      <td class="num">${fmtNum(t.n)}</td>
-                    </tr>
-                  `).join("")}
+                  ${(d.tierCounts || []).length === 0
+                    ? '<tr><td colspan="3" class="empty-state">No members in this range.</td></tr>'
+                    : (d.tierCounts || []).map(t => `
+                      <tr>
+                        <td><span class="tier-badge ${t.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(t.tier)}</span></td>
+                        <td>${escapeHtml(t.plan)}</td>
+                        <td class="num">${fmtNum(t.n)}</td>
+                      </tr>
+                    `).join("")}
                 </tbody>
               </table>
-              <div class="note-box">
-                <strong>Want to see actual € paid + coupons?</strong> Kajabi webhooks only carry activation events, not payment amounts. To pull revenue per coupon we need to point ThriveCart's webhook at a new endpoint and store purchase records. Ping support if you want to wire that up next.
-              </div>
             </div>
           </div>
 
           <!-- Signups by day + Process usage -->
           <div class="two-col">
             <div class="section">
-              <h2><span class="h2-eyebrow">Recent</span>Signups by day (last 14)</h2>
+              <h2><span class="h2-eyebrow">Recent</span>Signups by day</h2>
               ${signupDates.length === 0
-                ? '<p style="color:var(--text-mute);font-style:italic;">No signups in the last 30 days.</p>'
+                ? '<div class="empty-state">No signups in this range.</div>'
                 : signupDates.map(day => `
                   <div class="signup-row">
                     <div class="date">${fmtDate(day)}</div>
@@ -504,17 +611,19 @@
               }
             </div>
             <div class="section">
-              <h2><span class="h2-eyebrow">Unlimited use</span>Top processes (last 30 days)</h2>
+              <h2><span class="h2-eyebrow">Unlimited use</span>Top processes (last 30d, rolling)</h2>
               <table>
                 <thead><tr><th>Process</th><th class="num">Sessions</th><th class="num">Unique users</th></tr></thead>
                 <tbody>
-                  ${(d.processUsage || []).slice(0, 12).map(p => `
-                    <tr>
-                      <td>${escapeHtml(p.process_key)}</td>
-                      <td class="num">${fmtNum(p.sessions_started)}</td>
-                      <td class="num">${fmtNum(p.unique_users)}</td>
-                    </tr>
-                  `).join("")}
+                  ${(d.processUsage || []).length === 0
+                    ? '<tr><td colspan="3" class="empty-state">No Unlimited sessions yet.</td></tr>'
+                    : (d.processUsage || []).slice(0, 12).map(p => `
+                      <tr>
+                        <td>${escapeHtml(p.process_key)}</td>
+                        <td class="num">${fmtNum(p.sessions_started)}</td>
+                        <td class="num">${fmtNum(p.unique_users)}</td>
+                      </tr>
+                    `).join("")}
                 </tbody>
               </table>
             </div>
@@ -522,84 +631,76 @@
 
           <!-- Top Unlimited users -->
           <div class="section">
-            <h2><span class="h2-eyebrow">Engagement</span>Top Unlimited members by messages (last 30 days)</h2>
+            <h2><span class="h2-eyebrow">Engagement</span>Top Unlimited members by messages (last 30d, rolling)</h2>
             <table>
               <thead>
                 <tr>
-                  <th>Email</th>
-                  <th>Name</th>
-                  <th>Plan</th>
-                  <th class="num">Messages</th>
-                  <th class="num">Last message</th>
+                  <th>Email</th><th>Name</th><th>Plan</th>
+                  <th class="num">Messages</th><th class="num">Last message</th>
                 </tr>
               </thead>
               <tbody>
-                ${(d.perUserUnlimited || []).map(u => `
-                  <tr>
-                    <td>${escapeHtml(u.email)}</td>
-                    <td>${escapeHtml(u.display_name || "—")}</td>
-                    <td>${escapeHtml(u.subscription_plan || "—")}</td>
-                    <td class="num">${fmtNum(u.messages_30d)}</td>
-                    <td class="num">${fmtRelative(u.last_message_at)}</td>
-                  </tr>
-                `).join("")}
+                ${(d.perUserUnlimited || []).length === 0
+                  ? '<tr><td colspan="5" class="empty-state">No Unlimited messages in the last 30 days.</td></tr>'
+                  : (d.perUserUnlimited || []).map(u => `
+                    <tr>
+                      <td>${escapeHtml(u.email)}</td>
+                      <td>${escapeHtml(u.display_name || "—")}</td>
+                      <td>${escapeHtml(u.subscription_plan || "—")}</td>
+                      <td class="num">${fmtNum(u.messages_30d)}</td>
+                      <td class="num">${fmtRelative(u.last_message_at)}</td>
+                    </tr>
+                  `).join("")}
               </tbody>
             </table>
-            ${(d.perUserUnlimited || []).length === 0
-              ? '<p style="color:var(--text-mute);font-style:italic;">No Unlimited messages in the last 30 days.</p>'
-              : ''}
           </div>
 
-          <!-- Recent signups -->
+          <!-- Recent signups roster -->
           <div class="section">
-            <h2><span class="h2-eyebrow">Roster</span>Most recent signups (newest 25)</h2>
+            <h2><span class="h2-eyebrow">Roster</span>Most recent signups in this range (newest 25)</h2>
             <table>
               <thead>
                 <tr>
-                  <th>Email</th>
-                  <th>Name</th>
-                  <th>Tier</th>
-                  <th>Plan</th>
-                  <th>Joined</th>
-                  <th>1st login</th>
-                  <th class="num">Day</th>
+                  <th>Email</th><th>Name</th><th>Tier</th><th>Plan</th>
+                  <th>Joined</th><th>1st login</th><th class="num">Day</th>
                 </tr>
               </thead>
               <tbody>
-                ${(d.recentSignups || []).map(u => `
-                  <tr>
-                    <td>${escapeHtml(u.email)}</td>
-                    <td>${escapeHtml(u.display_name || "—")}</td>
-                    <td><span class="tier-badge ${u.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(u.tier)}</span></td>
-                    <td>${escapeHtml(u.subscription_plan || "—")}</td>
-                    <td>${fmtDate(u.created_at)}</td>
-                    <td>${u.first_login_at ? fmtDate(u.first_login_at) : "—"}</td>
-                    <td class="num">${u.last_completed_day || 0}</td>
-                  </tr>
-                `).join("")}
+                ${(d.recentSignups || []).length === 0
+                  ? '<tr><td colspan="7" class="empty-state">No signups in this range.</td></tr>'
+                  : (d.recentSignups || []).map(u => `
+                    <tr>
+                      <td>${escapeHtml(u.email)}</td>
+                      <td>${escapeHtml(u.display_name || "—")}</td>
+                      <td><span class="tier-badge ${u.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(u.tier)}</span></td>
+                      <td>${escapeHtml(u.subscription_plan || "—")}</td>
+                      <td>${fmtDate(u.created_at)}</td>
+                      <td>${u.first_login_at ? fmtDate(u.first_login_at) : "—"}</td>
+                      <td class="num">${u.last_completed_day || 0}</td>
+                    </tr>
+                  `).join("")}
               </tbody>
             </table>
           </div>
 
           <!-- Webhook activity -->
           <div class="section">
-            <h2><span class="h2-eyebrow">Plumbing</span>Webhook activity (last 30 days)</h2>
+            <h2><span class="h2-eyebrow">Plumbing</span>Webhook activity (last 30d, rolling)</h2>
             <table>
               <thead><tr><th>Event type</th><th class="num">Count</th><th class="num">Most recent</th></tr></thead>
               <tbody>
-                ${(d.webhookActivity || []).map(w => `
-                  <tr>
-                    <td>${escapeHtml(w.event_type)}</td>
-                    <td class="num">${fmtNum(w.n)}</td>
-                    <td class="num">${fmtRelative(w.last_at)}</td>
-                  </tr>
-                `).join("")}
+                ${(d.webhookActivity || []).length === 0
+                  ? '<tr><td colspan="3" class="empty-state">No webhook activity in the last 30 days.</td></tr>'
+                  : (d.webhookActivity || []).map(w => `
+                    <tr>
+                      <td>${escapeHtml(w.event_type)}</td>
+                      <td class="num">${fmtNum(w.n)}</td>
+                      <td class="num">${fmtRelative(w.last_at)}</td>
+                    </tr>
+                  `).join("")}
               </tbody>
             </table>
-            ${(d.webhookActivity || []).length === 0
-              ? '<p style="color:var(--text-mute);font-style:italic;">No webhook activity in the last 30 days.</p>'
-              : ''}
-            <div class="footnote">Source: Kajabi offer activation/deactivation webhooks. If you see &ldquo;no_email_in_payload&rdquo; events, those need investigation.</div>
+            <div class="footnote">Source: Kajabi offer webhooks + ThriveCart purchase webhooks (when wired up).</div>
           </div>
         </div>
       `;
@@ -625,7 +726,139 @@
       `).join("");
     }
 
+    function renderThrivecartSection(tc) {
+      const summary = tc.summary || {};
+      const grossCents = Number(summary.gross_cents || 0);
+      const refundCents = Number(summary.refund_cents || 0);
+      const netCents = grossCents - refundCents;
+      const aovCents = summary.orders ? Math.round(grossCents / summary.orders) : 0;
+
+      const maxByDay = (tc.byDay || []).reduce((m, r) => Math.max(m, Number(r.revenue_cents || 0)), 0) || 1;
+
+      return `
+        <div class="section">
+          <h2><span class="h2-eyebrow">Revenue</span>ThriveCart purchases in this range</h2>
+          <div class="kpi-grid" style="margin-bottom: 18px;">
+            <div class="kpi kpi-revenue">
+              <div class="kpi-label">Gross Revenue</div>
+              <div class="kpi-value">${fmtEur(grossCents)}</div>
+              <div class="kpi-sub">${fmtNum(summary.orders || 0)} orders</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-label">Refunds</div>
+              <div class="kpi-value">${fmtEur(refundCents)}</div>
+              <div class="kpi-sub">refunded back</div>
+            </div>
+            <div class="kpi kpi-revenue">
+              <div class="kpi-label">Net Revenue</div>
+              <div class="kpi-value">${fmtEur(netCents)}</div>
+              <div class="kpi-sub">gross − refunds</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-label">Avg Order Value</div>
+              <div class="kpi-value">${fmtEur(aovCents)}</div>
+              <div class="kpi-sub">per order</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-label">Unique Buyers</div>
+              <div class="kpi-value">${fmtNum(summary.unique_buyers || 0)}</div>
+              <div class="kpi-sub">distinct emails</div>
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div>
+              <h2 style="font-size: 14px; margin-bottom: 10px;">By coupon</h2>
+              <table>
+                <thead><tr><th>Coupon</th><th class="num">Orders</th><th class="num">Revenue</th><th class="num">Avg</th></tr></thead>
+                <tbody>
+                  ${(tc.byCoupon || []).length === 0
+                    ? '<tr><td colspan="4" class="empty-state">No orders yet.</td></tr>'
+                    : (tc.byCoupon || []).map(c => `
+                      <tr>
+                        <td>${escapeHtml(c.coupon)}</td>
+                        <td class="num">${fmtNum(c.orders)}</td>
+                        <td class="num">${fmtEur(c.revenue_cents)}</td>
+                        <td class="num">${fmtEur(c.avg_cents)}</td>
+                      </tr>
+                    `).join("")}
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <h2 style="font-size: 14px; margin-bottom: 10px;">By product</h2>
+              <table>
+                <thead><tr><th>Product</th><th class="num">Orders</th><th class="num">Revenue</th></tr></thead>
+                <tbody>
+                  ${(tc.byProduct || []).length === 0
+                    ? '<tr><td colspan="3" class="empty-state">No orders yet.</td></tr>'
+                    : (tc.byProduct || []).map(p => `
+                      <tr>
+                        <td>${escapeHtml(p.product)}</td>
+                        <td class="num">${fmtNum(p.orders)}</td>
+                        <td class="num">${fmtEur(p.revenue_cents)}</td>
+                      </tr>
+                    `).join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          ${(tc.byDay || []).length > 0 ? `
+            <h2 style="font-size: 14px; margin: 22px 0 10px;">Revenue by day</h2>
+            ${(tc.byDay || []).slice(0, 21).map(r => `
+              <div class="signup-row">
+                <div class="date">${fmtDate(r.day)}</div>
+                <div class="signup-bar-track"><div class="signup-bar-fill" style="width:${(Number(r.revenue_cents) / maxByDay) * 100}%;"></div></div>
+                <div class="n">${fmtEur(r.revenue_cents)}</div>
+              </div>
+            `).join("")}
+          ` : ''}
+
+          ${(tc.topBuyers || []).length > 0 ? `
+            <h2 style="font-size: 14px; margin: 22px 0 10px;">Top buyers</h2>
+            <table>
+              <thead><tr><th>Email</th><th class="num">Orders</th><th class="num">Total spend</th><th class="num">Last purchase</th></tr></thead>
+              <tbody>
+                ${(tc.topBuyers || []).map(b => `
+                  <tr>
+                    <td>${escapeHtml(b.email)}</td>
+                    <td class="num">${fmtNum(b.orders)}</td>
+                    <td class="num">${fmtEur(b.revenue_cents)}</td>
+                    <td class="num">${fmtRelative(b.last_purchase)}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    function renderThrivecartNotConnected() {
+      return `
+        <div class="section">
+          <h2><span class="h2-eyebrow">Setup needed</span>Connect ThriveCart for live revenue</h2>
+          <p style="color: var(--text-dim); font-size: 13px;">
+            Revenue data lights up the moment ThriveCart starts posting purchase webhooks to the new endpoint. Three steps:
+          </p>
+          <div class="note-box" style="line-height: 1.7;">
+            <strong>1.</strong> In <strong>Neon</strong> (Vercel → Storage → Open in Neon → SQL Editor), paste &amp; run the <code>CREATE TABLE purchases</code> SQL block from the bottom of <code>api/webhooks/thrivecart.js</code>.
+            <br>
+            <strong>2.</strong> In <strong>Vercel</strong> → Project Settings → Environment Variables, add <code>THRIVECART_WEBHOOK_SECRET</code> with a long random string. Redeploy.
+            <br>
+            <strong>3.</strong> In <strong>ThriveCart</strong> → Settings → API &amp; Webhooks: paste <code>https://thefieldai.app/api/webhooks/thrivecart</code> as the webhook URL, paste the same secret you set in Vercel, and select all event types (order.success, order.refund, order.subscription_payment, order.subscription_cancelled).
+          </div>
+          <div class="footnote">Once a real order comes through, this section automatically replaces itself with live revenue, coupon breakdown, product breakdown, and top buyers.</div>
+        </div>
+      `;
+    }
+
+    // Expose for inline onclick handlers
     window.loadMetrics = loadMetrics;
+    window.onPreset = onPreset;
+    window.onApplyCustom = onApplyCustom;
+
     loadMetrics();
   </script>
 </body>
