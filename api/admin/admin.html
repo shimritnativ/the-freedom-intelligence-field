@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Field — Team Metrics</title>
+  <style>
+    :root {
+      --bg: #FAF5E4;
+      --panel: #F4ECD0;
+      --gold: #C9A84C;
+      --gold-soft: rgba(201, 168, 76, 0.15);
+      --gold-line: rgba(201, 168, 76, 0.35);
+      --dark: #2C2416;
+      --text: #1A1612;
+      --text-dim: #6B5F3F;
+      --text-mute: #9A8D6C;
+      --border: rgba(201, 168, 76, 0.25);
+      --green: #4A7C3A;
+      --red: #C03A2B;
+      --shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .wrap {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 36px 28px 80px;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .brand-eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      color: var(--gold);
+      text-transform: uppercase;
+    }
+    h1 {
+      font-family: Georgia, "Times New Roman", serif;
+      font-style: italic;
+      font-size: 30px;
+      color: var(--text);
+      margin: 4px 0 0;
+      font-weight: 400;
+    }
+    .viewer {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-align: right;
+    }
+    .viewer .v-email {
+      color: var(--text);
+      font-weight: 600;
+    }
+    .refresh-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: transparent;
+      border: 1px solid var(--gold-line);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    .refresh-btn:hover { border-color: var(--gold); background: var(--gold-soft); }
+
+    /* KPI cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 30px;
+    }
+    .kpi {
+      background: var(--panel);
+      border: 1px solid var(--gold-line);
+      border-radius: 12px;
+      padding: 18px 18px 16px;
+    }
+    .kpi-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .kpi-value {
+      font-family: Georgia, serif;
+      font-size: 32px;
+      font-weight: 400;
+      color: var(--text);
+      line-height: 1.1;
+    }
+    .kpi-sub {
+      font-size: 11px;
+      color: var(--text-mute);
+      margin-top: 4px;
+    }
+
+    /* Section block */
+    .section {
+      background: #FFFFFF;
+      border: 1px solid var(--gold-line);
+      border-radius: 14px;
+      padding: 22px 24px;
+      margin-bottom: 18px;
+      box-shadow: var(--shadow);
+    }
+    .section h2 {
+      font-family: Georgia, serif;
+      font-style: italic;
+      font-size: 18px;
+      font-weight: 400;
+      color: var(--text);
+      margin: 0 0 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section h2 .h2-eyebrow {
+      display: inline-block;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-style: normal;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-right: 10px;
+      padding: 2px 7px;
+      background: var(--gold-soft);
+      border-radius: 999px;
+      vertical-align: middle;
+    }
+
+    /* Two-column inside sections */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px;
+    }
+    @media (max-width: 760px) {
+      .two-col { grid-template-columns: 1fr; }
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      background: var(--panel);
+    }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    th.num { text-align: right; }
+    tr:last-child td { border-bottom: none; }
+
+    .tier-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      padding: 2px 8px;
+      border-radius: 999px;
+      text-transform: uppercase;
+    }
+    .tier-preview { background: rgba(201, 168, 76, 0.18); color: #8B6F2F; }
+    .tier-full { background: rgba(74, 124, 58, 0.18); color: var(--green); }
+
+    /* Completion funnel bars */
+    .funnel-row {
+      display: grid;
+      grid-template-columns: 70px 1fr 110px;
+      align-items: center;
+      gap: 14px;
+      padding: 8px 0;
+    }
+    .funnel-label { font-weight: 600; font-size: 13px; }
+    .funnel-bar-track {
+      height: 14px;
+      background: var(--panel);
+      border-radius: 999px;
+      overflow: hidden;
+      position: relative;
+    }
+    .funnel-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold) 0%, #B89232 100%);
+      border-radius: 999px;
+      transition: width 0.6s ease;
+    }
+    .funnel-stat {
+      text-align: right;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+    .funnel-stat .pct { color: var(--text); font-weight: 600; }
+    .funnel-stat .n { color: var(--text-mute); font-size: 11px; }
+
+    /* Sparkline-ish daily signups */
+    .signup-row {
+      display: grid;
+      grid-template-columns: 90px 1fr 60px;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 0;
+      font-size: 12px;
+    }
+    .signup-bar-track {
+      height: 8px;
+      background: var(--panel);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .signup-bar-fill { height: 100%; background: var(--gold); border-radius: 999px; }
+    .signup-row .date { color: var(--text-dim); }
+    .signup-row .n { text-align: right; font-weight: 600; }
+
+    /* Auth gates */
+    .gate {
+      max-width: 480px;
+      margin: 80px auto;
+      padding: 36px 32px;
+      background: #FFFFFF;
+      border: 1px solid var(--gold-line);
+      border-radius: 16px;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .gate h1 {
+      font-size: 22px;
+      margin-bottom: 12px;
+    }
+    .gate p {
+      color: var(--text-dim);
+      margin: 8px 0;
+      font-size: 14px;
+    }
+    .gate a {
+      color: var(--gold);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .gate a:hover { text-decoration: underline; }
+
+    .footnote {
+      font-size: 11px;
+      color: var(--text-mute);
+      font-style: italic;
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+    .loading {
+      text-align: center;
+      padding: 80px 24px;
+      color: var(--text-dim);
+      font-style: italic;
+    }
+    .note-box {
+      background: var(--gold-soft);
+      border: 1px solid var(--gold-line);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 12px;
+    }
+    .note-box strong { color: var(--text); }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="loading">Loading metrics…</div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "tfif_session_v1";
+    const root = document.getElementById("root");
+
+    function escapeHtml(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+
+    function fmtNum(n) {
+      if (n == null) return "0";
+      return Number(n).toLocaleString();
+    }
+
+    function fmtPct(num, denom) {
+      if (!denom) return "0%";
+      return ((num / denom) * 100).toFixed(1) + "%";
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return "—";
+      const d = new Date(iso);
+      return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    }
+
+    function fmtRelative(iso) {
+      if (!iso) return "—";
+      const ms = Date.now() - new Date(iso).getTime();
+      const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+      if (days === 0) return "today";
+      if (days === 1) return "1 day ago";
+      if (days < 30) return days + " days ago";
+      const months = Math.floor(days / 30);
+      if (months === 1) return "1 month ago";
+      return months + " months ago";
+    }
+
+    function renderGate(message) {
+      root.innerHTML = `
+        <div class="gate">
+          <div class="brand-eyebrow">The Field — Team</div>
+          <h1>Team metrics</h1>
+          <p>${escapeHtml(message)}</p>
+          <p><a href="/app.html">Open The Field →</a></p>
+        </div>
+      `;
+    }
+
+    async function loadMetrics() {
+      let token;
+      try { token = localStorage.getItem(STORAGE_KEY); } catch { token = null; }
+      if (!token) {
+        renderGate("You need to log in to The Field first. Open the app, log in, then come back here.");
+        return;
+      }
+
+      try {
+        const r = await fetch("/api/admin/metrics", {
+          method: "GET",
+          headers: { "x-session-token": token },
+        });
+        if (r.status === 401) {
+          renderGate("Your session expired. Open The Field, log in again, then refresh this page.");
+          return;
+        }
+        if (r.status === 403) {
+          renderGate("This page is restricted to the @shimritnativ.com team.");
+          return;
+        }
+        if (!r.ok) {
+          renderGate("Something went wrong loading the metrics. Refresh and try again.");
+          return;
+        }
+        const data = await r.json();
+        renderDashboard(data);
+      } catch (err) {
+        renderGate("Network error. Check your connection and refresh.");
+      }
+    }
+
+    function renderDashboard(d) {
+      const c = d.completion || {};
+      const w = d.windowState || {};
+      const u = d.unlimitedEngagement || {};
+
+      // Tier totals
+      let resetTotal = 0, unlimitedTotal = 0, unlimitedMonthly = 0, unlimitedAnnual = 0, unlimitedNone = 0;
+      (d.tierCounts || []).forEach(t => {
+        if (t.tier === "preview") resetTotal += t.n;
+        if (t.tier === "full") {
+          unlimitedTotal += t.n;
+          if (t.plan === "monthly") unlimitedMonthly += t.n;
+          else if (t.plan === "yearly") unlimitedAnnual += t.n;
+          else unlimitedNone += t.n;
+        }
+      });
+      const totalMembers = resetTotal + unlimitedTotal;
+
+      const maxSignup = (d.signupsByDay || []).reduce((m, r) => Math.max(m, r.n), 0) || 1;
+      const signupsByDate = {};
+      (d.signupsByDay || []).forEach(r => {
+        const dateKey = r.day;
+        if (!signupsByDate[dateKey]) signupsByDate[dateKey] = 0;
+        signupsByDate[dateKey] += r.n;
+      });
+      const signupDates = Object.keys(signupsByDate).sort().reverse().slice(0, 14);
+
+      root.innerHTML = `
+        <div class="wrap">
+          <div class="topbar">
+            <div>
+              <div class="brand-eyebrow">The Field — Team</div>
+              <h1>Live metrics</h1>
+            </div>
+            <div class="viewer">
+              <div>Viewing as <span class="v-email">${escapeHtml(d.viewer.email)}</span></div>
+              <div>Last refresh: ${new Date(d.asOf).toLocaleTimeString()}</div>
+              <button class="refresh-btn" onclick="loadMetrics()">↻ Refresh</button>
+            </div>
+          </div>
+
+          <!-- KPI strip -->
+          <div class="kpi-grid">
+            <div class="kpi">
+              <div class="kpi-label">Total Members</div>
+              <div class="kpi-value">${fmtNum(totalMembers)}</div>
+              <div class="kpi-sub">${fmtNum(resetTotal)} Reset · ${fmtNum(unlimitedTotal)} Unlimited</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-label">72-Hour Reset</div>
+              <div class="kpi-value">${fmtNum(resetTotal)}</div>
+              <div class="kpi-sub">${fmtNum(w.active_reset || 0)} active · ${fmtNum(w.expired_reset || 0)} expired</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-label">Unlimited Field</div>
+              <div class="kpi-value">${fmtNum(unlimitedTotal)}</div>
+              <div class="kpi-sub">${fmtNum(unlimitedMonthly)} mo · ${fmtNum(unlimitedAnnual)} yr · ${fmtNum(unlimitedNone)} other</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-label">Day 3 Completed</div>
+              <div class="kpi-value">${fmtNum(c.d3 || 0)}</div>
+              <div class="kpi-sub">${fmtPct(c.d3 || 0, c.total_logged_in || 0)} of logged-in</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-label">Unlimited Active (7d)</div>
+              <div class="kpi-value">${fmtNum(u.active_users_7d || 0)}</div>
+              <div class="kpi-sub">${fmtNum(u.user_messages_7d || 0)} messages sent</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-label">Unlimited Active (30d)</div>
+              <div class="kpi-value">${fmtNum(u.active_users_30d || 0)}</div>
+              <div class="kpi-sub">${fmtNum(u.user_messages_30d || 0)} messages sent</div>
+            </div>
+          </div>
+
+          <!-- Completion funnel + Tier breakdown -->
+          <div class="two-col">
+            <div class="section">
+              <h2><span class="h2-eyebrow">Funnel</span>72-Hour Power Reset completion</h2>
+              ${renderFunnel(c)}
+              <div class="footnote">Based on members who have logged in at least once (total logged-in: ${fmtNum(c.total_logged_in || 0)}).</div>
+            </div>
+            <div class="section">
+              <h2><span class="h2-eyebrow">Tier mix</span>Members by tier &amp; plan</h2>
+              <table>
+                <thead><tr><th>Tier</th><th>Plan</th><th class="num">Members</th></tr></thead>
+                <tbody>
+                  ${(d.tierCounts || []).map(t => `
+                    <tr>
+                      <td><span class="tier-badge ${t.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(t.tier)}</span></td>
+                      <td>${escapeHtml(t.plan)}</td>
+                      <td class="num">${fmtNum(t.n)}</td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+              <div class="note-box">
+                <strong>Want to see actual € paid + coupons?</strong> Kajabi webhooks only carry activation events, not payment amounts. To pull revenue per coupon we need to point ThriveCart's webhook at a new endpoint and store purchase records. Ping support if you want to wire that up next.
+              </div>
+            </div>
+          </div>
+
+          <!-- Signups by day + Process usage -->
+          <div class="two-col">
+            <div class="section">
+              <h2><span class="h2-eyebrow">Recent</span>Signups by day (last 14)</h2>
+              ${signupDates.length === 0
+                ? '<p style="color:var(--text-mute);font-style:italic;">No signups in the last 30 days.</p>'
+                : signupDates.map(day => `
+                  <div class="signup-row">
+                    <div class="date">${fmtDate(day)}</div>
+                    <div class="signup-bar-track"><div class="signup-bar-fill" style="width:${(signupsByDate[day] / maxSignup) * 100}%;"></div></div>
+                    <div class="n">${fmtNum(signupsByDate[day])}</div>
+                  </div>
+                `).join("")
+              }
+            </div>
+            <div class="section">
+              <h2><span class="h2-eyebrow">Unlimited use</span>Top processes (last 30 days)</h2>
+              <table>
+                <thead><tr><th>Process</th><th class="num">Sessions</th><th class="num">Unique users</th></tr></thead>
+                <tbody>
+                  ${(d.processUsage || []).slice(0, 12).map(p => `
+                    <tr>
+                      <td>${escapeHtml(p.process_key)}</td>
+                      <td class="num">${fmtNum(p.sessions_started)}</td>
+                      <td class="num">${fmtNum(p.unique_users)}</td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Top Unlimited users -->
+          <div class="section">
+            <h2><span class="h2-eyebrow">Engagement</span>Top Unlimited members by messages (last 30 days)</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Name</th>
+                  <th>Plan</th>
+                  <th class="num">Messages</th>
+                  <th class="num">Last message</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(d.perUserUnlimited || []).map(u => `
+                  <tr>
+                    <td>${escapeHtml(u.email)}</td>
+                    <td>${escapeHtml(u.display_name || "—")}</td>
+                    <td>${escapeHtml(u.subscription_plan || "—")}</td>
+                    <td class="num">${fmtNum(u.messages_30d)}</td>
+                    <td class="num">${fmtRelative(u.last_message_at)}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+            ${(d.perUserUnlimited || []).length === 0
+              ? '<p style="color:var(--text-mute);font-style:italic;">No Unlimited messages in the last 30 days.</p>'
+              : ''}
+          </div>
+
+          <!-- Recent signups -->
+          <div class="section">
+            <h2><span class="h2-eyebrow">Roster</span>Most recent signups (newest 25)</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Name</th>
+                  <th>Tier</th>
+                  <th>Plan</th>
+                  <th>Joined</th>
+                  <th>1st login</th>
+                  <th class="num">Day</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(d.recentSignups || []).map(u => `
+                  <tr>
+                    <td>${escapeHtml(u.email)}</td>
+                    <td>${escapeHtml(u.display_name || "—")}</td>
+                    <td><span class="tier-badge ${u.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(u.tier)}</span></td>
+                    <td>${escapeHtml(u.subscription_plan || "—")}</td>
+                    <td>${fmtDate(u.created_at)}</td>
+                    <td>${u.first_login_at ? fmtDate(u.first_login_at) : "—"}</td>
+                    <td class="num">${u.last_completed_day || 0}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Webhook activity -->
+          <div class="section">
+            <h2><span class="h2-eyebrow">Plumbing</span>Webhook activity (last 30 days)</h2>
+            <table>
+              <thead><tr><th>Event type</th><th class="num">Count</th><th class="num">Most recent</th></tr></thead>
+              <tbody>
+                ${(d.webhookActivity || []).map(w => `
+                  <tr>
+                    <td>${escapeHtml(w.event_type)}</td>
+                    <td class="num">${fmtNum(w.n)}</td>
+                    <td class="num">${fmtRelative(w.last_at)}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+            ${(d.webhookActivity || []).length === 0
+              ? '<p style="color:var(--text-mute);font-style:italic;">No webhook activity in the last 30 days.</p>'
+              : ''}
+            <div class="footnote">Source: Kajabi offer activation/deactivation webhooks. If you see &ldquo;no_email_in_payload&rdquo; events, those need investigation.</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderFunnel(c) {
+      const total = c.total_logged_in || 0;
+      const rows = [
+        { label: "Logged in", count: total, pct: 100 },
+        { label: "Day 1", count: c.d1 || 0, pct: total ? ((c.d1 || 0) / total) * 100 : 0 },
+        { label: "Day 2", count: c.d2 || 0, pct: total ? ((c.d2 || 0) / total) * 100 : 0 },
+        { label: "Day 3", count: c.d3 || 0, pct: total ? ((c.d3 || 0) / total) * 100 : 0 },
+      ];
+      return rows.map(r => `
+        <div class="funnel-row">
+          <div class="funnel-label">${escapeHtml(r.label)}</div>
+          <div class="funnel-bar-track"><div class="funnel-bar-fill" style="width:${r.pct}%;"></div></div>
+          <div class="funnel-stat">
+            <div class="pct">${r.pct.toFixed(1)}%</div>
+            <div class="n">${fmtNum(r.count)} members</div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    window.loadMetrics = loadMetrics;
+    loadMetrics();
+  </script>
+</body>
+</html>
