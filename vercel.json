@@ -14,6 +14,10 @@
     {
       "source": "/",
       "destination": "/app.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin.html"
     }
   ],
   "redirects": [
