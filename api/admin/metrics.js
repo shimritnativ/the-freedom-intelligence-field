@@ -115,16 +115,20 @@ export default async function handler(req, res) {
         GROUP BY tier, COALESCE(subscription_plan, 'none')
         ORDER BY tier, plan
       `,
-      // 2. Completion funnel (filtered)
+      // 2. Completion funnel — Power Reset members only. The 72-Hour Power
+      // Reset funnel measures Reset-tier members specifically; Unlimited
+      // members aren't doing the Reset experience.
       sql`
         SELECT
-          COUNT(*)::int AS total_logged_in,
+          COUNT(*)::int AS total_members,
+          COUNT(*) FILTER (WHERE first_login_at IS NOT NULL)::int AS total_logged_in,
+          COUNT(*) FILTER (WHERE first_login_at IS NULL)::int AS never_logged_in,
           COUNT(*) FILTER (WHERE last_completed_day >= 1)::int AS d1,
           COUNT(*) FILTER (WHERE last_completed_day >= 2)::int AS d2,
           COUNT(*) FILTER (WHERE last_completed_day >= 3)::int AS d3
         FROM users
         WHERE kajabi_entitled = true
-          AND first_login_at IS NOT NULL
+          AND tier = 'preview'
           AND email NOT LIKE ${excludePattern}
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
@@ -347,23 +351,28 @@ export default async function handler(req, res) {
         GROUP BY product, coupon
         ORDER BY revenue_cents DESC, orders DESC
       `),
-      // 16. Completion details — one row per logged-in member with which day
-      // they're stuck at. Drives the clickable funnel that lets you see who
-      // hasn't started yet, who's at Day 1, etc.
+      // 16. Completion details — one row per member (logged in OR not). The
+      // frontend buckets these by login + completion stage to drive the
+      // clickable funnel rows, including the new "Joined but never logged in"
+      // row that surfaces paying members who haven't opened the app yet.
       sql`
         SELECT
           email,
           display_name,
           tier::text AS tier,
           COALESCE(last_completed_day, 0)::int AS last_completed_day,
-          first_login_at
+          first_login_at,
+          created_at
         FROM users
         WHERE kajabi_entitled = true
-          AND first_login_at IS NOT NULL
+          AND tier = 'preview'
           AND email NOT LIKE ${excludePattern}
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
-        ORDER BY last_completed_day DESC NULLS LAST, first_login_at DESC
+        ORDER BY
+          CASE WHEN first_login_at IS NULL THEN 1 ELSE 0 END,
+          last_completed_day DESC NULLS LAST,
+          first_login_at DESC NULLS LAST
       `,
       // 17. Today's snapshot — split into 3 lightweight queries because a
       // single multi-subquery statement caused parameter-binding issues with
