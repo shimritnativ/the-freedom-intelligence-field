@@ -345,6 +345,15 @@
       return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
     }
 
+    // Map raw DB tier values to the user-facing names the team actually uses.
+    // The CSS classes (tier-preview / tier-full) stay the same — only the
+    // label text changes.
+    function tierLabel(tier) {
+      if (tier === "preview") return "Power Reset";
+      if (tier === "full") return "Unlimited";
+      return tier || "—";
+    }
+
     function fmtRelative(iso) {
       if (!iso) return "—";
       const ms = Date.now() - new Date(iso).getTime();
@@ -585,7 +594,7 @@
                     ? '<tr><td colspan="3" class="empty-state">No members in this range.</td></tr>'
                     : (d.tierCounts || []).map(t => `
                       <tr>
-                        <td><span class="tier-badge ${t.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(t.tier)}</span></td>
+                        <td><span class="tier-badge ${t.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(tierLabel(t.tier))}</span></td>
                         <td>${escapeHtml(t.plan)}</td>
                         <td class="num">${fmtNum(t.n)}</td>
                       </tr>
@@ -672,7 +681,7 @@
                     <tr>
                       <td>${escapeHtml(u.email)}</td>
                       <td>${escapeHtml(u.display_name || "—")}</td>
-                      <td><span class="tier-badge ${u.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(u.tier)}</span></td>
+                      <td><span class="tier-badge ${u.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(tierLabel(u.tier))}</span></td>
                       <td>${escapeHtml(u.subscription_plan || "—")}</td>
                       <td>${fmtDate(u.created_at)}</td>
                       <td>${u.first_login_at ? fmtDate(u.first_login_at) : "—"}</td>
@@ -766,7 +775,25 @@
             </div>
           </div>
 
-          <div class="two-col">
+          <h2 style="font-size: 14px; margin: 8px 0 10px;">By product × coupon (every SKU + coupon combination)</h2>
+          <table>
+            <thead><tr><th>Product</th><th>Coupon</th><th class="num">Orders</th><th class="num">Revenue</th><th class="num">Avg / order</th></tr></thead>
+            <tbody>
+              ${(tc.byProductCoupon || []).length === 0
+                ? '<tr><td colspan="5" class="empty-state">No orders yet.</td></tr>'
+                : (tc.byProductCoupon || []).map(r => `
+                  <tr>
+                    <td>${escapeHtml(r.product)}</td>
+                    <td><span class="tier-badge ${r.coupon === '(full price)' ? '' : 'tier-preview'}" style="${r.coupon === '(full price)' ? 'background: transparent; color: var(--text-mute);' : ''}">${escapeHtml(r.coupon)}</span></td>
+                    <td class="num">${fmtNum(r.orders)}</td>
+                    <td class="num">${fmtEur(r.revenue_cents)}</td>
+                    <td class="num">${fmtEur(r.avg_cents)}</td>
+                  </tr>
+                `).join("")}
+            </tbody>
+          </table>
+
+          <div class="two-col" style="margin-top: 22px;">
             <div>
               <h2 style="font-size: 14px; margin-bottom: 10px;">By coupon</h2>
               <table>
