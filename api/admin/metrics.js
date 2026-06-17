@@ -16,6 +16,9 @@ import { getUserBySessionToken } from "../../lib/db.js";
 
 const ALLOWED_DOMAIN = "@shimritnativ.com";
 const LAUNCH_DATE = "2026-06-15"; // hard floor — no signups before this count
+// Coupons we never want polluting revenue stats. GEO100 was a free comp for
+// Tomer, used once for testing. Add others here as needed.
+const EXCLUDED_COUPONS = ["GEO100"];
 
 // Parse a YYYY-MM-DD query param into an ISO timestamp string we can safely
 // pass to Postgres. Returns null for empty/invalid input so the caller can
@@ -67,6 +70,9 @@ export default async function handler(req, res) {
 
   // Domain exclusion pattern for the WHERE clauses.
   const excludePattern = `%${ALLOWED_DOMAIN}`;
+  // Excluded coupons as a Postgres-friendly array for ANY() comparisons.
+  // Coupon_code can be NULL, so we use COALESCE to make the comparison safe.
+  const excludedCoupons = EXCLUDED_COUPONS;
 
   try {
     // Fan out every query in parallel. Every query that touches users or
@@ -90,6 +96,7 @@ export default async function handler(req, res) {
       thrivecartTopBuyers,
       thrivecartRevenueByDay,
       thrivecartByProductCoupon,
+      completionDetails,
     ] = await Promise.all([
       // 1. Members by tier × plan (filtered)
       sql`
@@ -243,9 +250,7 @@ export default async function handler(req, res) {
         GROUP BY process_key
         ORDER BY sessions_started DESC
       `,
-      // 10. ThriveCart total revenue (in range, excluding team)
-      // Wrapped in try/catch via Promise.resolve so missing table → null,
-      // not a 500.
+      // 10. ThriveCart total revenue (excludes team + excluded coupons)
       safeQuery(sql`
         SELECT
           COUNT(*) FILTER (WHERE event_type = 'order.success')::int AS orders,
@@ -254,6 +259,7 @@ export default async function handler(req, res) {
           COUNT(DISTINCT email) FILTER (WHERE event_type = 'order.success')::int AS unique_buyers
         FROM purchases
         WHERE email NOT LIKE ${excludePattern}
+          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons}::text[])
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
       `),
@@ -266,6 +272,7 @@ export default async function handler(req, res) {
         FROM purchases
         WHERE event_type = 'order.success'
           AND email NOT LIKE ${excludePattern}
+          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons}::text[])
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
         GROUP BY product
@@ -282,6 +289,7 @@ export default async function handler(req, res) {
         FROM purchases
         WHERE event_type = 'order.success'
           AND email NOT LIKE ${excludePattern}
+          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons}::text[])
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
         GROUP BY coupon
@@ -297,6 +305,7 @@ export default async function handler(req, res) {
         FROM purchases
         WHERE event_type = 'order.success'
           AND email NOT LIKE ${excludePattern}
+          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons}::text[])
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
         GROUP BY email
@@ -312,15 +321,13 @@ export default async function handler(req, res) {
         FROM purchases
         WHERE event_type = 'order.success'
           AND email NOT LIKE ${excludePattern}
+          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons}::text[])
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
         GROUP BY day
         ORDER BY day DESC
       `),
-      // 15. Product × coupon cross-tab — every distinct SKU+coupon combination.
-      // This is the granular view that breaks out, e.g., "Power Reset with
-      // POWER50" separately from "Power Reset full price" so each launch lever
-      // is measurable independently.
+      // 15. Product × coupon cross-tab
       safeQuery(sql`
         SELECT
           COALESCE(product_name, product_id, 'unknown') AS product,
@@ -331,11 +338,30 @@ export default async function handler(req, res) {
         FROM purchases
         WHERE event_type = 'order.success'
           AND email NOT LIKE ${excludePattern}
+          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons}::text[])
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
         GROUP BY product, coupon
         ORDER BY revenue_cents DESC, orders DESC
       `),
+      // 16. Completion details — one row per logged-in member with which day
+      // they're stuck at. Drives the clickable funnel that lets you see who
+      // hasn't started yet, who's at Day 1, etc.
+      sql`
+        SELECT
+          email,
+          display_name,
+          tier::text AS tier,
+          COALESCE(last_completed_day, 0)::int AS last_completed_day,
+          first_login_at
+        FROM users
+        WHERE kajabi_entitled = true
+          AND first_login_at IS NOT NULL
+          AND email NOT LIKE ${excludePattern}
+          AND created_at >= ${fromIso}
+          AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
+        ORDER BY last_completed_day DESC NULLS LAST, first_login_at DESC
+      `,
     ]);
 
     return res.status(200).json({
@@ -349,6 +375,7 @@ export default async function handler(req, res) {
       },
       tierCounts: tierCounts.rows,
       completion: completion.rows[0],
+      completionDetails: completionDetails.rows,
       signupsByDay: signupsByDay.rows,
       unlimitedEngagement: unlimitedEngagement.rows[0],
       perUserUnlimited: perUserUnlimited.rows,
