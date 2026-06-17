@@ -713,7 +713,7 @@
             <div class="section" id="panel-funnel">
               <h2><span class="h2-eyebrow">Funnel</span>72-Hour Power Reset completion</h2>
               ${renderFunnel(c, d.completionDetails)}
-              <div class="footnote">Click any row to see who's in it. Total members who joined &amp; logged in this range: ${fmtNum(c.total_logged_in || 0)}.</div>
+              <div class="footnote">Click any row to see who's in it. Base = ${fmtNum(c.total_members || 0)} Power Reset members in this range. Of those, ${fmtNum(c.total_logged_in || 0)} have logged in at least once.</div>
             </div>
             <div class="section" id="panel-tier-mix">
               <h2><span class="h2-eyebrow">Tier mix</span>Members by tier &amp; plan</h2>
@@ -846,23 +846,29 @@
     }
 
     function renderFunnel(c, details) {
-      const total = c.total_logged_in || 0;
+      // Base = ALL Power Reset members (not just those who logged in), so
+      // percentages reflect the full launch funnel from purchase → completion.
+      const base = c.total_members || 0;
+      const loggedIn = c.total_logged_in || 0;
+      const neverLoggedIn = c.never_logged_in || 0;
       details = details || [];
 
-      // Bucket members by the day they're currently stuck at. last_completed_day
-      // values: 0 (or null) = logged in but did nothing, 1 = finished Day 1
-      // but not 2, etc.
+      // Bucket logged-in members by their current day stage. Members with
+      // first_login_at = null go in the "never_logged_in" bucket separately.
       const buckets = { 0: [], 1: [], 2: [], 3: [] };
+      const neverLogged = [];
       details.forEach(u => {
-        const d = Math.max(0, Math.min(3, u.last_completed_day || 0));
-        buckets[d].push(u);
+        if (!u.first_login_at) {
+          neverLogged.push(u);
+        } else {
+          const d = Math.max(0, Math.min(3, u.last_completed_day || 0));
+          buckets[d].push(u);
+        }
       });
 
-      // Email lists per stage. Day 1 cumulative = users who completed >=1,
-      // Day 2 cumulative = users who completed >=2, etc. Stuck = exclusive
-      // (completed 0).
       const emailsByStage = {
-        "logged_in": details,
+        "never_logged_in": neverLogged,
+        "logged_in": details.filter(u => u.first_login_at),
         "stuck": buckets[0],
         "d1": buckets[1].concat(buckets[2]).concat(buckets[3]),
         "d2": buckets[2].concat(buckets[3]),
@@ -870,11 +876,12 @@
       };
 
       const rows = [
-        { stage: "logged_in", label: "Logged in", count: total, pct: 100, dropout: false },
-        { stage: "d1", label: "Day 1", count: c.d1 || 0, pct: total ? ((c.d1 || 0) / total) * 100 : 0, dropout: false },
-        { stage: "d2", label: "Day 2", count: c.d2 || 0, pct: total ? ((c.d2 || 0) / total) * 100 : 0, dropout: false },
-        { stage: "d3", label: "Day 3", count: c.d3 || 0, pct: total ? ((c.d3 || 0) / total) * 100 : 0, dropout: false },
-        { stage: "stuck", label: "Didn't start", count: buckets[0].length, pct: total ? (buckets[0].length / total) * 100 : 0, dropout: true },
+        { stage: "never_logged_in", label: "Never logged in", count: neverLoggedIn, pct: base ? (neverLoggedIn / base) * 100 : 0, dropout: true },
+        { stage: "logged_in", label: "Logged in", count: loggedIn, pct: base ? (loggedIn / base) * 100 : 0, dropout: false },
+        { stage: "d1", label: "Day 1", count: c.d1 || 0, pct: base ? ((c.d1 || 0) / base) * 100 : 0, dropout: false },
+        { stage: "d2", label: "Day 2", count: c.d2 || 0, pct: base ? ((c.d2 || 0) / base) * 100 : 0, dropout: false },
+        { stage: "d3", label: "Day 3", count: c.d3 || 0, pct: base ? ((c.d3 || 0) / base) * 100 : 0, dropout: false },
+        { stage: "stuck", label: "Logged in but didn't start", count: buckets[0].length, pct: base ? (buckets[0].length / base) * 100 : 0, dropout: true },
       ];
 
       return rows.map((r, i) => {
