@@ -222,9 +222,26 @@
     .tier-full { background: rgba(74, 124, 58, 0.18); color: var(--green); }
 
     .funnel-row {
-      display: grid; grid-template-columns: 70px 1fr 110px;
-      align-items: center; gap: 14px; padding: 8px 0;
+      display: grid; grid-template-columns: 18px 110px 1fr 110px;
+      align-items: center; gap: 12px; padding: 8px 6px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s ease;
     }
+    .funnel-row:hover { background: var(--panel); }
+    .funnel-row.not-clickable { cursor: default; }
+    .funnel-row.not-clickable:hover { background: transparent; }
+    .funnel-row.dropout .funnel-bar-fill {
+      background: linear-gradient(90deg, #B85C4A 0%, #8F4031 100%);
+    }
+    .funnel-chevron {
+      color: var(--gold);
+      font-size: 11px;
+      transition: transform 0.2s ease;
+      text-align: center;
+    }
+    .funnel-row.expanded .funnel-chevron { transform: rotate(90deg); }
+    .funnel-row.not-clickable .funnel-chevron { color: transparent; }
     .funnel-label { font-weight: 600; font-size: 13px; }
     .funnel-bar-track {
       height: 14px; background: var(--panel); border-radius: 999px; overflow: hidden;
@@ -237,6 +254,22 @@
     .funnel-stat { text-align: right; font-size: 13px; font-variant-numeric: tabular-nums; }
     .funnel-stat .pct { color: var(--text); font-weight: 600; }
     .funnel-stat .n { color: var(--text-mute); font-size: 11px; }
+    .funnel-emails {
+      margin: 4px 0 12px 30px;
+      padding: 10px 14px;
+      background: var(--panel);
+      border-left: 2px solid var(--gold);
+      border-radius: 4px;
+      font-size: 12px;
+      display: none;
+    }
+    .funnel-emails.open { display: block; }
+    .funnel-emails ul { margin: 0; padding-left: 16px; }
+    .funnel-emails li { margin: 2px 0; color: var(--text); }
+    .funnel-emails li .email-name { color: var(--text-dim); margin-left: 6px; }
+    .funnel-emails .empty {
+      color: var(--text-mute); font-style: italic;
+    }
 
     .signup-row {
       display: grid; grid-template-columns: 90px 1fr 60px;
@@ -582,8 +615,8 @@
           <div class="two-col">
             <div class="section">
               <h2><span class="h2-eyebrow">Funnel</span>72-Hour Power Reset completion</h2>
-              ${renderFunnel(c)}
-              <div class="footnote">Based on members who joined in this range and logged in at least once. Total: ${fmtNum(c.total_logged_in || 0)}.</div>
+              ${renderFunnel(c, d.completionDetails)}
+              <div class="footnote">Click any row to see who's in it. Total members who joined &amp; logged in this range: ${fmtNum(c.total_logged_in || 0)}.</div>
             </div>
             <div class="section">
               <h2><span class="h2-eyebrow">Tier mix</span>Members by tier &amp; plan</h2>
@@ -595,7 +628,7 @@
                     : (d.tierCounts || []).map(t => `
                       <tr>
                         <td><span class="tier-badge ${t.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(tierLabel(t.tier))}</span></td>
-                        <td>${escapeHtml(t.plan)}</td>
+                        <td>${t.plan === 'none' ? '—' : escapeHtml(t.plan)}</td>
                         <td class="num">${fmtNum(t.n)}</td>
                       </tr>
                     `).join("")}
@@ -715,25 +748,83 @@
       `;
     }
 
-    function renderFunnel(c) {
+    function renderFunnel(c, details) {
       const total = c.total_logged_in || 0;
+      details = details || [];
+
+      // Bucket members by the day they're currently stuck at. last_completed_day
+      // values: 0 (or null) = logged in but did nothing, 1 = finished Day 1
+      // but not 2, etc.
+      const buckets = { 0: [], 1: [], 2: [], 3: [] };
+      details.forEach(u => {
+        const d = Math.max(0, Math.min(3, u.last_completed_day || 0));
+        buckets[d].push(u);
+      });
+
+      // Email lists per stage. Day 1 cumulative = users who completed >=1,
+      // Day 2 cumulative = users who completed >=2, etc. Stuck = exclusive
+      // (completed 0).
+      const emailsByStage = {
+        "logged_in": details,
+        "stuck": buckets[0],
+        "d1": buckets[1].concat(buckets[2]).concat(buckets[3]),
+        "d2": buckets[2].concat(buckets[3]),
+        "d3": buckets[3],
+      };
+
       const rows = [
-        { label: "Logged in", count: total, pct: 100 },
-        { label: "Day 1", count: c.d1 || 0, pct: total ? ((c.d1 || 0) / total) * 100 : 0 },
-        { label: "Day 2", count: c.d2 || 0, pct: total ? ((c.d2 || 0) / total) * 100 : 0 },
-        { label: "Day 3", count: c.d3 || 0, pct: total ? ((c.d3 || 0) / total) * 100 : 0 },
+        { stage: "logged_in", label: "Logged in", count: total, pct: 100, dropout: false },
+        { stage: "d1", label: "Day 1", count: c.d1 || 0, pct: total ? ((c.d1 || 0) / total) * 100 : 0, dropout: false },
+        { stage: "d2", label: "Day 2", count: c.d2 || 0, pct: total ? ((c.d2 || 0) / total) * 100 : 0, dropout: false },
+        { stage: "d3", label: "Day 3", count: c.d3 || 0, pct: total ? ((c.d3 || 0) / total) * 100 : 0, dropout: false },
+        { stage: "stuck", label: "Didn't start", count: buckets[0].length, pct: total ? (buckets[0].length / total) * 100 : 0, dropout: true },
       ];
-      return rows.map(r => `
-        <div class="funnel-row">
-          <div class="funnel-label">${escapeHtml(r.label)}</div>
-          <div class="funnel-bar-track"><div class="funnel-bar-fill" style="width:${r.pct}%;"></div></div>
-          <div class="funnel-stat">
-            <div class="pct">${r.pct.toFixed(1)}%</div>
-            <div class="n">${fmtNum(r.count)} members</div>
+
+      return rows.map((r, i) => {
+        const emails = emailsByStage[r.stage] || [];
+        const hasEmails = emails.length > 0;
+        const rowId = `funnel-row-${r.stage}`;
+        const emailsId = `funnel-emails-${r.stage}`;
+        return `
+          <div class="funnel-row ${r.dropout ? 'dropout' : ''} ${hasEmails ? '' : 'not-clickable'}" id="${rowId}" ${hasEmails ? `onclick="toggleFunnelRow('${r.stage}')"` : ''}>
+            <div class="funnel-chevron">▶</div>
+            <div class="funnel-label">${escapeHtml(r.label)}</div>
+            <div class="funnel-bar-track"><div class="funnel-bar-fill" style="width:${r.pct}%;"></div></div>
+            <div class="funnel-stat">
+              <div class="pct">${r.pct.toFixed(1)}%</div>
+              <div class="n">${fmtNum(r.count)} ${r.count === 1 ? 'member' : 'members'}</div>
+            </div>
           </div>
-        </div>
-      `).join("");
+          <div class="funnel-emails" id="${emailsId}">
+            ${emails.length === 0
+              ? '<div class="empty">No members in this stage.</div>'
+              : `<ul>${emails.map(u => `
+                  <li>
+                    <span>${escapeHtml(u.email)}</span>
+                    ${u.display_name ? `<span class="email-name">(${escapeHtml(u.display_name)})</span>` : ''}
+                  </li>
+                `).join("")}</ul>`}
+          </div>
+        `;
+      }).join("");
     }
+
+    // Toggle a funnel row's email dropdown. Closes any other open one so only
+    // one is expanded at a time.
+    function toggleFunnelRow(stage) {
+      const allEmails = document.querySelectorAll('.funnel-emails');
+      const allRows = document.querySelectorAll('.funnel-row');
+      const targetEmails = document.getElementById('funnel-emails-' + stage);
+      const targetRow = document.getElementById('funnel-row-' + stage);
+      const wasOpen = targetEmails.classList.contains('open');
+      allEmails.forEach(el => el.classList.remove('open'));
+      allRows.forEach(el => el.classList.remove('expanded'));
+      if (!wasOpen) {
+        targetEmails.classList.add('open');
+        targetRow.classList.add('expanded');
+      }
+    }
+    window.toggleFunnelRow = toggleFunnelRow;
 
     function renderThrivecartSection(tc) {
       const summary = tc.summary || {};
