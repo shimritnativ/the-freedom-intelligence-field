@@ -31,6 +31,9 @@
 
 import { sql } from "@vercel/postgres";
 import { maybeRecordDayCompletion } from "../../lib/dayExtraction.js";
+import { getUserBySessionToken } from "../../lib/db.js";
+
+const ALLOWED_DOMAIN = "@shimritnativ.com";
 
 export const config = {
   // This can run for a while — each Haiku call is ~1-2s. Default 60s isn't
@@ -41,12 +44,34 @@ export const config = {
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
+  // CORS so the admin dashboard can call this from the browser.
+  res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-session-token, x-admin-token");
+
+  // Dual auth path:
+  //   1. ADMIN_TOKEN via header or query string (scripts/curl)
+  //   2. x-session-token from a logged-in @shimritnativ.com member (dashboard
+  //      button, no token to manage)
+  // Either passes through. This way you can lose the admin token and still
+  // run the backfill from the dashboard.
   const adminToken = process.env.ADMIN_TOKEN;
-  const provided =
+  const providedAdminToken =
     (req.headers && req.headers["x-admin-token"]) ||
     (req.query && req.query.token) ||
     "";
-  if (!adminToken || provided !== adminToken) {
+  const sessionToken = req.headers["x-session-token"];
+  let authorized = false;
+
+  if (adminToken && providedAdminToken === adminToken) {
+    authorized = true;
+  } else if (sessionToken) {
+    const user = await getUserBySessionToken(sessionToken);
+    if (user && (user.email || "").toLowerCase().endsWith(ALLOWED_DOMAIN)) {
+      authorized = true;
+    }
+  }
+  if (!authorized) {
     return res.status(401).json({ error: "unauthorized" });
   }
 
