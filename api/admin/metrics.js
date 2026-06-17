@@ -89,6 +89,7 @@ export default async function handler(req, res) {
       thrivecartByCoupon,
       thrivecartTopBuyers,
       thrivecartRevenueByDay,
+      thrivecartByProductCoupon,
     ] = await Promise.all([
       // 1. Members by tier × plan (filtered)
       sql`
@@ -316,6 +317,25 @@ export default async function handler(req, res) {
         GROUP BY day
         ORDER BY day DESC
       `),
+      // 15. Product × coupon cross-tab — every distinct SKU+coupon combination.
+      // This is the granular view that breaks out, e.g., "Power Reset with
+      // POWER50" separately from "Power Reset full price" so each launch lever
+      // is measurable independently.
+      safeQuery(sql`
+        SELECT
+          COALESCE(product_name, product_id, 'unknown') AS product,
+          COALESCE(coupon_code, '(full price)') AS coupon,
+          COUNT(*)::int AS orders,
+          COALESCE(SUM(amount_cents), 0)::bigint AS revenue_cents,
+          COALESCE(AVG(amount_cents), 0)::int AS avg_cents
+        FROM purchases
+        WHERE event_type = 'order.success'
+          AND email NOT LIKE ${excludePattern}
+          AND created_at >= ${fromIso}
+          AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
+        GROUP BY product, coupon
+        ORDER BY revenue_cents DESC, orders DESC
+      `),
     ]);
 
     return res.status(200).json({
@@ -341,6 +361,7 @@ export default async function handler(req, res) {
         summary: thrivecartRevenue ? thrivecartRevenue.rows[0] : null,
         byProduct: thrivecartByProduct ? thrivecartByProduct.rows : [],
         byCoupon: thrivecartByCoupon ? thrivecartByCoupon.rows : [],
+        byProductCoupon: thrivecartByProductCoupon ? thrivecartByProductCoupon.rows : [],
         topBuyers: thrivecartTopBuyers ? thrivecartTopBuyers.rows : [],
         byDay: thrivecartRevenueByDay ? thrivecartRevenueByDay.rows : [],
       },
