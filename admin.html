@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>The Field — Members Metrics</title>
+  <title>The Field — Team Metrics</title>
   <style>
     :root {
       --bg: #FAF5E4;
@@ -730,10 +730,19 @@
               <h2><span class="h2-eyebrow">Funnel</span>72-Hour Power Reset completion</h2>
               ${renderFunnel(c, d.completionDetails)}
               <div class="footnote">Base = ${fmtNum(c.total_members || 0)} Power Reset members. Top-level split: Never logged in + Logged in = ${fmtNum(c.total_members || 0)}. Indented rows break down the Logged-in group further (Day 1/2/3 are cumulative subsets, "Didn't start" is the leftover). Click any row to see who's in it.</div>
-              <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);">
-                <button class="preset-btn" onclick="runBackfill(false)" id="backfill-btn">Run completion backfill</button>
-                <button class="preset-btn" onclick="runBackfill(true)" id="backfill-dryrun-btn" style="margin-left: 6px;">Dry run first</button>
-                <div id="backfill-status" style="margin-top: 10px; font-size: 11px; color: var(--text-dim); font-style: italic;"></div>
+              <div style="margin-top: 16px; padding: 14px; border-top: 1px solid var(--border); background: var(--panel); border-radius: 8px;">
+                <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.18em; color: var(--gold); text-transform: uppercase; margin-bottom: 6px;">Find missing completions</div>
+                <div style="font-size: 12.5px; color: var(--text); margin-bottom: 12px; line-height: 1.55;">
+                  If a member tells you they finished Day 1 (or 2 or 3) but they don't show up in the funnel above, use this. It reads their past chat messages, finds the Day completion they did, and updates the funnel so they're counted. Useful for anyone who finished a Reset day before this auto-tracker existed.
+                </div>
+                <div style="font-size: 11.5px; color: var(--text-dim); margin-bottom: 12px; line-height: 1.5;">
+                  <strong style="color: var(--text);">Step 1 (safe):</strong> &ldquo;Just check, don't change anything&rdquo; tells you how many old messages will be looked at, without touching the funnel. Useful to see scope before running for real.
+                  <br>
+                  <strong style="color: var(--text);">Step 2:</strong> &ldquo;Find &amp; record completions&rdquo; actually does the work: scans every past chat, picks out the ones that look like a Day completion, asks Claude Haiku to read them carefully, and adds the recorded completions to the funnel. Takes ~30-60 seconds. You can run it any time without breaking anything; it won't double-count anyone.
+                </div>
+                <button class="preset-btn" onclick="runBackfill(true)" id="backfill-dryrun-btn">Just check, don't change anything</button>
+                <button class="preset-btn" onclick="runBackfill(false)" id="backfill-btn" style="margin-left: 6px; background: var(--gold); color: var(--dark); border-color: var(--gold);">Find &amp; record completions</button>
+                <div id="backfill-status" style="margin-top: 12px; font-size: 12px; color: var(--text); font-style: italic;"></div>
               </div>
             </div>
             <div class="section" id="panel-tier-mix">
