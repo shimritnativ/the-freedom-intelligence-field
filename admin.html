@@ -316,6 +316,17 @@
     }
     .tier-preview { background: rgba(201, 168, 76, 0.18); color: #8B6F2F; }
     .tier-full { background: rgba(74, 124, 58, 0.18); color: var(--green); }
+    /* Comp pill — sits inline next to emails of Unlimited users who haven't
+       actually paid (team accounts, GEO100 comps, admin-granted access). */
+    .comp-pill {
+      display: inline-block;
+      font-size: 9px; font-weight: 700; letter-spacing: 0.14em;
+      padding: 2px 7px; border-radius: 999px; text-transform: uppercase;
+      background: rgba(184, 92, 74, 0.14);
+      color: #B85C4A;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
 
     .funnel-row {
       display: grid; grid-template-columns: 18px 110px 1fr 110px;
@@ -433,7 +444,7 @@
   </div>
 
   <script>
-    const STORAGE_KEY = "tfif_session_v1";
+    const STORAGE_KEY = "tfif_session_v1"; // Field member session
     const RANGE_STORAGE_KEY = "tfif_admin_range_v1";
     const root = document.getElementById("root");
 
@@ -554,7 +565,7 @@
       let token;
       try { token = localStorage.getItem(STORAGE_KEY); } catch { token = null; }
       if (!token) {
-        renderGate("You need to log in to The Field first. Open the app, log in, then come back here.");
+        renderGate("You need to log in to The Field first. Open the app, log in with your @shimritnativ.com email, then come back here.");
         return;
       }
 
@@ -573,7 +584,7 @@
           return;
         }
         if (r.status === 403) {
-          renderGate("This page is restricted to the @shimritnativ.com team.");
+          renderGate("This page is restricted to @shimritnativ.com Field members.");
           return;
         }
         if (!r.ok) {
@@ -813,7 +824,7 @@
                   ? '<tr><td colspan="5" class="empty-state">No Unlimited messages in the last 30 days.</td></tr>'
                   : (d.perUserUnlimited || []).map(u => `
                     <tr>
-                      <td>${escapeHtml(u.email)}</td>
+                      <td>${escapeHtml(u.email)}${u.has_paid_purchase ? '' : '<span class="comp-pill" title="No real paid purchase. Comp account, team member, or used GEO100 free coupon.">comp</span>'}</td>
                       <td>${escapeHtml(u.display_name || "—")}</td>
                       <td>${escapeHtml(u.subscription_plan || "—")}</td>
                       <td class="num">${fmtNum(u.messages_30d)}</td>
