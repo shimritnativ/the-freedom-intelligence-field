@@ -50,7 +50,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "method_not_allowed" });
   }
 
-  // ===== Auth =====
+  // ===== Auth — Field session only =====
+  // Access is restricted to Field members whose email ends in @shimritnativ.com.
+  // The team logs into the Field normally; that same session unlocks /admin.
   const token = req.headers["x-session-token"];
   if (!token) return res.status(401).json({ error: "no_token" });
   const user = await getUserBySessionToken(token);
@@ -59,6 +61,7 @@ export default async function handler(req, res) {
   if (!email.endsWith(ALLOWED_DOMAIN)) {
     return res.status(403).json({ error: "forbidden_domain" });
   }
+  const displayName = user.display_name;
 
   // ===== Date range =====
   // `from` defaults to LAUNCH_DATE so we never count test accounts.
@@ -170,7 +173,11 @@ export default async function handler(req, res) {
         WHERE s.session_type = 'unlimited'
           AND u.email NOT LIKE ${excludePattern}
       `,
-      // 5. Top Unlimited users by message count, last 30 days
+      // 5. Top Unlimited users by message count, last 30 days. Also flags
+      // whether each member has any REAL paid purchase — anyone showing up
+      // here without a non-zero, non-test-coupon purchase is a comp/test
+      // account (team member, GEO100 user, admin-granted, etc.) and gets a
+      // visual "COMP" pill in the UI so revenue-impact users are obvious.
       sql`
         SELECT
           u.email,
@@ -178,7 +185,14 @@ export default async function handler(req, res) {
           u.tier::text AS tier,
           u.subscription_plan,
           COUNT(*) FILTER (WHERE m.role = 'user')::int AS messages_30d,
-          MAX(m.created_at) AS last_message_at
+          MAX(m.created_at) AS last_message_at,
+          EXISTS (
+            SELECT 1 FROM purchases p
+            WHERE p.email = u.email
+              AND p.event_type = 'order.success'
+              AND p.amount_cents > 0
+              AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+          ) AS has_paid_purchase
         FROM messages m
         JOIN sessions s ON s.id = m.session_id
         JOIN users u ON u.id = m.user_id
@@ -422,7 +436,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       asOf: new Date().toISOString(),
-      viewer: { email: user.email, displayName: user.display_name },
+      viewer: { email: email, displayName: displayName },
       dateRange: {
         from: fromIso,
         to: toIso,
