@@ -97,7 +97,9 @@ export default async function handler(req, res) {
       thrivecartRevenueByDay,
       thrivecartByProductCoupon,
       completionDetails,
-      today,
+      todaySignups,
+      todayRevenue,
+      todayActivity,
     ] = await Promise.all([
       // 1. Members by tier × plan (filtered)
       sql`
@@ -260,7 +262,7 @@ export default async function handler(req, res) {
           COUNT(DISTINCT email) FILTER (WHERE event_type = 'order.success')::int AS unique_buyers
         FROM purchases
         WHERE email NOT LIKE ${excludePattern}
-          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons}::text[])
+          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
       `),
@@ -273,7 +275,7 @@ export default async function handler(req, res) {
         FROM purchases
         WHERE event_type = 'order.success'
           AND email NOT LIKE ${excludePattern}
-          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons}::text[])
+          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
         GROUP BY product
@@ -290,7 +292,7 @@ export default async function handler(req, res) {
         FROM purchases
         WHERE event_type = 'order.success'
           AND email NOT LIKE ${excludePattern}
-          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons}::text[])
+          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
         GROUP BY coupon
@@ -306,7 +308,7 @@ export default async function handler(req, res) {
         FROM purchases
         WHERE event_type = 'order.success'
           AND email NOT LIKE ${excludePattern}
-          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons}::text[])
+          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
         GROUP BY email
@@ -322,7 +324,7 @@ export default async function handler(req, res) {
         FROM purchases
         WHERE event_type = 'order.success'
           AND email NOT LIKE ${excludePattern}
-          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons}::text[])
+          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
         GROUP BY day
@@ -339,7 +341,7 @@ export default async function handler(req, res) {
         FROM purchases
         WHERE event_type = 'order.success'
           AND email NOT LIKE ${excludePattern}
-          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons}::text[])
+          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
         GROUP BY product, coupon
@@ -363,35 +365,32 @@ export default async function handler(req, res) {
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
         ORDER BY last_completed_day DESC NULLS LAST, first_login_at DESC
       `,
-      // 17. Today's snapshot — drives the "Today's Highlights" strip at the
-      // top of the dashboard. All metrics are "since midnight today" using
-      // the server's clock. Team domain excluded everywhere.
-      sql`
+      // 17. Today's snapshot — split into 3 lightweight queries because a
+      // single multi-subquery statement caused parameter-binding issues with
+      // @vercel/postgres. Each query is independently safeQuery-wrapped so a
+      // missing table never breaks the whole dashboard.
+      safeQuery(sql`
         SELECT
-          (SELECT COUNT(*)::int FROM users
-             WHERE kajabi_entitled = true
-               AND email NOT LIKE ${excludePattern}
-               AND created_at >= date_trunc('day', NOW())) AS signups_today,
-          (SELECT COUNT(*)::int FROM users
-             WHERE kajabi_entitled = true
-               AND email NOT LIKE ${excludePattern}
-               AND tier = 'preview'
-               AND created_at >= date_trunc('day', NOW())) AS signups_today_reset,
-          (SELECT COUNT(*)::int FROM users
-             WHERE kajabi_entitled = true
-               AND email NOT LIKE ${excludePattern}
-               AND tier = 'full'
-               AND created_at >= date_trunc('day', NOW())) AS signups_today_unlimited,
-          (SELECT COALESCE(SUM(amount_cents), 0)::bigint FROM purchases
-             WHERE event_type = 'order.success'
-               AND email NOT LIKE ${excludePattern}
-               AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons}::text[])
-               AND created_at >= date_trunc('day', NOW())) AS revenue_today_cents,
-          (SELECT COUNT(*)::int FROM purchases
-             WHERE event_type = 'order.success'
-               AND email NOT LIKE ${excludePattern}
-               AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons}::text[])
-               AND created_at >= date_trunc('day', NOW())) AS orders_today,
+          COUNT(*)::int AS signups_today,
+          COUNT(*) FILTER (WHERE tier = 'preview')::int AS signups_today_reset,
+          COUNT(*) FILTER (WHERE tier = 'full')::int AS signups_today_unlimited
+        FROM users
+        WHERE kajabi_entitled = true
+          AND email NOT LIKE ${excludePattern}
+          AND created_at >= date_trunc('day', NOW())
+      `),
+      safeQuery(sql`
+        SELECT
+          COALESCE(SUM(amount_cents), 0)::bigint AS revenue_today_cents,
+          COUNT(*)::int AS orders_today
+        FROM purchases
+        WHERE event_type = 'order.success'
+          AND email NOT LIKE ${excludePattern}
+          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
+          AND created_at >= date_trunc('day', NOW())
+      `),
+      safeQuery(sql`
+        SELECT
           (SELECT COUNT(*)::int FROM day_completions dc
              JOIN users u ON u.id = dc.user_id
              WHERE u.email NOT LIKE ${excludePattern}
@@ -409,7 +408,7 @@ export default async function handler(req, res) {
                AND s.session_type = 'unlimited'
                AND m.role = 'user'
                AND m.created_at >= date_trunc('day', NOW())) AS unlimited_messages_today
-      `,
+      `),
     ]);
 
     return res.status(200).json({
@@ -421,7 +420,11 @@ export default async function handler(req, res) {
         launchDate: LAUNCH_DATE,
         excludedDomain: ALLOWED_DOMAIN,
       },
-      today: today.rows[0],
+      today: {
+        ...(todaySignups ? todaySignups.rows[0] : {}),
+        ...(todayRevenue ? todayRevenue.rows[0] : {}),
+        ...(todayActivity ? todayActivity.rows[0] : {}),
+      },
       tierCounts: tierCounts.rows,
       completion: completion.rows[0],
       completionDetails: completionDetails.rows,
