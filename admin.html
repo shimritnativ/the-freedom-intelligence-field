@@ -144,10 +144,106 @@
       border: 1px solid var(--gold-line);
       border-radius: 12px;
       padding: 18px 18px 16px;
+      position: relative;
+      transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
     }
+    .kpi.clickable { cursor: pointer; }
+    .kpi.clickable:hover {
+      border-color: var(--gold);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(201, 168, 76, 0.18);
+    }
+    .kpi.clickable::after {
+      content: "↓";
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      color: var(--gold);
+      font-size: 13px;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+    .kpi.clickable:hover::after { opacity: 1; }
     .kpi.kpi-revenue {
       background: linear-gradient(135deg, var(--gold-soft) 0%, var(--panel) 100%);
       border-color: var(--gold);
+    }
+    /* Flash effect when scrolled-to via KPI card click */
+    .section.flash {
+      animation: section-flash 1.4s ease-out;
+    }
+    @keyframes section-flash {
+      0% { box-shadow: 0 0 0 4px var(--gold), 0 12px 40px rgba(0, 0, 0, 0.08); }
+      100% { box-shadow: 0 0 0 0 rgba(201, 168, 76, 0), 0 12px 40px rgba(0, 0, 0, 0.08); }
+    }
+
+    /* Today's Highlights strip */
+    .highlights {
+      background: linear-gradient(135deg, var(--gold-soft) 0%, var(--panel) 100%);
+      border: 1px solid var(--gold);
+      border-radius: 14px;
+      padding: 18px 22px 16px;
+      margin-bottom: 22px;
+    }
+    .highlights-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .highlights-eyebrow {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      color: var(--gold);
+      text-transform: uppercase;
+    }
+    .highlights-title {
+      font-family: Georgia, serif;
+      font-style: italic;
+      font-size: 17px;
+      color: var(--text);
+      margin: 4px 0 0;
+    }
+    .highlights-date {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-style: italic;
+    }
+    .highlights-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .highlight {
+      background: rgba(255, 255, 255, 0.6);
+      border: 1px solid var(--gold-line);
+      border-radius: 10px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+    .highlight-value {
+      font-family: Georgia, serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.1;
+      min-width: 32px;
+    }
+    .highlight-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      line-height: 1.35;
+      flex: 1;
+    }
+    .highlight-label strong { color: var(--text); font-weight: 600; }
+    .highlights-quiet {
+      font-style: italic;
+      color: var(--text-mute);
+      font-size: 13px;
+      padding: 8px 0;
     }
     .kpi-label {
       font-size: 10px;
@@ -572,37 +668,38 @@
           </div>
 
           ${renderControls()}
+          ${renderHighlights(d.today)}
 
-          <!-- KPI strip -->
+          <!-- KPI strip — every card scrolls to its detail section on click -->
           <div class="kpi-grid">
-            <div class="kpi">
+            <div class="kpi clickable" onclick="scrollToSection('panel-tier-mix')">
               <div class="kpi-label">Total Members</div>
               <div class="kpi-value">${fmtNum(totalMembers)}</div>
               <div class="kpi-sub">${fmtNum(resetTotal)} Reset · ${fmtNum(unlimitedTotal)} Unlimited</div>
             </div>
-            <div class="kpi">
+            <div class="kpi clickable" onclick="scrollToSection('panel-tier-mix')">
               <div class="kpi-label">72-Hour Reset</div>
               <div class="kpi-value">${fmtNum(resetTotal)}</div>
               <div class="kpi-sub">${fmtNum(w.active_reset || 0)} active · ${fmtNum(w.expired_reset || 0)} expired</div>
             </div>
-            <div class="kpi">
+            <div class="kpi clickable" onclick="scrollToSection('panel-unlimited-engagement')">
               <div class="kpi-label">Unlimited Field</div>
               <div class="kpi-value">${fmtNum(unlimitedTotal)}</div>
               <div class="kpi-sub">${fmtNum(unlimitedMonthly)} mo · ${fmtNum(unlimitedAnnual)} yr · ${fmtNum(unlimitedNone)} other</div>
             </div>
-            <div class="kpi">
+            <div class="kpi clickable" onclick="scrollToSection('panel-funnel')">
               <div class="kpi-label">Day 3 Completed</div>
               <div class="kpi-value">${fmtNum(c.d3 || 0)}</div>
               <div class="kpi-sub">${fmtPct(c.d3 || 0, c.total_logged_in || 0)} of logged-in</div>
             </div>
             ${tc.connected ? `
-              <div class="kpi kpi-revenue">
+              <div class="kpi kpi-revenue clickable" onclick="scrollToSection('panel-revenue')">
                 <div class="kpi-label">Net Revenue (ThriveCart)</div>
                 <div class="kpi-value">${fmtEur(netCents)}</div>
                 <div class="kpi-sub">${fmtNum(tcSummary.orders || 0)} orders · ${fmtNum(tcSummary.unique_buyers || 0)} buyers</div>
               </div>
             ` : ''}
-            <div class="kpi">
+            <div class="kpi clickable" onclick="scrollToSection('panel-unlimited-engagement')">
               <div class="kpi-label">Unlimited Active (7d)</div>
               <div class="kpi-value">${fmtNum(u.active_users_7d || 0)}</div>
               <div class="kpi-sub">${fmtNum(u.user_messages_7d || 0)} messages</div>
@@ -613,12 +710,12 @@
 
           <!-- Completion funnel + Tier breakdown -->
           <div class="two-col">
-            <div class="section">
+            <div class="section" id="panel-funnel">
               <h2><span class="h2-eyebrow">Funnel</span>72-Hour Power Reset completion</h2>
               ${renderFunnel(c, d.completionDetails)}
               <div class="footnote">Click any row to see who's in it. Total members who joined &amp; logged in this range: ${fmtNum(c.total_logged_in || 0)}.</div>
             </div>
-            <div class="section">
+            <div class="section" id="panel-tier-mix">
               <h2><span class="h2-eyebrow">Tier mix</span>Members by tier &amp; plan</h2>
               <table>
                 <thead><tr><th>Tier</th><th>Plan</th><th class="num">Members</th></tr></thead>
@@ -639,7 +736,7 @@
 
           <!-- Signups by day + Process usage -->
           <div class="two-col">
-            <div class="section">
+            <div class="section" id="panel-signups">
               <h2><span class="h2-eyebrow">Recent</span>Signups by day</h2>
               ${signupDates.length === 0
                 ? '<div class="empty-state">No signups in this range.</div>'
@@ -652,7 +749,7 @@
                 `).join("")
               }
             </div>
-            <div class="section">
+            <div class="section" id="panel-processes">
               <h2><span class="h2-eyebrow">Unlimited use</span>Top processes (last 30d, rolling)</h2>
               <table>
                 <thead><tr><th>Process</th><th class="num">Sessions</th><th class="num">Unique users</th></tr></thead>
@@ -672,7 +769,7 @@
           </div>
 
           <!-- Top Unlimited users -->
-          <div class="section">
+          <div class="section" id="panel-unlimited-engagement">
             <h2><span class="h2-eyebrow">Engagement</span>Top Unlimited members by messages (last 30d, rolling)</h2>
             <table>
               <thead>
@@ -698,7 +795,7 @@
           </div>
 
           <!-- Recent signups roster -->
-          <div class="section">
+          <div class="section" id="panel-roster">
             <h2><span class="h2-eyebrow">Roster</span>Most recent signups in this range (newest 25)</h2>
             <table>
               <thead>
@@ -726,7 +823,7 @@
           </div>
 
           <!-- Webhook activity -->
-          <div class="section">
+          <div class="section" id="panel-webhooks">
             <h2><span class="h2-eyebrow">Plumbing</span>Webhook activity (last 30d, rolling)</h2>
             <table>
               <thead><tr><th>Event type</th><th class="num">Count</th><th class="num">Most recent</th></tr></thead>
@@ -809,6 +906,92 @@
       }).join("");
     }
 
+    // Smooth-scroll to a section by ID and briefly flash a gold ring around
+    // it so the user's eye lands on the right place. Triggered by clicking
+    // any of the top KPI cards.
+    function scrollToSection(targetId) {
+      const el = document.getElementById(targetId);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.classList.remove("flash"); // restart animation if already flashed
+      void el.offsetWidth; // force reflow
+      el.classList.add("flash");
+      setTimeout(() => el.classList.remove("flash"), 1500);
+    }
+    window.scrollToSection = scrollToSection;
+
+    // Render the Today's Highlights strip. Shows a snapshot of activity since
+    // midnight: new signups, revenue, day completions, unlimited engagement.
+    // Renders a quiet placeholder if nothing has happened yet today.
+    function renderHighlights(today) {
+      const t = today || {};
+      const signups = Number(t.signups_today || 0);
+      const revenue = Number(t.revenue_today_cents || 0);
+      const orders = Number(t.orders_today || 0);
+      const completions = Number(t.completions_today || 0);
+      const activeUnlimited = Number(t.active_unlimited_today || 0);
+      const unlimitedMessages = Number(t.unlimited_messages_today || 0);
+      const nothingYet = signups === 0 && orders === 0 && completions === 0 && activeUnlimited === 0;
+
+      const todayLabel = new Date().toLocaleDateString(undefined, {
+        weekday: "long", month: "long", day: "numeric"
+      });
+
+      if (nothingYet) {
+        return `
+          <div class="highlights">
+            <div class="highlights-header">
+              <div>
+                <div class="highlights-eyebrow">Today's highlights</div>
+                <div class="highlights-title">A quiet start so far</div>
+              </div>
+              <div class="highlights-date">${escapeHtml(todayLabel)}</div>
+            </div>
+            <div class="highlights-quiet">No signups, sales, or completions yet today. Check back later or scroll for the live state of the launch.</div>
+          </div>
+        `;
+      }
+
+      const tiles = [];
+      if (signups > 0) {
+        const breakdown = [];
+        if (Number(t.signups_today_reset) > 0) breakdown.push(`${Number(t.signups_today_reset)} Reset`);
+        if (Number(t.signups_today_unlimited) > 0) breakdown.push(`${Number(t.signups_today_unlimited)} Unlimited`);
+        tiles.push({ value: signups, label: `new <strong>signup${signups === 1 ? '' : 's'}</strong>${breakdown.length ? ' &middot; ' + breakdown.join(' &middot; ') : ''}`, target: "panel-roster" });
+      }
+      if (revenue > 0) {
+        tiles.push({ value: fmtEur(revenue), label: `revenue from <strong>${orders} order${orders === 1 ? '' : 's'}</strong>`, target: "panel-revenue", isCurrency: true });
+      } else if (orders > 0) {
+        tiles.push({ value: orders, label: `free <strong>order${orders === 1 ? '' : 's'}</strong> today`, target: "panel-revenue" });
+      }
+      if (completions > 0) {
+        tiles.push({ value: completions, label: `Day <strong>completion${completions === 1 ? '' : 's'}</strong> across all 3 days`, target: "panel-funnel" });
+      }
+      if (activeUnlimited > 0) {
+        tiles.push({ value: activeUnlimited, label: `Unlimited member${activeUnlimited === 1 ? '' : 's'} active &middot; <strong>${unlimitedMessages} message${unlimitedMessages === 1 ? '' : 's'}</strong>`, target: "panel-unlimited-engagement" });
+      }
+
+      return `
+        <div class="highlights">
+          <div class="highlights-header">
+            <div>
+              <div class="highlights-eyebrow">Today's highlights</div>
+              <div class="highlights-title">What's happened since midnight</div>
+            </div>
+            <div class="highlights-date">${escapeHtml(todayLabel)}</div>
+          </div>
+          <div class="highlights-grid">
+            ${tiles.map(tile => `
+              <div class="highlight" onclick="scrollToSection('${tile.target}')" style="cursor: pointer;">
+                <div class="highlight-value">${tile.isCurrency ? tile.value : fmtNum(tile.value)}</div>
+                <div class="highlight-label">${tile.label}</div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    }
+
     // Toggle a funnel row's email dropdown. Closes any other open one so only
     // one is expanded at a time.
     function toggleFunnelRow(stage) {
@@ -836,7 +1019,7 @@
       const maxByDay = (tc.byDay || []).reduce((m, r) => Math.max(m, Number(r.revenue_cents || 0)), 0) || 1;
 
       return `
-        <div class="section">
+        <div class="section" id="panel-revenue">
           <h2><span class="h2-eyebrow">Revenue</span>ThriveCart purchases in this range</h2>
           <div class="kpi-grid" style="margin-bottom: 18px;">
             <div class="kpi kpi-revenue">
@@ -955,7 +1138,7 @@
 
     function renderThrivecartNotConnected() {
       return `
-        <div class="section">
+        <div class="section" id="panel-revenue">
           <h2><span class="h2-eyebrow">Setup needed</span>Connect ThriveCart for live revenue</h2>
           <p style="color: var(--text-dim); font-size: 13px;">
             Revenue data lights up the moment ThriveCart starts posting purchase webhooks to the new endpoint. Three steps:
