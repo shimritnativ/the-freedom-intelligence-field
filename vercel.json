@@ -20,6 +20,12 @@
       "destination": "/admin.html"
     }
   ],
+  "crons": [
+    {
+      "path": "/api/admin/backfill-completions?source=cron",
+      "schedule": "0 5 * * *"
+    }
+  ],
   "redirects": [
     {
       "source": "/",
