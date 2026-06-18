@@ -219,9 +219,14 @@ async function handleSend(req, res) {
       const senderEmail =
         (req.headers["x-admin-sender-email"] && String(req.headers["x-admin-sender-email"])) ||
         null;
+      // Optional tap-to-go destination. When set, the Field renders a small
+      // gold button at the bottom of the notification card — tapping it
+      // navigates to cta_url (internal ?process=X or external https://).
+      const ctaUrl = body.ctaUrl ? String(body.ctaUrl).slice(0, 500) : null;
+      const ctaLabel = body.ctaLabel ? String(body.ctaLabel).slice(0, 40) : null;
       const ins = await sql`
-        INSERT INTO notifications (title, body, audience, sent_by_email)
-        VALUES (${payload.title}, ${payload.body || ""}, 'all', ${senderEmail})
+        INSERT INTO notifications (title, body, audience, sent_by_email, cta_url, cta_label)
+        VALUES (${payload.title}, ${payload.body || ""}, 'all', ${senderEmail}, ${ctaUrl}, ${ctaLabel})
         RETURNING id
       `;
       inboxId = ins.rows[0]?.id || null;
