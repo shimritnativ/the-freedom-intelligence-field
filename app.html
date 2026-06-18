@@ -6880,21 +6880,26 @@ Begin.` },
   // (permission === "default"), AND we haven't already shown this user
   // the prompt (tracked in localStorage so reload doesn't re-prompt).
   // Bumped to v2 when the prompt copy was generalized from "Day 2/3 reminders"
-  // to "notifications from The Field." Existing members who hit "Maybe later"
-  // on v1 will see the new prompt once on their next visit. Members who
-  // already granted permission won't be re-prompted (Notification.permission
-  // check catches them).
+  // to "notifications from The Field."
   const NOTIF_PROMPT_KEY = "tfif_notif_prompt_shown_v2";
+
+  // The "already prompted" flag is scoped per-account email so team members
+  // on a shared browser (very common during testing — Geo logs in as
+  // multiple shimritnativ.com accounts on the same browser) each see the
+  // prompt once. For anonymous demo state, falls back to the global key.
+  function notifPromptKeyForAccount() {
+    const email = (state.userEmail || "").toLowerCase().trim();
+    return email ? `${NOTIF_PROMPT_KEY}__${email}` : NOTIF_PROMPT_KEY;
+  }
 
   function maybeShowNotifPrompt() {
     if (!pushSupported()) return;
     if (!state.sessionToken) return; // wait until logged in
 
-    // Force-show via URL param. Bypasses both the permission check and the
-    // localStorage "already prompted" flag. Designed for team UX review on
-    // accounts that already granted notifications — without this, the prompt
-    // would never appear because the early-return on permission === "granted"
-    // would catch it. Append `?show_notif_prompt=1` to any Field URL to use.
+    const email = (state.userEmail || "").toLowerCase();
+    const isTeam = email.endsWith("@shimritnativ.com");
+
+    // ?show_notif_prompt=1 forces the prompt regardless of any check.
     let forced = false;
     try {
       const url = new URL(window.location.href);
@@ -6902,9 +6907,17 @@ Begin.` },
     } catch {}
 
     if (!forced) {
-      if (Notification.permission !== "default") return; // already granted or blocked
+      // Team accounts bypass the Notification.permission check. They've often
+      // already granted permission at the origin level (from prior testing),
+      // which would normally block the prompt — but for demoing the UX to
+      // Shimrit and the team, we want the prompt to actually show. Click
+      // "Yes" is a no-op for already-subscribed accounts; click "Maybe later"
+      // just sets the per-account flag so it doesn't keep appearing.
+      if (!isTeam && Notification.permission !== "default") return;
+
+      // Per-account localStorage flag (see helper above).
       try {
-        if (localStorage.getItem(NOTIF_PROMPT_KEY)) return; // already prompted this user
+        if (localStorage.getItem(notifPromptKeyForAccount())) return;
       } catch {}
     }
 
@@ -6917,15 +6930,14 @@ Begin.` },
   }
 
   function onNotifPromptAccept() {
-    try { localStorage.setItem(NOTIF_PROMPT_KEY, String(Date.now())); } catch {}
+    try { localStorage.setItem(notifPromptKeyForAccount(), String(Date.now())); } catch {}
     state.notifPromptOpen = false;
     render();
-    // Now trigger the real OS permission flow + subscription save.
     enablePushNotifications();
   }
 
   function onNotifPromptDismiss() {
-    try { localStorage.setItem(NOTIF_PROMPT_KEY, String(Date.now())); } catch {}
+    try { localStorage.setItem(notifPromptKeyForAccount(), String(Date.now())); } catch {}
     state.notifPromptOpen = false;
     render();
   }
