@@ -680,6 +680,9 @@
           state.launchDate = data.dateRange.launchDate.slice(0, 10);
         }
         renderDashboard(data);
+        // Load the push subscribers list lazily after the main dashboard
+        // paints, so the "Send a notification" panel is ready to use.
+        setTimeout(() => loadPushSubscribers(), 100);
       } catch (err) {
         renderGate("Network error. Check your connection and refresh.");
       }
@@ -936,23 +939,48 @@
             </table>
           </div>
 
-          <!-- Push notification test panel — fire any reminder copy to
-               your own subscribed devices on demand. Useful for QA and
-               screenshots. Requires that you've already enabled notifs
-               on the device you want to receive on. -->
+          <!-- Push notification send panel — pick recipients, pick a
+               prepared reminder OR write custom copy, fire it. -->
           <div class="section" id="panel-push-test">
-            <h2><span class="h2-eyebrow">Test</span>Send a push notification to my devices</h2>
-            <p style="font-size: 12.5px; color: var(--text-dim); margin: 0 0 14px; line-height: 1.5;">
-              Click any button to fire that exact reminder to every device where you've enabled notifications. Use to preview, screenshot, or QA copy.
+            <h2><span class="h2-eyebrow">Notifications</span>Send a push notification</h2>
+            <p style="font-size: 12.5px; color: var(--text-dim); margin: 0 0 18px; line-height: 1.5;">
+              Send any of the prepared reminders or a custom message to one, many, or all members who have notifications enabled.
             </p>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              <button class="preset-btn" onclick="sendTestPush('day2_unlocked')">Day 2 unlocked</button>
-              <button class="preset-btn" onclick="sendTestPush('day2_nudge')">Day 2 nudge</button>
-              <button class="preset-btn" onclick="sendTestPush('day3_unlocked')">Day 3 unlocked</button>
-              <button class="preset-btn" onclick="sendTestPush('day3_nudge')">Day 3 nudge</button>
-              <button class="preset-btn" onclick="sendTestPush('window_closing')">Window closing</button>
-              <button class="preset-btn" onclick="sendTestPush('')" style="margin-left: 10px;">Generic test</button>
+
+            <div style="margin-bottom: 18px;">
+              <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.18em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px;">Recipients</div>
+              <div id="push-subscribers-list" style="background: var(--panel); border: 1px solid var(--gold-line); border-radius: 8px; padding: 10px 12px; max-height: 240px; overflow-y: auto;">
+                <div style="font-size: 12px; color: var(--text-mute); font-style: italic; text-align: center; padding: 8px 0;">Loading subscribers…</div>
+              </div>
+              <div style="margin-top: 6px;">
+                <label style="font-size: 11.5px; color: var(--text-dim); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                  <input type="checkbox" id="push-select-all" onclick="togglePushSelectAll()" />
+                  <span>Select all subscribers</span>
+                </label>
+              </div>
             </div>
+
+            <div style="margin-bottom: 18px;">
+              <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.18em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px;">Message</div>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
+                <button type="button" class="push-msg-btn preset-btn" data-key="day2_unlocked" onclick="selectPushMessage('day2_unlocked')">Day 2 unlocked</button>
+                <button type="button" class="push-msg-btn preset-btn" data-key="day2_nudge" onclick="selectPushMessage('day2_nudge')">Day 2 nudge</button>
+                <button type="button" class="push-msg-btn preset-btn" data-key="day3_unlocked" onclick="selectPushMessage('day3_unlocked')">Day 3 unlocked</button>
+                <button type="button" class="push-msg-btn preset-btn" data-key="day3_nudge" onclick="selectPushMessage('day3_nudge')">Day 3 nudge</button>
+                <button type="button" class="push-msg-btn preset-btn" data-key="window_closing" onclick="selectPushMessage('window_closing')">Window closing</button>
+                <button type="button" class="push-msg-btn preset-btn" data-key="custom" onclick="selectPushMessage('custom')">Custom…</button>
+              </div>
+              <div id="push-message-preview" style="background: var(--panel); border: 1px solid var(--gold-line); border-radius: 8px; padding: 12px 14px;">
+                <div id="push-preview-title" style="font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px;">Pick a message above</div>
+                <div id="push-preview-body" style="font-size: 12px; color: var(--text-dim); line-height: 1.4;">The preview will appear here.</div>
+              </div>
+              <div id="push-custom-form" style="display: none; margin-top: 10px;">
+                <input type="text" id="push-custom-title" placeholder="Title (e.g., A small reminder)" maxlength="80" style="width: 100%; padding: 8px 10px; border: 1px solid var(--gold-line); border-radius: 6px; font-family: inherit; font-size: 13px; margin-bottom: 6px; box-sizing: border-box;" oninput="updateCustomPreview()" />
+                <textarea id="push-custom-body" placeholder="Body (e.g., The Field is here when you are.)" maxlength="300" rows="3" style="width: 100%; padding: 8px 10px; border: 1px solid var(--gold-line); border-radius: 6px; font-family: inherit; font-size: 13px; resize: vertical; box-sizing: border-box;" oninput="updateCustomPreview()"></textarea>
+              </div>
+            </div>
+
+            <button class="preset-btn" style="background: var(--gold); color: var(--dark); border-color: var(--gold); padding: 8px 18px; font-weight: 600;" onclick="sendBulkPush()" id="push-send-btn">Send notification</button>
             <div id="push-test-status" style="margin-top: 12px; font-size: 12px; color: var(--text-dim); font-style: italic;"></div>
           </div>
 
@@ -1354,42 +1382,148 @@
     }
     window.runBackfill = runBackfill;
 
-    // Fire a test push notification to the logged-in viewer's subscribed
-    // devices. `key` selects which reminder copy to send (matches the keys
-    // in lib/push.js REMINDER_COPY). Empty key = generic test message.
-    async function sendTestPush(key) {
+    // ===== Push notification sender =====
+    // Loads subscribers on demand, lets admin pick recipients (one, many, all),
+    // pick a prepared reminder OR write custom copy, and fire it.
+    const REMINDER_COPY_CLIENT = {
+      day2_unlocked: { title: "Day 2 is open ✨", body: "Your Day 1 work is done. Day 2 — Decision and Action Alignment — is ready when you are." },
+      day2_nudge: { title: "Day 2 is waiting", body: "You started yesterday. The clarity from Day 1 deepens when Day 2 lands today." },
+      day3_unlocked: { title: "Day 3 is open ✨", body: "The peak of your Reset. Today the Field takes you inside the frequency of what you decided." },
+      day3_nudge: { title: "Day 3 is waiting", body: "The frequency calibration is the last piece. Show up today." },
+      window_closing: { title: "Your Reset window closes soon", body: "Less than 12 hours left to complete the 72-Hour Power Reset. The Field is here when you are." },
+    };
+
+    let pushSubscribers = [];
+    let selectedPushKey = null;
+    async function loadPushSubscribers() {
+      const list = document.getElementById("push-subscribers-list");
+      const token = localStorage.getItem(STORAGE_KEY);
+      if (!token || !list) return;
+      try {
+        const r = await fetch("/api/push?action=subscribers", {
+          method: "POST",
+          headers: { "x-session-token": token },
+        });
+        if (!r.ok) {
+          list.innerHTML = '<div style="font-size: 12px; color: var(--text-mute); font-style: italic; text-align: center; padding: 8px 0;">Could not load subscribers (HTTP ' + r.status + ').</div>';
+          return;
+        }
+        const data = await r.json();
+        pushSubscribers = data.subscribers || [];
+        if (pushSubscribers.length === 0) {
+          list.innerHTML = '<div style="font-size: 12px; color: var(--text-mute); font-style: italic; text-align: center; padding: 12px 0;">No members have enabled notifications yet.</div>';
+          return;
+        }
+        list.innerHTML = pushSubscribers.map(s => `
+          <label style="display: flex; align-items: center; gap: 10px; padding: 6px 4px; cursor: pointer; border-radius: 4px;">
+            <input type="checkbox" class="push-recipient" value="${escapeHtml(s.id)}" data-email="${escapeHtml(s.email)}" />
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 12.5px; color: var(--text); font-weight: 500;">${escapeHtml(s.email)}${s.display_name ? ' <span style="color: var(--text-dim); font-weight: 400;">(' + escapeHtml(s.display_name) + ')</span>' : ''}</div>
+              <div style="font-size: 11px; color: var(--text-mute);">${s.devices} device${s.devices === 1 ? '' : 's'} · ${s.tier === 'full' ? 'Unlimited' : 'Power Reset'}${s.last_sent ? ' · last sent ' + fmtRelative(s.last_sent) : ''}</div>
+            </div>
+          </label>
+        `).join("");
+      } catch (err) {
+        list.innerHTML = '<div style="font-size: 12px; color: var(--text-mute); font-style: italic; text-align: center; padding: 8px 0;">Network error loading subscribers.</div>';
+      }
+    }
+
+    function togglePushSelectAll() {
+      const checked = document.getElementById("push-select-all").checked;
+      document.querySelectorAll(".push-recipient").forEach(cb => { cb.checked = checked; });
+    }
+
+    function selectPushMessage(key) {
+      selectedPushKey = key;
+      // Highlight the chosen button
+      document.querySelectorAll(".push-msg-btn").forEach(btn => {
+        if (btn.dataset.key === key) {
+          btn.style.background = "var(--gold)";
+          btn.style.color = "var(--dark)";
+          btn.style.borderColor = "var(--gold)";
+        } else {
+          btn.style.background = "";
+          btn.style.color = "";
+          btn.style.borderColor = "";
+        }
+      });
+      const customForm = document.getElementById("push-custom-form");
+      if (key === "custom") {
+        customForm.style.display = "";
+        updateCustomPreview();
+      } else {
+        customForm.style.display = "none";
+        const copy = REMINDER_COPY_CLIENT[key];
+        if (copy) {
+          document.getElementById("push-preview-title").textContent = copy.title;
+          document.getElementById("push-preview-body").textContent = copy.body;
+        }
+      }
+    }
+
+    function updateCustomPreview() {
+      const title = document.getElementById("push-custom-title").value || "(no title)";
+      const body = document.getElementById("push-custom-body").value || "(no body)";
+      document.getElementById("push-preview-title").textContent = title;
+      document.getElementById("push-preview-body").textContent = body;
+    }
+
+    async function sendBulkPush() {
       const status = document.getElementById("push-test-status");
       const token = localStorage.getItem(STORAGE_KEY);
+      const sendBtn = document.getElementById("push-send-btn");
       if (!token) {
         status.textContent = "Session expired. Refresh the page and try again.";
         return;
       }
-      status.textContent = "Sending…";
+      const checked = Array.from(document.querySelectorAll(".push-recipient:checked"));
+      if (checked.length === 0) {
+        status.textContent = "Pick at least one recipient first.";
+        return;
+      }
+      if (!selectedPushKey) {
+        status.textContent = "Pick a message above.";
+        return;
+      }
+      const body = { userIds: checked.map(cb => cb.value) };
+      if (selectedPushKey === "custom") {
+        const title = document.getElementById("push-custom-title").value.trim();
+        const bodyText = document.getElementById("push-custom-body").value.trim();
+        if (!title) { status.textContent = "Custom title is required."; return; }
+        body.payload = { title, body: bodyText };
+      } else {
+        body.key = selectedPushKey;
+      }
+      sendBtn.disabled = true;
+      status.textContent = "Sending to " + checked.length + " recipient" + (checked.length === 1 ? "" : "s") + "…";
       try {
-        const url = "/api/push?action=test" + (key ? "&key=" + encodeURIComponent(key) : "");
-        const r = await fetch(url, {
+        const r = await fetch("/api/push?action=send", {
           method: "POST",
-          headers: { "x-session-token": token },
+          headers: { "Content-Type": "application/json", "x-session-token": token },
+          body: JSON.stringify(body),
         });
         const data = await r.json().catch(() => ({}));
         if (!r.ok) {
-          status.textContent = "Failed: " + (data.error || ("HTTP " + r.status));
+          status.textContent = "Send failed: " + (data.error || ("HTTP " + r.status));
           return;
         }
-        if (data.no_subscriptions) {
-          status.innerHTML = "<strong>No subscriptions for your account.</strong> Enable notifications on at least one device first (popup or sidebar), then try again.";
-          return;
-        }
-        if (data.deduped) {
-          status.textContent = "Already sent. Reminder dedup is per-user lifetime; use the Generic test button instead.";
-          return;
-        }
-        status.innerHTML = "Sent to <strong>" + (data.sent || 0) + "</strong> device" + ((data.sent || 0) === 1 ? "" : "s") + ". Check your phone and desktop.";
+        const reached = data.usersReached || 0;
+        const noDevices = data.usersWithNoDevices || 0;
+        let msg = "Sent to <strong>" + (data.totalSent || 0) + "</strong> device" + ((data.totalSent || 0) === 1 ? "" : "s") + " across <strong>" + reached + "</strong> member" + (reached === 1 ? "" : "s") + ".";
+        if (noDevices > 0) msg += " " + noDevices + " selected member" + (noDevices === 1 ? "" : "s") + " had no active subscriptions.";
+        status.innerHTML = msg;
+        loadPushSubscribers(); // refresh last-sent timestamps
       } catch (err) {
         status.textContent = "Network error: " + (err.message || err);
+      } finally {
+        sendBtn.disabled = false;
       }
     }
-    window.sendTestPush = sendTestPush;
+
+    window.togglePushSelectAll = togglePushSelectAll;
+    window.selectPushMessage = selectPushMessage;
+    window.updateCustomPreview = updateCustomPreview;
+    window.sendBulkPush = sendBulkPush;
 
     // Expose for inline onclick handlers
     window.loadMetrics = loadMetrics;
