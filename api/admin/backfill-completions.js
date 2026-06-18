@@ -63,9 +63,17 @@ export default async function handler(req, res) {
   const sessionToken = req.headers["x-session-token"];
   let authorized = false;
 
-  if (adminToken && providedAdminToken === adminToken) {
+  // Vercel Cron Jobs hit this endpoint as a GET with the User-Agent
+  // "vercel-cron/1.0" — that's how we recognize the scheduled run vs an
+  // unauthenticated drive-by. The cron is fired daily by the schedule in
+  // vercel.json, no token required.
+  const userAgent = String(req.headers["user-agent"] || "");
+  const isVercelCron = userAgent.includes("vercel-cron");
+  if (isVercelCron) authorized = true;
+
+  if (!authorized && adminToken && providedAdminToken === adminToken) {
     authorized = true;
-  } else if (sessionToken) {
+  } else if (!authorized && sessionToken) {
     const user = await getUserBySessionToken(sessionToken);
     if (user && (user.email || "").toLowerCase().endsWith(ALLOWED_DOMAIN)) {
       authorized = true;
