@@ -592,11 +592,15 @@
       text-transform: uppercase;
     }
     .intel-quick--zero { opacity: 0.4; }
+    /* Positive-opportunity green for "hot" segments. Red signaled urgency
+       but read as a warning, which is the wrong mental model — these aren't
+       problems, they're high-value sales moments. Emerald says "ripe to
+       harvest" and stays MYP-warm. */
     .intel-quick--hot {
-      background: linear-gradient(135deg, rgba(184, 92, 74, 0.08), var(--bg-card));
-      border-color: rgba(184, 92, 74, 0.4);
+      background: linear-gradient(135deg, rgba(63, 128, 96, 0.08), var(--bg-card));
+      border-color: rgba(63, 128, 96, 0.4);
     }
-    .intel-quick--hot .intel-quick-label { color: #B85C4A; }
+    .intel-quick--hot .intel-quick-label { color: #3F8060; }
     /* Segment cards */
     .intel-card {
       background: var(--bg-card);
@@ -624,9 +628,12 @@
       text-transform: uppercase;
       white-space: nowrap;
     }
-    .intel-priority-chip--hot { background: #B85C4A; color: white; }
+    /* Priority chip palette — chosen to read as positive-opportunity, not
+       warning. Hot = ripe to harvest (emerald), Ready = premium ladder
+       (MYP gold), Nurture = gentle attention (warm taupe). */
+    .intel-priority-chip--hot { background: #3F8060; color: white; }
     .intel-priority-chip--ready { background: var(--gold); color: var(--dark); }
-    .intel-priority-chip--nurture { background: var(--text-mute); color: var(--bg); }
+    .intel-priority-chip--nurture { background: #8B7B5E; color: white; }
     .intel-card-title {
       font-family: Georgia, serif;
       font-style: italic;
