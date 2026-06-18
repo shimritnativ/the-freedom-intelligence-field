@@ -19,6 +19,9 @@ const LAUNCH_DATE = "2026-06-15"; // hard floor — no signups before this count
 // Coupons we never want polluting revenue stats. GEO100 was a free comp for
 // Tomer, used once for testing. Add others here as needed.
 const EXCLUDED_COUPONS = ["GEO100"];
+// Personal team gmail addresses that don't end in @shimritnativ.com but still
+// shouldn't show up in member-facing segments. Add new ones as the team grows.
+const EXTRA_EXCLUDED_EMAILS = ["ge.amaral3@gmail.com"];
 
 // Parse a YYYY-MM-DD query param into an ISO timestamp string we can safely
 // pass to Postgres. Returns null for empty/invalid input so the caller can
@@ -76,6 +79,9 @@ export default async function handler(req, res) {
   // Excluded coupons as a Postgres-friendly array for ANY() comparisons.
   // Coupon_code can be NULL, so we use COALESCE to make the comparison safe.
   const excludedCoupons = EXCLUDED_COUPONS;
+  // Extra emails (non-@shimritnativ.com team accounts) to exclude from
+  // Intelligence segments. Used as `u.email <> ALL(${extraExcluded})`.
+  const extraExcluded = EXTRA_EXCLUDED_EMAILS;
 
   try {
     // Fan out every query in parallel. Every query that touches users or
@@ -183,6 +189,7 @@ export default async function handler(req, res) {
         WHERE s.session_type = 'unlimited'
           AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
+          AND u.email <> ALL(${extraExcluded})
           AND EXISTS (
             SELECT 1 FROM purchases p
             WHERE p.email = u.email
@@ -219,6 +226,7 @@ export default async function handler(req, res) {
           AND u.kajabi_entitled = true
           AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
+          AND u.email <> ALL(${extraExcluded})
         GROUP BY u.id, u.email, u.display_name, u.tier, u.subscription_plan
         ORDER BY messages_30d DESC
         LIMIT 20
@@ -288,6 +296,7 @@ export default async function handler(req, res) {
           AND s.started_at > NOW() - INTERVAL '30 days'
           AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
+          AND u.email <> ALL(${extraExcluded})
         GROUP BY process_key
         ORDER BY sessions_started DESC
       `,
@@ -449,6 +458,7 @@ export default async function handler(req, res) {
           AND m.created_at > NOW() - INTERVAL '30 days'
           AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
+          AND u.email <> ALL(${extraExcluded})
           AND EXISTS (
             SELECT 1 FROM purchases p
             WHERE p.email = u.email
@@ -472,6 +482,7 @@ export default async function handler(req, res) {
           AND dc.day = 3
           AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
+          AND u.email <> ALL(${extraExcluded})
           AND EXISTS (
             SELECT 1 FROM purchases p2
             WHERE p2.email = u.email
@@ -495,6 +506,7 @@ export default async function handler(req, res) {
           AND p.coupon_code IN ('LAUNCHTEAM', 'LAUNCHTEAMUNLIMITED')
           AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
+          AND u.email <> ALL(${extraExcluded})
         GROUP BY u.id, u.email, u.display_name, u.last_completed_day, u.tier
         ORDER BY purchased_at DESC
       `),
@@ -517,6 +529,7 @@ export default async function handler(req, res) {
         WHERE u.tier = 'full'
           AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
+          AND u.email <> ALL(${extraExcluded})
           AND (lm.last_at IS NULL OR lm.last_at < NOW() - INTERVAL '14 days')
           AND EXISTS (
             SELECT 1 FROM purchases p
@@ -542,6 +555,7 @@ export default async function handler(req, res) {
           AND u.preview_ends_at > NOW()
           AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
+          AND u.email <> ALL(${extraExcluded})
           AND EXISTS (
             SELECT 1 FROM purchases p
             WHERE p.email = u.email
@@ -564,6 +578,7 @@ export default async function handler(req, res) {
           AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
           AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
+          AND u.email <> ALL(${extraExcluded})
         GROUP BY u.id, u.email, u.display_name, u.tier
         HAVING COUNT(DISTINCT p.thrivecart_id) >= 2
         ORDER BY total_cents DESC
