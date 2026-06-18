@@ -766,26 +766,21 @@
       background: var(--gold);
       color: var(--dark);
     }
-    /* Tiny constellation next to "Intelligence" — gives the tab a touch of
-       Field-magic. Soft gold by default, brightens on hover, sparkles when
-       the tab is active. */
+    /* Sparkle emoji next to "Intelligence" — gives the tab a touch of
+       Field-magic. Subtle pulse on hover, gentle shimmer when active. */
     .tab-sparkle {
       display: inline-block;
-      color: var(--gold);
-      font-size: 0.85em;
-      letter-spacing: 0.05em;
+      font-size: 0.95em;
       margin-right: 2px;
-      opacity: 0.7;
-      transition: opacity 0.3s ease, transform 0.3s ease;
+      transition: transform 0.3s ease;
     }
-    .tab-btn:hover .tab-sparkle { opacity: 1; transform: scale(1.1); }
+    .tab-btn:hover .tab-sparkle { transform: scale(1.15) rotate(8deg); }
     .tab-btn--active .tab-sparkle {
-      opacity: 1;
       animation: tab-sparkle-shimmer 2.4s ease-in-out infinite;
     }
     @keyframes tab-sparkle-shimmer {
-      0%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
-      50% { opacity: 0.6; transform: scale(1.05) rotate(-3deg); }
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      50% { transform: scale(1.15) rotate(-6deg); }
     }
     @media (max-width: 760px) {
       .dashboard-body { grid-template-columns: 1fr; }
@@ -1451,7 +1446,7 @@
             <!-- Left-side tab navigation. Sticky on desktop, horizontal scroll on mobile. -->
             <nav class="tabs" role="tablist">
               <button class="tab-btn" data-tab="overview" onclick="switchTab('overview')">Overview</button>
-              <button class="tab-btn" data-tab="intelligence" onclick="switchTab('intelligence')"><span class="tab-sparkle">⋆˙⟡</span> Intelligence${intelligenceTotal ? '<span class="tab-btn-count">' + fmtNum(intelligenceTotal) + '</span>' : ''}</button>
+              <button class="tab-btn" data-tab="intelligence" onclick="switchTab('intelligence')"><span class="tab-sparkle">✨</span> Intelligence${intelligenceTotal ? '<span class="tab-btn-count">' + fmtNum(intelligenceTotal) + '</span>' : ''}</button>
               <button class="tab-btn" data-tab="members" onclick="switchTab('members')">Members${totalMembers ? '<span class="tab-btn-count">' + fmtNum(totalMembers) + '</span>' : ''}</button>
               <button class="tab-btn" data-tab="revenue" onclick="switchTab('revenue')">Revenue</button>
               <button class="tab-btn" data-tab="engagement" onclick="switchTab('engagement')">Engagement</button>
