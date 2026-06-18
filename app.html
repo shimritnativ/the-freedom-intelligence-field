@@ -3817,12 +3817,12 @@ Begin.` },
             <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
           </svg>
           <div class="notif-eyebrow">A small ask</div>
-          <div class="notif-title" id="notif-title">Want reminders for the next days of your Reset?</div>
-          <div class="notif-sub">A few quick notifications, only at the moments that matter.</div>
+          <div class="notif-title" id="notif-title">Want notifications from The Field?</div>
+          <div class="notif-sub">Only the moments worth your attention. Nothing else.</div>
           <ul class="notif-bullets">
-            <li>When Day 2 unlocks (after 24 hours)</li>
-            <li>When Day 3 unlocks (after 48 hours)</li>
-            <li>A gentle nudge before your Reset window closes</li>
+            <li>When Day 2 and Day 3 of your Reset unlock</li>
+            <li>When new features and processes arrive in the Field</li>
+            <li>Occasional updates from Master Your Path</li>
           </ul>
           <div class="notif-buttons">
             <button class="notif-btn notif-btn--primary" id="notif-accept-btn" type="button">Yes, send reminders</button>
@@ -4825,8 +4825,8 @@ Begin.` },
                 </svg>
               </div>
               <div class="pref-card-body">
-                <div class="pref-card-title" id="pref-notif-title">Day 2 &amp; 3 reminders</div>
-                <div class="pref-card-desc" id="pref-notif-desc">Push notifications when each day unlocks, plus a gentle nudge before your Reset window closes.</div>
+                <div class="pref-card-title" id="pref-notif-title">Notifications</div>
+                <div class="pref-card-desc" id="pref-notif-desc">Reset milestones, new features, and the occasional update from The Field.</div>
               </div>
               <div class="pref-card-status" id="pref-notif-status">…</div>
             </div>
@@ -6904,15 +6904,18 @@ Begin.` },
     statusEl.classList.remove("pref-card-status--enabled", "pref-card-status--enable", "pref-card-status--blocked");
 
     if (Notification.permission === "granted") {
-      if (desc) desc.textContent = "You'll be notified when Day 2 and Day 3 unlock, plus a gentle nudge before your Reset window closes.";
+      if (desc) desc.textContent = "You're set to receive Reset milestones, new features, and the occasional update from The Field.";
       statusEl.textContent = "✓ Enabled";
       statusEl.classList.add("pref-card-status--enabled");
+      // Even when enabled, allow clicking to manually re-sync the subscription
+      // to the server (covers the self-heal case from earlier).
+      card.classList.add("pref-card--clickable");
     } else if (Notification.permission === "denied") {
-      if (desc) desc.textContent = "Notifications are blocked. Unblock them for thefieldai.app in your browser settings to enable reminders.";
+      if (desc) desc.textContent = "Notifications are blocked. Unblock thefieldai.app in your browser settings to receive updates.";
       statusEl.textContent = "Blocked";
       statusEl.classList.add("pref-card-status--blocked");
     } else {
-      if (desc) desc.textContent = "Push notifications when each day unlocks, plus a gentle nudge before your Reset window closes.";
+      if (desc) desc.textContent = "Reset milestones, new features, and the occasional update from The Field.";
       statusEl.textContent = "Enable";
       statusEl.classList.add("pref-card-status--enable");
       card.classList.add("pref-card--clickable");
