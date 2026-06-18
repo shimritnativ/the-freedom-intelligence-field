@@ -4133,16 +4133,6 @@ Begin.` },
             </span>
             <span class="sidebar-cta-arrow" aria-hidden="true">↓</span>
           </button>
-          <button class="sidebar-cta-btn" id="sidebar-notify-btn" type="button" style="cursor: pointer; display: none;">
-            <span style="display: inline-flex; align-items: center; gap: 7px;">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
-                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
-              </svg>
-              <span id="sidebar-notify-label">Get Day 2 &amp; 3 reminders</span>
-            </span>
-            <span class="sidebar-cta-arrow" aria-hidden="true">→</span>
-          </button>
         </div>
 
         <div class="sidebar-aux">
@@ -5438,16 +5428,6 @@ Begin.` },
     // Sidebar "Add to Home Screen" button — same install modal popup.
     const sidebarInstallBtn = document.getElementById("sidebar-install-btn");
     if (sidebarInstallBtn) sidebarInstallBtn.addEventListener("click", onInstallOpen);
-    // Sidebar "Get reminders" button — wires Web Push subscription.
-    const sidebarNotifyBtn = document.getElementById("sidebar-notify-btn");
-    if (sidebarNotifyBtn) {
-      sidebarNotifyBtn.addEventListener("click", () => {
-        if (Notification.permission === "granted") return; // already enabled
-        enablePushNotifications();
-      });
-    }
-    // Update label/visibility based on current Notification.permission state.
-    updatePushButtonState();
     // Notification opt-in pre-prompt modal buttons
     const notifAcceptBtn = document.getElementById("notif-accept-btn");
     if (notifAcceptBtn) notifAcceptBtn.addEventListener("click", onNotifPromptAccept);
