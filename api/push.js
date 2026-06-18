@@ -182,6 +182,11 @@ async function handleSend(req, res) {
   const userIds = Array.isArray(body.userIds) ? body.userIds : [];
   const key = String(body.key || "").trim();
   const custom = body.payload && typeof body.payload === "object" ? body.payload : null;
+  // Inbox flag: when true, the message also gets written to the
+  // notifications table so members see it in their bell-icon inbox even
+  // if they don't have push enabled. Default true — that's the safer
+  // setting for the kind of team announcement the admin sends.
+  const alsoSaveToInbox = body.alsoSaveToInbox !== false;
 
   // Build the notification payload. Either an existing reminder key OR a
   // custom payload from the admin form. Custom needs at least a title.
@@ -196,6 +201,29 @@ async function handleSend(req, res) {
 
   if (userIds.length === 0) {
     return res.status(400).json({ error: "no_recipients" });
+  }
+
+  // Write the announcement to the notifications inbox so members without
+  // active push subscriptions still see the message. audience='all' for
+  // now — future scoping (e.g. only Reset members) can use a different
+  // value. We don't filter by userIds here; the inbox is intentionally
+  // visible to everyone so members on a fresh device still see history.
+  let inboxId = null;
+  if (alsoSaveToInbox) {
+    try {
+      const senderEmail =
+        (req.headers["x-admin-sender-email"] && String(req.headers["x-admin-sender-email"])) ||
+        null;
+      const ins = await sql`
+        INSERT INTO notifications (title, body, audience, sent_by_email)
+        VALUES (${payload.title}, ${payload.body || ""}, 'all', ${senderEmail})
+        RETURNING id
+      `;
+      inboxId = ins.rows[0]?.id || null;
+    } catch (err) {
+      // Don't fail the push if the inbox write fails — log it and continue.
+      console.warn("inbox_insert_failed", { message: err?.message });
+    }
   }
 
   let totalSent = 0;
@@ -223,6 +251,8 @@ async function handleSend(req, res) {
     usersReached,
     usersWithNoDevices,
     failures,
+    inboxId,
+    savedToInbox: alsoSaveToInbox && !!inboxId,
   });
 }
 
