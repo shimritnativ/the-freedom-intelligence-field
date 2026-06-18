@@ -299,6 +299,82 @@
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
     @media (max-width: 760px) { .two-col { grid-template-columns: 1fr; } }
 
+    /* ===== Mobile (phones, ≤640px) ===== */
+    @media (max-width: 640px) {
+      .wrap { padding: 20px 14px 60px; }
+
+      /* Topbar stacks vertically; viewer info left-aligns */
+      .topbar { flex-direction: column; align-items: stretch; gap: 12px; margin-bottom: 18px; }
+      .viewer { text-align: left; }
+
+      /* Date controls — keep on one card but compact */
+      .date-controls { padding: 10px 12px; gap: 6px; }
+      .preset-btn { font-size: 11px; padding: 5px 10px; }
+      .date-input { font-size: 11px; padding: 5px 8px; min-width: 0; flex: 1; }
+      .range-summary {
+        width: 100%; margin: 4px 0 0; text-align: left;
+        font-size: 10px;
+      }
+
+      /* KPI cards — 2 per row, smaller */
+      .kpi-grid { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 22px; }
+      .kpi { padding: 14px 14px 12px; }
+      .kpi-value { font-size: 24px; }
+      .kpi-label { font-size: 9px; }
+      .kpi-sub { font-size: 10px; }
+      .kpi.clickable::after { display: none; }
+
+      /* Today's Highlights — single column */
+      .highlights { padding: 14px 16px 12px; margin-bottom: 18px; }
+      .highlights-grid { grid-template-columns: 1fr; gap: 8px; }
+      .highlights-title { font-size: 15px; }
+      .highlight { padding: 8px 12px; }
+      .highlight-value { font-size: 19px; min-width: 28px; }
+
+      /* Sections — tighter */
+      .section { padding: 16px 14px; margin-bottom: 14px; border-radius: 12px; }
+      .section h2 { font-size: 15px; margin-bottom: 12px; padding-bottom: 10px; }
+      .section h2 .h2-eyebrow { display: block; margin: 0 0 4px; }
+
+      /* Tables — horizontal scroll for wide ones */
+      .section table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+      }
+      .section table thead,
+      .section table tbody,
+      .section table tr { display: table; width: 100%; table-layout: fixed; min-width: 480px; }
+      th, td { padding: 8px 10px; font-size: 12px; }
+      th { font-size: 9px; }
+
+      /* Funnel — compact grid */
+      .funnel-row {
+        grid-template-columns: 14px 78px 1fr 70px;
+        gap: 8px; padding: 6px 4px;
+      }
+      .funnel-row--subset {
+        margin-left: 16px;
+        grid-template-columns: 14px 64px 1fr 70px;
+      }
+      .funnel-label { font-size: 12px; }
+      .funnel-row--subset .funnel-label { font-size: 11px; }
+      .funnel-bar-track { height: 10px; }
+      .funnel-stat { font-size: 11px; }
+      .funnel-stat .n { font-size: 10px; }
+
+      /* Email dropdown under funnel rows */
+      .funnel-emails { margin-left: 18px; padding: 8px 10px; font-size: 11px; }
+      .funnel-emails ul { padding-left: 14px; }
+
+      /* Signup bars */
+      .signup-row { grid-template-columns: 76px 1fr 48px; font-size: 11px; }
+
+      /* Note box copy on mobile */
+      .note-box { font-size: 11px; padding: 10px 12px; }
+    }
+
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
     th {
