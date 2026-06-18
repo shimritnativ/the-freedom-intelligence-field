@@ -333,7 +333,20 @@
 
     /* ===== Mobile (phones, ≤640px) ===== */
     @media (max-width: 640px) {
-      .wrap { padding: 20px 14px 60px; }
+      /* Respect iOS safe-area-inset-top so the page title doesn't sit
+         under the dynamic island / notch on iPhones. Falls back to 20px
+         on browsers that don't support the env() var. */
+      .wrap {
+        padding: max(20px, env(safe-area-inset-top)) 14px 60px;
+      }
+
+      /* Section headings need to wrap on mobile — long phrases like
+         "By product × coupon (every SKU + coupon combination)" were
+         pushing off the right edge of the viewport. */
+      .section h2 {
+        word-break: break-word;
+        overflow-wrap: anywhere;
+      }
 
       /* Topbar stacks vertically; viewer info left-aligns */
       .topbar { flex-direction: column; align-items: stretch; gap: 12px; margin-bottom: 18px; }
@@ -370,18 +383,48 @@
       .section h2 { font-size: 15px; margin-bottom: 12px; padding-bottom: 10px; }
       .section h2 .h2-eyebrow { display: block; margin: 0 0 4px; }
 
-      /* Tables — horizontal scroll for wide ones */
+      /* Tables — let each table expand to fit its content and scroll
+         horizontally inside its own scroller. The old approach forced
+         table-layout: fixed at min-width: 480px which squeezed 7-column
+         tables (Roster, Revenue) so tight that adjacent cells visually
+         overlapped. New approach: cells size to content via max-content,
+         all text nowraps, the table BLOCK scrolls horizontally if the
+         total width exceeds the viewport. A faint right-edge fade hints
+         that more content lives off-screen. */
       .section table {
         display: block;
         overflow-x: auto;
-        white-space: nowrap;
         -webkit-overflow-scrolling: touch;
+        max-width: 100%;
+        white-space: nowrap;
+        position: relative;
       }
-      .section table thead,
-      .section table tbody,
-      .section table tr { display: table; width: 100%; table-layout: fixed; min-width: 480px; }
-      th, td { padding: 8px 10px; font-size: 12px; }
-      th { font-size: 9px; }
+      .section table > thead,
+      .section table > tbody {
+        display: table;
+        width: max-content;
+        min-width: 100%;
+        table-layout: auto;
+      }
+      .section table > thead > tr,
+      .section table > tbody > tr {
+        display: table-row;
+      }
+      .section table th,
+      .section table td {
+        white-space: nowrap;
+        padding: 8px 12px;
+        font-size: 12px;
+        max-width: none;
+      }
+      .section table th { font-size: 9px; }
+      /* Long content cells (product names, email addresses) get truncated
+         with an ellipsis above a reasonable cap so a single row can't
+         force the whole table into a 1000px horizontal scroll. */
+      .section table td .tier-badge,
+      .section table td .comp-pill {
+        white-space: nowrap;
+      }
 
       /* Funnel — compact grid */
       .funnel-row {
