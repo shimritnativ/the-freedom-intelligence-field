@@ -6879,7 +6879,12 @@ Begin.` },
   // Conditions: push is supported, browser hasn't been asked yet
   // (permission === "default"), AND we haven't already shown this user
   // the prompt (tracked in localStorage so reload doesn't re-prompt).
-  const NOTIF_PROMPT_KEY = "tfif_notif_prompt_shown_v1";
+  // Bumped to v2 when the prompt copy was generalized from "Day 2/3 reminders"
+  // to "notifications from The Field." Existing members who hit "Maybe later"
+  // on v1 will see the new prompt once on their next visit. Members who
+  // already granted permission won't be re-prompted (Notification.permission
+  // check catches them).
+  const NOTIF_PROMPT_KEY = "tfif_notif_prompt_shown_v2";
 
   function maybeShowNotifPrompt() {
     if (!pushSupported()) return;
