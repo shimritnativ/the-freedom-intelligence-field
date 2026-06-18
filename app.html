@@ -4788,6 +4788,16 @@ Begin.` },
               </span>
               <span class="acct-link-arrow" aria-hidden="true">↓</span>
             </button>
+            <button class="acct-link" id="acct-notify-btn" type="button" style="cursor: pointer; font-family: inherit; text-align: left; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+              <span style="display: inline-flex; align-items: center; gap: 8px;">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+                  <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+                </svg>
+                <span id="acct-notify-label">Get Day 2 &amp; 3 reminders</span>
+              </span>
+              <span class="acct-link-arrow" id="acct-notify-arrow" aria-hidden="true">→</span>
+            </button>
           </div>
 
           <div class="acct-signout-row">
@@ -5425,6 +5435,19 @@ Begin.` },
     if (acctExportUnlimitedBtn) acctExportUnlimitedBtn.addEventListener("click", onExportAllUnlimitedClick);
     const acctInstallBtn = document.getElementById("acct-install-btn");
     if (acctInstallBtn) acctInstallBtn.addEventListener("click", onInstallOpen);
+    // Your Account "Reminders" row — opens the OS permission prompt + saves
+    // the push subscription. Label updates live based on current permission.
+    const acctNotifyBtn = document.getElementById("acct-notify-btn");
+    if (acctNotifyBtn) {
+      acctNotifyBtn.addEventListener("click", () => {
+        if (Notification.permission === "granted") return; // already on
+        if (Notification.permission === "denied") return;  // user must unblock in browser
+        enablePushNotifications();
+      });
+    }
+    // Sync the row's label/arrow to current permission state every time the
+    // modal mounts, so re-opening shows the correct status.
+    updatePushButtonState();
     // Sidebar "Add to Home Screen" button — same install modal popup.
     const sidebarInstallBtn = document.getElementById("sidebar-install-btn");
     if (sidebarInstallBtn) sidebarInstallBtn.addEventListener("click", onInstallOpen);
@@ -6744,24 +6767,32 @@ Begin.` },
     render();
   }
 
+  // Sync the Your Account modal's "Reminders" row to current permission state.
+  // Hides on devices that don't support push at all (iOS Safari outside a
+  // home-screen PWA, very old browsers).
   function updatePushButtonState() {
-    const btn = document.getElementById("sidebar-notify-btn");
-    const label = document.getElementById("sidebar-notify-label");
-    if (!btn) return;
-    if (!pushSupported()) {
-      btn.style.display = "none";
-      return;
-    }
-    btn.style.display = "";
-    if (Notification.permission === "granted") {
-      if (label) label.textContent = "Reminders enabled ✓";
-      btn.style.cursor = "default";
-    } else if (Notification.permission === "denied") {
-      if (label) label.textContent = "Reminders blocked in browser";
-      btn.style.cursor = "default";
-    } else {
-      if (label) label.textContent = "Get Day 2 & 3 reminders";
-      btn.style.cursor = "pointer";
+    const acctBtn = document.getElementById("acct-notify-btn");
+    const acctLabel = document.getElementById("acct-notify-label");
+    const acctArrow = document.getElementById("acct-notify-arrow");
+    if (acctBtn) {
+      if (!pushSupported()) {
+        acctBtn.style.display = "none";
+      } else {
+        acctBtn.style.display = "";
+        if (Notification.permission === "granted") {
+          if (acctLabel) acctLabel.textContent = "Reminders enabled ✓";
+          if (acctArrow) acctArrow.textContent = "✓";
+          acctBtn.style.cursor = "default";
+        } else if (Notification.permission === "denied") {
+          if (acctLabel) acctLabel.textContent = "Reminders blocked — enable in browser settings";
+          if (acctArrow) acctArrow.textContent = "✕";
+          acctBtn.style.cursor = "default";
+        } else {
+          if (acctLabel) acctLabel.textContent = "Get Day 2 & 3 reminders";
+          if (acctArrow) acctArrow.textContent = "→";
+          acctBtn.style.cursor = "pointer";
+        }
+      }
     }
   }
 
