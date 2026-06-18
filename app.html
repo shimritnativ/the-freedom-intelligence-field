@@ -587,17 +587,19 @@
   .sidebar-aux {
     display: flex;
     justify-content: center;
-    gap: 8px;
+    align-items: center;
+    gap: 6px;
     padding: 14px 4px 0;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    min-width: 0;
   }
   .sidebar-aux button {
-    padding: 8px 18px;
+    padding: 7px 12px;
     border-radius: 999px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-size: 11px;
+    font-size: 10.5px;
     font-weight: 600;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
     cursor: pointer;
     border: 1px solid transparent;
     white-space: nowrap;
@@ -617,8 +619,8 @@
     background: rgba(0, 0, 0, 0.5);
     color: var(--text);
     border: 1px solid var(--gold-line);
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     padding: 0;
     border-radius: 999px;
     display: inline-flex;
@@ -668,16 +670,20 @@
   }
   .notif-btn-badge[hidden] { display: none; }
 
-  /* Slide-down notifications panel. Anchored just above the sidebar-aux
-     row and slides into place from a translateY(8px) start. Auto-dismisses
-     on outside click (handled in JS) and on Esc. */
+  /* Notifications panel — anchored to the bottom-left of the viewport so
+     it visually emerges from the bell button (which sits in the bottom-
+     left sidebar). transform-origin is bottom-left so the open animation
+     scales out from the bell's corner, giving a "popping out of the bell"
+     feel. Stays in place once open until explicitly dismissed.
+
+     On mobile the sidebar is a drawer; we widen the panel to fill more
+     of the screen so it remains readable on small viewports. */
   .notif-panel {
     position: fixed;
+    bottom: 110px;
     left: 16px;
-    right: 16px;
-    bottom: 90px;
-    max-width: 420px;
-    margin: 0 auto;
+    width: 360px;
+    max-width: calc(100vw - 32px);
     background: var(--panel);
     border: 1px solid var(--gold);
     border-radius: 14px;
@@ -685,15 +691,26 @@
     padding: 18px 20px 14px;
     z-index: 1500;
     opacity: 0;
-    transform: translateY(8px);
+    /* Origin sits near the bottom-left corner of the panel so the scale-out
+       animation visually emerges from the bell button area beneath it. */
+    transform-origin: 24px 100%;
+    transform: scale(0.7) translateY(12px);
     pointer-events: none;
     transition: opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-                transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+                transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .notif-panel.is-open {
     opacity: 1;
-    transform: translateY(0);
+    transform: scale(1) translateY(0);
     pointer-events: auto;
+  }
+  @media (max-width: 720px) {
+    .notif-panel {
+      bottom: 80px;
+      left: 12px;
+      right: 12px;
+      width: auto;
+    }
   }
   .notif-panel-head {
     display: flex;
