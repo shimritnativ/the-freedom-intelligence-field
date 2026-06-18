@@ -538,6 +538,115 @@
       text-align: center; padding: 24px 12px;
       color: var(--text-mute); font-style: italic; font-size: 13px;
     }
+    /* ===== Intelligence segment cards ===== */
+    .intel-intro {
+      background: var(--panel);
+      border: 1px solid var(--gold-line);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 22px;
+      font-size: 13px; color: var(--text);
+      line-height: 1.55;
+    }
+    .intel-intro strong { color: var(--gold); }
+    .intel-segment {
+      background: var(--bg-card);
+      border: 1px solid var(--gold-line);
+      border-radius: 14px;
+      padding: 20px 22px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+    }
+    .intel-segment-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .intel-segment-title {
+      font-family: Georgia, serif;
+      font-style: italic;
+      font-size: 19px;
+      color: var(--text);
+      margin: 0;
+    }
+    .intel-segment-eyebrow {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      color: var(--gold);
+      text-transform: uppercase;
+      padding: 3px 8px;
+      background: var(--gold-soft);
+      border-radius: 999px;
+    }
+    .intel-segment-count {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dim);
+    }
+    .intel-segment-count strong { color: var(--text); font-size: 15px; }
+    .intel-segment-why {
+      font-family: Georgia, serif;
+      font-style: italic;
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.5;
+      margin-bottom: 14px;
+    }
+    .intel-action {
+      background: var(--panel);
+      border-left: 3px solid var(--gold);
+      border-radius: 0 8px 8px 0;
+      padding: 10px 14px;
+      margin-bottom: 14px;
+    }
+    .intel-action-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .intel-action-text {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .intel-action-text strong { color: var(--text); }
+    .intel-members-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+    }
+    .intel-members-table th {
+      text-align: left;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      padding: 8px 10px;
+      background: var(--panel);
+      border-radius: 6px 6px 0 0;
+    }
+    .intel-members-table th.num { text-align: right; }
+    .intel-members-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    .intel-members-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .intel-members-table tr:last-child td { border-bottom: none; }
+    .intel-empty {
+      font-style: italic;
+      color: var(--text-mute);
+      font-size: 12.5px;
+      padding: 8px 0;
+    }
     /* ===== Left-side tab navigation ===== */
     .dashboard-body {
       display: grid;
@@ -936,6 +1045,16 @@
       const refundCents = Number(tcSummary.refund_cents || 0);
       const netCents = grossCents - refundCents;
 
+      // Intelligence tab — sum of all six segment sizes for the nav badge.
+      const intel = d.intelligence || {};
+      const intelligenceTotal =
+        (intel.ready_for_upsell || []).length +
+        (intel.hot_reset_graduate || []).length +
+        (intel.book_launch_warmer || []).length +
+        (intel.at_risk_subscriber || []).length +
+        (intel.stuck_reset || []).length +
+        (intel.high_intent_buyer || []).length;
+
       root.innerHTML = `
         <div class="wrap">
           <div class="topbar">
@@ -1025,6 +1144,12 @@
 
           </div>
           <!-- /end Overview tab -->
+
+          <!-- ===== INTELLIGENCE TAB ===== -->
+          <div data-tab-content="intelligence" style="display: none;">
+            ${renderIntelligence(d.intelligence || {})}
+          </div>
+          <!-- /end Intelligence tab -->
 
           <!-- ===== MEMBERS TAB ===== -->
           <div data-tab-content="members" style="display: none;">
@@ -1198,9 +1323,10 @@
 
             </div><!-- /.dashboard-main -->
 
-            <!-- Right-side tab navigation. Sticky on desktop, horizontal scroll on mobile. -->
+            <!-- Left-side tab navigation. Sticky on desktop, horizontal scroll on mobile. -->
             <nav class="tabs" role="tablist">
               <button class="tab-btn" data-tab="overview" onclick="switchTab('overview')">Overview</button>
+              <button class="tab-btn" data-tab="intelligence" onclick="switchTab('intelligence')">Intelligence${intelligenceTotal ? '<span class="tab-btn-count">' + fmtNum(intelligenceTotal) + '</span>' : ''}</button>
               <button class="tab-btn" data-tab="members" onclick="switchTab('members')">Members${totalMembers ? '<span class="tab-btn-count">' + fmtNum(totalMembers) + '</span>' : ''}</button>
               <button class="tab-btn" data-tab="revenue" onclick="switchTab('revenue')">Revenue</button>
               <button class="tab-btn" data-tab="engagement" onclick="switchTab('engagement')">Engagement</button>
@@ -1216,6 +1342,140 @@
       const currentTheme = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
       const themeBtn = document.getElementById("theme-toggle-btn");
       if (themeBtn) themeBtn.textContent = currentTheme === "dark" ? "☀" : "☾";
+    }
+
+    // ===== Intelligence tab renderer =====
+    // Six sales/marketing-actionable segments, each pointing to a real MYP
+    // offer at its actual price point. The eyebrow chip flags the urgency:
+    // hot opportunities (Day 3 grads, high-intent buyers) vs win-back work
+    // (at-risk subs, stuck Reset members).
+    function renderIntelligence(intel) {
+      const segments = [
+        {
+          key: "hot_reset_graduate",
+          eyebrow: "HOT — 48h window",
+          title: "Hot Reset graduates ready to upgrade",
+          why: "These members just hit Day 3. Peak emotional state, just felt the value, never higher intent. Convert them to Unlimited before the feeling fades.",
+          action: "Send an Unlimited Field invitation within 24 hours. Best converter at this stage: <strong>Unlimited Field (€77/mo or €777/yr)</strong>. If they need a softer nudge: <strong>UNLIMITED50 coupon</strong> (50% off first month) to lower the activation barrier.",
+          rows: intel.hot_reset_graduate || [],
+          cols: [
+            { label: "Member", key: "email", render: u => `${escapeHtml(u.email)}${u.display_name ? ` <span style="color:var(--text-dim)">(${escapeHtml(u.display_name)})</span>` : ""}` },
+            { label: "Completed Day 3", key: "day3_completed_at", num: true, render: u => fmtRelative(u.day3_completed_at) },
+            { label: "Coupon used", key: "coupon_used", render: u => escapeHtml(u.coupon_used || "—") },
+          ],
+        },
+        {
+          key: "ready_for_upsell",
+          eyebrow: "Premium ladder",
+          title: "Ready for higher-ticket offers",
+          why: "Paid Unlimited members with 30+ messages in the last 30 days. They use the tool daily, they trust the methodology. This is the natural pool for Shimrit's mid-to-high-ticket offers.",
+          action: "Book a 15-min consult with Shimrit to assess fit. Natural ladder from here: <strong>Business Club (€55/mo or €555/yr)</strong> as a soft entry; <strong>Business Accelerator (€5,000)</strong> for entrepreneurs ready for direct strategic support; <strong>Coaching Certification (€9,999)</strong> for those who want to teach the methodology; <strong>RISE Mastermind (€9,999 – €33,333)</strong> for established leaders.",
+          rows: intel.ready_for_upsell || [],
+          cols: [
+            { label: "Member", key: "email", render: u => `${escapeHtml(u.email)}${u.display_name ? ` <span style="color:var(--text-dim)">(${escapeHtml(u.display_name)})</span>` : ""}` },
+            { label: "Messages (30d)", key: "messages_30d", num: true, render: u => fmtNum(u.messages_30d) },
+            { label: "Last active", key: "last_message_at", num: true, render: u => fmtRelative(u.last_message_at) },
+          ],
+        },
+        {
+          key: "high_intent_buyer",
+          eyebrow: "Stacked purchases",
+          title: "High-intent buyers (multiple ThriveCart orders)",
+          why: "Bought Reset and then Order Bump and/or NOW Shift OTO. They opted in at every step of your front-end funnel. Strong indicator of purchase intent for the next tier.",
+          action: "Personal Shimrit outreach + <strong>Business Accelerator (€5,000)</strong> or <strong>RISE Gold (€9,999)</strong> as the natural next ask. If under €200 total spend, lead with <strong>Business Club (€55/mo)</strong> to graduate them into the ecosystem first.",
+          rows: intel.high_intent_buyer || [],
+          cols: [
+            { label: "Member", key: "email", render: u => `${escapeHtml(u.email)}${u.display_name ? ` <span style="color:var(--text-dim)">(${escapeHtml(u.display_name)})</span>` : ""}` },
+            { label: "Tier", key: "tier", render: u => `<span class="tier-badge ${u.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(tierLabel(u.tier))}</span>` },
+            { label: "Orders", key: "purchase_count", num: true, render: u => fmtNum(u.purchase_count) },
+            { label: "Total spend", key: "total_cents", num: true, render: u => fmtEur(u.total_cents) },
+          ],
+        },
+        {
+          key: "book_launch_warmer",
+          eyebrow: "Book community",
+          title: "Book Launch attendees who showed up",
+          why: "Used LAUNCHTEAM or LAUNCHTEAMUNLIMITED coupons. They are part of Shimrit's book community already, opted in to a known content world, and they engaged with the Reset (or Unlimited at 75% off). High lifetime value potential.",
+          action: "Nurture sequence on book themes (Skill of Freedom chapters). If they liked the Reset: pitch <strong>Human Instrument Mastery</strong> as the deeper layer of the same work. If entrepreneur: <strong>Business Club (€55/mo)</strong>. If interested in teaching: <strong>Coaching Certification (€9,999)</strong>.",
+          rows: intel.book_launch_warmer || [],
+          cols: [
+            { label: "Member", key: "email", render: u => `${escapeHtml(u.email)}${u.display_name ? ` <span style="color:var(--text-dim)">(${escapeHtml(u.display_name)})</span>` : ""}` },
+            { label: "Coupons", key: "coupons", render: u => `<span class="tier-badge tier-preview">${escapeHtml(u.coupons || "—")}</span>` },
+            { label: "Tier", key: "tier", render: u => `<span class="tier-badge ${u.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(tierLabel(u.tier))}</span>` },
+            { label: "Day reached", key: "last_completed_day", num: true, render: u => fmtNum(u.last_completed_day || 0) },
+          ],
+        },
+        {
+          key: "at_risk_subscriber",
+          eyebrow: "Win-back",
+          title: "At-risk Unlimited subscribers (quiet 14+ days)",
+          why: "Paying for Unlimited but haven't sent a message in two weeks or more. Likely drifting toward cancellation. The longer the silence, the harder the win-back.",
+          action: "Re-engagement WhatsApp/email from Shimrit referencing a recent process they could re-enter. If no response in 7 days, offer a <strong>free 15-min check-in call</strong> to identify what's blocking them. Last-resort save: pause subscription option (better than losing them entirely).",
+          rows: intel.at_risk_subscriber || [],
+          cols: [
+            { label: "Member", key: "email", render: u => `${escapeHtml(u.email)}${u.display_name ? ` <span style="color:var(--text-dim)">(${escapeHtml(u.display_name)})</span>` : ""}` },
+            { label: "Plan", key: "subscription_plan", render: u => escapeHtml(u.subscription_plan || "—") },
+            { label: "Days quiet", key: "days_quiet", num: true, render: u => fmtNum(u.days_quiet || 0) + "d" },
+            { label: "Last message", key: "last_message_at", num: true, render: u => u.last_message_at ? fmtRelative(u.last_message_at) : "never" },
+          ],
+        },
+        {
+          key: "stuck_reset",
+          eyebrow: "Re-engagement",
+          title: "Stuck Reset members (window still open)",
+          why: "Logged in, paid, started the 72-hour window, but stopped before Day 3. Window hasn't expired yet, which means there's still time to save the experience for them.",
+          action: "Personalized nudge from Shimrit (text or email) referencing where they are in the journey. The auto push reminders are already firing — this layer adds the human touch when the system alone isn't enough. If they finish: pitch <strong>Unlimited Field</strong>. If they don't: log as a re-launch target for the next promotional window.",
+          rows: intel.stuck_reset || [],
+          cols: [
+            { label: "Member", key: "email", render: u => `${escapeHtml(u.email)}${u.display_name ? ` <span style="color:var(--text-dim)">(${escapeHtml(u.display_name)})</span>` : ""}` },
+            { label: "On day", key: "last_completed_day", num: true, render: u => fmtNum(u.last_completed_day || 0) },
+            { label: "Days since login", key: "days_since_login", num: true, render: u => fmtNum(u.days_since_login || 0) + "d" },
+          ],
+        },
+      ];
+
+      const total = segments.reduce((sum, s) => sum + s.rows.length, 0);
+
+      const intro = total === 0
+        ? `<div class="intel-intro">No members currently fit any of the six segments. This will populate as your funnel matures and members start engaging across the offer ladder.</div>`
+        : `<div class="intel-intro">Six segments, <strong>${fmtNum(total)} members</strong> total across all of them. Each segment maps to a specific MYP offer at its real price point. Work the top of each list first.</div>`;
+
+      const segmentsHtml = segments.map(s => {
+        const empty = s.rows.length === 0;
+        const tableRows = empty
+          ? `<div class="intel-empty">No members in this segment right now.</div>`
+          : `
+            <table class="intel-members-table">
+              <thead><tr>${s.cols.map(c => `<th class="${c.num ? 'num' : ''}">${escapeHtml(c.label)}</th>`).join("")}</tr></thead>
+              <tbody>
+                ${s.rows.map(r => `
+                  <tr>
+                    ${s.cols.map(c => `<td class="${c.num ? 'num' : ''}">${c.render(r)}</td>`).join("")}
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          `;
+        return `
+          <div class="intel-segment">
+            <div class="intel-segment-head">
+              <div>
+                <span class="intel-segment-eyebrow">${escapeHtml(s.eyebrow)}</span>
+                <div class="intel-segment-title" style="margin-top: 4px;">${escapeHtml(s.title)}</div>
+              </div>
+              <div class="intel-segment-count"><strong>${fmtNum(s.rows.length)}</strong> ${s.rows.length === 1 ? "member" : "members"}</div>
+            </div>
+            <div class="intel-segment-why">${s.why}</div>
+            <div class="intel-action">
+              <div class="intel-action-label">Recommended action</div>
+              <div class="intel-action-text">${s.action}</div>
+            </div>
+            ${tableRows}
+          </div>
+        `;
+      }).join("");
+
+      return intro + segmentsHtml;
     }
 
     function renderFunnel(c, details) {
