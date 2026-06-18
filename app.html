@@ -5510,9 +5510,19 @@ Begin.` },
     // happened" mobile bug from the previous attached-but-no-op handler.
     const prefNotifCard = document.getElementById("pref-notif-card");
     if (prefNotifCard) {
-      prefNotifCard.addEventListener("click", () => {
+      prefNotifCard.addEventListener("click", async () => {
         if (Notification.permission === "default") {
           enablePushNotifications();
+          return;
+        }
+        if (Notification.permission === "granted") {
+          // Re-sync the subscription to the server. Self-heal for cases
+          // where the initial save didn't land. Briefly flash the status.
+          const statusEl = document.getElementById("pref-notif-status");
+          const orig = statusEl ? statusEl.textContent : "";
+          if (statusEl) statusEl.textContent = "Refreshing…";
+          await syncPushSubscription();
+          if (statusEl) statusEl.textContent = orig;
         }
       });
     }
@@ -5966,8 +5976,10 @@ Begin.` },
       state.loginError = "";
       loadFullState().then(() => loadUnlimitedSessions().then(() => {
         render();
-        // Fresh login — check whether to surface the notification opt-in.
+        // Fresh login — check whether to surface the notification opt-in,
+        // and self-heal any stale push subscription state.
         maybeShowNotifPrompt();
+        syncPushSubscription();
       }));
     } catch (err) {
       state.loginLoading = false;
@@ -6743,6 +6755,52 @@ Begin.` },
     return out;
   }
 
+  // Silently push the existing browser subscription up to the server. Called
+  // on every app load when permission is already granted. Self-heals cases
+  // where the initial subscription save failed (VAPID not yet configured,
+  // migration not yet run, network blip, etc.) — next load tries again.
+  async function syncPushSubscription() {
+    if (!pushSupported() || !state.sessionToken) return;
+    if (Notification.permission !== "granted") return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      let existing = await reg.pushManager.getSubscription();
+      if (!existing) {
+        // Browser doesn't have a subscription either — do the full flow.
+        const keyRes = await fetch("/api/push?action=public-key");
+        if (!keyRes.ok) {
+          console.warn("push_sync_vapid_unavailable");
+          return;
+        }
+        const { publicKey } = await keyRes.json();
+        if (!publicKey) {
+          console.warn("push_sync_no_vapid_key");
+          return;
+        }
+        existing = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
+        });
+      }
+      const saveRes = await fetch("/api/push?action=subscribe", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-session-token": state.sessionToken,
+        },
+        body: JSON.stringify({ subscription: existing.toJSON() }),
+      });
+      if (!saveRes.ok) {
+        const body = await saveRes.text().catch(() => "");
+        console.warn("push_sync_save_failed", saveRes.status, body.slice(0, 200));
+      } else {
+        console.log("push_sync_ok");
+      }
+    } catch (err) {
+      console.warn("push_sync_error", err?.message || err);
+    }
+  }
+
   async function enablePushNotifications() {
     if (!pushSupported() || !state.sessionToken) return;
 
@@ -7305,6 +7363,9 @@ Begin.` },
         // notification opt-in pre-prompt. No-op for members who've already
         // granted, blocked, or dismissed it.
         maybeShowNotifPrompt();
+        // Self-heal: if permission is already granted but the server may not
+        // have a record of this device, silently re-save the subscription.
+        syncPushSubscription();
       }));
     } else {
       state.view = "login";
