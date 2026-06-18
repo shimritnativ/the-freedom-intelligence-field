@@ -538,114 +538,184 @@
       text-align: center; padding: 24px 12px;
       color: var(--text-mute); font-style: italic; font-size: 13px;
     }
-    /* ===== Intelligence segment cards ===== */
-    .intel-intro {
+    /* ===== Intelligence tab (redesigned for clarity + action) ===== */
+    .intel-empty-state {
+      text-align: center;
+      padding: 60px 24px;
       background: var(--panel);
       border: 1px solid var(--gold-line);
-      border-radius: 12px;
-      padding: 16px 20px;
-      margin-bottom: 22px;
-      font-size: 13px; color: var(--text);
-      line-height: 1.55;
-    }
-    .intel-intro strong { color: var(--gold); }
-    .intel-segment {
-      background: var(--bg-card);
-      border: 1px solid var(--gold-line);
       border-radius: 14px;
-      padding: 20px 22px;
-      margin-bottom: 16px;
-      box-shadow: var(--shadow);
     }
-    .intel-segment-head {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 14px;
-      margin-bottom: 10px;
-      flex-wrap: wrap;
-    }
-    .intel-segment-title {
+    .intel-empty-icon { font-size: 32px; margin-bottom: 12px; color: var(--gold); }
+    .intel-empty-title {
       font-family: Georgia, serif;
       font-style: italic;
       font-size: 19px;
       color: var(--text);
-      margin: 0;
+      margin-bottom: 6px;
     }
-    .intel-segment-eyebrow {
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.22em;
-      color: var(--gold);
-      text-transform: uppercase;
-      padding: 3px 8px;
-      background: var(--gold-soft);
-      border-radius: 999px;
-    }
-    .intel-segment-count {
-      font-size: 13px;
-      font-weight: 600;
+    .intel-empty-sub {
+      font-size: 12.5px;
       color: var(--text-dim);
-    }
-    .intel-segment-count strong { color: var(--text); font-size: 15px; }
-    .intel-segment-why {
-      font-family: Georgia, serif;
-      font-style: italic;
-      font-size: 13px;
-      color: var(--text-dim);
+      max-width: 360px;
+      margin: 0 auto;
       line-height: 1.5;
-      margin-bottom: 14px;
     }
-    .intel-action {
-      background: var(--panel);
-      border-left: 3px solid var(--gold);
-      border-radius: 0 8px 8px 0;
-      padding: 10px 14px;
-      margin-bottom: 14px;
+    /* Quick-scan strip at the top — small clickable chips per segment */
+    .intel-quickscan {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin-bottom: 24px;
     }
-    .intel-action-label {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.18em;
-      color: var(--gold);
-      text-transform: uppercase;
+    .intel-quick {
+      background: var(--bg-card);
+      border: 1px solid var(--gold-line);
+      border-radius: 10px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .intel-quick:hover { transform: translateY(-2px); border-color: var(--gold); }
+    .intel-quick-count {
+      font-family: Georgia, serif;
+      font-size: 24px;
+      color: var(--text);
+      line-height: 1;
       margin-bottom: 4px;
     }
-    .intel-action-text {
-      font-size: 13px;
-      color: var(--text);
-      line-height: 1.5;
-    }
-    .intel-action-text strong { color: var(--text); }
-    .intel-members-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12.5px;
-    }
-    .intel-members-table th {
-      text-align: left;
-      font-size: 9px;
+    .intel-quick-label {
+      font-size: 10px;
       font-weight: 700;
       letter-spacing: 0.14em;
       color: var(--text-dim);
       text-transform: uppercase;
-      padding: 8px 10px;
-      background: var(--panel);
-      border-radius: 6px 6px 0 0;
     }
-    .intel-members-table th.num { text-align: right; }
-    .intel-members-table td {
-      padding: 8px 10px;
-      border-bottom: 1px solid var(--border);
+    .intel-quick--zero { opacity: 0.4; }
+    .intel-quick--hot {
+      background: linear-gradient(135deg, rgba(184, 92, 74, 0.08), var(--bg-card));
+      border-color: rgba(184, 92, 74, 0.4);
+    }
+    .intel-quick--hot .intel-quick-label { color: #B85C4A; }
+    /* Segment cards */
+    .intel-card {
+      background: var(--bg-card);
+      border: 1px solid var(--gold-line);
+      border-radius: 14px;
+      padding: 18px 22px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+    .intel-card--empty { opacity: 0.5; padding: 12px 22px; box-shadow: none; }
+    .intel-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .intel-card-title-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .intel-priority-chip {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      padding: 3px 9px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .intel-priority-chip--hot { background: #B85C4A; color: white; }
+    .intel-priority-chip--ready { background: var(--gold); color: var(--dark); }
+    .intel-priority-chip--nurture { background: var(--text-mute); color: var(--bg); }
+    .intel-card-title {
+      font-family: Georgia, serif;
+      font-style: italic;
+      font-size: 17px;
       color: var(--text);
     }
-    .intel-members-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
-    .intel-members-table tr:last-child td { border-bottom: none; }
-    .intel-empty {
-      font-style: italic;
-      color: var(--text-mute);
+    .intel-card-count {
       font-size: 12.5px;
-      padding: 8px 0;
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+    .intel-card-count strong { color: var(--text); }
+    .intel-card-action {
+      font-size: 12.5px;
+      color: var(--text);
+      background: var(--panel);
+      border-left: 3px solid var(--gold);
+      padding: 8px 14px;
+      border-radius: 0 6px 6px 0;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+    .intel-card-action strong { color: var(--text); font-weight: 600; }
+    .intel-member-list { display: grid; gap: 6px; }
+    .intel-member {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      background: var(--panel);
+      border-radius: 8px;
+      border: 1px solid transparent;
+      transition: border-color 0.15s ease;
+    }
+    .intel-member:hover { border-color: var(--gold-line); }
+    .intel-member-info { min-width: 0; }
+    .intel-member-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 1px;
+    }
+    .intel-member-name--anon { color: var(--text-dim); font-weight: 500; }
+    .intel-member-email {
+      font-size: 11.5px;
+      color: var(--text-dim);
+      margin-bottom: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .intel-member-context {
+      font-size: 11px;
+      color: var(--text-mute);
+      font-style: italic;
+    }
+    .intel-member-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .intel-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--gold-line);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    .intel-btn:hover {
+      background: var(--gold);
+      color: var(--dark);
+      border-color: var(--gold);
+    }
+    .intel-btn--primary {
+      background: var(--gold);
+      color: var(--dark);
+      border-color: var(--gold);
+    }
+    .intel-btn--primary:hover { background: #B89232; }
+    @media (max-width: 640px) {
+      .intel-card { padding: 14px 16px; }
+      .intel-member { grid-template-columns: 1fr; }
+      .intel-member-actions { justify-content: flex-start; }
     }
     /* ===== Left-side tab navigation ===== */
     .dashboard-body {
@@ -1349,12 +1419,174 @@
       if (themeBtn) themeBtn.textContent = currentTheme === "dark" ? "☀" : "☾";
     }
 
-    // ===== Intelligence tab renderer =====
-    // Six sales/marketing-actionable segments, each pointing to a real MYP
-    // offer at its actual price point. The eyebrow chip flags the urgency:
-    // hot opportunities (Day 3 grads, high-intent buyers) vs win-back work
-    // (at-risk subs, stuck Reset members).
+    // Smooth-scroll to a specific Intelligence segment card. Called by the
+    // quick-scan chips at the top of the tab.
+    function scrollToSegment(key) {
+      const el = document.getElementById("intel-seg-" + key);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    window.scrollToSegment = scrollToSegment;
+
+    // ===== Intelligence tab renderer (action-first redesign) =====
+    // Each segment surfaces the smallest set of members who match a specific
+    // sales/marketing trigger, with a one-line action and an Email button
+    // that opens the user's mail client pre-populated with subject + greeting.
     function renderIntelligence(intel) {
+      const firstName = (u) => {
+        const dn = (u.display_name || "").trim();
+        if (dn) return dn.split(/\s+/)[0];
+        return null;
+      };
+      const greeting = (u) => firstName(u) ? `Hi ${firstName(u)},\n\n` : "Hi,\n\n";
+
+      const segments = [
+        {
+          key: "hot_reset_graduate",
+          priority: "hot",
+          priorityLabel: "Convert today",
+          title: "Hot Reset graduates",
+          action: "Offer <strong>Unlimited Field (€77/mo or €777/yr)</strong> within 24h. Add <strong>UNLIMITED50</strong> coupon (50% off first month) for softer nudge.",
+          emailSubject: "The next layer of the Field is open for you",
+          rows: intel.hot_reset_graduate || [],
+          context: u => `Completed Day 3 ${fmtRelative(u.day3_completed_at)}${u.coupon_used ? ` · used ${escapeHtml(u.coupon_used)}` : ""}`,
+        },
+        {
+          key: "high_intent_buyer",
+          priority: "hot",
+          priorityLabel: "Stacked purchases",
+          title: "High-intent buyers",
+          action: "Personal Shimrit outreach. Pitch <strong>Business Accelerator (€5,000)</strong> or <strong>RISE Gold (€9,999)</strong>. Under €200 total spend → <strong>Business Club (€55/mo)</strong> first.",
+          emailSubject: "A note from Shimrit",
+          rows: intel.high_intent_buyer || [],
+          context: u => `${fmtNum(u.purchase_count)} purchases · ${fmtEur(u.total_cents)} total · ${escapeHtml(tierLabel(u.tier))}`,
+        },
+        {
+          key: "at_risk_subscriber",
+          priority: "hot",
+          priorityLabel: "Win-back",
+          title: "At-risk Unlimited subscribers",
+          action: "Re-engagement note from Shimrit. If no response in 7d, offer <strong>free 15-min check-in call</strong>. Last resort: pause-subscription option.",
+          emailSubject: "Checking in",
+          rows: intel.at_risk_subscriber || [],
+          context: u => `Quiet ${fmtNum(u.days_quiet || 0)}d · ${u.last_message_at ? "last msg " + fmtRelative(u.last_message_at) : "never messaged"}${u.subscription_plan ? " · " + escapeHtml(u.subscription_plan) : ""}`,
+        },
+        {
+          key: "ready_for_upsell",
+          priority: "ready",
+          priorityLabel: "Premium ladder",
+          title: "Ready for higher-ticket offers",
+          action: "Book 15-min Shimrit consult. Natural ladder: <strong>Business Club (€55/mo)</strong> → <strong>Business Accelerator (€5,000)</strong> → <strong>Coaching Certification (€9,999)</strong> → <strong>RISE Mastermind (€9,999 – €33,333)</strong>.",
+          emailSubject: "I'd love to spend 15 minutes with you",
+          rows: intel.ready_for_upsell || [],
+          context: u => `${fmtNum(u.messages_30d)} messages last 30d · last active ${fmtRelative(u.last_message_at)}`,
+        },
+        {
+          key: "book_launch_warmer",
+          priority: "ready",
+          priorityLabel: "Book community",
+          title: "Book Launch attendees",
+          action: "Nurture with Skill of Freedom themes. Entrepreneurs → <strong>Business Club (€55/mo)</strong>. Coaches → <strong>Coaching Certification (€9,999)</strong>. Seekers → <strong>HIM Mastery</strong>.",
+          emailSubject: "From the Field to the deeper work",
+          rows: intel.book_launch_warmer || [],
+          context: u => `${escapeHtml(u.coupons || "—")} · ${escapeHtml(tierLabel(u.tier))} · on Day ${fmtNum(u.last_completed_day || 0)}`,
+        },
+        {
+          key: "stuck_reset",
+          priority: "nurture",
+          priorityLabel: "Re-engagement",
+          title: "Stuck Reset members",
+          action: "Personalized nudge from Shimrit referencing where they are in the journey. If they finish: pitch <strong>Unlimited Field</strong>. If not: re-launch retarget.",
+          emailSubject: "Where you left off in the Field",
+          rows: intel.stuck_reset || [],
+          context: u => `Stuck on Day ${fmtNum(u.last_completed_day || 0)} · ${fmtNum(u.days_since_login || 0)}d since login`,
+        },
+      ];
+
+      // Sort: actionable segments first (by priority hot > ready > nurture),
+      // empty ones to the bottom in muted state.
+      const priorityRank = { hot: 0, ready: 1, nurture: 2 };
+      segments.sort((a, b) => {
+        const aEmpty = a.rows.length === 0;
+        const bEmpty = b.rows.length === 0;
+        if (aEmpty !== bEmpty) return aEmpty ? 1 : -1;
+        return priorityRank[a.priority] - priorityRank[b.priority];
+      });
+
+      const totalActionable = segments.reduce((sum, s) => sum + s.rows.length, 0);
+
+      if (totalActionable === 0) {
+        return `
+          <div class="intel-empty-state">
+            <div class="intel-empty-icon">✨</div>
+            <div class="intel-empty-title">No actions to take right now</div>
+            <div class="intel-empty-sub">As members hit milestones — finish Day 3, stack purchases, go quiet — they'll surface here with a recommended next step.</div>
+          </div>
+        `;
+      }
+
+      // Quick-scan strip — chips at the top, click to jump to that segment
+      const quickHtml = `
+        <div class="intel-quickscan">
+          ${segments.map(s => `
+            <div class="intel-quick ${s.priority === 'hot' && s.rows.length > 0 ? 'intel-quick--hot' : ''} ${s.rows.length === 0 ? 'intel-quick--zero' : ''}" onclick="scrollToSegment('${s.key}')">
+              <div class="intel-quick-count">${fmtNum(s.rows.length)}</div>
+              <div class="intel-quick-label">${escapeHtml(s.title)}</div>
+            </div>
+          `).join("")}
+        </div>
+      `;
+
+      // Segment cards
+      const segmentsHtml = segments.map(s => {
+        if (s.rows.length === 0) {
+          return `
+            <div class="intel-card intel-card--empty" id="intel-seg-${s.key}">
+              <div class="intel-card-head">
+                <div class="intel-card-title-row">
+                  <span class="intel-priority-chip intel-priority-chip--${s.priority}">${escapeHtml(s.priorityLabel)}</span>
+                  <span class="intel-card-title">${escapeHtml(s.title)}</span>
+                </div>
+                <span class="intel-card-count">0 members</span>
+              </div>
+            </div>
+          `;
+        }
+        const memberCards = s.rows.map(u => {
+          const displayName = u.display_name && String(u.display_name).trim();
+          const subject = encodeURIComponent(s.emailSubject);
+          const body = encodeURIComponent(greeting(u));
+          return `
+            <div class="intel-member">
+              <div class="intel-member-info">
+                <div class="intel-member-name ${displayName ? '' : 'intel-member-name--anon'}">${escapeHtml(displayName || u.email)}</div>
+                ${displayName ? `<div class="intel-member-email">${escapeHtml(u.email)}</div>` : ''}
+                <div class="intel-member-context">${s.context(u)}</div>
+              </div>
+              <div class="intel-member-actions">
+                <a class="intel-btn intel-btn--primary" href="mailto:${escapeHtml(u.email)}?subject=${subject}&body=${body}" title="Compose email">✉ Email</a>
+              </div>
+            </div>
+          `;
+        }).join("");
+        return `
+          <div class="intel-card" id="intel-seg-${s.key}">
+            <div class="intel-card-head">
+              <div class="intel-card-title-row">
+                <span class="intel-priority-chip intel-priority-chip--${s.priority}">${escapeHtml(s.priorityLabel)}</span>
+                <span class="intel-card-title">${escapeHtml(s.title)}</span>
+              </div>
+              <span class="intel-card-count"><strong>${fmtNum(s.rows.length)}</strong> ${s.rows.length === 1 ? 'member' : 'members'}</span>
+            </div>
+            <div class="intel-card-action">${s.action}</div>
+            <div class="intel-member-list">${memberCards}</div>
+          </div>
+        `;
+      }).join("");
+
+      return quickHtml + segmentsHtml;
+    }
+
+    function renderIntelligenceLegacy(intel) {
       const segments = [
         {
           key: "hot_reset_graduate",
