@@ -245,6 +245,14 @@
       align-items: baseline;
       gap: 10px;
     }
+    /* Dark mode: the hardcoded white tile background washes out the light
+       dim-text color, making the label invisible. Swap to a dark surface
+       with a soft gold border so the tile reads as elevated on dark bg
+       and the text contrasts cleanly. */
+    [data-theme="dark"] .highlight {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(196, 160, 90, 0.35);
+    }
     .highlight-value {
       font-family: Georgia, serif;
       font-size: 22px;
@@ -260,6 +268,9 @@
       flex: 1;
     }
     .highlight-label strong { color: var(--text); font-weight: 600; }
+    /* Bumped contrast for the non-bold portion of the label in dark mode.
+       --text-dim is on the cusp of unreadable on the new dark tile. */
+    [data-theme="dark"] .highlight-label { color: #D4C9A8; }
     .highlights-quiet {
       font-style: italic;
       color: var(--text-mute);
