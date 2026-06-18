@@ -650,72 +650,42 @@
       line-height: 1.5;
     }
     .intel-card-action strong { color: var(--text); font-weight: 600; }
-    .intel-member-list { display: grid; gap: 6px; }
+    .intel-member-list { display: grid; gap: 8px; }
     .intel-member {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 12px;
+      padding: 12px 14px;
       background: var(--panel);
       border-radius: 8px;
       border: 1px solid transparent;
       transition: border-color 0.15s ease;
     }
     .intel-member:hover { border-color: var(--gold-line); }
-    .intel-member-info { min-width: 0; }
+    .intel-member-head {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
     .intel-member-name {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 600;
       color: var(--text);
-      margin-bottom: 1px;
     }
     .intel-member-name--anon { color: var(--text-dim); font-weight: 500; }
     .intel-member-email {
-      font-size: 11.5px;
+      font-size: 12px;
       color: var(--text-dim);
-      margin-bottom: 2px;
       overflow: hidden;
       text-overflow: ellipsis;
-      white-space: nowrap;
     }
-    .intel-member-context {
-      font-size: 11px;
-      color: var(--text-mute);
-      font-style: italic;
+    .intel-member-why {
+      font-size: 12.5px;
+      color: var(--text-dim);
+      line-height: 1.55;
     }
-    .intel-member-actions { display: flex; gap: 6px; flex-shrink: 0; }
-    .intel-btn {
-      background: var(--bg-card);
-      border: 1px solid var(--gold-line);
-      color: var(--text);
-      font-family: inherit;
-      font-size: 11.5px;
-      font-weight: 600;
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      white-space: nowrap;
-    }
-    .intel-btn:hover {
-      background: var(--gold);
-      color: var(--dark);
-      border-color: var(--gold);
-    }
-    .intel-btn--primary {
-      background: var(--gold);
-      color: var(--dark);
-      border-color: var(--gold);
-    }
-    .intel-btn--primary:hover { background: #B89232; }
+    .intel-member-why strong { color: var(--text); font-weight: 600; }
     @media (max-width: 640px) {
       .intel-card { padding: 14px 16px; }
-      .intel-member { grid-template-columns: 1fr; }
-      .intel-member-actions { justify-content: flex-start; }
     }
     /* ===== Left-side tab navigation ===== */
     .dashboard-body {
@@ -1439,6 +1409,8 @@
       };
       const greeting = (u) => firstName(u) ? `Hi ${firstName(u)},\n\n` : "Hi,\n\n";
 
+      // Each segment's `why` returns the interpretive sentence ("why this
+      // person is here right now"). The factual data is woven into it.
       const segments = [
         {
           key: "hot_reset_graduate",
@@ -1448,7 +1420,11 @@
           action: "Offer <strong>Unlimited Field (€77/mo or €777/yr)</strong> within 24h. Add <strong>UNLIMITED50</strong> coupon (50% off first month) for softer nudge.",
           emailSubject: "The next layer of the Field is open for you",
           rows: intel.hot_reset_graduate || [],
-          context: u => `Completed Day 3 ${fmtRelative(u.day3_completed_at)}${u.coupon_used ? ` · used ${escapeHtml(u.coupon_used)}` : ""}`,
+          why: u => {
+            const when = u.day3_completed_at ? "finished Day 3 " + fmtRelative(u.day3_completed_at) : "completed Day 3";
+            const coupon = u.coupon_used ? ` Came in via <strong>${escapeHtml(u.coupon_used)}</strong>.` : "";
+            return `Just ${when}. Peak emotional state, has just felt the value — highest-intent moment in the funnel. Window closes in ~24h.${coupon}`;
+          },
         },
         {
           key: "high_intent_buyer",
@@ -1458,7 +1434,11 @@
           action: "Personal Shimrit outreach. Pitch <strong>Business Accelerator (€5,000)</strong> or <strong>RISE Gold (€9,999)</strong>. Under €200 total spend → <strong>Business Club (€55/mo)</strong> first.",
           emailSubject: "A note from Shimrit",
           rows: intel.high_intent_buyer || [],
-          context: u => `${fmtNum(u.purchase_count)} purchases · ${fmtEur(u.total_cents)} total · ${escapeHtml(tierLabel(u.tier))}`,
+          why: u => {
+            const count = Number(u.purchase_count || 0);
+            const tot = Number(u.total_cents || 0);
+            return `Bought <strong>${fmtNum(count)} products</strong> totaling <strong>${fmtEur(tot)}</strong>. Said yes at every checkout step of the front-end funnel. Strong purchase muscle, demonstrated trust.`;
+          },
         },
         {
           key: "at_risk_subscriber",
@@ -1468,7 +1448,12 @@
           action: "Re-engagement note from Shimrit. If no response in 7d, offer <strong>free 15-min check-in call</strong>. Last resort: pause-subscription option.",
           emailSubject: "Checking in",
           rows: intel.at_risk_subscriber || [],
-          context: u => `Quiet ${fmtNum(u.days_quiet || 0)}d · ${u.last_message_at ? "last msg " + fmtRelative(u.last_message_at) : "never messaged"}${u.subscription_plan ? " · " + escapeHtml(u.subscription_plan) : ""}`,
+          why: u => {
+            const days = Number(u.days_quiet || 0);
+            const plan = u.subscription_plan ? `${escapeHtml(u.subscription_plan)} plan` : "Unlimited";
+            const lastMsg = u.last_message_at ? `Last activity ${fmtRelative(u.last_message_at)}.` : `Never engaged with Unlimited after subscribing.`;
+            return `Paying for ${plan} but has gone <strong>${fmtNum(days)} days</strong> without a message. ${lastMsg} Cancellation risk rising — silence is the first symptom.`;
+          },
         },
         {
           key: "ready_for_upsell",
@@ -1478,7 +1463,11 @@
           action: "Book 15-min Shimrit consult. Natural ladder: <strong>Business Club (€55/mo)</strong> → <strong>Business Accelerator (€5,000)</strong> → <strong>Coaching Certification (€9,999)</strong> → <strong>RISE Mastermind (€9,999 – €33,333)</strong>.",
           emailSubject: "I'd love to spend 15 minutes with you",
           rows: intel.ready_for_upsell || [],
-          context: u => `${fmtNum(u.messages_30d)} messages last 30d · last active ${fmtRelative(u.last_message_at)}`,
+          why: u => {
+            const msgs = Number(u.messages_30d || 0);
+            const last = u.last_message_at ? `here ${fmtRelative(u.last_message_at)}` : "consistently active";
+            return `<strong>${fmtNum(msgs)} messages</strong> in the last 30 days, ${last}. Daily user, trusts the methodology, has installed the work into their week. The natural pool for premium tier conversations.`;
+          },
         },
         {
           key: "book_launch_warmer",
@@ -1488,7 +1477,12 @@
           action: "Nurture with Skill of Freedom themes. Entrepreneurs → <strong>Business Club (€55/mo)</strong>. Coaches → <strong>Coaching Certification (€9,999)</strong>. Seekers → <strong>HIM Mastery</strong>.",
           emailSubject: "From the Field to the deeper work",
           rows: intel.book_launch_warmer || [],
-          context: u => `${escapeHtml(u.coupons || "—")} · ${escapeHtml(tierLabel(u.tier))} · on Day ${fmtNum(u.last_completed_day || 0)}`,
+          why: u => {
+            const coupons = u.coupons || "Book Launch coupon";
+            const day = Number(u.last_completed_day || 0);
+            const progress = day > 0 ? `Made it to Day ${day} of the Reset.` : `Hasn't begun the Reset experience yet.`;
+            return `Came in through Shimrit's book community via <strong>${escapeHtml(coupons)}</strong>. ${progress} Already opted into a known content world — lifetime value potential is high.`;
+          },
         },
         {
           key: "stuck_reset",
@@ -1498,7 +1492,12 @@
           action: "Personalized nudge from Shimrit referencing where they are in the journey. If they finish: pitch <strong>Unlimited Field</strong>. If not: re-launch retarget.",
           emailSubject: "Where you left off in the Field",
           rows: intel.stuck_reset || [],
-          context: u => `Stuck on Day ${fmtNum(u.last_completed_day || 0)} · ${fmtNum(u.days_since_login || 0)}d since login`,
+          why: u => {
+            const day = Number(u.last_completed_day || 0);
+            const since = Number(u.days_since_login || 0);
+            const stage = day === 0 ? "logged in but hasn't started Day 1" : `made it to Day ${day} and stopped`;
+            return `Paid for the Reset, ${stage}. <strong>${fmtNum(since)} days</strong> since their last login. Window still open — but it's closing. May need a manual nudge to come back.`;
+          },
         },
       ];
 
@@ -1553,18 +1552,19 @@
         }
         const memberCards = s.rows.map(u => {
           const displayName = u.display_name && String(u.display_name).trim();
-          const subject = encodeURIComponent(s.emailSubject);
-          const body = encodeURIComponent(greeting(u));
+          const email = (u.email || "").trim();
+          // Defensive: if both display_name and email are missing for some
+          // reason (data corruption, edge-case query result), show "Unknown
+          // member" rather than rendering an invisible card.
+          const primary = displayName || email || "Unknown member";
+          const showEmailLine = displayName && email;
           return `
             <div class="intel-member">
-              <div class="intel-member-info">
-                <div class="intel-member-name ${displayName ? '' : 'intel-member-name--anon'}">${escapeHtml(displayName || u.email)}</div>
-                ${displayName ? `<div class="intel-member-email">${escapeHtml(u.email)}</div>` : ''}
-                <div class="intel-member-context">${s.context(u)}</div>
+              <div class="intel-member-head">
+                <span class="intel-member-name ${displayName ? '' : 'intel-member-name--anon'}">${escapeHtml(primary)}</span>
+                ${showEmailLine ? `<span class="intel-member-email">${escapeHtml(email)}</span>` : ''}
               </div>
-              <div class="intel-member-actions">
-                <a class="intel-btn intel-btn--primary" href="mailto:${escapeHtml(u.email)}?subject=${subject}&body=${body}" title="Compose email">✉ Email</a>
-              </div>
+              <div class="intel-member-why">${s.why(u)}</div>
             </div>
           `;
         }).join("");
