@@ -150,7 +150,11 @@ export default async function handler(req, res) {
         GROUP BY day, tier
         ORDER BY day DESC
       `,
-      // 4. Unlimited engagement — rolling windows, team excluded
+      // 4. Unlimited engagement — rolling windows, team excluded, AND only
+      // counts PAYING Unlimited members. Free accounts (GEO100 comps, team
+      // grants, etc.) inflate engagement numbers and obscure how real
+      // customers are using the product. Same has_paid_purchase logic as
+      // the COMP pill elsewhere.
       sql`
         SELECT
           COUNT(DISTINCT m.user_id) FILTER (
@@ -172,6 +176,13 @@ export default async function handler(req, res) {
         JOIN users u ON u.id = m.user_id
         WHERE s.session_type = 'unlimited'
           AND u.email NOT LIKE ${excludePattern}
+          AND EXISTS (
+            SELECT 1 FROM purchases p
+            WHERE p.email = u.email
+              AND p.event_type = 'order.success'
+              AND p.amount_cents > 0
+              AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+          )
       `,
       // 5. Top Unlimited users by message count, last 30 days. Also flags
       // whether each member has any REAL paid purchase — anyone showing up
@@ -423,14 +434,28 @@ export default async function handler(req, res) {
              JOIN users u ON u.id = m.user_id
              WHERE u.email NOT LIKE ${excludePattern}
                AND s.session_type = 'unlimited'
-               AND m.created_at >= date_trunc('day', NOW())) AS active_unlimited_today,
+               AND m.created_at >= date_trunc('day', NOW())
+               AND EXISTS (
+                 SELECT 1 FROM purchases p
+                 WHERE p.email = u.email
+                   AND p.event_type = 'order.success'
+                   AND p.amount_cents > 0
+                   AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+               )) AS active_unlimited_today,
           (SELECT COUNT(*)::int FROM messages m
              JOIN sessions s ON s.id = m.session_id
              JOIN users u ON u.id = m.user_id
              WHERE u.email NOT LIKE ${excludePattern}
                AND s.session_type = 'unlimited'
                AND m.role = 'user'
-               AND m.created_at >= date_trunc('day', NOW())) AS unlimited_messages_today
+               AND m.created_at >= date_trunc('day', NOW())
+               AND EXISTS (
+                 SELECT 1 FROM purchases p
+                 WHERE p.email = u.email
+                   AND p.event_type = 'order.success'
+                   AND p.amount_cents > 0
+                   AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+               )) AS unlimited_messages_today
       `),
     ]);
 
