@@ -20,6 +20,7 @@ import {
   saveSubscription,
   sendPushToUser,
   runReminders,
+  REMINDER_COPY,
 } from "../lib/push.js";
 
 export const config = {
@@ -96,14 +97,17 @@ async function handleUnsubscribe(req, res, user) {
 }
 
 async function handleTest(req, res, user) {
-  const result = await sendPushToUser({
-    userId: user.id,
-    payload: {
-      title: "Test notification from The Field",
-      body: "If you see this, notifications are working. 🌿",
-    },
-  });
-  return res.status(200).json({ ok: true, ...result });
+  // Optional `key` param selects which reminder copy to send. Use to
+  // preview the exact production notifications from the admin dashboard
+  // without waiting for the cron schedule. Falls back to a generic test
+  // when key is missing or unrecognized.
+  const key = (req.query && req.query.key) || "";
+  const payload = REMINDER_COPY[key] || {
+    title: "Test notification from The Field",
+    body: "If you see this, notifications are working. 🌿",
+  };
+  const result = await sendPushToUser({ userId: user.id, payload });
+  return res.status(200).json({ ok: true, key: key || "generic", ...result });
 }
 
 async function handleReminders(req, res) {
