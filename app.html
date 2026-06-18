@@ -359,6 +359,67 @@
   }
   .acct-section { margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
   .acct-section:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+  /* ===== Preferences card (Your Account modal) ===== */
+  /* Self-contained card with icon, title, description, and status pill.
+     Three visual states keyed off Notification.permission:
+       default → looks clickable, primary CTA pill on the right
+       granted → looks like a confirmed status, no hover affordance
+       denied  → muted, with a help line about unblocking in settings */
+  .pref-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--bg);
+    border: 1px solid var(--gold-line);
+    border-radius: 12px;
+    padding: 14px 14px;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .pref-card--clickable { cursor: pointer; }
+  .pref-card--clickable:hover { border-color: var(--gold); background: rgba(201, 168, 76, 0.06); }
+  .pref-card-icon {
+    flex-shrink: 0;
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: rgba(201, 168, 76, 0.14);
+    color: var(--gold);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pref-card-body { flex: 1; min-width: 0; }
+  .pref-card-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+    margin-bottom: 3px;
+  }
+  .pref-card-desc {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+  .pref-card-status {
+    flex-shrink: 0;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 5px 11px;
+    border-radius: 999px;
+    align-self: center;
+    white-space: nowrap;
+  }
+  .pref-card-status--enabled {
+    background: rgba(74, 124, 58, 0.16);
+    color: var(--green, #4A7C3A);
+  }
+  .pref-card-status--enable {
+    background: var(--gold);
+    color: var(--bg);
+  }
+  .pref-card-status--blocked {
+    background: rgba(192, 58, 43, 0.12);
+    color: var(--red, #C03A2B);
+  }
   .acct-name-row { display: flex; gap: 10px; align-items: stretch; }
   .acct-name-input {
     flex: 1;
@@ -4754,6 +4815,23 @@ Begin.` },
             </div>
           </div>
 
+          <div class="acct-section" id="acct-section-prefs">
+            <div class="acct-section-label">Preferences</div>
+            <div class="pref-card" id="pref-notif-card">
+              <div class="pref-card-icon">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+                  <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+                </svg>
+              </div>
+              <div class="pref-card-body">
+                <div class="pref-card-title" id="pref-notif-title">Day 2 &amp; 3 reminders</div>
+                <div class="pref-card-desc" id="pref-notif-desc">Push notifications when each day unlocks, plus a gentle nudge before your Reset window closes.</div>
+              </div>
+              <div class="pref-card-status" id="pref-notif-status">…</div>
+            </div>
+          </div>
+
           <div class="acct-section">
             <div class="acct-section-label">Useful Links</div>
             ${(function () {
@@ -4787,16 +4865,6 @@ Begin.` },
                 <span>Add to Phone Home Screen</span>
               </span>
               <span class="acct-link-arrow" aria-hidden="true">↓</span>
-            </button>
-            <button class="acct-link" id="acct-notify-btn" type="button" style="cursor: pointer; font-family: inherit; text-align: left; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-              <span style="display: inline-flex; align-items: center; gap: 8px;">
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
-                  <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
-                </svg>
-                <span id="acct-notify-label">Get Day 2 &amp; 3 reminders</span>
-              </span>
-              <span class="acct-link-arrow" id="acct-notify-arrow" aria-hidden="true">→</span>
             </button>
           </div>
 
@@ -5435,18 +5503,20 @@ Begin.` },
     if (acctExportUnlimitedBtn) acctExportUnlimitedBtn.addEventListener("click", onExportAllUnlimitedClick);
     const acctInstallBtn = document.getElementById("acct-install-btn");
     if (acctInstallBtn) acctInstallBtn.addEventListener("click", onInstallOpen);
-    // Your Account "Reminders" row — opens the OS permission prompt + saves
-    // the push subscription. Label updates live based on current permission.
-    const acctNotifyBtn = document.getElementById("acct-notify-btn");
-    if (acctNotifyBtn) {
-      acctNotifyBtn.addEventListener("click", () => {
-        if (Notification.permission === "granted") return; // already on
-        if (Notification.permission === "denied") return;  // user must unblock in browser
-        enablePushNotifications();
+    // Preferences → Day 2 & 3 reminders card. Only clickable when permission
+    // is in the default state (never asked). When granted, the card displays
+    // a confirmation pill. When denied, the desc points to browser settings.
+    // Both terminal states bind no click — prevents the "tapped, nothing
+    // happened" mobile bug from the previous attached-but-no-op handler.
+    const prefNotifCard = document.getElementById("pref-notif-card");
+    if (prefNotifCard) {
+      prefNotifCard.addEventListener("click", () => {
+        if (Notification.permission === "default") {
+          enablePushNotifications();
+        }
       });
     }
-    // Sync the row's label/arrow to current permission state every time the
-    // modal mounts, so re-opening shows the correct status.
+    // Sync the card to current permission state every time the modal mounts.
     updatePushButtonState();
     // Sidebar "Add to Home Screen" button — same install modal popup.
     const sidebarInstallBtn = document.getElementById("sidebar-install-btn");
@@ -6674,25 +6744,15 @@ Begin.` },
   }
 
   async function enablePushNotifications() {
-    const btn = document.getElementById("sidebar-notify-btn");
-    const label = document.getElementById("sidebar-notify-label");
-    if (!pushSupported()) {
-      if (label) label.textContent = "Notifications not supported";
-      return;
-    }
-    if (!state.sessionToken) {
-      if (label) label.textContent = "Log in to enable";
-      return;
-    }
-
-    if (label) label.textContent = "Asking permission…";
+    if (!pushSupported() || !state.sessionToken) return;
 
     let permission = Notification.permission;
     if (permission === "default") {
       permission = await Notification.requestPermission();
     }
     if (permission !== "granted") {
-      if (label) label.textContent = "Permission denied";
+      // User said no in the OS prompt — sync the card to show the new state.
+      updatePushButtonState();
       return;
     }
 
@@ -6721,14 +6781,10 @@ Begin.` },
       });
       if (!saveRes.ok) throw new Error("subscription_save_failed");
 
-      if (label) label.textContent = "Reminders enabled ✓";
-      if (btn) {
-        btn.style.background = "var(--gold-soft)";
-        btn.style.cursor = "default";
-      }
+      // Refresh the Preferences card so it shows "✓ Enabled" immediately.
+      updatePushButtonState();
     } catch (err) {
       console.warn("enable_push_failed", err);
-      if (label) label.textContent = "Couldn't enable — try again";
     }
   }
 
@@ -6767,32 +6823,41 @@ Begin.` },
     render();
   }
 
-  // Sync the Your Account modal's "Reminders" row to current permission state.
-  // Hides on devices that don't support push at all (iOS Safari outside a
-  // home-screen PWA, very old browsers).
+  // Sync the Preferences notification card to current permission state.
+  // Hides the whole Preferences section on devices that don't support push
+  // at all (iOS Safari outside a home-screen PWA, very old browsers).
   function updatePushButtonState() {
-    const acctBtn = document.getElementById("acct-notify-btn");
-    const acctLabel = document.getElementById("acct-notify-label");
-    const acctArrow = document.getElementById("acct-notify-arrow");
-    if (acctBtn) {
-      if (!pushSupported()) {
-        acctBtn.style.display = "none";
-      } else {
-        acctBtn.style.display = "";
-        if (Notification.permission === "granted") {
-          if (acctLabel) acctLabel.textContent = "Reminders enabled ✓";
-          if (acctArrow) acctArrow.textContent = "✓";
-          acctBtn.style.cursor = "default";
-        } else if (Notification.permission === "denied") {
-          if (acctLabel) acctLabel.textContent = "Reminders blocked — enable in browser settings";
-          if (acctArrow) acctArrow.textContent = "✕";
-          acctBtn.style.cursor = "default";
-        } else {
-          if (acctLabel) acctLabel.textContent = "Get Day 2 & 3 reminders";
-          if (acctArrow) acctArrow.textContent = "→";
-          acctBtn.style.cursor = "pointer";
-        }
-      }
+    const card = document.getElementById("pref-notif-card");
+    const section = document.getElementById("acct-section-prefs");
+    const desc = document.getElementById("pref-notif-desc");
+    const statusEl = document.getElementById("pref-notif-status");
+    if (!card || !section || !statusEl) return;
+
+    if (!pushSupported()) {
+      // No push at all on this device — hide the whole section so members
+      // aren't taunted by a feature they can't use.
+      section.style.display = "none";
+      return;
+    }
+    section.style.display = "";
+
+    // Reset card class state.
+    card.classList.remove("pref-card--clickable");
+    statusEl.classList.remove("pref-card-status--enabled", "pref-card-status--enable", "pref-card-status--blocked");
+
+    if (Notification.permission === "granted") {
+      if (desc) desc.textContent = "You'll be notified when Day 2 and Day 3 unlock, plus a gentle nudge before your Reset window closes.";
+      statusEl.textContent = "✓ Enabled";
+      statusEl.classList.add("pref-card-status--enabled");
+    } else if (Notification.permission === "denied") {
+      if (desc) desc.textContent = "Notifications are blocked. Unblock them for thefieldai.app in your browser settings to enable reminders.";
+      statusEl.textContent = "Blocked";
+      statusEl.classList.add("pref-card-status--blocked");
+    } else {
+      if (desc) desc.textContent = "Push notifications when each day unlocks, plus a gentle nudge before your Reset window closes.";
+      statusEl.textContent = "Enable";
+      statusEl.classList.add("pref-card-status--enable");
+      card.classList.add("pref-card--clickable");
     }
   }
 
