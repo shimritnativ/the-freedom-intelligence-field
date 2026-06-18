@@ -936,6 +936,26 @@
             </table>
           </div>
 
+          <!-- Push notification test panel — fire any reminder copy to
+               your own subscribed devices on demand. Useful for QA and
+               screenshots. Requires that you've already enabled notifs
+               on the device you want to receive on. -->
+          <div class="section" id="panel-push-test">
+            <h2><span class="h2-eyebrow">Test</span>Send a push notification to my devices</h2>
+            <p style="font-size: 12.5px; color: var(--text-dim); margin: 0 0 14px; line-height: 1.5;">
+              Click any button to fire that exact reminder to every device where you've enabled notifications. Use to preview, screenshot, or QA copy.
+            </p>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="preset-btn" onclick="sendTestPush('day2_unlocked')">Day 2 unlocked</button>
+              <button class="preset-btn" onclick="sendTestPush('day2_nudge')">Day 2 nudge</button>
+              <button class="preset-btn" onclick="sendTestPush('day3_unlocked')">Day 3 unlocked</button>
+              <button class="preset-btn" onclick="sendTestPush('day3_nudge')">Day 3 nudge</button>
+              <button class="preset-btn" onclick="sendTestPush('window_closing')">Window closing</button>
+              <button class="preset-btn" onclick="sendTestPush('')" style="margin-left: 10px;">Generic test</button>
+            </div>
+            <div id="push-test-status" style="margin-top: 12px; font-size: 12px; color: var(--text-dim); font-style: italic;"></div>
+          </div>
+
           <!-- Webhook activity -->
           <div class="section" id="panel-webhooks">
             <h2><span class="h2-eyebrow">Plumbing</span>Webhook activity (last 30d, rolling)</h2>
@@ -1333,6 +1353,43 @@
       }
     }
     window.runBackfill = runBackfill;
+
+    // Fire a test push notification to the logged-in viewer's subscribed
+    // devices. `key` selects which reminder copy to send (matches the keys
+    // in lib/push.js REMINDER_COPY). Empty key = generic test message.
+    async function sendTestPush(key) {
+      const status = document.getElementById("push-test-status");
+      const token = localStorage.getItem(STORAGE_KEY);
+      if (!token) {
+        status.textContent = "Session expired. Refresh the page and try again.";
+        return;
+      }
+      status.textContent = "Sending…";
+      try {
+        const url = "/api/push?action=test" + (key ? "&key=" + encodeURIComponent(key) : "");
+        const r = await fetch(url, {
+          method: "POST",
+          headers: { "x-session-token": token },
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          status.textContent = "Failed: " + (data.error || ("HTTP " + r.status));
+          return;
+        }
+        if (data.no_subscriptions) {
+          status.innerHTML = "<strong>No subscriptions for your account.</strong> Enable notifications on at least one device first (popup or sidebar), then try again.";
+          return;
+        }
+        if (data.deduped) {
+          status.textContent = "Already sent. Reminder dedup is per-user lifetime; use the Generic test button instead.";
+          return;
+        }
+        status.innerHTML = "Sent to <strong>" + (data.sent || 0) + "</strong> device" + ((data.sent || 0) === 1 ? "" : "s") + ". Check your phone and desktop.";
+      } catch (err) {
+        status.textContent = "Network error: " + (err.message || err);
+      }
+    }
+    window.sendTestPush = sendTestPush;
 
     // Expose for inline onclick handlers
     window.loadMetrics = loadMetrics;
