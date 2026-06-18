@@ -1513,6 +1513,47 @@
               </div>
             </div>
 
+            <!-- Optional tap-to-go CTA. When a destination is picked, the
+                 Field renders a small gold button at the bottom of the
+                 notification card. Tapping it runs the chosen action —
+                 open a process, jump to a day, resume last conversation,
+                 or open an external URL. -->
+            <div style="margin-bottom: 14px;">
+              <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.18em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px;">Tap-to-go action <span style="font-weight: 400; color: var(--text-mute); letter-spacing: 0; text-transform: none;">(optional)</span></div>
+              <select id="push-cta-destination" onchange="updateCtaForm()" style="width: 100%; padding: 8px 10px; border: 1px solid var(--gold-line); border-radius: 6px; font-family: inherit; font-size: 13px; background: var(--bg-card); color: var(--text); margin-bottom: 6px;">
+                <option value="">— No action (info only) —</option>
+                <optgroup label="Open a process">
+                  <option value="process:morning-activation">Morning Activation</option>
+                  <option value="process:evening-reset">Evening Reset</option>
+                  <option value="process:desired-outcome-snapshot">Desired Outcome Snapshot</option>
+                  <option value="process:grand-vision">Grand Vision</option>
+                  <option value="process:setting-the-destination">Setting the Destination</option>
+                  <option value="process:decision-alignment">Decision Alignment</option>
+                  <option value="process:frequency-booster">The Frequency Booster</option>
+                  <option value="process:identity-upgrade">Identity Upgrade</option>
+                  <option value="process:worthy-to-receive">Worthy to Receive</option>
+                  <option value="process:emotional-addiction-release">Emotional Addiction Release</option>
+                  <option value="process:root-pattern-release">Root Pattern Release</option>
+                  <option value="process:prosperity-code">The Prosperity Code</option>
+                  <option value="process:abundance-projection">Abundance Projection</option>
+                  <option value="process:financial-thermostat-reset">Financial Thermostat Reset</option>
+                  <option value="process:dream-reading">Dream Reading</option>
+                  <option value="process:frequency-calibration">Frequency Calibration</option>
+                </optgroup>
+                <optgroup label="Jump to">
+                  <option value="day:1">Day 1</option>
+                  <option value="day:2">Day 2</option>
+                  <option value="day:3">Day 3</option>
+                  <option value="continue:last">Continue last conversation</option>
+                </optgroup>
+                <optgroup label="External">
+                  <option value="url:">External URL…</option>
+                </optgroup>
+              </select>
+              <input type="url" id="push-cta-url" placeholder="https://..." style="width: 100%; padding: 8px 10px; border: 1px solid var(--gold-line); border-radius: 6px; font-family: inherit; font-size: 13px; margin-bottom: 6px; box-sizing: border-box; display: none;" />
+              <input type="text" id="push-cta-label" placeholder="Button label (defaults to &quot;Open&quot;)" maxlength="40" style="width: 100%; padding: 8px 10px; border: 1px solid var(--gold-line); border-radius: 6px; font-family: inherit; font-size: 13px; box-sizing: border-box; display: none;" />
+            </div>
+
             <button class="preset-btn" style="background: var(--gold); color: var(--dark); border-color: var(--gold); padding: 8px 18px; font-weight: 600; margin-top: 10px;" onclick="sendBulkPush()" id="push-send-btn">Send notification</button>
             <div id="push-test-status" style="margin-top: 12px; font-size: 12px; color: var(--text-dim); font-style: italic;"></div>
           </div>
@@ -2463,6 +2504,57 @@
       document.getElementById("push-preview-body").textContent = body;
     }
 
+    // ===== Tap-to-go CTA helpers =====
+    // The destination dropdown encodes the chosen action as "type:value":
+    //   process:<key>   → /app.html?process=<key>
+    //   day:<n>         → /app.html?day=<n>
+    //   continue:last   → /app.html?continue=last
+    //   url:            → custom external URL (shows the URL input)
+    //   (empty)         → no action
+    // Show/hide the URL + label inputs based on what's picked.
+    function updateCtaForm() {
+      const dest = (document.getElementById("push-cta-destination") || {}).value || "";
+      const urlEl = document.getElementById("push-cta-url");
+      const labelEl = document.getElementById("push-cta-label");
+      if (!urlEl || !labelEl) return;
+      if (!dest) {
+        urlEl.style.display = "none";
+        labelEl.style.display = "none";
+        return;
+      }
+      // URL input shown only for the "External URL" option; label is shown
+      // for every non-empty destination so the admin can override "Open".
+      urlEl.style.display = dest === "url:" ? "" : "none";
+      labelEl.style.display = "";
+    }
+    window.updateCtaForm = updateCtaForm;
+
+    // Resolves the dropdown selection + URL input into the final cta_url
+    // string we'll store on the notification. Returns null when no action
+    // is set or the input is invalid.
+    function buildCtaUrl() {
+      const dest = (document.getElementById("push-cta-destination") || {}).value || "";
+      if (!dest) return null;
+      const [type, value] = dest.split(":");
+      if (type === "process") return "/app.html?process=" + encodeURIComponent(value);
+      if (type === "day") return "/app.html?day=" + encodeURIComponent(value);
+      if (type === "continue") return "/app.html?continue=" + encodeURIComponent(value);
+      if (type === "url") {
+        const u = (document.getElementById("push-cta-url") || {}).value || "";
+        const trimmed = u.trim();
+        if (!trimmed) return null;
+        // Require https or http to avoid javascript: shenanigans.
+        if (!/^https?:\/\//i.test(trimmed)) return null;
+        return trimmed;
+      }
+      return null;
+    }
+
+    function buildCtaLabel() {
+      const l = (document.getElementById("push-cta-label") || {}).value || "";
+      return l.trim() || null; // null lets the Field default to "Open"
+    }
+
     // ===== Manage inbox =====
     // Loads the recent inbox notifications and renders them with delete
     // buttons. Called when the Notifications tab is entered and after a
@@ -2486,22 +2578,34 @@
           container.innerHTML = '<div style="color: var(--text-dim); font-style: italic; font-size: 13px;">No notifications saved to the inbox yet.</div>';
           return;
         }
-        container.innerHTML = items.map(n => `
-          <div style="background: var(--panel); border: 1px solid var(--gold-line); border-radius: 8px; padding: 12px 14px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start;">
-            <div style="min-width: 0;">
-              <div style="font-weight: 600; color: var(--text); font-size: 13.5px; margin-bottom: 2px;">${escapeHtml(n.title || '')}</div>
-              ${n.body ? `<div style="font-size: 12px; color: var(--text-dim); line-height: 1.45; margin-bottom: 4px;">${escapeHtml(n.body)}</div>` : ''}
-              <div style="font-size: 11px; color: var(--text-mute);">
-                ${fmtRelative(n.created_at)} · read by <strong>${fmtNum(n.read_count || 0)}</strong> member${(n.read_count || 0) === 1 ? '' : 's'}${n.sent_by_email ? ' · from ' + escapeHtml(n.sent_by_email) : ''}
+        container.innerHTML = items.map(n => {
+          // Render the CTA info inline if present. The display label is
+          // either the explicit cta_label or "Open"; the URL gives the
+          // admin a quick at-a-glance of where the button leads.
+          const ctaChip = n.cta_url
+            ? `<span style="display: inline-block; background: var(--gold-soft); color: var(--gold); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; margin-left: 6px; letter-spacing: 0.04em;">→ ${escapeHtml(n.cta_label || "Open")}</span>`
+            : "";
+          const ctaUrlLine = n.cta_url
+            ? `<div style="font-size: 11px; color: var(--text-mute); margin-top: 2px; word-break: break-all;">${escapeHtml(n.cta_url)}</div>`
+            : "";
+          return `
+            <div style="background: var(--panel); border: 1px solid var(--gold-line); border-radius: 8px; padding: 12px 14px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start;">
+              <div style="min-width: 0;">
+                <div style="font-weight: 600; color: var(--text); font-size: 13.5px; margin-bottom: 2px;">${escapeHtml(n.title || '')}${ctaChip}</div>
+                ${n.body ? `<div style="font-size: 12px; color: var(--text-dim); line-height: 1.45; margin-bottom: 4px;">${escapeHtml(n.body)}</div>` : ''}
+                ${ctaUrlLine}
+                <div style="font-size: 11px; color: var(--text-mute);">
+                  ${fmtRelative(n.created_at)} · read by <strong>${fmtNum(n.read_count || 0)}</strong> member${(n.read_count || 0) === 1 ? '' : 's'}${n.sent_by_email ? ' · from ' + escapeHtml(n.sent_by_email) : ''}
+                </div>
               </div>
+              <button onclick="deleteInboxNotification('${escapeHtml(n.id)}', this)"
+                      style="background: transparent; border: 1px solid var(--gold-line); color: var(--text-dim); padding: 5px 10px; border-radius: 6px; font-family: inherit; font-size: 11px; cursor: pointer; font-weight: 600; white-space: nowrap;"
+                      title="Remove this from every member's inbox">
+                Delete
+              </button>
             </div>
-            <button onclick="deleteInboxNotification('${escapeHtml(n.id)}', this)"
-                    style="background: transparent; border: 1px solid var(--gold-line); color: var(--text-dim); padding: 5px 10px; border-radius: 6px; font-family: inherit; font-size: 11px; cursor: pointer; font-weight: 600; white-space: nowrap;"
-                    title="Remove this from every member's inbox">
-              Delete
-            </button>
-          </div>
-        `).join("");
+          `;
+        }).join("");
       } catch (err) {
         container.innerHTML = '<div style="color: var(--text-dim); font-style: italic; font-size: 13px;">Network error loading inbox.</div>';
       }
@@ -2581,6 +2685,9 @@
         // announcements being durable. Inbox-only mode skips push;
         // push+inbox mode does both.
         alsoSaveToInbox: true,
+        // Optional tap-to-go destination. null when no action is chosen.
+        ctaUrl: buildCtaUrl(),
+        ctaLabel: buildCtaLabel(),
       };
       if (selectedPushKey === "custom") {
         const title = document.getElementById("push-custom-title").value.trim();
