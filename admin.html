@@ -1485,6 +1485,10 @@
               </div>
             </div>
 
+            <label style="display: flex; align-items: center; gap: 8px; margin: 10px 0 14px; font-size: 13px; color: var(--text);" title="Members who don't have push enabled will see this in their bell-icon inbox inside the Field.">
+              <input type="checkbox" id="push-save-to-inbox" checked style="margin: 0;" />
+              <span>Also save to inbox <span style="color: var(--text-mute); font-style: italic;">(visible to all members via the bell icon)</span></span>
+            </label>
             <button class="preset-btn" style="background: var(--gold); color: var(--dark); border-color: var(--gold); padding: 8px 18px; font-weight: 600;" onclick="sendBulkPush()" id="push-send-btn">Send notification</button>
             <div id="push-test-status" style="margin-top: 12px; font-size: 12px; color: var(--text-dim); font-style: italic;"></div>
           </div>
@@ -2439,6 +2443,11 @@
         return;
       }
       const body = { userIds: checked.map(cb => cb.value) };
+      // Forward the "Save to inbox" checkbox state. Default is on — the
+      // server treats omission as true to match historical behavior for
+      // any caller (cron, scripts) that doesn't supply the flag.
+      const saveToInboxEl = document.getElementById("push-save-to-inbox");
+      body.alsoSaveToInbox = saveToInboxEl ? !!saveToInboxEl.checked : true;
       if (selectedPushKey === "custom") {
         const title = document.getElementById("push-custom-title").value.trim();
         const bodyText = document.getElementById("push-custom-body").value.trim();
