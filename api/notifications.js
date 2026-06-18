@@ -38,6 +38,7 @@ export default async function handler(req, res) {
       if (!isAdmin(user)) return res.status(403).json({ error: "forbidden" });
       const { rows } = await sql`
         SELECT n.id, n.title, n.body, n.created_at, n.sent_by_email, n.audience,
+          n.cta_url, n.cta_label,
           (SELECT COUNT(*)::int FROM notification_reads nr WHERE nr.notification_id = n.id) AS read_count
         FROM notifications n
         ORDER BY n.created_at DESC
@@ -65,6 +66,8 @@ export default async function handler(req, res) {
           n.title,
           n.body,
           n.created_at,
+          n.cta_url,
+          n.cta_label,
           (nr.read_at IS NOT NULL) AS is_read
         FROM notifications n
         LEFT JOIN notification_reads nr
