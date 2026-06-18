@@ -89,6 +89,7 @@ export default async function handler(req, res) {
     if (action === "subscribe") return await handleSubscribe(req, res, user);
     if (action === "unsubscribe") return await handleUnsubscribe(req, res, user);
     if (action === "test") return await handleTest(req, res, user);
+    if (action === "my-subscription") return await handleMySubscription(req, res, user);
 
     return res.status(400).json({ error: "unknown_action" });
   } catch (err) {
@@ -128,6 +129,20 @@ async function handleUnsubscribe(req, res, user) {
     await sql`DELETE FROM push_subscriptions WHERE user_id = ${user.id}`;
   }
   return res.status(200).json({ ok: true });
+}
+
+async function handleMySubscription(req, res, user) {
+  // Returns whether the LOGGED-IN user has any active push subscription on
+  // the server. Used by the Preferences toggle to show the true state per
+  // account — browser-level Notification.permission only tells us about
+  // the origin, not which account the subscription is registered to.
+  const { rows } = await sql`
+    SELECT COUNT(*)::int AS n
+    FROM push_subscriptions
+    WHERE user_id = ${user.id} AND failed_count < 5
+  `;
+  const n = rows[0]?.n || 0;
+  return res.status(200).json({ hasSubscription: n > 0, deviceCount: n });
 }
 
 async function handleTest(req, res, user) {
