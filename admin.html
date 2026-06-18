@@ -946,6 +946,17 @@
         if (typeof loadPushSubscribers === "function") loadPushSubscribers();
         if (typeof loadInboxNotifications === "function") loadInboxNotifications();
       }
+      // Lazy-load the Launch Tracker iframe the first time the tab opens
+      // so its 1000-line page doesn't compete with the dashboard's initial
+      // paint. Subsequent switches just toggle visibility; the iframe stays
+      // mounted so any in-progress calculations aren't lost.
+      if (tab === "launch") {
+        const frame = document.getElementById("launch-tracker-frame");
+        if (frame && frame.getAttribute("src") === "about:blank") {
+          const realSrc = frame.getAttribute("data-real-src");
+          if (realSrc) frame.setAttribute("src", realSrc);
+        }
+      }
     }
 
     // KPI click → switch to the target tab, then scroll the detail panel
@@ -1594,6 +1605,24 @@
           </div>
           <!-- /end Notifications tab -->
 
+          <!-- ===== LAUNCH TRACKER TAB =====
+               Embeds the standalone /launch-tracker.html so the existing
+               calculator + P&L view live inside the admin without a copy
+               of all that markup here. Loaded lazily on tab entry so the
+               iframe doesn't compete with the dashboard's initial paint. -->
+          <div data-tab-content="launch" style="display: none;">
+            <div class="section" id="panel-launch" style="padding: 0; overflow: hidden;">
+              <iframe
+                id="launch-tracker-frame"
+                title="Launch tracker"
+                src="about:blank"
+                data-real-src="/launch-tracker.html"
+                style="width: 100%; min-height: 1400px; height: calc(100vh - 60px); border: none; display: block; background: var(--bg);"
+                loading="lazy"></iframe>
+            </div>
+          </div>
+          <!-- /end Launch tracker tab -->
+
             </div><!-- /.dashboard-main -->
 
             <!-- Left-side tab navigation. Sticky on desktop, horizontal scroll on mobile. -->
@@ -1604,6 +1633,7 @@
               <button class="tab-btn" data-tab="revenue" onclick="switchTab('revenue')">Revenue</button>
               <button class="tab-btn" data-tab="engagement" onclick="switchTab('engagement')">Engagement</button>
               <button class="tab-btn" data-tab="notifications" onclick="switchTab('notifications')">Notifications</button>
+              <button class="tab-btn" data-tab="launch" onclick="switchTab('launch')">Launch tracker</button>
             </nav>
           </div><!-- /.dashboard-body -->
         </div>
