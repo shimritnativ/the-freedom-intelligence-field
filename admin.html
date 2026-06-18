@@ -7,6 +7,7 @@
   <style>
     :root {
       --bg: #FAF5E4;
+      --bg-card: #FFFFFF;
       --panel: #F4ECD0;
       --gold: #C9A84C;
       --gold-soft: rgba(201, 168, 76, 0.15);
@@ -19,6 +20,24 @@
       --green: #4A7C3A;
       --red: #C03A2B;
       --shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+      --kpi-bg: var(--panel);
+    }
+    [data-theme="dark"] {
+      --bg: #1A1612;
+      --bg-card: #251F18;
+      --panel: #2C2416;
+      --gold: #D4B864;
+      --gold-soft: rgba(212, 184, 100, 0.12);
+      --gold-line: rgba(212, 184, 100, 0.32);
+      --dark: #FAF5E4;
+      --text: #F4ECD0;
+      --text-dim: #B8AB8B;
+      --text-mute: #8A8064;
+      --border: rgba(212, 184, 100, 0.2);
+      --green: #7AAE5E;
+      --red: #E08580;
+      --shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+      --kpi-bg: #2C2416;
     }
     * { box-sizing: border-box; }
     html, body {
@@ -71,7 +90,7 @@
       align-items: center;
       flex-wrap: wrap;
       gap: 8px;
-      background: #FFFFFF;
+      background: var(--bg-card);
       border: 1px solid var(--gold-line);
       border-radius: 12px;
       padding: 12px 14px;
@@ -109,7 +128,7 @@
       padding: 6px 10px;
       border: 1px solid var(--gold-line);
       border-radius: 6px;
-      background: #FFFFFF;
+      background: var(--bg-card);
       color: var(--text);
     }
     .date-sep { color: var(--text-mute); font-size: 12px; }
@@ -140,7 +159,7 @@
       margin-bottom: 30px;
     }
     .kpi {
-      background: var(--panel);
+      background: var(--kpi-bg);
       border: 1px solid var(--gold-line);
       border-radius: 12px;
       padding: 18px 18px 16px;
@@ -263,7 +282,7 @@
     .kpi-sub { font-size: 11px; color: var(--text-mute); margin-top: 4px; }
 
     .section {
-      background: #FFFFFF;
+      background: var(--bg-card);
       border: 1px solid var(--gold-line);
       border-radius: 14px;
       padding: 22px 24px;
@@ -488,7 +507,7 @@
 
     .gate {
       max-width: 480px; margin: 80px auto;
-      padding: 36px 32px; background: #FFFFFF;
+      padding: 36px 32px; background: var(--bg-card);
       border: 1px solid var(--gold-line); border-radius: 16px;
       text-align: center; box-shadow: var(--shadow);
     }
@@ -512,59 +531,100 @@
     }
     .note-box strong { color: var(--text); }
     .note-box code {
-      background: #FFFFFF; padding: 2px 6px; border-radius: 4px;
+      background: var(--bg-card); padding: 2px 6px; border-radius: 4px;
       font-family: "SF Mono", Monaco, monospace; font-size: 11px;
     }
     .empty-state {
       text-align: center; padding: 24px 12px;
       color: var(--text-mute); font-style: italic; font-size: 13px;
     }
-    /* ===== Top tab navigation ===== */
+    /* ===== Right-side tab navigation ===== */
+    .dashboard-body {
+      display: grid;
+      grid-template-columns: 1fr 200px;
+      gap: 28px;
+      align-items: start;
+    }
     .tabs {
       display: flex;
+      flex-direction: column;
       gap: 2px;
-      border-bottom: 1px solid var(--gold-line);
-      margin-bottom: 22px;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
+      background: var(--panel);
+      border: 1px solid var(--gold-line);
+      border-radius: 12px;
+      padding: 10px;
+      position: sticky;
+      top: 24px;
     }
     .tab-btn {
       background: transparent;
-      border: none;
-      padding: 12px 18px;
+      border: 1px solid transparent;
+      padding: 10px 14px;
       font-family: inherit;
-      font-size: 12.5px;
+      font-size: 13px;
       font-weight: 600;
       color: var(--text-dim);
       cursor: pointer;
-      border-bottom: 2px solid transparent;
-      margin-bottom: -1px;
-      transition: color 0.15s ease, border-color 0.15s ease;
-      white-space: nowrap;
+      border-radius: 8px;
+      transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+      text-align: left;
       letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
     }
-    .tab-btn:hover { color: var(--text); }
+    .tab-btn:hover { color: var(--text); background: rgba(201, 168, 76, 0.08); }
     .tab-btn--active {
       color: var(--text);
-      border-bottom-color: var(--gold);
+      background: var(--gold-soft);
+      border-color: var(--gold-line);
     }
     .tab-btn-count {
       background: var(--gold-soft);
       color: var(--gold);
       font-size: 10px;
       font-weight: 700;
-      padding: 1px 6px;
+      padding: 1px 7px;
       border-radius: 999px;
-      margin-left: 6px;
-      vertical-align: middle;
     }
     .tab-btn--active .tab-btn-count {
       background: var(--gold);
       color: var(--dark);
     }
-    @media (max-width: 640px) {
-      .tab-btn { padding: 10px 12px; font-size: 11.5px; }
+    @media (max-width: 760px) {
+      .dashboard-body { grid-template-columns: 1fr; }
+      .tabs {
+        flex-direction: row;
+        position: static;
+        overflow-x: auto;
+        padding: 4px;
+        gap: 2px;
+        -webkit-overflow-scrolling: touch;
+        margin-bottom: 16px;
+      }
+      .tab-btn {
+        white-space: nowrap;
+        padding: 8px 12px;
+        font-size: 12px;
+      }
     }
+    /* ===== Theme toggle ===== */
+    .theme-toggle {
+      width: 36px; height: 36px;
+      border: 1px solid var(--gold-line);
+      background: transparent;
+      color: var(--text);
+      border-radius: 50%;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      margin-left: 8px;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    .theme-toggle:hover { border-color: var(--gold); background: var(--gold-soft); }
   </style>
 </head>
 <body>
@@ -576,7 +636,35 @@
     const STORAGE_KEY = "tfif_session_v1"; // Field member session
     const RANGE_STORAGE_KEY = "tfif_admin_range_v1";
     const TAB_STORAGE_KEY = "tfif_admin_tab_v1"; // Last selected dashboard tab
+    const THEME_STORAGE_KEY = "tfif_admin_theme_v1";
     const root = document.getElementById("root");
+
+    // ===== Light/dark theme =====
+    // Applied via data-theme="dark" on documentElement so CSS variables flip
+    // for the whole dashboard. Choice persists in localStorage. Defaults to
+    // light. The toggle button in the topbar shows ☀ in dark mode and ☾ in
+    // light mode (the icon represents what you'd switch TO).
+    function applyTheme(theme) {
+      if (theme === "dark") {
+        document.documentElement.setAttribute("data-theme", "dark");
+      } else {
+        document.documentElement.removeAttribute("data-theme");
+      }
+      const btn = document.getElementById("theme-toggle-btn");
+      if (btn) btn.textContent = theme === "dark" ? "☀" : "☾";
+    }
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+      const next = current === "dark" ? "light" : "dark";
+      applyTheme(next);
+      try { localStorage.setItem(THEME_STORAGE_KEY, next); } catch {}
+    }
+    window.toggleTheme = toggleTheme;
+    // Apply saved theme immediately so the dashboard doesn't flash light first
+    try {
+      const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+      if (savedTheme === "dark") applyTheme("dark");
+    } catch {}
 
     // Switch the active tab. Hides all data-tab-content blocks except the
     // target, highlights the matching tab button, and saves the choice so
@@ -857,20 +945,17 @@
             <div class="viewer">
               <div>Viewing as <span class="v-email">${escapeHtml(d.viewer.email)}</span></div>
               <div>Last refresh: ${new Date(d.asOf).toLocaleTimeString()}</div>
-              <button class="preset-btn" style="margin-top: 6px;" onclick="loadMetrics()">↻ Refresh</button>
+              <div style="margin-top: 6px; display: flex; align-items: center; justify-content: flex-end;">
+                <button class="preset-btn" onclick="loadMetrics()">↻ Refresh</button>
+                <button class="theme-toggle" onclick="toggleTheme()" id="theme-toggle-btn" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">☾</button>
+              </div>
             </div>
           </div>
 
           ${renderControls()}
 
-          <!-- Tab navigation — restores last-selected tab via localStorage -->
-          <nav class="tabs" role="tablist">
-            <button class="tab-btn" data-tab="overview" onclick="switchTab('overview')">Overview</button>
-            <button class="tab-btn" data-tab="members" onclick="switchTab('members')">Members${totalMembers ? '<span class="tab-btn-count">' + fmtNum(totalMembers) + '</span>' : ''}</button>
-            <button class="tab-btn" data-tab="revenue" onclick="switchTab('revenue')">Revenue</button>
-            <button class="tab-btn" data-tab="engagement" onclick="switchTab('engagement')">Engagement</button>
-            <button class="tab-btn" data-tab="notifications" onclick="switchTab('notifications')">Notifications</button>
-          </nav>
+          <div class="dashboard-body">
+            <div class="dashboard-main">
 
           <!-- ===== OVERVIEW TAB ===== -->
           <div data-tab-content="overview">
@@ -881,7 +966,7 @@
               <div class="kpi clickable" onclick="goToPanel('overview', 'panel-tier-mix')">
                 <div class="kpi-label">Total Members</div>
                 <div class="kpi-value">${fmtNum(totalMembers)}</div>
-                <div class="kpi-sub">${fmtNum(resetTotal)} Reset · ${fmtNum(unlimitedTotal)} Unlimited</div>
+                <div class="kpi-sub">${fmtNum(resetTotal)} Reset · ${fmtNum(unlimitedTotal)} Unlimited${tc.connected && tcSummary.unique_buyers ? `<br>${fmtNum(tcSummary.unique_buyers)} paid via ThriveCart · ${fmtNum(Math.max(0, totalMembers - tcSummary.unique_buyers))} comp/granted` : ''}</div>
               </div>
               <div class="kpi clickable" onclick="goToPanel('overview', 'panel-tier-mix')">
                 <div class="kpi-label">72-Hour Reset</div>
@@ -902,14 +987,9 @@
                 <div class="kpi kpi-revenue clickable" onclick="goToPanel('revenue', 'panel-revenue')">
                   <div class="kpi-label">Net Revenue (ThriveCart)</div>
                   <div class="kpi-value">${fmtEur(netCents)}</div>
-                  <div class="kpi-sub">${fmtNum(tcSummary.orders || 0)} orders · ${fmtNum(tcSummary.unique_buyers || 0)} buyers</div>
+                  <div class="kpi-sub">${fmtNum(tcSummary.orders || 0)} orders · ${fmtNum(tcSummary.unique_buyers || 0)} paying buyers</div>
                 </div>
               ` : ''}
-              <div class="kpi clickable" onclick="goToPanel('engagement', 'panel-unlimited-engagement')">
-                <div class="kpi-label">Paid Unlimited Active (7d)</div>
-                <div class="kpi-value">${fmtNum(u.active_users_7d || 0)}</div>
-                <div class="kpi-sub">${fmtNum(u.user_messages_7d || 0)} messages · paying members only</div>
-              </div>
             </div>
 
             <!-- Completion funnel + Tier breakdown -->
@@ -1114,11 +1194,27 @@
           </div>
           </div>
           <!-- /end Notifications tab -->
+
+            </div><!-- /.dashboard-main -->
+
+            <!-- Right-side tab navigation. Sticky on desktop, horizontal scroll on mobile. -->
+            <nav class="tabs" role="tablist">
+              <button class="tab-btn" data-tab="overview" onclick="switchTab('overview')">Overview</button>
+              <button class="tab-btn" data-tab="members" onclick="switchTab('members')">Members${totalMembers ? '<span class="tab-btn-count">' + fmtNum(totalMembers) + '</span>' : ''}</button>
+              <button class="tab-btn" data-tab="revenue" onclick="switchTab('revenue')">Revenue</button>
+              <button class="tab-btn" data-tab="engagement" onclick="switchTab('engagement')">Engagement</button>
+              <button class="tab-btn" data-tab="notifications" onclick="switchTab('notifications')">Notifications</button>
+            </nav>
+          </div><!-- /.dashboard-body -->
         </div>
       `;
       // Restore last-active tab (or default to overview).
       const savedTab = (function () { try { return localStorage.getItem(TAB_STORAGE_KEY); } catch { return null; } })();
       switchTab(savedTab || "overview");
+      // Repaint the theme toggle icon now that the topbar exists.
+      const currentTheme = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+      const themeBtn = document.getElementById("theme-toggle-btn");
+      if (themeBtn) themeBtn.textContent = currentTheme === "dark" ? "☀" : "☾";
     }
 
     function renderFunnel(c, details) {
