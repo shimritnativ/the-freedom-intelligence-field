@@ -100,6 +100,12 @@ export default async function handler(req, res) {
       thrivecartRevenueByDay,
       thrivecartByProductCoupon,
       completionDetails,
+      segReadyForUpsell,
+      segHotResetGrad,
+      segBookLaunchWarmer,
+      segAtRiskSubscriber,
+      segStuckReset,
+      segHighIntent,
       todaySignups,
       todayRevenue,
       todayActivity,
@@ -423,6 +429,136 @@ export default async function handler(req, res) {
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND created_at >= date_trunc('day', NOW())
       `),
+      // ===== Intelligence segments (6 sales/marketing-actionable buckets) =====
+      // Each query returns the named members who currently fit the segment,
+      // sorted so the most actionable ones are at the top of the list.
+      // 18. Ready for upsell — high-engagement paid Unlimited members
+      safeQuery(sql`
+        SELECT
+          u.id, u.email, u.display_name,
+          COUNT(*) FILTER (WHERE m.role = 'user')::int AS messages_30d,
+          MAX(m.created_at) AS last_message_at
+        FROM users u
+        JOIN messages m ON m.user_id = u.id
+        JOIN sessions s ON s.id = m.session_id
+        WHERE u.tier = 'full'
+          AND s.session_type = 'unlimited'
+          AND m.created_at > NOW() - INTERVAL '30 days'
+          AND u.email NOT LIKE ${excludePattern}
+          AND EXISTS (
+            SELECT 1 FROM purchases p
+            WHERE p.email = u.email
+              AND p.event_type = 'order.success'
+              AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+          )
+        GROUP BY u.id, u.email, u.display_name
+        HAVING COUNT(*) FILTER (WHERE m.role = 'user') >= 30
+        ORDER BY messages_30d DESC
+      `),
+      // 19. Hot Reset graduate — completed Day 3, still on Reset tier
+      safeQuery(sql`
+        SELECT
+          u.id, u.email, u.display_name,
+          MAX(dc.created_at) AS day3_completed_at,
+          MAX(p.coupon_code) AS coupon_used
+        FROM users u
+        JOIN day_completions dc ON dc.user_id = u.id
+        LEFT JOIN purchases p ON p.email = u.email AND p.event_type = 'order.success'
+        WHERE u.tier = 'preview'
+          AND dc.day = 3
+          AND u.email NOT LIKE ${excludePattern}
+          AND EXISTS (
+            SELECT 1 FROM purchases p2
+            WHERE p2.email = u.email
+              AND p2.event_type = 'order.success'
+              AND COALESCE(p2.coupon_code, '') <> ALL(${excludedCoupons})
+          )
+        GROUP BY u.id, u.email, u.display_name
+        ORDER BY day3_completed_at DESC
+      `),
+      // 20. Book Launch warmer — used LAUNCHTEAM coupons + showed engagement
+      safeQuery(sql`
+        SELECT DISTINCT
+          u.id, u.email, u.display_name,
+          string_agg(DISTINCT p.coupon_code, ', ') AS coupons,
+          MAX(p.created_at) AS purchased_at,
+          u.last_completed_day,
+          u.tier::text AS tier
+        FROM users u
+        JOIN purchases p ON p.email = u.email
+        WHERE p.event_type = 'order.success'
+          AND p.coupon_code IN ('LAUNCHTEAM', 'LAUNCHTEAMUNLIMITED')
+          AND u.email NOT LIKE ${excludePattern}
+        GROUP BY u.id, u.email, u.display_name, u.last_completed_day, u.tier
+        ORDER BY purchased_at DESC
+      `),
+      // 21. At-risk Unlimited subscriber — paid but quiet for 14+ days
+      safeQuery(sql`
+        WITH last_unlimited_msg AS (
+          SELECT m.user_id, MAX(m.created_at) AS last_at
+          FROM messages m
+          JOIN sessions s ON s.id = m.session_id
+          WHERE s.session_type = 'unlimited' AND m.role = 'user'
+          GROUP BY m.user_id
+        )
+        SELECT
+          u.id, u.email, u.display_name,
+          u.subscription_plan,
+          lm.last_at AS last_message_at,
+          EXTRACT(DAY FROM (NOW() - COALESCE(lm.last_at, u.created_at)))::int AS days_quiet
+        FROM users u
+        LEFT JOIN last_unlimited_msg lm ON lm.user_id = u.id
+        WHERE u.tier = 'full'
+          AND u.email NOT LIKE ${excludePattern}
+          AND (lm.last_at IS NULL OR lm.last_at < NOW() - INTERVAL '14 days')
+          AND EXISTS (
+            SELECT 1 FROM purchases p
+            WHERE p.email = u.email
+              AND p.event_type = 'order.success'
+              AND p.amount_cents > 0
+              AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+          )
+        ORDER BY days_quiet DESC NULLS FIRST
+      `),
+      // 22. Stuck Reset — logged in but not completing within 3+ days
+      safeQuery(sql`
+        SELECT
+          u.id, u.email, u.display_name,
+          COALESCE(u.last_completed_day, 0)::int AS last_completed_day,
+          u.first_login_at,
+          EXTRACT(DAY FROM (NOW() - u.first_login_at))::int AS days_since_login
+        FROM users u
+        WHERE u.tier = 'preview'
+          AND u.first_login_at IS NOT NULL
+          AND u.first_login_at < NOW() - INTERVAL '3 days'
+          AND COALESCE(u.last_completed_day, 0) < 3
+          AND u.preview_ends_at > NOW()
+          AND u.email NOT LIKE ${excludePattern}
+          AND EXISTS (
+            SELECT 1 FROM purchases p
+            WHERE p.email = u.email
+              AND p.event_type = 'order.success'
+              AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+          )
+        ORDER BY days_since_login DESC
+      `),
+      // 23. High-intent buyer — multiple ThriveCart purchases (front-end stacked)
+      safeQuery(sql`
+        SELECT
+          u.id, u.email, u.display_name,
+          u.tier::text AS tier,
+          COUNT(DISTINCT p.thrivecart_id)::int AS purchase_count,
+          COALESCE(SUM(p.amount_cents), 0)::bigint AS total_cents,
+          MAX(p.created_at) AS last_purchase_at
+        FROM users u
+        JOIN purchases p ON p.email = u.email
+        WHERE p.event_type = 'order.success'
+          AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+          AND u.email NOT LIKE ${excludePattern}
+        GROUP BY u.id, u.email, u.display_name, u.tier
+        HAVING COUNT(DISTINCT p.thrivecart_id) >= 2
+        ORDER BY total_cents DESC
+      `),
       safeQuery(sql`
         SELECT
           (SELECT COUNT(*)::int FROM day_completions dc
@@ -476,6 +612,14 @@ export default async function handler(req, res) {
       tierCounts: tierCounts.rows,
       completion: completion.rows[0],
       completionDetails: completionDetails.rows,
+      intelligence: {
+        ready_for_upsell: segReadyForUpsell ? segReadyForUpsell.rows : [],
+        hot_reset_graduate: segHotResetGrad ? segHotResetGrad.rows : [],
+        book_launch_warmer: segBookLaunchWarmer ? segBookLaunchWarmer.rows : [],
+        at_risk_subscriber: segAtRiskSubscriber ? segAtRiskSubscriber.rows : [],
+        stuck_reset: segStuckReset ? segStuckReset.rows : [],
+        high_intent_buyer: segHighIntent ? segHighIntent.rows : [],
+      },
       signupsByDay: signupsByDay.rows,
       unlimitedEngagement: unlimitedEngagement.rows[0],
       perUserUnlimited: perUserUnlimited.rows,
