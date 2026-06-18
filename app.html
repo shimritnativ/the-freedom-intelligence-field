@@ -789,6 +789,25 @@
     color: var(--text-dim);
     line-height: 1.5;
   }
+  .notif-item-cta {
+    margin-top: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--gold);
+    color: var(--bg);
+    border: none;
+    padding: 7px 14px;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  .notif-item-cta:hover { opacity: 0.92; transform: translateY(-1px); }
+  .notif-item-cta:after { content: "→"; font-size: 13px; }
   .notif-empty {
     text-align: center;
     padding: 28px 8px;
@@ -6317,15 +6336,121 @@ Begin.` },
       `;
       return;
     }
-    list.innerHTML = notifState.items.map(n => `
-      <li class="notif-item ${n.is_read ? 'is-read' : ''}">
-        <div class="notif-item-head">
-          <div class="notif-item-title">${escapeHtml(n.title || '')}</div>
-          <div class="notif-item-time">${notifFmtRelative(n.created_at)}</div>
-        </div>
-        ${n.body ? `<div class="notif-item-body">${escapeHtml(n.body)}</div>` : ''}
-      </li>
-    `).join("");
+    list.innerHTML = notifState.items.map(n => {
+      // Render the optional CTA button at the bottom of each card. The
+      // data-cta-url attribute carries the destination; clicking dispatches
+      // it through onNotifCtaClick which resolves internal routes (?process=,
+      // ?day=, ?continue=) or opens external URLs.
+      const ctaBtn = n.cta_url
+        ? `<button class="notif-item-cta" type="button" data-cta-url="${escapeHtml(n.cta_url)}" onclick="onNotifCtaClick(event)">${escapeHtml(n.cta_label || "Open")}</button>`
+        : "";
+      return `
+        <li class="notif-item ${n.is_read ? 'is-read' : ''}">
+          <div class="notif-item-head">
+            <div class="notif-item-title">${escapeHtml(n.title || '')}</div>
+            <div class="notif-item-time">${notifFmtRelative(n.created_at)}</div>
+          </div>
+          ${n.body ? `<div class="notif-item-body">${escapeHtml(n.body)}</div>` : ''}
+          ${ctaBtn}
+        </li>
+      `;
+    }).join("");
+  }
+
+  // Handle a click on a notification's tap-to-go button. Closes the inbox
+  // panel and dispatches the action: internal Field routes (?process=X,
+  // ?day=N, ?continue=last) are handled in-page so the experience is
+  // instant; external https:// URLs open in a new tab.
+  function onNotifCtaClick(ev) {
+    if (ev) ev.preventDefault();
+    const btn = ev && ev.currentTarget;
+    const url = btn && btn.getAttribute("data-cta-url");
+    if (!url) return;
+    closeNotifPanel();
+    dispatchNotifCta(url);
+  }
+  window.onNotifCtaClick = onNotifCtaClick;
+
+  // Resolves a cta_url into an actual action inside the Field. Internal
+  // routes use known query params; everything else is treated as a real
+  // URL and opened in a new tab. Kept tolerant — if anything is off we
+  // silently no-op rather than break the inbox.
+  function dispatchNotifCta(url) {
+    if (!url) return;
+    try {
+      // Relative URLs we own — parse the query string locally without
+      // navigating, so the action happens in-place.
+      if (url.startsWith("/app.html") || url.startsWith("?")) {
+        const qs = url.includes("?") ? url.slice(url.indexOf("?") + 1) : "";
+        const params = new URLSearchParams(qs);
+        const processKey = params.get("process");
+        const dayParam = params.get("day");
+        const continueParam = params.get("continue");
+        if (processKey && typeof onProcessPick === "function") {
+          onProcessPick(processKey);
+          return;
+        }
+        if (dayParam) {
+          // Best effort — scroll the matching day section into view.
+          const target = document.querySelector(`[data-day="${dayParam}"]`);
+          if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+          return;
+        }
+        if (continueParam === "last") {
+          // Resume the user's last Unlimited session if one exists.
+          if (state && state.lastUnlimitedSessionId && typeof onUnlimitedSessionPick === "function") {
+            onUnlimitedSessionPick(state.lastUnlimitedSessionId);
+          } else if (typeof onProcessPick === "function") {
+            // Fallback: drop them into a fresh Unlimited chat.
+            onProcessPick("unlimited");
+          }
+          return;
+        }
+      }
+      // Anything else: treat as a real URL and open externally.
+      if (/^https?:\/\//i.test(url)) {
+        window.open(url, "_blank", "noopener");
+      }
+    } catch (err) {
+      console.warn("notif_cta_dispatch_failed", err);
+    }
+  }
+  window.dispatchNotifCta = dispatchNotifCta;
+
+  // Boot-time CTA handler: if the page was opened with ?process=X /
+  // ?day=N / ?continue=last in the URL (e.g. a member tapped a notification
+  // CTA on another device and the link opened the Field fresh), dispatch
+  // the same action and then clean the query string so a reload doesn't
+  // re-fire. Runs once a few hundred ms after the dashboard paints so the
+  // process menu is ready.
+  function maybeHandleBootCtaParam() {
+    try {
+      const params = new URLSearchParams(window.location.search || "");
+      const processKey = params.get("process");
+      const dayParam = params.get("day");
+      const continueParam = params.get("continue");
+      let dispatched = false;
+      if (processKey && typeof onProcessPick === "function") {
+        onProcessPick(processKey);
+        dispatched = true;
+      } else if (dayParam) {
+        const target = document.querySelector(`[data-day="${dayParam}"]`);
+        if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+        dispatched = true;
+      } else if (continueParam === "last") {
+        if (state && state.lastUnlimitedSessionId && typeof onUnlimitedSessionPick === "function") {
+          onUnlimitedSessionPick(state.lastUnlimitedSessionId);
+          dispatched = true;
+        }
+      }
+      if (dispatched) {
+        // Strip the params so reloads or back-button don't re-trigger.
+        const cleanUrl = window.location.pathname;
+        try { window.history.replaceState({}, document.title, cleanUrl); } catch {}
+      }
+    } catch (err) {
+      console.warn("boot_cta_dispatch_failed", err);
+    }
   }
 
   // Tiny relative-time formatter scoped to the notifications panel.
@@ -7852,6 +7977,10 @@ Begin.` },
         // Pull the inbox so the bell badge shows the unread count from
         // the very first paint. Errors are swallowed inside.
         fetchNotifications();
+        // If the URL carries a tap-to-go param (?process= / ?day= /
+        // ?continue=) — usually from a notification CTA opened externally
+        // — dispatch the action once everything's loaded.
+        setTimeout(() => maybeHandleBootCtaParam(), 200);
       }));
     } else {
       state.view = "login";
