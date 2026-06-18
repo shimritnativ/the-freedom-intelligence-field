@@ -770,14 +770,18 @@
     }
     /* ===== Smooth interactions =====
        Tab content fades in + lifts slightly when shown so switching tabs
-       feels like a gentle reveal instead of a hard cut. Buttons, KPI cards,
-       and clickable elements all share the same easing curve. */
-    [data-tab-content].is-revealing {
-      animation: tab-fade-in 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+       feels like a gentle reveal instead of a hard cut. Default state is
+       visible (opacity 1) so initial page load has no flash. When a tab
+       is about to be shown, we briefly add .is-entering to push it to
+       opacity 0 + translateY(6px), then remove the class on the next
+       animation frame so the transition plays back to default. */
+    [data-tab-content] {
+      transition: opacity 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+                  transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
     }
-    @keyframes tab-fade-in {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
+    [data-tab-content].is-entering {
+      opacity: 0;
+      transform: translateY(6px);
     }
     /* Universal easing for the most-clicked things in the dashboard. */
     .tab-btn,
@@ -900,14 +904,22 @@
     function switchTab(tab) {
       document.querySelectorAll("[data-tab-content]").forEach(el => {
         const isTarget = el.dataset.tabContent === tab;
-        el.style.display = isTarget ? "" : "none";
         if (isTarget) {
-          // Re-trigger the animation: remove the class, force a layout
-          // reflow, then add it back. Without the reflow the browser
-          // batches the changes and the animation doesn't re-play.
-          el.classList.remove("is-revealing");
-          void el.offsetWidth;
-          el.classList.add("is-revealing");
+          // Apply the "entering" state (opacity 0 + translated), make the
+          // element visible, then on the next two animation frames remove
+          // the class so the transition plays back to default (opacity 1).
+          // Two RAFs because the first one fires before the browser has
+          // committed the display change and the class application.
+          el.classList.add("is-entering");
+          el.style.display = "";
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              el.classList.remove("is-entering");
+            });
+          });
+        } else {
+          el.classList.remove("is-entering");
+          el.style.display = "none";
         }
       });
       document.querySelectorAll(".tab-btn").forEach(btn => {
@@ -2086,8 +2098,21 @@
     }
     function setRevenueVatMode(mode) {
       try { localStorage.setItem("tfif_admin_vat_mode", mode); } catch {}
-      // Re-render the dashboard so all the numbers flip at once.
-      if (typeof render === "function") render();
+      // Re-render the dashboard so all the numbers flip at once. The admin
+      // app uses renderDashboard(data) — there's no shorthand render() —
+      // so we replay the last metrics response we stashed in state.data.
+      // Preserve the current tab so the user stays where they were instead
+      // of bouncing back to Overview.
+      if (typeof renderDashboard === "function" && state && state.data) {
+        const currentTab = (() => {
+          try { return localStorage.getItem(TAB_STORAGE_KEY) || "overview"; }
+          catch { return "overview"; }
+        })();
+        renderDashboard(state.data);
+        // renderDashboard rebuilds the DOM, so re-apply the active tab
+        // (which sets display + the active-button highlight).
+        setTimeout(() => switchTab(currentTab), 0);
+      }
     }
     window.setRevenueVatMode = setRevenueVatMode;
 
