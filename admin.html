@@ -818,9 +818,8 @@
               ${renderFunnel(c, d.completionDetails)}
               <div class="footnote">Base = ${fmtNum(c.total_members || 0)} Power Reset members. Top-level split: Never logged in + Logged in = ${fmtNum(c.total_members || 0)}. Indented rows break down the Logged-in group further (Day 1/2/3 are cumulative subsets, "Didn't start" is the leftover). Click any row to see who's in it.</div>
               <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);">
-                <button class="preset-btn" onclick="runBackfill(true)" id="backfill-dryrun-btn">Just check, don't change anything</button>
-                <button class="preset-btn" onclick="runBackfill(false)" id="backfill-btn" style="margin-left: 6px; background: var(--gold); color: var(--dark); border-color: var(--gold);">Find &amp; record completions</button>
-                <div id="backfill-status" style="margin-top: 10px; font-size: 12px; color: var(--text-dim); font-style: italic;"></div>
+                <button class="preset-btn" onclick="runBackfill()" id="backfill-btn" style="background: var(--gold); color: var(--dark); border-color: var(--gold);">Refresh completions</button>
+                <div id="backfill-status" style="margin-top: 10px; font-size: 12px; color: var(--text-dim); font-style: italic;">Runs automatically once a day. Click any time to refresh now.</div>
               </div>
             </div>
             <div class="section" id="panel-tier-mix">
@@ -1278,42 +1277,33 @@
     // the funnel. Posts to /api/admin/backfill-completions with the same
     // x-session-token the dashboard already uses, so no ADMIN_TOKEN is
     // needed when running from the browser as a @shimritnativ.com viewer.
-    async function runBackfill(dryRun) {
+    async function runBackfill() {
       const status = document.getElementById("backfill-status");
-      const realBtn = document.getElementById("backfill-btn");
-      const dryBtn = document.getElementById("backfill-dryrun-btn");
+      const btn = document.getElementById("backfill-btn");
       const token = localStorage.getItem(STORAGE_KEY);
       if (!token) {
         status.textContent = "Session expired. Refresh the page and try again.";
         return;
       }
-      realBtn.disabled = true;
-      dryBtn.disabled = true;
-      status.textContent = dryRun
-        ? "Running dry-run scan of all past assistant messages…"
-        : "Backfilling completions from past messages… this can take up to a minute.";
+      btn.disabled = true;
+      status.textContent = "Refreshing… scanning chat messages for new Day completions.";
       try {
-        const url = "/api/admin/backfill-completions" + (dryRun ? "?dry_run=1" : "");
-        const r = await fetch(url, {
+        const r = await fetch("/api/admin/backfill-completions", {
           method: "POST",
           headers: { "x-session-token": token },
         });
         if (!r.ok) {
           const errBody = await r.text().catch(() => "");
-          status.textContent = "Backfill failed (HTTP " + r.status + "). " + errBody.slice(0, 200);
+          status.textContent = "Refresh failed (HTTP " + r.status + "). " + errBody.slice(0, 200);
           return;
         }
         const data = await r.json();
-        if (dryRun) {
-          status.innerHTML = "Dry-run complete: <strong>" + data.candidates + " candidate messages</strong> across <strong>" + (data.details || []).length + "</strong> records. None were inserted. Click 'Run completion backfill' to do it for real.";
-        } else {
-          status.innerHTML = "Done. Scanned <strong>" + data.candidates + "</strong> candidate messages, recorded <strong>" + data.recorded + "</strong> new completions, skipped " + data.skipped_strict + " (didn't pass strict extraction). Reload to see updated funnel.";
-        }
+        status.innerHTML = "Done. Scanned <strong>" + data.candidates + "</strong> messages, recorded <strong>" + data.recorded + "</strong> new completions. Reloading…";
+        setTimeout(() => loadMetrics(), 1500);
       } catch (err) {
         status.textContent = "Network error: " + (err.message || err);
       } finally {
-        realBtn.disabled = false;
-        dryBtn.disabled = false;
+        btn.disabled = false;
       }
     }
     window.runBackfill = runBackfill;
