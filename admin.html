@@ -789,6 +789,11 @@
       try { localStorage.setItem(TAB_STORAGE_KEY, tab); } catch {}
       // Scroll to the top of the dashboard so each tab starts cleanly.
       window.scrollTo({ top: 0, behavior: "smooth" });
+      // Refresh the push subscriber list when entering Notifications — keeps
+      // the recipient picker honest about who is currently subscribed.
+      if (tab === "notifications" && typeof loadPushSubscribers === "function") {
+        loadPushSubscribers();
+      }
     }
 
     // KPI click → switch to the target tab, then scroll the detail panel
