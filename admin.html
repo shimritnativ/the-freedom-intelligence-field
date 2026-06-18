@@ -1941,7 +1941,7 @@
         tiles.push({ value: orders, label: `free <strong>order${orders === 1 ? '' : 's'}</strong> today`, target: "panel-revenue" });
       }
       if (completions > 0) {
-        tiles.push({ value: completions, label: `Day <strong>completion${completions === 1 ? '' : 's'}</strong> across all 3 days`, target: "panel-funnel" });
+        tiles.push({ value: completions, label: `<strong>Day-step completion${completions === 1 ? '' : 's'}</strong> today (Day 1 + 2 + 3 combined)`, target: "panel-funnel" });
       }
       if (activeUnlimited > 0) {
         tiles.push({ value: activeUnlimited, label: `Unlimited member${activeUnlimited === 1 ? '' : 's'} active &middot; <strong>${unlimitedMessages} message${unlimitedMessages === 1 ? '' : 's'}</strong>`, target: "panel-unlimited-engagement" });
