@@ -1557,6 +1557,108 @@
     border-top: 1px solid var(--border);
     text-align: center;
   }
+  /* ===== Notification opt-in pre-prompt modal ===== */
+  /* Auto-shows once after login for members who haven't yet granted or
+     dismissed push notifications. Explains WHY we want to send notifs
+     before the native browser prompt fires, which dramatically lifts the
+     accept rate vs hitting them with a cold OS prompt. */
+  .notif-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9055;
+    padding: 24px 20px;
+    animation: acctFadeIn 0.24s ease-out;
+  }
+  .notif-modal {
+    background: var(--sidebar-bg);
+    color: var(--text);
+    border: 1px solid var(--gold-line);
+    border-radius: 18px;
+    max-width: 420px;
+    width: 100%;
+    padding: 28px 28px 22px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    box-shadow: var(--shadow);
+    text-align: center;
+    animation: acctSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .notif-icon {
+    width: 52px; height: 52px;
+    margin: 0 auto 14px;
+    color: var(--gold);
+  }
+  .notif-eyebrow {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.22em;
+    color: var(--gold); text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .notif-title {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 22px;
+    color: var(--text);
+    line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .notif-sub {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 13.5px;
+    color: var(--text-dim);
+    line-height: 1.55;
+    margin-bottom: 22px;
+  }
+  .notif-bullets {
+    text-align: left;
+    margin: 0 auto 22px;
+    padding: 0;
+    max-width: 320px;
+    list-style: none;
+  }
+  .notif-bullets li {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+    padding: 5px 0 5px 20px;
+    position: relative;
+  }
+  .notif-bullets li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    top: 5px;
+    color: var(--gold);
+    font-weight: 700;
+  }
+  .notif-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .notif-btn {
+    padding: 12px 18px;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .notif-btn--primary {
+    background: var(--gold);
+    color: var(--bg);
+    border-color: var(--gold);
+  }
+  .notif-btn--primary:hover { background: #B89232; border-color: #B89232; }
+  .notif-btn--secondary {
+    background: transparent;
+    color: var(--text-dim);
+    border-color: var(--gold-line);
+  }
+  .notif-btn--secondary:hover { border-color: var(--gold); color: var(--text); }
   @media (max-width: 640px) {
     .install-modal { padding: 22px 20px 18px; max-width: 420px; }
     .install-title { font-size: 20px; }
@@ -2739,6 +2841,7 @@ Begin.` },
     // tap flow since iOS blocks programmatic install. Triggered from the
     // "Install on iPhone" button in the Your Account modal.
     installModalOpen: false,
+    notifPromptOpen: false,
     // 'preview' = Reset-tier member (Unlimited locked); 'full' = Unlimited member.
     // Set from the backend tier at /api/start; the sidebar toggle overrides it
     // for review until real Kajabi entitlements are wired in.
@@ -3640,6 +3743,35 @@ Begin.` },
   // (Apple intentionally blocks programmatic install). The best we can do
   // is show a beautiful walkthrough explaining the manual flow. This modal
   // mounts when state.installModalOpen is true.
+  // Renders the notification opt-in pre-prompt. Auto-shows once per member
+  // (after login, with a small delay so the dashboard loads first). Soft
+  // explainer first, then if they say yes we trigger the real OS prompt.
+  function renderNotifPromptModal() {
+    if (!state.notifPromptOpen) return "";
+    return `
+      <div class="notif-overlay" id="notif-overlay">
+        <div class="notif-modal" role="dialog" aria-modal="true" aria-labelledby="notif-title">
+          <svg class="notif-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+          </svg>
+          <div class="notif-eyebrow">A small ask</div>
+          <div class="notif-title" id="notif-title">Want reminders for the next days of your Reset?</div>
+          <div class="notif-sub">A few quick notifications, only at the moments that matter.</div>
+          <ul class="notif-bullets">
+            <li>When Day 2 unlocks (after 24 hours)</li>
+            <li>When Day 3 unlocks (after 48 hours)</li>
+            <li>A gentle nudge before your Reset window closes</li>
+          </ul>
+          <div class="notif-buttons">
+            <button class="notif-btn notif-btn--primary" id="notif-accept-btn" type="button">Yes, send reminders</button>
+            <button class="notif-btn notif-btn--secondary" id="notif-dismiss-btn" type="button">Maybe later</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   function renderInstallModal() {
     if (!state.installModalOpen) return "";
     return `
@@ -4934,6 +5066,7 @@ Begin.` },
         ${renderRenameModal()}
         ${renderFloatingChatMenu()}
         ${renderInstallModal()}
+        ${renderNotifPromptModal()}
       `;
       document.getElementById("entry-form").addEventListener("submit", onStartSubmit);
       // Restore + persist drafts on the entry form too.
@@ -4992,6 +5125,7 @@ Begin.` },
         ${renderRenameModal()}
         ${renderFloatingChatMenu()}
         ${renderInstallModal()}
+        ${renderNotifPromptModal()}
       `;
       renderMessages();
       // Composer-bound handlers are no-ops when the Reset window has elapsed
@@ -5033,6 +5167,7 @@ Begin.` },
         ${renderRenameModal()}
         ${renderFloatingChatMenu()}
         ${renderInstallModal()}
+        ${renderNotifPromptModal()}
       `;
       // Wire the process cards: each one starts the matching guided process.
       document.querySelectorAll(".category-card[data-process]").forEach(btn => {
@@ -5058,6 +5193,7 @@ Begin.` },
         ${renderRenameModal()}
         ${renderFloatingChatMenu()}
         ${renderInstallModal()}
+        ${renderNotifPromptModal()}
       `;
       document.querySelectorAll(".library-card[data-category]").forEach(btn => {
         btn.addEventListener("click", () => onCategoryClick(btn.dataset.category));
@@ -5116,6 +5252,7 @@ Begin.` },
         ${renderRenameModal()}
         ${renderFloatingChatMenu()}
         ${renderInstallModal()}
+        ${renderNotifPromptModal()}
       `;
       // Common sidebar wiring (mobile menu, account, logout, theme, etc.)
       // runs unconditionally at the bottom of render() for every view, so
@@ -5205,6 +5342,7 @@ Begin.` },
         ${renderRenameModal()}
         ${renderFloatingChatMenu()}
         ${renderInstallModal()}
+        ${renderNotifPromptModal()}
       `;
       renderUnlimitedMessages();
       document.getElementById("input").addEventListener("input", onInputChange);
@@ -5310,6 +5448,11 @@ Begin.` },
     }
     // Update label/visibility based on current Notification.permission state.
     updatePushButtonState();
+    // Notification opt-in pre-prompt modal buttons
+    const notifAcceptBtn = document.getElementById("notif-accept-btn");
+    if (notifAcceptBtn) notifAcceptBtn.addEventListener("click", onNotifPromptAccept);
+    const notifDismissBtn = document.getElementById("notif-dismiss-btn");
+    if (notifDismissBtn) notifDismissBtn.addEventListener("click", onNotifPromptDismiss);
     // Install modal overlay click + close button
     const installOverlay = document.getElementById("install-overlay");
     if (installOverlay) {
@@ -5748,7 +5891,11 @@ Begin.` },
       state.loginLoading = false;
       state.loginStep = "email";
       state.loginError = "";
-      loadFullState().then(() => loadUnlimitedSessions().then(() => render()));
+      loadFullState().then(() => loadUnlimitedSessions().then(() => {
+        render();
+        // Fresh login — check whether to surface the notification opt-in.
+        maybeShowNotifPrompt();
+      }));
     } catch (err) {
       state.loginLoading = false;
       state.loginError = loginErrorMessage(err && err.message);
@@ -6582,6 +6729,41 @@ Begin.` },
     }
   }
 
+  // Decide whether to auto-show the notif opt-in pre-prompt.
+  // Conditions: push is supported, browser hasn't been asked yet
+  // (permission === "default"), AND we haven't already shown this user
+  // the prompt (tracked in localStorage so reload doesn't re-prompt).
+  const NOTIF_PROMPT_KEY = "tfif_notif_prompt_shown_v1";
+
+  function maybeShowNotifPrompt() {
+    if (!pushSupported()) return;
+    if (Notification.permission !== "default") return; // already granted or blocked
+    try {
+      if (localStorage.getItem(NOTIF_PROMPT_KEY)) return; // already prompted this user
+    } catch {}
+    if (!state.sessionToken) return; // wait until logged in
+    // Small delay so the dashboard paints first — the modal landing on a
+    // blank page feels jarring.
+    setTimeout(() => {
+      state.notifPromptOpen = true;
+      render();
+    }, 1500);
+  }
+
+  function onNotifPromptAccept() {
+    try { localStorage.setItem(NOTIF_PROMPT_KEY, String(Date.now())); } catch {}
+    state.notifPromptOpen = false;
+    render();
+    // Now trigger the real OS permission flow + subscription save.
+    enablePushNotifications();
+  }
+
+  function onNotifPromptDismiss() {
+    try { localStorage.setItem(NOTIF_PROMPT_KEY, String(Date.now())); } catch {}
+    state.notifPromptOpen = false;
+    render();
+  }
+
   function updatePushButtonState() {
     const btn = document.getElementById("sidebar-notify-btn");
     const label = document.getElementById("sidebar-notify-label");
@@ -7041,7 +7223,13 @@ Begin.` },
     const existing = EMBED_MODE ? null : loadToken();
     if (existing) {
       state.sessionToken = existing;
-      loadFullState().then(() => loadUnlimitedSessions().then(() => render()));
+      loadFullState().then(() => loadUnlimitedSessions().then(() => {
+        render();
+        // After the dashboard is loaded, decide whether to show the
+        // notification opt-in pre-prompt. No-op for members who've already
+        // granted, blocked, or dismissed it.
+        maybeShowNotifPrompt();
+      }));
     } else {
       state.view = "login";
       state.loginStep = "email";
