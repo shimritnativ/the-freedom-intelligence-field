@@ -519,6 +519,52 @@
       text-align: center; padding: 24px 12px;
       color: var(--text-mute); font-style: italic; font-size: 13px;
     }
+    /* ===== Top tab navigation ===== */
+    .tabs {
+      display: flex;
+      gap: 2px;
+      border-bottom: 1px solid var(--gold-line);
+      margin-bottom: 22px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      padding: 12px 18px;
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-dim);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.15s ease, border-color 0.15s ease;
+      white-space: nowrap;
+      letter-spacing: 0.02em;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn--active {
+      color: var(--text);
+      border-bottom-color: var(--gold);
+    }
+    .tab-btn-count {
+      background: var(--gold-soft);
+      color: var(--gold);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 999px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .tab-btn--active .tab-btn-count {
+      background: var(--gold);
+      color: var(--dark);
+    }
+    @media (max-width: 640px) {
+      .tab-btn { padding: 10px 12px; font-size: 11.5px; }
+    }
   </style>
 </head>
 <body>
@@ -529,7 +575,42 @@
   <script>
     const STORAGE_KEY = "tfif_session_v1"; // Field member session
     const RANGE_STORAGE_KEY = "tfif_admin_range_v1";
+    const TAB_STORAGE_KEY = "tfif_admin_tab_v1"; // Last selected dashboard tab
     const root = document.getElementById("root");
+
+    // Switch the active tab. Hides all data-tab-content blocks except the
+    // target, highlights the matching tab button, and saves the choice so
+    // refresh restores the same tab.
+    function switchTab(tab) {
+      document.querySelectorAll("[data-tab-content]").forEach(el => {
+        el.style.display = el.dataset.tabContent === tab ? "" : "none";
+      });
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.classList.toggle("tab-btn--active", btn.dataset.tab === tab);
+      });
+      try { localStorage.setItem(TAB_STORAGE_KEY, tab); } catch {}
+      // Scroll to the top of the dashboard so each tab starts cleanly.
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    // KPI click → switch to the target tab, then scroll the detail panel
+    // into view inside that tab. Used by every KPI card at the top.
+    function goToPanel(tab, panelId) {
+      switchTab(tab);
+      setTimeout(() => {
+        const el = document.getElementById(panelId);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+          el.classList.remove("flash");
+          void el.offsetWidth;
+          el.classList.add("flash");
+          setTimeout(() => el.classList.remove("flash"), 1500);
+        }
+      }, 120);
+    }
+
+    window.switchTab = switchTab;
+    window.goToPanel = goToPanel;
 
     // State for the date range picker. Defaults to "since launch" until the
     // user picks something else. Stored in localStorage so it survives refresh.
@@ -781,47 +862,57 @@
           </div>
 
           ${renderControls()}
-          ${renderHighlights(d.today)}
 
-          <!-- KPI strip — every card scrolls to its detail section on click -->
-          <div class="kpi-grid">
-            <div class="kpi clickable" onclick="scrollToSection('panel-tier-mix')">
-              <div class="kpi-label">Total Members</div>
-              <div class="kpi-value">${fmtNum(totalMembers)}</div>
-              <div class="kpi-sub">${fmtNum(resetTotal)} Reset · ${fmtNum(unlimitedTotal)} Unlimited</div>
-            </div>
-            <div class="kpi clickable" onclick="scrollToSection('panel-tier-mix')">
-              <div class="kpi-label">72-Hour Reset</div>
-              <div class="kpi-value">${fmtNum(resetTotal)}</div>
-              <div class="kpi-sub">${fmtNum(w.active_reset || 0)} active · ${fmtNum(w.expired_reset || 0)} expired</div>
-            </div>
-            <div class="kpi clickable" onclick="scrollToSection('panel-unlimited-engagement')">
-              <div class="kpi-label">Unlimited Field</div>
-              <div class="kpi-value">${fmtNum(unlimitedTotal)}</div>
-              <div class="kpi-sub">${fmtNum(unlimitedMonthly)} mo · ${fmtNum(unlimitedAnnual)} yr · ${fmtNum(unlimitedNone)} other</div>
-            </div>
-            <div class="kpi clickable" onclick="scrollToSection('panel-funnel')">
-              <div class="kpi-label">Day 3 Completed</div>
-              <div class="kpi-value">${fmtNum(c.d3 || 0)}</div>
-              <div class="kpi-sub">${fmtPct(c.d3 || 0, c.total_logged_in || 0)} of logged-in</div>
-            </div>
-            ${tc.connected ? `
-              <div class="kpi kpi-revenue clickable" onclick="scrollToSection('panel-revenue')">
-                <div class="kpi-label">Net Revenue (ThriveCart)</div>
-                <div class="kpi-value">${fmtEur(netCents)}</div>
-                <div class="kpi-sub">${fmtNum(tcSummary.orders || 0)} orders · ${fmtNum(tcSummary.unique_buyers || 0)} buyers</div>
+          <!-- Tab navigation — restores last-selected tab via localStorage -->
+          <nav class="tabs" role="tablist">
+            <button class="tab-btn" data-tab="overview" onclick="switchTab('overview')">Overview</button>
+            <button class="tab-btn" data-tab="members" onclick="switchTab('members')">Members${totalMembers ? '<span class="tab-btn-count">' + fmtNum(totalMembers) + '</span>' : ''}</button>
+            <button class="tab-btn" data-tab="revenue" onclick="switchTab('revenue')">Revenue</button>
+            <button class="tab-btn" data-tab="engagement" onclick="switchTab('engagement')">Engagement</button>
+            <button class="tab-btn" data-tab="notifications" onclick="switchTab('notifications')">Notifications</button>
+          </nav>
+
+          <!-- ===== OVERVIEW TAB ===== -->
+          <div data-tab-content="overview">
+            ${renderHighlights(d.today)}
+
+            <!-- KPI strip — every card switches tabs + scrolls to detail -->
+            <div class="kpi-grid">
+              <div class="kpi clickable" onclick="goToPanel('overview', 'panel-tier-mix')">
+                <div class="kpi-label">Total Members</div>
+                <div class="kpi-value">${fmtNum(totalMembers)}</div>
+                <div class="kpi-sub">${fmtNum(resetTotal)} Reset · ${fmtNum(unlimitedTotal)} Unlimited</div>
               </div>
-            ` : ''}
-            <div class="kpi clickable" onclick="scrollToSection('panel-unlimited-engagement')">
-              <div class="kpi-label">Paid Unlimited Active (7d)</div>
-              <div class="kpi-value">${fmtNum(u.active_users_7d || 0)}</div>
-              <div class="kpi-sub">${fmtNum(u.user_messages_7d || 0)} messages · paying members only</div>
+              <div class="kpi clickable" onclick="goToPanel('overview', 'panel-tier-mix')">
+                <div class="kpi-label">72-Hour Reset</div>
+                <div class="kpi-value">${fmtNum(resetTotal)}</div>
+                <div class="kpi-sub">${fmtNum(w.active_reset || 0)} active · ${fmtNum(w.expired_reset || 0)} expired</div>
+              </div>
+              <div class="kpi clickable" onclick="goToPanel('engagement', 'panel-unlimited-engagement')">
+                <div class="kpi-label">Unlimited Field</div>
+                <div class="kpi-value">${fmtNum(unlimitedTotal)}</div>
+                <div class="kpi-sub">${fmtNum(unlimitedMonthly)} mo · ${fmtNum(unlimitedAnnual)} yr · ${fmtNum(unlimitedNone)} other</div>
+              </div>
+              <div class="kpi clickable" onclick="goToPanel('overview', 'panel-funnel')">
+                <div class="kpi-label">Day 3 Completed</div>
+                <div class="kpi-value">${fmtNum(c.d3 || 0)}</div>
+                <div class="kpi-sub">${fmtPct(c.d3 || 0, c.total_logged_in || 0)} of logged-in</div>
+              </div>
+              ${tc.connected ? `
+                <div class="kpi kpi-revenue clickable" onclick="goToPanel('revenue', 'panel-revenue')">
+                  <div class="kpi-label">Net Revenue (ThriveCart)</div>
+                  <div class="kpi-value">${fmtEur(netCents)}</div>
+                  <div class="kpi-sub">${fmtNum(tcSummary.orders || 0)} orders · ${fmtNum(tcSummary.unique_buyers || 0)} buyers</div>
+                </div>
+              ` : ''}
+              <div class="kpi clickable" onclick="goToPanel('engagement', 'panel-unlimited-engagement')">
+                <div class="kpi-label">Paid Unlimited Active (7d)</div>
+                <div class="kpi-value">${fmtNum(u.active_users_7d || 0)}</div>
+                <div class="kpi-sub">${fmtNum(u.user_messages_7d || 0)} messages · paying members only</div>
+              </div>
             </div>
-          </div>
 
-          ${tc.connected ? renderThrivecartSection(tc) : renderThrivecartNotConnected()}
-
-          <!-- Completion funnel + Tier breakdown -->
+            <!-- Completion funnel + Tier breakdown -->
           <div class="two-col">
             <div class="section" id="panel-funnel">
               <h2><span class="h2-eyebrow">Funnel</span>72-Hour Power Reset completion</h2>
@@ -851,69 +942,14 @@
             </div>
           </div>
 
-          <!-- Signups by day + Process usage -->
-          <div class="two-col">
-            <div class="section" id="panel-signups">
-              <h2><span class="h2-eyebrow">Recent</span>Signups by day</h2>
-              ${signupDates.length === 0
-                ? '<div class="empty-state">No signups in this range.</div>'
-                : signupDates.map(day => `
-                  <div class="signup-row">
-                    <div class="date">${fmtDate(day)}</div>
-                    <div class="signup-bar-track"><div class="signup-bar-fill" style="width:${(signupsByDate[day] / maxSignup) * 100}%;"></div></div>
-                    <div class="n">${fmtNum(signupsByDate[day])}</div>
-                  </div>
-                `).join("")
-              }
-            </div>
-            <div class="section" id="panel-processes">
-              <h2><span class="h2-eyebrow">Unlimited use</span>Top processes (last 30d, rolling)</h2>
-              <table>
-                <thead><tr><th>Process</th><th class="num">Sessions</th><th class="num">Unique users</th></tr></thead>
-                <tbody>
-                  ${(d.processUsage || []).length === 0
-                    ? '<tr><td colspan="3" class="empty-state">No Unlimited sessions yet.</td></tr>'
-                    : (d.processUsage || []).slice(0, 12).map(p => `
-                      <tr>
-                        <td>${escapeHtml(p.process_key)}</td>
-                        <td class="num">${fmtNum(p.sessions_started)}</td>
-                        <td class="num">${fmtNum(p.unique_users)}</td>
-                      </tr>
-                    `).join("")}
-                </tbody>
-              </table>
-            </div>
           </div>
+          <!-- /end Overview tab -->
 
-          <!-- Top Unlimited users -->
-          <div class="section" id="panel-unlimited-engagement">
-            <h2><span class="h2-eyebrow">Engagement</span>Top Unlimited members by messages (last 30d, rolling)</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Email</th><th>Name</th><th>Plan</th>
-                  <th class="num">Messages</th><th class="num">Last message</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${(d.perUserUnlimited || []).length === 0
-                  ? '<tr><td colspan="5" class="empty-state">No Unlimited messages in the last 30 days.</td></tr>'
-                  : (d.perUserUnlimited || []).map(u => `
-                    <tr>
-                      <td>${escapeHtml(u.email)}${u.has_paid_purchase ? '' : '<span class="comp-pill" title="No paid purchase. Free access via team grant or GEO100 100%-off coupon.">free access</span>'}</td>
-                      <td>${escapeHtml(u.display_name || "—")}</td>
-                      <td>${escapeHtml(u.subscription_plan || "—")}</td>
-                      <td class="num">${fmtNum(u.messages_30d)}</td>
-                      <td class="num">${fmtRelative(u.last_message_at)}</td>
-                    </tr>
-                  `).join("")}
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Recent signups roster -->
-          <div class="section" id="panel-roster">
-            <h2><span class="h2-eyebrow">Roster</span>Most recent signups in this range (newest 25)</h2>
+          <!-- ===== MEMBERS TAB ===== -->
+          <div data-tab-content="members" style="display: none;">
+            <!-- Recent signups roster -->
+            <div class="section" id="panel-roster">
+              <h2><span class="h2-eyebrow">Roster</span>Most recent signups in this range (newest 25)</h2>
             <table>
               <thead>
                 <tr>
@@ -938,6 +974,79 @@
               </tbody>
             </table>
           </div>
+          <!-- Signups by day -->
+          <div class="section" id="panel-signups">
+            <h2><span class="h2-eyebrow">Recent</span>Signups by day</h2>
+            ${signupDates.length === 0
+              ? '<div class="empty-state">No signups in this range.</div>'
+              : signupDates.map(day => `
+                <div class="signup-row">
+                  <div class="date">${fmtDate(day)}</div>
+                  <div class="signup-bar-track"><div class="signup-bar-fill" style="width:${(signupsByDate[day] / maxSignup) * 100}%;"></div></div>
+                  <div class="n">${fmtNum(signupsByDate[day])}</div>
+                </div>
+              `).join("")
+            }
+          </div>
+          </div>
+          <!-- /end Members tab -->
+
+          <!-- ===== REVENUE TAB ===== -->
+          <div data-tab-content="revenue" style="display: none;">
+            ${tc.connected ? renderThrivecartSection(tc) : renderThrivecartNotConnected()}
+          </div>
+          <!-- /end Revenue tab -->
+
+          <!-- ===== ENGAGEMENT TAB ===== -->
+          <div data-tab-content="engagement" style="display: none;">
+            <!-- Top Unlimited users -->
+            <div class="section" id="panel-unlimited-engagement">
+              <h2><span class="h2-eyebrow">Engagement</span>Top Unlimited members by messages (last 30d, rolling)</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Email</th><th>Name</th><th>Plan</th>
+                    <th class="num">Messages</th><th class="num">Last message</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${(d.perUserUnlimited || []).length === 0
+                    ? '<tr><td colspan="5" class="empty-state">No Unlimited messages in the last 30 days.</td></tr>'
+                    : (d.perUserUnlimited || []).map(u => `
+                      <tr>
+                        <td>${escapeHtml(u.email)}${u.has_paid_purchase ? '' : '<span class="comp-pill" title="No paid purchase. Free access via team grant or GEO100 100%-off coupon.">free access</span>'}</td>
+                        <td>${escapeHtml(u.display_name || "—")}</td>
+                        <td>${escapeHtml(u.subscription_plan || "—")}</td>
+                        <td class="num">${fmtNum(u.messages_30d)}</td>
+                        <td class="num">${fmtRelative(u.last_message_at)}</td>
+                      </tr>
+                    `).join("")}
+                </tbody>
+              </table>
+            </div>
+            <!-- Top processes used -->
+            <div class="section" id="panel-processes">
+              <h2><span class="h2-eyebrow">Unlimited use</span>Top processes (last 30d, rolling)</h2>
+              <table>
+                <thead><tr><th>Process</th><th class="num">Sessions</th><th class="num">Unique users</th></tr></thead>
+                <tbody>
+                  ${(d.processUsage || []).length === 0
+                    ? '<tr><td colspan="3" class="empty-state">No Unlimited sessions yet.</td></tr>'
+                    : (d.processUsage || []).slice(0, 12).map(p => `
+                      <tr>
+                        <td>${escapeHtml(p.process_key)}</td>
+                        <td class="num">${fmtNum(p.sessions_started)}</td>
+                        <td class="num">${fmtNum(p.unique_users)}</td>
+                      </tr>
+                    `).join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <!-- /end Engagement tab -->
+
+          <!-- ===== NOTIFICATIONS TAB ===== -->
+          <div data-tab-content="notifications" style="display: none;">
 
           <!-- Push notification send panel — pick recipients, pick a
                prepared reminder OR write custom copy, fire it. -->
@@ -1003,8 +1112,13 @@
             </table>
             <div class="footnote">Source: Kajabi offer webhooks + ThriveCart purchase webhooks (when wired up).</div>
           </div>
+          </div>
+          <!-- /end Notifications tab -->
         </div>
       `;
+      // Restore last-active tab (or default to overview).
+      const savedTab = (function () { try { return localStorage.getItem(TAB_STORAGE_KEY); } catch { return null; } })();
+      switchTab(savedTab || "overview");
     }
 
     function renderFunnel(c, details) {
