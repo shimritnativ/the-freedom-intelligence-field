@@ -903,6 +903,41 @@
         .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     }
 
+    // Best-effort display name from the email's local part. Used as a
+    // fallback when display_name is empty in the DB — most CSV-backfilled
+    // historical purchases have null raw_payload, so the ThriveCart name
+    // backfill produces nothing for them. This at least gives the admin
+    // tables something humanized to look at instead of just "—".
+    //
+    // Splits on common separators (. _ -), trims digits at the end, and
+    // titlecases each piece. Examples:
+    //   sofsegebarth@hotmail.com   → "Sofsegebarth"
+    //   mark.j.platten@gmail.com   → "Mark J Platten"
+    //   moniq_piccola@yahoo.com    → "Moniq Piccola"
+    //   ge.amaral3@gmail.com       → "Ge Amaral"
+    function humanizeEmail(email) {
+      if (!email) return null;
+      const local = String(email).split("@")[0];
+      if (!local) return null;
+      const parts = local
+        .split(/[._-]+/)
+        .map(p => p.replace(/\d+$/, "")) // strip trailing digits per part
+        .filter(Boolean)
+        .map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase());
+      const name = parts.join(" ").trim();
+      return name || null;
+    }
+
+    // Display the best name we have for a user — DB display_name first
+    // (set by ThriveCart webhook or member's Your Account input), then a
+    // humanized email fallback, then a dash placeholder.
+    function nameOrFallback(u) {
+      const dn = u && u.display_name && String(u.display_name).trim();
+      if (dn) return dn;
+      const guess = humanizeEmail(u && u.email);
+      return guess || "—";
+    }
+
     function fmtNum(n) {
       if (n == null) return "0";
       return Number(n).toLocaleString();
@@ -1231,7 +1266,7 @@
                   : (d.recentSignups || []).map(u => `
                     <tr>
                       <td>${escapeHtml(u.email)}</td>
-                      <td>${escapeHtml(u.display_name || "—")}</td>
+                      <td>${escapeHtml(nameOrFallback(u))}</td>
                       <td><span class="tier-badge ${u.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(tierLabel(u.tier))}</span></td>
                       <td>${escapeHtml(u.subscription_plan || "—")}</td>
                       <td>${fmtDate(u.created_at)}</td>
@@ -1283,7 +1318,7 @@
                     : (d.perUserUnlimited || []).map(u => `
                       <tr>
                         <td>${escapeHtml(u.email)}${u.has_paid_purchase ? '' : '<span class="comp-pill" title="No paid purchase. Free access via team grant or GEO100 100%-off coupon.">free access</span>'}</td>
-                        <td>${escapeHtml(u.display_name || "—")}</td>
+                        <td>${escapeHtml(nameOrFallback(u))}</td>
                         <td>${escapeHtml(u.subscription_plan || "—")}</td>
                         <td class="num">${fmtNum(u.messages_30d)}</td>
                         <td class="num">${fmtRelative(u.last_message_at)}</td>
@@ -1594,11 +1629,15 @@
         const memberCards = s.rows.map(u => {
           const displayName = u.display_name && String(u.display_name).trim();
           const email = (u.email || "").trim();
-          // Defensive: if both display_name and email are missing (corrupted
-          // user row), show a flagged label that includes the user ID so we
-          // can investigate which row it is.
-          const idTag = u.id ? ` (id ${String(u.id).slice(0, 8)})` : "";
-          const primary = displayName || email || `Unknown member${idTag}`;
+          // Diagnostic: when name and email both come back empty, dump ALL
+          // the keys we received so we can see exactly what the server sent.
+          // This shows whether u.id is missing, whether the email field is
+          // named differently, etc.
+          const idTag = u.id ? ` · id ${String(u.id).slice(0, 8)}` : " · NO ID";
+          const debugDump = (!displayName && !email)
+            ? ` · keys: ${Object.keys(u).join(", ")} · raw: ${JSON.stringify(u).slice(0, 200)}`
+            : "";
+          const primary = displayName || email || `Unknown member${idTag}${debugDump}`;
           const showEmailLine = displayName && email;
           const bullets = (s.why(u) || []).map(b => `<li>${b}</li>`).join("");
           return `
