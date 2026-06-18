@@ -181,6 +181,7 @@ export default async function handler(req, res) {
         JOIN sessions s ON s.id = m.session_id
         JOIN users u ON u.id = m.user_id
         WHERE s.session_type = 'unlimited'
+          AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
           AND EXISTS (
             SELECT 1 FROM purchases p
@@ -216,6 +217,7 @@ export default async function handler(req, res) {
         WHERE s.session_type = 'unlimited'
           AND m.created_at > NOW() - INTERVAL '30 days'
           AND u.kajabi_entitled = true
+          AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
         GROUP BY u.id, u.email, u.display_name, u.tier, u.subscription_plan
         ORDER BY messages_30d DESC
@@ -284,6 +286,7 @@ export default async function handler(req, res) {
         JOIN users u ON u.id = s.user_id
         WHERE s.session_type = 'unlimited'
           AND s.started_at > NOW() - INTERVAL '30 days'
+          AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
         GROUP BY process_key
         ORDER BY sessions_started DESC
@@ -444,6 +447,7 @@ export default async function handler(req, res) {
         WHERE u.tier = 'full'
           AND s.session_type = 'unlimited'
           AND m.created_at > NOW() - INTERVAL '30 days'
+          AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
           AND EXISTS (
             SELECT 1 FROM purchases p
@@ -466,6 +470,7 @@ export default async function handler(req, res) {
         LEFT JOIN purchases p ON p.email = u.email AND p.event_type = 'order.success'
         WHERE u.tier = 'preview'
           AND dc.day = 3
+          AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
           AND EXISTS (
             SELECT 1 FROM purchases p2
@@ -488,6 +493,7 @@ export default async function handler(req, res) {
         JOIN purchases p ON p.email = u.email
         WHERE p.event_type = 'order.success'
           AND p.coupon_code IN ('LAUNCHTEAM', 'LAUNCHTEAMUNLIMITED')
+          AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
         GROUP BY u.id, u.email, u.display_name, u.last_completed_day, u.tier
         ORDER BY purchased_at DESC
@@ -509,6 +515,7 @@ export default async function handler(req, res) {
         FROM users u
         LEFT JOIN last_unlimited_msg lm ON lm.user_id = u.id
         WHERE u.tier = 'full'
+          AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
           AND (lm.last_at IS NULL OR lm.last_at < NOW() - INTERVAL '14 days')
           AND EXISTS (
@@ -533,6 +540,7 @@ export default async function handler(req, res) {
           AND u.first_login_at < NOW() - INTERVAL '3 days'
           AND COALESCE(u.last_completed_day, 0) < 3
           AND u.preview_ends_at > NOW()
+          AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
           AND EXISTS (
             SELECT 1 FROM purchases p
@@ -554,6 +562,7 @@ export default async function handler(req, res) {
         JOIN purchases p ON p.email = u.email
         WHERE p.event_type = 'order.success'
           AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+          AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
         GROUP BY u.id, u.email, u.display_name, u.tier
         HAVING COUNT(DISTINCT p.thrivecart_id) >= 2
