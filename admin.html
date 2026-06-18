@@ -772,8 +772,8 @@
        Field-magic. Subtle pulse on hover, gentle shimmer when active. */
     .tab-sparkle {
       display: inline-block;
-      font-size: 0.85em;
-      margin-right: -2px;
+      font-size: 0.9em;
+      margin: 0;
       transition: transform 0.3s ease;
       vertical-align: middle;
     }
@@ -1449,7 +1449,7 @@
             <!-- Left-side tab navigation. Sticky on desktop, horizontal scroll on mobile. -->
             <nav class="tabs" role="tablist">
               <button class="tab-btn" data-tab="overview" onclick="switchTab('overview')">Overview</button>
-              <button class="tab-btn" data-tab="intelligence" onclick="switchTab('intelligence')"><span class="tab-sparkle">✨</span>Intelligence${intelligenceTotal ? '<span class="tab-btn-count">' + fmtNum(intelligenceTotal) + '</span>' : ''}</button>
+              <button class="tab-btn" data-tab="intelligence" onclick="switchTab('intelligence')">Intelligence <span class="tab-sparkle">✨</span>${intelligenceTotal ? '<span class="tab-btn-count">' + fmtNum(intelligenceTotal) + '</span>' : ''}</button>
               <button class="tab-btn" data-tab="members" onclick="switchTab('members')">Members${totalMembers ? '<span class="tab-btn-count">' + fmtNum(totalMembers) + '</span>' : ''}</button>
               <button class="tab-btn" data-tab="revenue" onclick="switchTab('revenue')">Revenue</button>
               <button class="tab-btn" data-tab="engagement" onclick="switchTab('engagement')">Engagement</button>
@@ -1521,14 +1521,8 @@
           why: u => {
             const count = Number(u.purchase_count || 0);
             const tot = Number(u.total_cents || 0);
-            // Inline diagnostic: if count or total comes back as 0 we surface
-            // the raw row keys so we can see what the API actually sent —
-            // helps debug when the SQL aggregation drops fields silently.
-            const diag = (count === 0 || tot === 0)
-              ? `<span style="color:#B85C4A; font-size: 11px;">⚠ Got 0 from server — raw keys: ${Object.keys(u).join(", ")}</span>`
-              : "";
             return [
-              `Bought <strong>${fmtNum(count)} products</strong> totaling <strong>${fmtRev(tot)}</strong>${diag ? "<br>" + diag : ""}`,
+              `Bought <strong>${fmtNum(count)} products</strong> totaling <strong>${fmtRev(tot)}</strong>`,
               "Said yes at every checkout step of the front-end funnel",
               "Strong purchase muscle, demonstrated trust",
             ];
