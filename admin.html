@@ -940,9 +940,11 @@
       // Scroll to the top of the dashboard so each tab starts cleanly.
       window.scrollTo({ top: 0, behavior: "smooth" });
       // Refresh the push subscriber list when entering Notifications — keeps
-      // the recipient picker honest about who is currently subscribed.
-      if (tab === "notifications" && typeof loadPushSubscribers === "function") {
-        loadPushSubscribers();
+      // the recipient picker honest about who is currently subscribed. Also
+      // refresh the inbox list so any new or deleted message is visible.
+      if (tab === "notifications") {
+        if (typeof loadPushSubscribers === "function") loadPushSubscribers();
+        if (typeof loadInboxNotifications === "function") loadInboxNotifications();
       }
     }
 
@@ -1149,9 +1151,13 @@
           state.launchDate = data.dateRange.launchDate.slice(0, 10);
         }
         renderDashboard(data);
-        // Load the push subscribers list lazily after the main dashboard
-        // paints, so the "Send a notification" panel is ready to use.
-        setTimeout(() => loadPushSubscribers(), 100);
+        // Load the push subscribers list and inbox manager lazily after
+        // the main dashboard paints, so the "Send a notification" panel
+        // is ready to use the moment the admin clicks into it.
+        setTimeout(() => {
+          loadPushSubscribers();
+          loadInboxNotifications();
+        }, 100);
       } catch (err) {
         renderGate("Network error. Check your connection and refresh.");
       }
@@ -1509,6 +1515,20 @@
 
             <button class="preset-btn" style="background: var(--gold); color: var(--dark); border-color: var(--gold); padding: 8px 18px; font-weight: 600; margin-top: 10px;" onclick="sendBulkPush()" id="push-send-btn">Send notification</button>
             <div id="push-test-status" style="margin-top: 12px; font-size: 12px; color: var(--text-dim); font-style: italic;"></div>
+          </div>
+
+          <!-- Manage inbox: list of every notification saved to the inbox,
+               newest first, with a delete button per row so an accidental
+               send can be pulled back from every member's bell. Loads on
+               tab entry alongside the subscriber list. -->
+          <div class="section" id="panel-inbox-manage">
+            <h2><span class="h2-eyebrow">Inbox</span>Recent notifications in everyone's inbox</h2>
+            <p style="font-size: 12.5px; color: var(--text-dim); margin: 0 0 14px; line-height: 1.5;">
+              These are the announcements every member can see via the bell icon in the Field. Deleting one removes it from every member's inbox (and clears the read-state records).
+            </p>
+            <div id="inbox-manage-list" style="display: grid; gap: 8px;">
+              <div style="color: var(--text-dim); font-style: italic; font-size: 13px;">Loading…</div>
+            </div>
           </div>
 
           <!-- Webhook activity -->
@@ -2443,6 +2463,77 @@
       document.getElementById("push-preview-body").textContent = body;
     }
 
+    // ===== Manage inbox =====
+    // Loads the recent inbox notifications and renders them with delete
+    // buttons. Called when the Notifications tab is entered and after a
+    // successful send so the new message shows up immediately.
+    async function loadInboxNotifications() {
+      const container = document.getElementById("inbox-manage-list");
+      if (!container) return;
+      const token = localStorage.getItem(STORAGE_KEY);
+      if (!token) return;
+      try {
+        const r = await fetch("/api/notifications?action=admin-list", {
+          headers: { "x-session-token": token },
+        });
+        if (!r.ok) {
+          container.innerHTML = '<div style="color: var(--text-dim); font-style: italic; font-size: 13px;">Couldn\'t load inbox messages.</div>';
+          return;
+        }
+        const data = await r.json();
+        const items = data.notifications || [];
+        if (items.length === 0) {
+          container.innerHTML = '<div style="color: var(--text-dim); font-style: italic; font-size: 13px;">No notifications saved to the inbox yet.</div>';
+          return;
+        }
+        container.innerHTML = items.map(n => `
+          <div style="background: var(--panel); border: 1px solid var(--gold-line); border-radius: 8px; padding: 12px 14px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start;">
+            <div style="min-width: 0;">
+              <div style="font-weight: 600; color: var(--text); font-size: 13.5px; margin-bottom: 2px;">${escapeHtml(n.title || '')}</div>
+              ${n.body ? `<div style="font-size: 12px; color: var(--text-dim); line-height: 1.45; margin-bottom: 4px;">${escapeHtml(n.body)}</div>` : ''}
+              <div style="font-size: 11px; color: var(--text-mute);">
+                ${fmtRelative(n.created_at)} · read by <strong>${fmtNum(n.read_count || 0)}</strong> member${(n.read_count || 0) === 1 ? '' : 's'}${n.sent_by_email ? ' · from ' + escapeHtml(n.sent_by_email) : ''}
+              </div>
+            </div>
+            <button onclick="deleteInboxNotification('${escapeHtml(n.id)}', this)"
+                    style="background: transparent; border: 1px solid var(--gold-line); color: var(--text-dim); padding: 5px 10px; border-radius: 6px; font-family: inherit; font-size: 11px; cursor: pointer; font-weight: 600; white-space: nowrap;"
+                    title="Remove this from every member's inbox">
+              Delete
+            </button>
+          </div>
+        `).join("");
+      } catch (err) {
+        container.innerHTML = '<div style="color: var(--text-dim); font-style: italic; font-size: 13px;">Network error loading inbox.</div>';
+      }
+    }
+    window.loadInboxNotifications = loadInboxNotifications;
+
+    async function deleteInboxNotification(id, btnEl) {
+      if (!id) return;
+      if (!confirm("Delete this notification from every member's inbox? This can't be undone.")) return;
+      const token = localStorage.getItem(STORAGE_KEY);
+      if (!token) return;
+      if (btnEl) { btnEl.disabled = true; btnEl.textContent = "Deleting…"; }
+      try {
+        const r = await fetch("/api/notifications?action=admin-delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-session-token": token },
+          body: JSON.stringify({ id }),
+        });
+        if (!r.ok) {
+          if (btnEl) { btnEl.disabled = false; btnEl.textContent = "Delete"; }
+          alert("Couldn't delete. Try again.");
+          return;
+        }
+        // Reload the list so the deleted row disappears immediately.
+        loadInboxNotifications();
+      } catch (err) {
+        if (btnEl) { btnEl.disabled = false; btnEl.textContent = "Delete"; }
+        alert("Network error. Try again.");
+      }
+    }
+    window.deleteInboxNotification = deleteInboxNotification;
+
     // Returns the currently chosen delivery mode: "push" (push + inbox) or
     // "inbox" (inbox only, no phone interruption). Falls back to "push"
     // so the form's default behavior is unchanged for old admins.
@@ -2516,6 +2607,7 @@
         }
         if (mode === "inbox") {
           status.innerHTML = "Saved to inbox. Every member will see it next time they open the bell icon in the Field.";
+          loadInboxNotifications(); // refresh the manage list so the new row is visible immediately
         } else {
           const reached = data.usersReached || 0;
           const noDevices = data.usersWithNoDevices || 0;
