@@ -1627,24 +1627,19 @@
           `;
         }
         const memberCards = s.rows.map(u => {
-          const displayName = u.display_name && String(u.display_name).trim();
+          const dbName = u.display_name && String(u.display_name).trim();
           const email = (u.email || "").trim();
-          // Diagnostic: when name and email both come back empty, dump ALL
-          // the keys we received so we can see exactly what the server sent.
-          // This shows whether u.id is missing, whether the email field is
-          // named differently, etc.
-          const idTag = u.id ? ` · id ${String(u.id).slice(0, 8)}` : " · NO ID";
-          const debugDump = (!displayName && !email)
-            ? ` · keys: ${Object.keys(u).join(", ")} · raw: ${JSON.stringify(u).slice(0, 200)}`
-            : "";
-          const primary = displayName || email || `Unknown member${idTag}${debugDump}`;
-          const showEmailLine = displayName && email;
+          // Prefer DB display name, then humanized email local part, then
+          // a last-resort placeholder. The email is always shown on its own
+          // line beneath so you can still copy/identify the member.
+          const primary = dbName || humanizeEmail(email) || "Unknown member";
+          const isReal = !!dbName;
           const bullets = (s.why(u) || []).map(b => `<li>${b}</li>`).join("");
           return `
             <div class="intel-member">
               <div class="intel-member-head">
-                <span class="intel-member-name ${displayName ? '' : 'intel-member-name--anon'}">${escapeHtml(primary)}</span>
-                ${showEmailLine ? `<span class="intel-member-email">${escapeHtml(email)}</span>` : ''}
+                <span class="intel-member-name ${isReal ? '' : 'intel-member-name--anon'}">${escapeHtml(primary)}</span>
+                ${email ? `<span class="intel-member-email">${escapeHtml(email)}</span>` : ''}
               </div>
               <ul class="intel-member-why">${bullets}</ul>
             </div>
