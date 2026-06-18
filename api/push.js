@@ -199,7 +199,12 @@ async function handleSend(req, res) {
     return res.status(400).json({ error: "missing_payload" });
   }
 
-  if (userIds.length === 0) {
+  // Inbox-only mode: when the caller wants the announcement to land in
+  // every member's bell-icon inbox but NOT fire push notifications to any
+  // device, they can send with userIds=[] AND alsoSaveToInbox=true. Skip
+  // the recipients check and the push loop, just save the inbox row.
+  const inboxOnly = userIds.length === 0 && alsoSaveToInbox;
+  if (!inboxOnly && userIds.length === 0) {
     return res.status(400).json({ error: "no_recipients" });
   }
 
