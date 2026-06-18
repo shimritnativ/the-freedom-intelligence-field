@@ -417,30 +417,6 @@ export default async function handler(req, res) {
           last_completed_day DESC NULLS LAST,
           first_login_at DESC NULLS LAST
       `,
-      // 17. Today's snapshot — split into 3 lightweight queries because a
-      // single multi-subquery statement caused parameter-binding issues with
-      // @vercel/postgres. Each query is independently safeQuery-wrapped so a
-      // missing table never breaks the whole dashboard.
-      safeQuery(sql`
-        SELECT
-          COUNT(*)::int AS signups_today,
-          COUNT(*) FILTER (WHERE tier = 'preview')::int AS signups_today_reset,
-          COUNT(*) FILTER (WHERE tier = 'full')::int AS signups_today_unlimited
-        FROM users
-        WHERE kajabi_entitled = true
-          AND email NOT LIKE ${excludePattern}
-          AND created_at >= date_trunc('day', NOW())
-      `),
-      safeQuery(sql`
-        SELECT
-          COALESCE(SUM(amount_cents), 0)::bigint AS revenue_today_cents,
-          COUNT(*)::int AS orders_today
-        FROM purchases
-        WHERE event_type = 'order.success'
-          AND email NOT LIKE ${excludePattern}
-          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
-          AND created_at >= date_trunc('day', NOW())
-      `),
       // ===== Intelligence segments (6 sales/marketing-actionable buckets) =====
       // Each query returns the named members who currently fit the segment,
       // sorted so the most actionable ones are at the top of the list.
@@ -582,6 +558,35 @@ export default async function handler(req, res) {
         GROUP BY u.id, u.email, u.display_name, u.tier
         HAVING COUNT(DISTINCT p.thrivecart_id) >= 2
         ORDER BY total_cents DESC
+      `),
+      // ===== Today's snapshot — split into 3 lightweight queries because a
+      // single multi-subquery statement caused parameter-binding issues with
+      // @vercel/postgres. Each query is independently safeQuery-wrapped so a
+      // missing table never breaks the whole dashboard. The destructuring
+      // order at the top expects these in this exact spot: todaySignups,
+      // todayRevenue, todayActivity (positions 23/24/25 of Promise.all).
+      // Do not interleave these with the segment queries — last time we did,
+      // the array offset silently rendered the wrong segment's columns into
+      // each card.
+      safeQuery(sql`
+        SELECT
+          COUNT(*)::int AS signups_today,
+          COUNT(*) FILTER (WHERE tier = 'preview')::int AS signups_today_reset,
+          COUNT(*) FILTER (WHERE tier = 'full')::int AS signups_today_unlimited
+        FROM users
+        WHERE kajabi_entitled = true
+          AND email NOT LIKE ${excludePattern}
+          AND created_at >= date_trunc('day', NOW())
+      `),
+      safeQuery(sql`
+        SELECT
+          COALESCE(SUM(amount_cents), 0)::bigint AS revenue_today_cents,
+          COUNT(*)::int AS orders_today
+        FROM purchases
+        WHERE event_type = 'order.success'
+          AND email NOT LIKE ${excludePattern}
+          AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
+          AND created_at >= date_trunc('day', NOW())
       `),
       safeQuery(sql`
         SELECT
