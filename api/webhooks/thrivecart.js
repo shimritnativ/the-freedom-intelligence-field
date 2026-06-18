@@ -101,6 +101,19 @@ export default async function handler(req, res) {
     null
   );
 
+  // ThriveCart sends customer name fields at the top level of every webhook.
+  // We use them to fill in users.display_name for accounts that came in
+  // through a webhook (Kajabi only gave us the email). Falls back to building
+  // a name from first + last if full_name is absent.
+  const firstName = String(body.first_name || (body.customer && body.customer.first_name) || "").trim();
+  const lastName = String(body.last_name || (body.customer && body.customer.last_name) || "").trim();
+  const fullName = String(
+    body.full_name ||
+    body.customer_name ||
+    (body.customer && body.customer.full_name) ||
+    [firstName, lastName].filter(Boolean).join(" ")
+  ).trim();
+
   if (!orderId || !email || !event) {
     console.warn("thrivecart_webhook_missing_fields", { orderId, email, event });
     return res.status(200).json({ ok: false, note: "missing_required_fields" });
@@ -121,6 +134,17 @@ export default async function handler(req, res) {
       )
       ON CONFLICT (thrivecart_id, event_type) DO NOTHING
     `;
+    // Backfill display_name for users created via Kajabi (email only). Only
+    // updates rows where display_name is currently empty — we never overwrite
+    // a name the member set themselves in Your Account.
+    if (fullName && email) {
+      await sql`
+        UPDATE users
+        SET display_name = ${fullName}, updated_at = NOW()
+        WHERE email = ${email}
+          AND (display_name IS NULL OR display_name = '')
+      `;
+    }
     return res.status(200).json({ ok: true });
   } catch (err) {
     console.error("thrivecart_webhook_error", { message: err?.message, event, orderId });
