@@ -1577,6 +1577,18 @@
         },
       ];
 
+      // Hard filter: drop any row that has no usable email. The backend
+      // query *should* never return such rows, but if it does (stale build,
+      // phantom data, NULL-email demo user, anything) we'd rather show 0
+      // members than a flagged "Unknown member" card that confuses Shimrit
+      // and the team. Counts and sort order both use the filtered list.
+      segments.forEach(s => {
+        s.rows = (s.rows || []).filter(u => {
+          const e = u && u.email && String(u.email).trim();
+          return !!e;
+        });
+      });
+
       // Sort: actionable segments first (by priority hot > ready > nurture),
       // empty ones to the bottom in muted state.
       const priorityRank = { hot: 0, ready: 1, nurture: 2 };
