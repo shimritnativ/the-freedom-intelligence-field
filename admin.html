@@ -1948,7 +1948,8 @@
         tiles.push({ value: signups, label: `new <strong>signup${signups === 1 ? '' : 's'}</strong>${breakdown.length ? ' &middot; ' + breakdown.join(' &middot; ') : ''}`, target: "panel-roster" });
       }
       if (revenue > 0) {
-        tiles.push({ value: fmtEur(revenue), label: `revenue from <strong>${orders} order${orders === 1 ? '' : 's'}</strong>`, target: "panel-revenue", isCurrency: true });
+        const isNet = getRevenueVatMode() === "net";
+        tiles.push({ value: fmtRev(revenue), label: `revenue from <strong>${orders} order${orders === 1 ? '' : 's'}</strong>${isNet ? ' <span style="opacity:0.7;font-style:italic;">(ex VAT)</span>' : ''}`, target: "panel-revenue", isCurrency: true });
       } else if (orders > 0) {
         tiles.push({ value: orders, label: `free <strong>order${orders === 1 ? '' : 's'}</strong> today`, target: "panel-revenue" });
       }
@@ -1997,37 +1998,86 @@
     }
     window.toggleFunnelRow = toggleFunnelRow;
 
+    // VAT rate applied to ThriveCart amount_cents to derive what we actually
+    // keep. Most launch orders are EU buyers paying 19% German VAT — a few
+    // (Mark in the US, Doruk with NL business exemption) had no VAT charged,
+    // so for those rows the net = gross and dividing slightly understates.
+    // Acceptable for at-a-glance — the gross column is one toggle away.
+    const VAT_RATE_PCT = 19;
+    const VAT_DIVISOR = 1 + VAT_RATE_PCT / 100;
+
+    // Whether the revenue tables should display amounts net of VAT. Stored
+    // in localStorage so the choice persists across reloads.
+    function getRevenueVatMode() {
+      try {
+        const v = localStorage.getItem("tfif_admin_vat_mode");
+        return v === "gross" ? "gross" : "net"; // default: net (Geo's ask)
+      } catch { return "net"; }
+    }
+    function setRevenueVatMode(mode) {
+      try { localStorage.setItem("tfif_admin_vat_mode", mode); } catch {}
+      // Re-render the dashboard so all the numbers flip at once.
+      if (typeof render === "function") render();
+    }
+    window.setRevenueVatMode = setRevenueVatMode;
+
+    // Apply the active VAT mode to a cents amount. In "net" mode, divides
+    // by 1.19. In "gross" mode, returns the raw value.
+    function applyVat(cents) {
+      const c = Number(cents || 0);
+      if (getRevenueVatMode() === "net") return Math.round(c / VAT_DIVISOR);
+      return c;
+    }
+    // Convenience wrapper so the rendering code reads cleanly.
+    function fmtRev(cents) { return fmtEur(applyVat(cents)); }
+
     function renderThrivecartSection(tc) {
       const summary = tc.summary || {};
       const grossCents = Number(summary.gross_cents || 0);
       const refundCents = Number(summary.refund_cents || 0);
       const netCents = grossCents - refundCents;
       const aovCents = summary.orders ? Math.round(grossCents / summary.orders) : 0;
+      const mode = getRevenueVatMode();
+      const isNet = mode === "net";
 
       const maxByDay = (tc.byDay || []).reduce((m, r) => Math.max(m, Number(r.revenue_cents || 0)), 0) || 1;
 
       return `
         <div class="section" id="panel-revenue">
           <h2><span class="h2-eyebrow">Revenue</span>ThriveCart purchases in this range</h2>
+
+          <!-- VAT toggle: lets the admin flip between gross (incl. VAT) and
+               net-of-VAT views. Default is net since that's what Shimrit
+               actually earns. -->
+          <div class="vat-toggle" style="display: inline-flex; gap: 0; margin-bottom: 14px; border: 1px solid var(--gold-line); border-radius: 8px; overflow: hidden; background: var(--panel);">
+            <button onclick="setRevenueVatMode('net')" style="border: 0; padding: 8px 14px; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; background: ${isNet ? 'var(--gold)' : 'transparent'}; color: ${isNet ? 'var(--dark)' : 'var(--text-dim)'};">Ex VAT (what you keep)</button>
+            <button onclick="setRevenueVatMode('gross')" style="border: 0; padding: 8px 14px; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; background: ${!isNet ? 'var(--gold)' : 'transparent'}; color: ${!isNet ? 'var(--dark)' : 'var(--text-dim)'}; border-left: 1px solid var(--gold-line);">Incl. VAT (gross)</button>
+          </div>
+          <div style="font-size: 11.5px; color: var(--text-mute); margin-bottom: 14px; font-style: italic;">
+            ${isNet
+              ? `Showing revenue net of ~${VAT_RATE_PCT}% German VAT. Non-EU orders (Mark, Doruk) may not have VAT charged — actual net could be marginally higher.`
+              : `Showing gross revenue (what buyers paid). VAT is included.`}
+          </div>
+
           <div class="kpi-grid" style="margin-bottom: 18px;">
             <div class="kpi kpi-revenue">
-              <div class="kpi-label">Gross Revenue</div>
-              <div class="kpi-value">${fmtEur(grossCents)}</div>
+              <div class="kpi-label">${isNet ? 'Revenue (ex VAT)' : 'Gross Revenue'}</div>
+              <div class="kpi-value">${fmtRev(grossCents)}</div>
               <div class="kpi-sub">${fmtNum(summary.orders || 0)} orders</div>
             </div>
             <div class="kpi">
               <div class="kpi-label">Refunds</div>
-              <div class="kpi-value">${fmtEur(refundCents)}</div>
+              <div class="kpi-value">${fmtRev(refundCents)}</div>
               <div class="kpi-sub">refunded back</div>
             </div>
             <div class="kpi kpi-revenue">
-              <div class="kpi-label">Net Revenue</div>
-              <div class="kpi-value">${fmtEur(netCents)}</div>
-              <div class="kpi-sub">gross − refunds</div>
+              <div class="kpi-label">${isNet ? 'After refunds (ex VAT)' : 'Net Revenue'}</div>
+              <div class="kpi-value">${fmtRev(netCents)}</div>
+              <div class="kpi-sub">revenue − refunds</div>
             </div>
             <div class="kpi">
               <div class="kpi-label">Avg Order Value</div>
-              <div class="kpi-value">${fmtEur(aovCents)}</div>
+              <div class="kpi-value">${fmtRev(aovCents)}</div>
               <div class="kpi-sub">per order</div>
             </div>
             <div class="kpi">
@@ -2048,8 +2098,8 @@
                     <td>${escapeHtml(r.product)}</td>
                     <td><span class="tier-badge ${r.coupon === '(full price)' ? '' : 'tier-preview'}" style="${r.coupon === '(full price)' ? 'background: transparent; color: var(--text-mute);' : ''}">${escapeHtml(r.coupon)}</span></td>
                     <td class="num">${fmtNum(r.orders)}</td>
-                    <td class="num">${fmtEur(r.revenue_cents)}</td>
-                    <td class="num">${fmtEur(r.avg_cents)}</td>
+                    <td class="num">${fmtRev(r.revenue_cents)}</td>
+                    <td class="num">${fmtRev(r.avg_cents)}</td>
                   </tr>
                 `).join("")}
             </tbody>
@@ -2067,8 +2117,8 @@
                       <tr>
                         <td>${escapeHtml(c.coupon)}</td>
                         <td class="num">${fmtNum(c.orders)}</td>
-                        <td class="num">${fmtEur(c.revenue_cents)}</td>
-                        <td class="num">${fmtEur(c.avg_cents)}</td>
+                        <td class="num">${fmtRev(c.revenue_cents)}</td>
+                        <td class="num">${fmtRev(c.avg_cents)}</td>
                       </tr>
                     `).join("")}
                 </tbody>
@@ -2085,7 +2135,7 @@
                       <tr>
                         <td>${escapeHtml(p.product)}</td>
                         <td class="num">${fmtNum(p.orders)}</td>
-                        <td class="num">${fmtEur(p.revenue_cents)}</td>
+                        <td class="num">${fmtRev(p.revenue_cents)}</td>
                       </tr>
                     `).join("")}
                 </tbody>
@@ -2099,7 +2149,7 @@
               <div class="signup-row">
                 <div class="date">${fmtDate(r.day)}</div>
                 <div class="signup-bar-track"><div class="signup-bar-fill" style="width:${(Number(r.revenue_cents) / maxByDay) * 100}%;"></div></div>
-                <div class="n">${fmtEur(r.revenue_cents)}</div>
+                <div class="n">${fmtRev(r.revenue_cents)}</div>
               </div>
             `).join("")}
           ` : ''}
@@ -2113,7 +2163,7 @@
                   <tr>
                     <td>${escapeHtml(b.email)}</td>
                     <td class="num">${fmtNum(b.orders)}</td>
-                    <td class="num">${fmtEur(b.revenue_cents)}</td>
+                    <td class="num">${fmtRev(b.revenue_cents)}</td>
                     <td class="num">${fmtRelative(b.last_purchase)}</td>
                   </tr>
                 `).join("")}
