@@ -538,10 +538,10 @@
       text-align: center; padding: 24px 12px;
       color: var(--text-mute); font-style: italic; font-size: 13px;
     }
-    /* ===== Right-side tab navigation ===== */
+    /* ===== Left-side tab navigation ===== */
     .dashboard-body {
       display: grid;
-      grid-template-columns: 1fr 200px;
+      grid-template-columns: 200px 1fr;
       gap: 28px;
       align-items: start;
     }
@@ -555,6 +555,7 @@
       padding: 10px;
       position: sticky;
       top: 24px;
+      order: -1;
     }
     .tab-btn {
       background: transparent;
@@ -966,7 +967,7 @@
               <div class="kpi clickable" onclick="goToPanel('overview', 'panel-tier-mix')">
                 <div class="kpi-label">Total Members</div>
                 <div class="kpi-value">${fmtNum(totalMembers)}</div>
-                <div class="kpi-sub">${fmtNum(resetTotal)} Reset · ${fmtNum(unlimitedTotal)} Unlimited${tc.connected && tcSummary.unique_buyers ? `<br>${fmtNum(tcSummary.unique_buyers)} paid via ThriveCart · ${fmtNum(Math.max(0, totalMembers - tcSummary.unique_buyers))} comp/granted` : ''}</div>
+                <div class="kpi-sub">${fmtNum(resetTotal)} Reset · ${fmtNum(unlimitedTotal)} Unlimited</div>
               </div>
               <div class="kpi clickable" onclick="goToPanel('overview', 'panel-tier-mix')">
                 <div class="kpi-label">72-Hour Reset</div>
