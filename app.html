@@ -6888,11 +6888,26 @@ Begin.` },
 
   function maybeShowNotifPrompt() {
     if (!pushSupported()) return;
-    if (Notification.permission !== "default") return; // already granted or blocked
-    try {
-      if (localStorage.getItem(NOTIF_PROMPT_KEY)) return; // already prompted this user
-    } catch {}
     if (!state.sessionToken) return; // wait until logged in
+
+    // Force-show via URL param. Bypasses both the permission check and the
+    // localStorage "already prompted" flag. Designed for team UX review on
+    // accounts that already granted notifications — without this, the prompt
+    // would never appear because the early-return on permission === "granted"
+    // would catch it. Append `?show_notif_prompt=1` to any Field URL to use.
+    let forced = false;
+    try {
+      const url = new URL(window.location.href);
+      forced = url.searchParams.get("show_notif_prompt") === "1";
+    } catch {}
+
+    if (!forced) {
+      if (Notification.permission !== "default") return; // already granted or blocked
+      try {
+        if (localStorage.getItem(NOTIF_PROMPT_KEY)) return; // already prompted this user
+      } catch {}
+    }
+
     // Small delay so the dashboard paints first — the modal landing on a
     // blank page feels jarring.
     setTimeout(() => {
