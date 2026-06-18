@@ -463,7 +463,7 @@ export default async function handler(req, res) {
       safeQuery(sql`
         SELECT
           u.id, u.email, u.display_name,
-          MAX(dc.created_at) AS day3_completed_at,
+          MAX(dc.completed_at) AS day3_completed_at,
           MAX(p.coupon_code) AS coupon_used
         FROM users u
         JOIN day_completions dc ON dc.user_id = u.id
@@ -573,7 +573,7 @@ export default async function handler(req, res) {
           (SELECT COUNT(*)::int FROM day_completions dc
              JOIN users u ON u.id = dc.user_id
              WHERE u.email NOT LIKE ${excludePattern}
-               AND dc.created_at >= date_trunc('day', NOW())) AS completions_today,
+               AND dc.completed_at >= date_trunc('day', NOW())) AS completions_today,
           (SELECT COUNT(DISTINCT m.user_id)::int FROM messages m
              JOIN sessions s ON s.id = m.session_id
              JOIN users u ON u.id = m.user_id
