@@ -13,6 +13,12 @@
 import { sql } from "@vercel/postgres";
 import { getUserBySessionToken } from "../lib/db.js";
 
+const ADMIN_DOMAIN = "@shimritnativ.com";
+
+function isAdmin(user) {
+  return !!user && (user.email || "").toLowerCase().endsWith(ADMIN_DOMAIN);
+}
+
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
@@ -25,6 +31,30 @@ export default async function handler(req, res) {
   if (!user) return res.status(401).json({ error: "unauthorized" });
 
   try {
+    const action = (req.query && req.query.action) || "";
+
+    // ===== Admin-only actions =====
+    if (action === "admin-list") {
+      if (!isAdmin(user)) return res.status(403).json({ error: "forbidden" });
+      const { rows } = await sql`
+        SELECT n.id, n.title, n.body, n.created_at, n.sent_by_email, n.audience,
+          (SELECT COUNT(*)::int FROM notification_reads nr WHERE nr.notification_id = n.id) AS read_count
+        FROM notifications n
+        ORDER BY n.created_at DESC
+        LIMIT 50
+      `;
+      return res.status(200).json({ notifications: rows });
+    }
+    if (action === "admin-delete") {
+      if (!isAdmin(user)) return res.status(403).json({ error: "forbidden" });
+      if (req.method !== "POST") return res.status(405).json({ error: "method_not_allowed" });
+      const id = (req.body && req.body.id) || (req.query && req.query.id) || "";
+      if (!id) return res.status(400).json({ error: "missing_id" });
+      // ON DELETE CASCADE on notification_reads handles the read records.
+      await sql`DELETE FROM notifications WHERE id = ${id}`;
+      return res.status(200).json({ ok: true });
+    }
+
     if (req.method === "GET") {
       // Pull the latest 50 announcements the user is allowed to see.
       // LEFT JOIN to notification_reads so we can flag which are unread
