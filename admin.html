@@ -768,12 +768,45 @@
       background: var(--gold);
       color: var(--dark);
     }
+    /* ===== Smooth interactions =====
+       Tab content fades in + lifts slightly when shown so switching tabs
+       feels like a gentle reveal instead of a hard cut. Buttons, KPI cards,
+       and clickable elements all share the same easing curve. */
+    [data-tab-content].is-revealing {
+      animation: tab-fade-in 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    @keyframes tab-fade-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* Universal easing for the most-clicked things in the dashboard. */
+    .tab-btn,
+    .kpi,
+    .clickable,
+    .intel-card,
+    .intel-member,
+    .intel-quick {
+      transition: background-color 0.25s ease,
+                  border-color 0.25s ease,
+                  transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+                  box-shadow 0.25s ease,
+                  opacity 0.25s ease;
+    }
+    .kpi.clickable:hover, .kpi-revenue.clickable:hover {
+      transform: translateY(-1px);
+    }
+    .intel-quick:hover {
+      transform: translateY(-1px);
+    }
     /* Sparkle emoji next to "Intelligence" — gives the tab a touch of
        Field-magic. Subtle pulse on hover, gentle shimmer when active. */
+    /* Wraps "Intelligence ✨" so they sit together as a single flex child
+       and the count badge gets pushed to the far right instead of opening
+       a gap between the word and the emoji. */
+    .tab-label { display: inline-flex; align-items: center; gap: 4px; }
     .tab-sparkle {
       display: inline-block;
       font-size: 0.9em;
-      margin: 0;
       transition: transform 0.3s ease;
       vertical-align: middle;
     }
@@ -861,10 +894,21 @@
 
     // Switch the active tab. Hides all data-tab-content blocks except the
     // target, highlights the matching tab button, and saves the choice so
-    // refresh restores the same tab.
+    // refresh restores the same tab. The is-revealing class triggers a
+    // soft fade + slide-up animation so the content arrives gracefully
+    // instead of snapping into place.
     function switchTab(tab) {
       document.querySelectorAll("[data-tab-content]").forEach(el => {
-        el.style.display = el.dataset.tabContent === tab ? "" : "none";
+        const isTarget = el.dataset.tabContent === tab;
+        el.style.display = isTarget ? "" : "none";
+        if (isTarget) {
+          // Re-trigger the animation: remove the class, force a layout
+          // reflow, then add it back. Without the reflow the browser
+          // batches the changes and the animation doesn't re-play.
+          el.classList.remove("is-revealing");
+          void el.offsetWidth;
+          el.classList.add("is-revealing");
+        }
       });
       document.querySelectorAll(".tab-btn").forEach(btn => {
         btn.classList.toggle("tab-btn--active", btn.dataset.tab === tab);
@@ -1228,9 +1272,9 @@
               </div>
               ${tc.connected ? `
                 <div class="kpi kpi-revenue clickable" onclick="goToPanel('revenue', 'panel-revenue')">
-                  <div class="kpi-label">Net Revenue (ThriveCart)</div>
-                  <div class="kpi-value">${fmtEur(netCents)}</div>
-                  <div class="kpi-sub">${fmtNum(tcSummary.orders || 0)} orders · ${fmtNum(tcSummary.unique_buyers || 0)} paying buyers</div>
+                  <div class="kpi-label">Net Revenue (ex VAT)</div>
+                  <div class="kpi-value">${fmtEur(Math.round(netCents / VAT_DIVISOR))}</div>
+                  <div class="kpi-sub">${fmtNum(tcSummary.orders || 0)} orders · ${fmtNum(tcSummary.unique_buyers || 0)} paying buyers <span style="opacity:0.7;">· ${fmtEur(netCents)} gross</span></div>
                 </div>
               ` : ''}
             </div>
@@ -1449,7 +1493,7 @@
             <!-- Left-side tab navigation. Sticky on desktop, horizontal scroll on mobile. -->
             <nav class="tabs" role="tablist">
               <button class="tab-btn" data-tab="overview" onclick="switchTab('overview')">Overview</button>
-              <button class="tab-btn" data-tab="intelligence" onclick="switchTab('intelligence')">Intelligence <span class="tab-sparkle">✨</span>${intelligenceTotal ? '<span class="tab-btn-count">' + fmtNum(intelligenceTotal) + '</span>' : ''}</button>
+              <button class="tab-btn" data-tab="intelligence" onclick="switchTab('intelligence')"><span class="tab-label">Intelligence <span class="tab-sparkle">✨</span></span>${intelligenceTotal ? '<span class="tab-btn-count">' + fmtNum(intelligenceTotal) + '</span>' : ''}</button>
               <button class="tab-btn" data-tab="members" onclick="switchTab('members')">Members${totalMembers ? '<span class="tab-btn-count">' + fmtNum(totalMembers) + '</span>' : ''}</button>
               <button class="tab-btn" data-tab="revenue" onclick="switchTab('revenue')">Revenue</button>
               <button class="tab-btn" data-tab="engagement" onclick="switchTab('engagement')">Engagement</button>
