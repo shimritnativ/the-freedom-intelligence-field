@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>The Field — Team Metrics</title>
+  <link rel="icon" type="image/png" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" />
+  <link rel="apple-touch-icon" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" />
   <style>
     :root {
       --bg: #FAF5E4;
@@ -770,9 +772,10 @@
        Field-magic. Subtle pulse on hover, gentle shimmer when active. */
     .tab-sparkle {
       display: inline-block;
-      font-size: 0.95em;
-      margin-right: 2px;
+      font-size: 0.85em;
+      margin-right: -2px;
       transition: transform 0.3s ease;
+      vertical-align: middle;
     }
     .tab-btn:hover .tab-sparkle { transform: scale(1.15) rotate(8deg); }
     .tab-btn--active .tab-sparkle {
@@ -1446,7 +1449,7 @@
             <!-- Left-side tab navigation. Sticky on desktop, horizontal scroll on mobile. -->
             <nav class="tabs" role="tablist">
               <button class="tab-btn" data-tab="overview" onclick="switchTab('overview')">Overview</button>
-              <button class="tab-btn" data-tab="intelligence" onclick="switchTab('intelligence')"><span class="tab-sparkle">✨</span> Intelligence${intelligenceTotal ? '<span class="tab-btn-count">' + fmtNum(intelligenceTotal) + '</span>' : ''}</button>
+              <button class="tab-btn" data-tab="intelligence" onclick="switchTab('intelligence')"><span class="tab-sparkle">✨</span>Intelligence${intelligenceTotal ? '<span class="tab-btn-count">' + fmtNum(intelligenceTotal) + '</span>' : ''}</button>
               <button class="tab-btn" data-tab="members" onclick="switchTab('members')">Members${totalMembers ? '<span class="tab-btn-count">' + fmtNum(totalMembers) + '</span>' : ''}</button>
               <button class="tab-btn" data-tab="revenue" onclick="switchTab('revenue')">Revenue</button>
               <button class="tab-btn" data-tab="engagement" onclick="switchTab('engagement')">Engagement</button>
