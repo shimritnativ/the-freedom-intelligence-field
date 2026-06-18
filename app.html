@@ -420,6 +420,37 @@
     background: rgba(192, 58, 43, 0.12);
     color: var(--red, #C03A2B);
   }
+  /* Real toggle switch — single source of truth for ON/OFF state */
+  .pref-toggle {
+    width: 44px; height: 24px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.18);
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
+    align-self: center;
+    transition: background 0.2s ease;
+  }
+  .pref-toggle::after {
+    content: "";
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 20px; height: 20px;
+    background: #FFFFFF;
+    border-radius: 50%;
+    transition: left 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  }
+  .pref-toggle--on { background: #4A7C3A; }
+  .pref-toggle--on::after { left: 22px; }
+  .pref-toggle--disabled {
+    background: rgba(192, 58, 43, 0.4);
+    cursor: not-allowed;
+  }
+  .pref-toggle--loading {
+    opacity: 0.6;
+    cursor: wait;
+  }
   .acct-name-row { display: flex; gap: 10px; align-items: stretch; }
   .acct-name-input {
     flex: 1;
@@ -4828,7 +4859,7 @@ Begin.` },
                 <div class="pref-card-title" id="pref-notif-title">Notifications</div>
                 <div class="pref-card-desc" id="pref-notif-desc">Reset milestones, new features, and the occasional update from The Field.</div>
               </div>
-              <div class="pref-card-status" id="pref-notif-status">…</div>
+              <div class="pref-toggle" id="pref-notif-toggle" role="switch" aria-checked="false" tabindex="0"><span class="sr-only">Toggle notifications</span></div>
             </div>
           </div>
 
@@ -5508,26 +5539,24 @@ Begin.` },
     // a confirmation pill. When denied, the desc points to browser settings.
     // Both terminal states bind no click — prevents the "tapped, nothing
     // happened" mobile bug from the previous attached-but-no-op handler.
-    const prefNotifCard = document.getElementById("pref-notif-card");
-    if (prefNotifCard) {
-      prefNotifCard.addEventListener("click", async () => {
-        if (Notification.permission === "default") {
-          enablePushNotifications();
-          return;
-        }
-        if (Notification.permission === "granted") {
-          // Re-sync the subscription to the server. Self-heal for cases
-          // where the initial save didn't land. Briefly flash the status.
-          const statusEl = document.getElementById("pref-notif-status");
-          const orig = statusEl ? statusEl.textContent : "";
-          if (statusEl) statusEl.textContent = "Refreshing…";
-          await syncPushSubscription();
-          if (statusEl) statusEl.textContent = orig;
+    // The toggle is the new single source of truth for ON/OFF state. Click
+    // anywhere on it (or press space/enter while focused) to flip.
+    const prefNotifToggle = document.getElementById("pref-notif-toggle");
+    if (prefNotifToggle) {
+      prefNotifToggle.addEventListener("click", onPushTogglePress);
+      prefNotifToggle.addEventListener("keydown", (e) => {
+        if (e.key === " " || e.key === "Enter") {
+          e.preventDefault();
+          onPushTogglePress();
         }
       });
     }
-    // Sync the card to current permission state every time the modal mounts.
+    // Refresh the server-side subscription state for THIS account, then
+    // paint the toggle. This is the fix for the bug where a different
+    // logged-in account showed "Enabled" because the browser permission was
+    // still granted from the previous account.
     updatePushButtonState();
+    refreshPushServerState().then(updatePushButtonState);
     // Sidebar "Add to Home Screen" button — same install modal popup.
     const sidebarInstallBtn = document.getElementById("sidebar-install-btn");
     if (sidebarInstallBtn) sidebarInstallBtn.addEventListener("click", onInstallOpen);
@@ -6881,44 +6910,99 @@ Begin.` },
     render();
   }
 
-  // Sync the Preferences notification card to current permission state.
-  // Hides the whole Preferences section on devices that don't support push
-  // at all (iOS Safari outside a home-screen PWA, very old browsers).
+  // The Preferences toggle reflects PER-ACCOUNT subscription state, not the
+  // browser's permission alone. We confirm with the server whether THIS user
+  // currently has a saved subscription — that closes the bug where switching
+  // accounts in the same browser made the card lie about "Enabled".
+  let pushUserHasSubscription = false;
+  let pushStateRefreshing = false;
+
+  async function refreshPushServerState() {
+    if (!state.sessionToken || !pushSupported()) {
+      pushUserHasSubscription = false;
+      return;
+    }
+    try {
+      const r = await fetch("/api/push?action=my-subscription", {
+        method: "POST",
+        headers: { "x-session-token": state.sessionToken },
+      });
+      if (!r.ok) { pushUserHasSubscription = false; return; }
+      const data = await r.json();
+      pushUserHasSubscription = !!data.hasSubscription;
+    } catch {
+      pushUserHasSubscription = false;
+    }
+  }
+
   function updatePushButtonState() {
     const card = document.getElementById("pref-notif-card");
     const section = document.getElementById("acct-section-prefs");
     const desc = document.getElementById("pref-notif-desc");
-    const statusEl = document.getElementById("pref-notif-status");
-    if (!card || !section || !statusEl) return;
+    const toggle = document.getElementById("pref-notif-toggle");
+    if (!card || !section || !toggle) return;
 
     if (!pushSupported()) {
-      // No push at all on this device — hide the whole section so members
-      // aren't taunted by a feature they can't use.
       section.style.display = "none";
       return;
     }
     section.style.display = "";
 
-    // Reset card class state.
-    card.classList.remove("pref-card--clickable");
-    statusEl.classList.remove("pref-card-status--enabled", "pref-card-status--enable", "pref-card-status--blocked");
+    toggle.classList.remove("pref-toggle--on", "pref-toggle--disabled", "pref-toggle--loading");
+    if (pushStateRefreshing) toggle.classList.add("pref-toggle--loading");
 
-    if (Notification.permission === "granted") {
-      if (desc) desc.textContent = "You're set to receive Reset milestones, new features, and the occasional update from The Field.";
-      statusEl.textContent = "✓ Enabled";
-      statusEl.classList.add("pref-card-status--enabled");
-      // Even when enabled, allow clicking to manually re-sync the subscription
-      // to the server (covers the self-heal case from earlier).
-      card.classList.add("pref-card--clickable");
-    } else if (Notification.permission === "denied") {
-      if (desc) desc.textContent = "Notifications are blocked. Unblock thefieldai.app in your browser settings to receive updates.";
-      statusEl.textContent = "Blocked";
-      statusEl.classList.add("pref-card-status--blocked");
+    if (Notification.permission === "denied") {
+      if (desc) desc.textContent = "Notifications are blocked. Unblock thefieldai.app in your browser settings, then come back to turn this on.";
+      toggle.classList.add("pref-toggle--disabled");
+      toggle.setAttribute("aria-checked", "false");
+      return;
+    }
+
+    // Treat "ON" as: permission granted AND this user has a server-side
+    // subscription record. Anything else is OFF.
+    const isOn = Notification.permission === "granted" && pushUserHasSubscription;
+    if (isOn) {
+      if (desc) desc.textContent = "You're set to receive Reset milestones, new features, and the occasional update from The Field. Toggle off any time.";
+      toggle.classList.add("pref-toggle--on");
+      toggle.setAttribute("aria-checked", "true");
     } else {
-      if (desc) desc.textContent = "Reset milestones, new features, and the occasional update from The Field.";
-      statusEl.textContent = "Enable";
-      statusEl.classList.add("pref-card-status--enable");
-      card.classList.add("pref-card--clickable");
+      if (desc) desc.textContent = "Reset milestones, new features, and the occasional update from The Field. Toggle on whenever you want them.";
+      toggle.setAttribute("aria-checked", "false");
+    }
+  }
+
+  // Click handler for the toggle. Subscribes if OFF, unsubscribes if ON.
+  // Blocks the click if the permission is denied at the browser level (only
+  // the user can unblock that, from browser settings).
+  async function onPushTogglePress() {
+    if (!pushSupported()) return;
+    if (Notification.permission === "denied") return;
+    if (pushStateRefreshing) return;
+
+    const currentlyOn = Notification.permission === "granted" && pushUserHasSubscription;
+    pushStateRefreshing = true;
+    updatePushButtonState();
+
+    try {
+      if (currentlyOn) {
+        // Toggle OFF: remove this user's subscription from the server.
+        // We don't revoke the browser permission (can't programmatically),
+        // we just stop sending pushes to this account.
+        await fetch("/api/push?action=unsubscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken },
+          body: JSON.stringify({}),
+        });
+        pushUserHasSubscription = false;
+      } else {
+        // Toggle ON: request permission (no-op if already granted) and
+        // save the subscription under THIS account's user_id.
+        await enablePushNotifications();
+        await refreshPushServerState();
+      }
+    } finally {
+      pushStateRefreshing = false;
+      updatePushButtonState();
     }
   }
 
