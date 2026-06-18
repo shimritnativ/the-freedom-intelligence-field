@@ -464,8 +464,15 @@
     }
     .funnel-emails.open { display: block; }
     .funnel-emails ul { margin: 0; padding-left: 16px; }
-    .funnel-emails li { margin: 2px 0; color: var(--text); }
+    .funnel-emails li { margin: 6px 0; color: var(--text); list-style: disc; }
     .funnel-emails li .email-name { color: var(--text-dim); margin-left: 6px; }
+    .funnel-emails li .email-meta {
+      display: block;
+      color: var(--text-mute);
+      font-size: 10.5px;
+      margin-top: 2px;
+      font-style: italic;
+    }
     .funnel-emails .empty {
       color: var(--text-mute); font-style: italic;
     }
@@ -803,9 +810,9 @@
               </div>
             ` : ''}
             <div class="kpi clickable" onclick="scrollToSection('panel-unlimited-engagement')">
-              <div class="kpi-label">Unlimited Active (7d)</div>
+              <div class="kpi-label">Paid Unlimited Active (7d)</div>
               <div class="kpi-value">${fmtNum(u.active_users_7d || 0)}</div>
-              <div class="kpi-sub">${fmtNum(u.user_messages_7d || 0)} messages</div>
+              <div class="kpi-sub">${fmtNum(u.user_messages_7d || 0)} messages · paying members only</div>
             </div>
           </div>
 
@@ -1012,12 +1019,31 @@
           <div class="funnel-emails" id="${emailsId}">
             ${emails.length === 0
               ? '<div class="empty">No members in this stage.</div>'
-              : `<ul>${emails.map(u => `
-                  <li>
-                    <span>${escapeHtml(u.email)}</span>
-                    ${u.display_name ? `<span class="email-name">(${escapeHtml(u.display_name)})</span>` : ''}
-                  </li>
-                `).join("")}</ul>`}
+              : `<ul>${emails.map(u => {
+                  // Pick the right "when did this start" line per stage so
+                  // Geo can see how long each person has been stuck.
+                  let when;
+                  if (r.stage === "never_logged_in") {
+                    when = u.created_at
+                      ? `Joined ${fmtRelative(u.created_at)}, hasn't opened the app`
+                      : "Hasn't opened the app";
+                  } else if (r.stage === "stuck") {
+                    when = u.first_login_at
+                      ? `Logged in ${fmtRelative(u.first_login_at)}, hasn't started Day 1`
+                      : "Hasn't started Day 1";
+                  } else {
+                    when = u.first_login_at
+                      ? `Started Reset ${fmtRelative(u.first_login_at)}`
+                      : (u.created_at ? `Joined ${fmtRelative(u.created_at)}` : "");
+                  }
+                  return `
+                    <li>
+                      <span>${escapeHtml(u.email)}</span>
+                      ${u.display_name ? `<span class="email-name">(${escapeHtml(u.display_name)})</span>` : ''}
+                      ${when ? `<span class="email-meta">${escapeHtml(when)}</span>` : ''}
+                    </li>
+                  `;
+                }).join("")}</ul>`}
           </div>
         `;
       }).join("");
