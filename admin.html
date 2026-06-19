@@ -1189,13 +1189,27 @@
       document.querySelectorAll(".tab-btn").forEach(btn => {
         btn.classList.toggle("tab-btn--active", btn.dataset.tab === tab);
       });
-      // On mobile the tab nav is a horizontal scroller — make sure the
-      // newly-active tab is visible inside it. Without this, switching
-      // to a tab off-screen leaves the active highlight invisible.
+      // On mobile the tab nav is a horizontal scroller — center the
+      // newly-active tab inside it. We used to call scrollIntoView with
+      // inline:"center", but Safari and Chrome both refuse to scroll
+      // past the natural content edge even when CSS padding-right adds
+      // room, so the rightmost tab (Launch tracker) ended up flush
+      // right instead of in the middle of the viewport.
+      //
+      // Computing scrollLeft directly gives us a value the browser will
+      // actually honor: container.scrollTo() WILL scroll into padding
+      // area, putting the tab's center at the viewport's center
+      // regardless of which tab it is.
       try {
         const activeBtn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
-        if (activeBtn && activeBtn.scrollIntoView) {
-          activeBtn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+        const tabsContainer = document.querySelector(".tabs");
+        if (activeBtn && tabsContainer) {
+          const tabCenter = activeBtn.offsetLeft + activeBtn.offsetWidth / 2;
+          const viewportCenter = tabsContainer.clientWidth / 2;
+          tabsContainer.scrollTo({
+            left: Math.max(0, tabCenter - viewportCenter),
+            behavior: "smooth",
+          });
         }
       } catch {}
       try { localStorage.setItem(TAB_STORAGE_KEY, tab); } catch {}
@@ -1431,12 +1445,31 @@
         /year|annual/i.test(String(name || ""));
       let preUpgradesMonthly = 0;
       let preUpgradesYearly = 0;
+      // Track cents per cohort so we can compute the actual paid-price
+      // average and sync it back to the tracker — no more typing the
+      // discounted yearly/monthly price by hand.
+      let preUpgradesMonthlyCents = 0;
+      let preUpgradesYearlyCents = 0;
       preUpgradesRows.forEach(r => {
         const orders = Number(r.orders || 0);
-        if (isMonthlyProduct(r.product)) preUpgradesMonthly += orders;
-        else if (isYearlyProduct(r.product)) preUpgradesYearly += orders;
-        else preUpgradesYearly += orders; // default unknown to yearly
+        const cents = Number(r.revenue_cents || 0);
+        if (isMonthlyProduct(r.product)) {
+          preUpgradesMonthly += orders;
+          preUpgradesMonthlyCents += cents;
+        } else if (isYearlyProduct(r.product)) {
+          preUpgradesYearly += orders;
+          preUpgradesYearlyCents += cents;
+        } else {
+          preUpgradesYearly += orders;
+          preUpgradesYearlyCents += cents;
+        }
       });
+      const preUpgradeYearlyAvg = preUpgradesYearly > 0
+        ? toMoney(preUpgradesYearlyCents) / preUpgradesYearly
+        : 0;
+      const preUpgradeMonthlyAvg = preUpgradesMonthly > 0
+        ? toMoney(preUpgradesMonthlyCents) / preUpgradesMonthly
+        : 0;
 
       // Public launch Unlimited upgrades — strictly full-price (no coupon).
       // Same logic as the Reset cohort: anything with a coupon belongs to
@@ -1499,6 +1532,19 @@
           preLaunchResetAvgPrice: Number(preResetAvg.toFixed(2)),
           preLaunchUpgradesMonthly: preUpgradesMonthly,
           preLaunchUpgradesYearly: preUpgradesYearly,
+          // Avg paid price for the discounted yearly/monthly cohorts.
+          // Lets the launch tracker render real upgrade revenue without
+          // making Geo type the LAUNCHTEAMUNLIMITED price by hand. We
+          // omit the key entirely (send undefined → null) when there
+          // are zero buyers in a cohort so the tracker's manual default
+          // (163.23 yearly / 16.18 monthly) doesn't get clobbered to 0
+          // before real data exists.
+          preLaunchUpgradeYearlyPrice: preUpgradesYearly > 0
+            ? Number(preUpgradeYearlyAvg.toFixed(2))
+            : null,
+          preLaunchUpgradeMonthlyPrice: preUpgradesMonthly > 0
+            ? Number(preUpgradeMonthlyAvg.toFixed(2))
+            : null,
           publicLaunchResetBuyers: pubResetBuyers,
           publicLaunchResetAvgPrice: Number(pubResetAvg.toFixed(2)),
           publicLaunchUpgrades: pubUpgrades,
