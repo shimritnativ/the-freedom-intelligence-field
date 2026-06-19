@@ -258,7 +258,28 @@ export default async function handler(req, res) {
           u.created_at,
           u.first_login_at,
           u.last_completed_day,
-          u.preview_ends_at
+          u.preview_ends_at,
+          -- Total amount each member has paid on the Field (main products +
+          -- OTOs + bumps + recurring), excluding refunds and free comps.
+          -- The frontend respects the VAT toggle and divides by 1.19 for
+          -- the "ex VAT" view. Returned in cents to match every other
+          -- money field on the dashboard.
+          COALESCE((
+            SELECT SUM(p.amount_cents)
+            FROM purchases p
+            WHERE p.email = u.email
+              AND p.event_type = 'order.success'
+              AND p.amount_cents > 0
+              AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+          ), 0)::bigint AS total_spent_cents,
+          COALESCE((
+            SELECT COUNT(DISTINCT p.thrivecart_id)
+            FROM purchases p
+            WHERE p.email = u.email
+              AND p.event_type = 'order.success'
+              AND p.amount_cents > 0
+              AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+          ), 0)::int AS purchase_count
         FROM users u
         WHERE u.kajabi_entitled = true
           AND u.email NOT LIKE ${excludePattern}
