@@ -1633,10 +1633,12 @@
   // Endpoint that holds the singleton state row. Both GET and POST go here.
   const STATE_ENDPOINT = "/api/admin/launch-tracker-state";
   // How long to wait after the last keystroke before pushing to the server.
-  // Short enough that you don't lose more than ~1 keystroke if you tab away,
+  // Short enough that you don't lose your edits if you refresh quickly,
   // long enough that mashing the up-arrow on a number input doesn't fire
-  // dozens of requests.
-  const SAVE_DEBOUNCE_MS = 800;
+  // dozens of requests. We also flush immediately on blur and on tab
+  // hide / page unload so this debounce only matters during continuous
+  // typing — once you stop touching the field, the save fires fast.
+  const SAVE_DEBOUNCE_MS = 350;
   // How often to poll for changes from other admins while the page is open.
   // 60s is plenty — the launch tracker isn't a chat app.
   const REFRESH_INTERVAL_MS = 60 * 1000;
@@ -2822,18 +2824,74 @@
     });
     return state;
   }
+  // Fields the user has typed into but whose save hasn't been confirmed
+  // by the server yet. We must NEVER overwrite these from a background
+  // refresh — otherwise a 60s tick can land between a keystroke and the
+  // 800ms-debounced server push, fetch stale state, and clobber the
+  // value the user just typed (this happened to Geo: typed 0 into
+  // "People in the sequence", refresh landed, value snapped back to
+  // 2000, save fired with the wrong number).
+  const pendingEdits = new Set();
   // Fire on every input change. Writes the cache immediately so a tab
   // refresh never loses keystrokes, then debounces the server push so we
   // batch rapid edits into one round-trip.
   let _saveDebounce = null;
-  function persist() {
+  function persist(editedId) {
     const state = snapshotState();
     saveStateCache(state);
     flashSaved();
+    if (editedId) pendingEdits.add(editedId);
     clearTimeout(_saveDebounce);
-    _saveDebounce = setTimeout(() => {
-      pushServerState(state);
+    _saveDebounce = setTimeout(async () => {
+      // Snapshot the IDs we're about to confirm so we can clear them
+      // only if the push succeeds. New edits that land during the await
+      // stay in the set and trigger their own save.
+      const confirming = Array.from(pendingEdits);
+      const result = await pushServerState(state);
+      if (result) confirming.forEach(id => pendingEdits.delete(id));
     }, SAVE_DEBOUNCE_MS);
+  }
+  // Force any debounced save to fire RIGHT NOW. Returns a promise so
+  // callers can await the round-trip when they need to (e.g. before
+  // letting the page unload). Idempotent — calling it with no pending
+  // debounce just no-ops.
+  function flushPendingSave() {
+    if (!_saveDebounce) return Promise.resolve(null);
+    clearTimeout(_saveDebounce);
+    _saveDebounce = null;
+    const state = snapshotState();
+    saveStateCache(state);
+    const confirming = Array.from(pendingEdits);
+    return pushServerState(state).then(result => {
+      if (result) confirming.forEach(id => pendingEdits.delete(id));
+      return result;
+    });
+  }
+  // Synchronous best-effort save for unload — uses fetch with keepalive
+  // so the request survives the page going away. Browsers will still
+  // make this request even if the tab closes mid-flight. sendBeacon
+  // would also work but doesn't let us set the JSON content type cleanly
+  // alongside our session token header.
+  function beaconSave() {
+    if (!_saveDebounce && pendingEdits.size === 0) return;
+    clearTimeout(_saveDebounce);
+    _saveDebounce = null;
+    const token = getSessionToken();
+    if (!token) return;
+    const state = snapshotState();
+    saveStateCache(state);
+    try {
+      fetch(STATE_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-session-token": token,
+        },
+        credentials: "include",
+        body: JSON.stringify({ state }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch {}
   }
 
   // Apply a state object to the form. Used both on initial load and when
@@ -2843,12 +2901,28 @@
     FIELDS.forEach(id => {
       if (state[id] != null) {
         const el = document.getElementById(id);
-        // Only overwrite if the user isn't actively focused on this input
-        // — typing while a background refresh lands would clobber their
-        // current keystroke. The cache push happens on every keystroke so
-        // their value is already persisted; the next refresh will pick it
-        // up from the server anyway.
-        if (el && document.activeElement !== el) el.value = state[id];
+        if (!el) return;
+        // Don't overwrite an input the user is actively typing in —
+        // would clobber their keystroke. The cache push happens on every
+        // keystroke so their value is already persisted; the next refresh
+        // will pick it up from the server anyway.
+        if (document.activeElement === el) return;
+        // Don't overwrite a field that the parent admin just pushed a
+        // live ThriveCart value into. handleSyncMessage runs whenever
+        // the iframe receives a sync postMessage from admin.html; it
+        // adds the field id to `syncedFields` after applying the value.
+        // If hydrate (or the background refresh) lands later with a
+        // stale value from the server, this guard keeps the freshly
+        // synced number visible instead of regressing to whatever was
+        // last saved. The synced value also gets pushed to the server
+        // via persist() so the regression doesn't happen on next load.
+        if (typeof syncedFields !== "undefined" && syncedFields.has(id)) return;
+        // Don't overwrite a field the user just typed into where the
+        // save is still in flight. Background refresh races with the
+        // 800ms debounce — without this guard, the user's keystroke can
+        // be silently reverted to the stale server value.
+        if (pendingEdits.has(id)) return;
+        el.value = state[id];
       }
     });
   }
@@ -2901,7 +2975,9 @@
     "pre-purchases":         "preLaunchResetBuyers",
     "pre-reset-price":       "preLaunchResetAvgPrice",
     "pre-upgrades-yearly":   "preLaunchUpgradesYearly",
+    "pre-upgrade-yearly-price":  "preLaunchUpgradeYearlyPrice",
     "pre-upgrades-monthly":  "preLaunchUpgradesMonthly",
+    "pre-upgrade-monthly-price": "preLaunchUpgradeMonthlyPrice",
     "launch-purchases":  "publicLaunchResetBuyers",
     "launch-reset-price":"publicLaunchResetAvgPrice",
     "launch-upgrades":   "publicLaunchUpgrades",
@@ -3094,8 +3170,13 @@
         // Typing into a synced field flips it to "manual override" mode.
         markManualOverride(id);
         recalc();
-        persist();
+        persist(id);
       });
+      // The moment the user leaves the field (clicks away, tabs out,
+      // focuses something else), flush the save immediately. Means a
+      // page refresh right after typing doesn't lose the edit — by the
+      // time the refresh action runs, the value is on the server.
+      el.addEventListener("blur", () => { flushPendingSave(); });
     });
 
     document.getElementById("reset-btn").addEventListener("click", async () => {
@@ -3226,6 +3307,21 @@
       head.addEventListener("click", onToggle);
     });
   }
+
+  // Page-level save triggers — these catch the cases where a single
+  // input's blur isn't enough (tab going to background, browser
+  // navigation, refresh button hit while the focus is still in the
+  // input). Together with the input-level blur listener, anything the
+  // user types should reach the server unless their network drops.
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) flushPendingSave();
+  });
+  // beforeunload fires on refresh, navigation, tab close. We use the
+  // keepalive fetch path because async/await doesn't get to finish
+  // during unload — the request must be queued synchronously and the
+  // browser will deliver it even after the page is gone.
+  window.addEventListener("beforeunload", () => { beaconSave(); });
+  window.addEventListener("pagehide", () => { beaconSave(); });
 
   // Initial paint runs from cache synchronously so the form isn't blank
   // while we wait for the server. Then hydrate() awaits the server fetch
