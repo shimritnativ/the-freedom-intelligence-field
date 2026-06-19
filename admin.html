@@ -1623,23 +1623,36 @@
               <thead>
                 <tr>
                   <th>Email</th><th>Name</th><th>Tier</th><th>Plan</th>
+                  <th class="num">Spent</th>
                   <th>Joined</th><th>1st login</th><th class="num">Day</th>
                 </tr>
               </thead>
               <tbody>
                 ${(d.recentSignups || []).length === 0
-                  ? '<tr><td colspan="7" class="empty-state">No signups in this range.</td></tr>'
-                  : (d.recentSignups || []).map(u => `
-                    <tr>
-                      <td>${escapeHtml(u.email)}</td>
-                      <td>${escapeHtml(nameOrFallback(u))}</td>
-                      <td><span class="tier-badge ${u.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(tierLabel(u.tier))}</span></td>
-                      <td>${escapeHtml(u.subscription_plan || "—")}</td>
-                      <td>${fmtDate(u.created_at)}</td>
-                      <td>${u.first_login_at ? fmtDate(u.first_login_at) : "—"}</td>
-                      <td class="num">${u.last_completed_day || 0}</td>
-                    </tr>
-                  `).join("")}
+                  ? '<tr><td colspan="8" class="empty-state">No signups in this range.</td></tr>'
+                  : (d.recentSignups || []).map(u => {
+                      // Total spend respects the global VAT toggle — fmtRev
+                      // divides by 1.19 when the admin is viewing "ex VAT".
+                      // Zero spend (free members like Tomer would be here
+                      // if we hadn't filtered him) renders as a dash.
+                      const spent = Number(u.total_spent_cents || 0);
+                      const count = Number(u.purchase_count || 0);
+                      const spentCell = spent > 0
+                        ? `${fmtRev(spent)}<span style="color: var(--text-mute); font-weight: 400; font-size: 11px; margin-left: 6px;">${count} order${count === 1 ? '' : 's'}</span>`
+                        : '<span style="color: var(--text-mute);">—</span>';
+                      return `
+                        <tr>
+                          <td>${escapeHtml(u.email)}</td>
+                          <td>${escapeHtml(nameOrFallback(u))}</td>
+                          <td><span class="tier-badge ${u.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(tierLabel(u.tier))}</span></td>
+                          <td>${escapeHtml(u.subscription_plan || "—")}</td>
+                          <td class="num">${spentCell}</td>
+                          <td>${fmtDate(u.created_at)}</td>
+                          <td>${u.first_login_at ? fmtDate(u.first_login_at) : "—"}</td>
+                          <td class="num">${u.last_completed_day || 0}</td>
+                        </tr>
+                      `;
+                    }).join("")}
               </tbody>
             </table>
           </div>
@@ -2379,6 +2392,9 @@
       const revenue = Number(t.revenue_today_cents || 0);
       const orders = Number(t.orders_today || 0);
       const completions = Number(t.completions_today || 0);
+      const day1Today = Number(t.day1_today || 0);
+      const day2Today = Number(t.day2_today || 0);
+      const day3Today = Number(t.day3_today || 0);
       const activeUnlimited = Number(t.active_unlimited_today || 0);
       const unlimitedMessages = Number(t.unlimited_messages_today || 0);
       // Catches Unlimited conversions today — including returning customers
@@ -2450,11 +2466,39 @@
           target: "panel-revenue",
         });
       }
-      if (completions > 0) {
+      // Day completions — broken out by which day was reached. Each one is
+      // a meaningful milestone in the 72-Hour Reset arc:
+      //   Day 1 = ignition (people started the practice)
+      //   Day 2 = deepening (they kept going through the dip)
+      //   Day 3 = the full Reset (the launch goal — accent tile)
+      if (day3Today > 0) {
         tiles.push({
-          value: completions,
-          eyebrow: "Day-step completions",
-          detail: "across Day 1 + 2 + 3 combined",
+          value: day3Today,
+          eyebrow: "Day 3 completed",
+          detail: day3Today === 1
+            ? "1 member finished the full 72-Hour Reset"
+            : day3Today + " members finished the full 72-Hour Reset",
+          target: "panel-funnel",
+          accent: true,
+        });
+      }
+      if (day2Today > 0) {
+        tiles.push({
+          value: day2Today,
+          eyebrow: "Day 2 reached",
+          detail: day2Today === 1
+            ? "1 member deepened the practice"
+            : day2Today + " members deepened the practice",
+          target: "panel-funnel",
+        });
+      }
+      if (day1Today > 0) {
+        tiles.push({
+          value: day1Today,
+          eyebrow: "Day 1 started",
+          detail: day1Today === 1
+            ? "1 member began the Reset"
+            : day1Today + " members began the Reset",
           target: "panel-funnel",
         });
       }
