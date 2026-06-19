@@ -1272,6 +1272,11 @@
       }
     }
 
+    // After every recalc, ask the parent to re-measure us. The gap
+    // narrative, projected revenue sub-line, and path cards all change
+    // height as numbers change.
+    scheduleHeightReport();
+
     // Summary cards
     document.getElementById("sum-spent").textContent = eur(totalSpend, 0);
     document.getElementById("sum-revenue").textContent = eur(totalRevenue, 0);
@@ -1441,6 +1446,35 @@
     }
   }
   window.addEventListener("message", handleSyncMessage);
+
+  // Report this page's full content height back to the parent (admin) so
+  // it can size the iframe to match. Kills the nested-scroll experience:
+  // the admin page becomes the single scroll surface, the iframe just
+  // shows everything inline. Posts on initial load, on every recalc
+  // (since the gap narrative + path cards change height), and on resize.
+  function postHeightToParent() {
+    if (window.parent === window) return; // standalone, not embedded
+    const doc = document.documentElement;
+    const body = document.body;
+    const height = Math.max(
+      doc.scrollHeight || 0,
+      body ? body.scrollHeight : 0,
+      doc.offsetHeight || 0,
+      body ? body.offsetHeight : 0
+    );
+    try {
+      window.parent.postMessage({ type: "launch-tracker-height", height: height }, "*");
+    } catch {}
+  }
+  // Debounce so recalcs (which fire on every input) don't postMessage-storm.
+  let heightTimer = null;
+  function scheduleHeightReport() {
+    if (heightTimer) clearTimeout(heightTimer);
+    heightTimer = setTimeout(postHeightToParent, 80);
+  }
+  window.addEventListener("resize", scheduleHeightReport);
+  // Also report once images / fonts settle.
+  window.addEventListener("load", () => setTimeout(postHeightToParent, 100));
 
   function wire() {
     FIELDS.forEach(id => {
