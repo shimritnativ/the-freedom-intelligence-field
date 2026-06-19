@@ -1305,6 +1305,11 @@
         .filter(t => t.tier === "full" && t.plan === "yearly")
         .reduce((s, t) => s + Number(t.n || 0), 0);
 
+      // Active members for the per-user economics view. Sum of all tier
+      // counts gives total members (Reset + paid Unlimited) — exactly
+      // what the launch tracker needs to compute cost-per-user math.
+      const activeMembers = tiers.reduce((s, t) => s + Number(t.n || 0), 0);
+
       // Intelligence segment counts — drives the Path-from-Intelligence
       // section in the launch tracker. Each count is the # of members
       // currently in that segment on the live admin.
@@ -1339,6 +1344,7 @@
           publicLaunchUpgrades: pubUpgrades,
           unlimitedMonthly: unlimitedMonthly,
           unlimitedYearly: unlimitedYearly,
+          activeMembers: activeMembers,
           actualRevenue: actualRevenue,
           intel: intelCounts,
         },
