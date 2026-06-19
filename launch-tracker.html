@@ -190,6 +190,162 @@
     font-weight: 600;
     cursor: default;
   }
+  /* Sync indicator — small dot next to fields auto-filled from live data.
+     Gold = live-synced, soft amber = user overrode the synced value. */
+  .field { position: relative; }
+  .sync-dot {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    pointer-events: auto;
+    cursor: help;
+    box-shadow: 0 0 0 2px var(--panel-2);
+  }
+  .sync-dot.synced { background: var(--gold); }
+  .sync-dot.manual { background: rgba(154, 110, 16, 0.35); }
+  .sync-dot.synced::after {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: 999px;
+    background: var(--gold);
+    opacity: 0.3;
+    animation: sync-pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes sync-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.3; }
+    50% { transform: scale(1.4); opacity: 0; }
+  }
+  /* Sync banner — shows at the top once data has been pushed from admin. */
+  .sync-banner {
+    display: none;
+    background: linear-gradient(135deg, var(--gold-soft), rgba(255,255,255,0));
+    border: 1px solid var(--gold-line);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin: 0 0 18px;
+    font-size: 12.5px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sync-banner-dot {
+    width: 8px; height: 8px; border-radius: 999px; background: var(--gold);
+    box-shadow: 0 0 0 3px var(--gold-soft);
+  }
+  .sync-banner strong { color: var(--text); font-weight: 600; }
+  /* Gap-to-target narrative — sentiment-tinted box that tells you what
+     the math means and what to do next, instead of leaving you to read
+     six numbers and figure it out yourself. */
+  .gap-narrative {
+    margin-top: 18px;
+    padding: 16px 18px;
+    border-radius: 12px;
+    border: 1px solid var(--gold-line);
+    background: var(--gold-soft);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .gap-narrative strong { font-weight: 700; color: var(--gold); }
+  .gap-narrative.is-profitable {
+    background: var(--success-soft);
+    border-color: rgba(45, 107, 58, 0.25);
+  }
+  .gap-narrative.is-profitable strong { color: var(--success); }
+  .gap-narrative.is-loss {
+    background: var(--danger-soft);
+    border-color: rgba(168, 42, 42, 0.25);
+  }
+  .gap-narrative.is-loss strong { color: var(--danger); }
+  /* Path from Intelligence — Layer 3. Pulls live segment counts from the
+     admin and shows the specific paths to close the gap. Each card is
+     one Intelligence segment with the projected contribution. */
+  .path-from-intel {
+    margin-top: 22px;
+    padding: 18px 20px 16px;
+    background: var(--panel-2);
+    border: 1px solid var(--gold-line);
+    border-radius: 12px;
+  }
+  .path-from-intel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .path-eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+  .path-from-intel-source {
+    font-size: 11.5px;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+  .path-from-intel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+  }
+  .path-card {
+    background: var(--panel);
+    border: 1px solid var(--gold-line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .path-card--hot { border-color: rgba(63, 128, 96, 0.4); background: rgba(63, 128, 96, 0.04); }
+  .path-card--ready { border-color: var(--gold); background: var(--gold-soft); }
+  .path-card--nurture { border-color: rgba(139, 123, 94, 0.4); background: rgba(139, 123, 94, 0.04); }
+  .path-card-eyebrow {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .path-card-title {
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .path-card-count {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    font-family: Georgia, serif;
+    line-height: 1.1;
+    margin-top: 4px;
+  }
+  .path-card-contribution {
+    font-size: 11.5px;
+    color: var(--text-dim);
+    line-height: 1.4;
+    margin-top: 4px;
+  }
+  .path-card-contribution strong { color: var(--text); font-weight: 600; }
+  .path-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 18px;
+    color: var(--text-mute);
+    font-style: italic;
+    font-size: 13px;
+  }
   .field input[readonly]:focus {
     border-color: var(--gold-line);
     background: var(--gold-soft);
@@ -374,6 +530,15 @@
     </div>
     <div class="summary-card-sub" id="sum-status-sub">Updates with the numbers</div>
   </div>
+</div>
+
+<div class="sync-banner" id="sync-banner">
+  <span class="sync-banner-dot"></span>
+  <span>
+    <strong>Live data synced</strong> from the Field admin dashboard at
+    <span id="sync-banner-time">—</span>. Fields with a gold dot are pulled
+    from real purchases. Type into any field to override it manually.
+  </span>
 </div>
 
 <section>
@@ -649,6 +814,27 @@
   </div>
   <p class="section-desc">The numbers that answer your real question. Update everything above, then read the breakeven analysis below.</p>
 
+  <!-- Profit target input — drives the gap narrative and the Path from
+       Intelligence section. Defaults to €5,000 which is a reasonable
+       first-launch goal; the user can dial it up or down. -->
+  <div class="grid grid-3" style="margin-bottom: 18px;">
+    <div class="field">
+      <label class="field-label" for="final-profit-target">Profit target this launch (€)</label>
+      <input type="number" id="final-profit-target" value="5000" min="0" step="100" />
+      <div class="field-hint">What you're aiming to net by the end of this launch</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="final-gap-to-target">Gap to target (€)</label>
+      <input type="number" id="final-gap-to-target" readonly />
+      <div class="field-hint">Target − current P&L</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="final-upgrades-to-target">Upgrades to close the gap</label>
+      <input type="number" id="final-upgrades-to-target" readonly />
+      <div class="field-hint">At the LTV set above</div>
+    </div>
+  </div>
+
   <div class="grid grid-3">
     <div class="field">
       <label class="field-label" for="final-total-cost">Total spend (€)</label>
@@ -679,6 +865,37 @@
       <input type="number" id="final-roas" readonly />
       <div class="field-hint">Above 1.0 means profitable</div>
     </div>
+    <div class="field">
+      <label class="field-label" for="final-profit-per-buyer">Profit per Reset buyer (€)</label>
+      <input type="number" id="final-profit-per-buyer" readonly />
+      <div class="field-hint">Revenue per buyer − cost per buyer</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="final-ltv-cac">LTV / CAC ratio</label>
+      <input type="number" id="final-ltv-cac" readonly />
+      <div class="field-hint">Above 3 is healthy growth</div>
+    </div>
+  </div>
+
+  <!-- Gap-to-target narrative: a single sentence that translates the
+       math into "what to do next" so the launch tracker reads as an
+       action plan, not just a calculator. Background tints based on
+       sentiment so the dashboard tells the story at a glance. -->
+  <div class="gap-narrative" id="gap-narrative">
+    Fill in the numbers above and a recommended next move will appear here.
+  </div>
+
+  <!-- Path from Intelligence — Layer 3. Reads the Intelligence segment
+       counts synced from the admin dashboard and shows the specific
+       member-pools you can pull from to close the gap. Each card
+       translates segment count × LTV → "could contribute Y of the gap"
+       so it's an action plan, not a number salad. -->
+  <div class="path-from-intel" id="path-from-intel">
+    <div class="path-from-intel-head">
+      <span class="path-eyebrow">Path to target</span>
+      <span class="path-from-intel-source" id="path-source">Waiting for live data from the Field admin…</span>
+    </div>
+    <div class="path-from-intel-grid" id="path-from-intel-grid"></div>
   </div>
 
   <div class="actions">
@@ -707,7 +924,8 @@
     "launch-replies", "launch-yes", "launch-clicks", "launch-purchases", "launch-reset-price", "launch-upgrades",
     "unl-monthly-price", "unl-yearly-price", "unl-monthly-count", "unl-yearly-count", "unl-ltv",
     "op-vercel", "op-domain", "op-resend", "op-neon", "op-anthropic",
-    "op-elevenlabs", "op-whisper", "op-ghl", "op-other", "op-fx"
+    "op-elevenlabs", "op-whisper", "op-ghl", "op-other", "op-fx",
+    "final-profit-target"
   ];
 
   function loadState() {
@@ -788,6 +1006,101 @@
       pill.textContent = "Below breakeven";
       sub.textContent = "Need more upgrades to turn this profitable";
     }
+  }
+
+  // Renders the Path-from-Intelligence cards: each Intelligence segment
+  // gets one card showing its current count, what fraction of the gap it
+  // could cover if all members converted at the LTV. Priority order:
+  //   hot — convert today (Hot Reset graduates, High-intent buyers)
+  //   ready — premium ladder (Ready for upsell, Book launch warmers)
+  //   nurture — re-engagement (Stuck Reset)
+  // Win-back at-risk subs is listed as a retention signal, not a path to
+  // close the launch gap (preventing churn ≠ acquiring new revenue).
+  function renderIntelPath(gap, upgradesToTarget, ltv) {
+    const grid = document.getElementById("path-from-intel-grid");
+    const source = document.getElementById("path-source");
+    if (!grid) return;
+
+    if (intelSyncedAt) {
+      source.textContent = "Live data · synced " + intelSyncedAt.toLocaleTimeString();
+    }
+
+    const segments = [
+      {
+        priority: "hot",
+        title: "Hot Reset graduates",
+        eyebrow: "Convert today",
+        count: intelCounts.hot_reset_graduate,
+        note: "Just finished Day 3 — peak intent window",
+      },
+      {
+        priority: "hot",
+        title: "High-intent buyers",
+        eyebrow: "Stacked purchases",
+        count: intelCounts.high_intent_buyer,
+        note: "Said yes at every checkout step",
+      },
+      {
+        priority: "ready",
+        title: "Ready for higher-ticket offers",
+        eyebrow: "Premium ladder",
+        count: intelCounts.ready_for_upsell,
+        note: "Daily active Unlimited users",
+      },
+      {
+        priority: "ready",
+        title: "Book Launch attendees",
+        eyebrow: "Book community",
+        count: intelCounts.book_launch_warmer,
+        note: "Already inside Shimrit's content world",
+      },
+      {
+        priority: "nurture",
+        title: "Stuck Reset members",
+        eyebrow: "Re-engagement",
+        count: intelCounts.stuck_reset,
+        note: "Paid but stalled — need a manual nudge",
+      },
+    ];
+
+    const totalLeads = segments.reduce((s, seg) => s + seg.count, 0);
+    if (totalLeads === 0) {
+      grid.innerHTML = `<div class="path-empty">When members start hitting Intelligence segments in the admin, your warmest paths to closing the gap will appear here.</div>`;
+      return;
+    }
+
+    grid.innerHTML = segments
+      .filter(seg => seg.count > 0)
+      .sort((a, b) => {
+        const rank = { hot: 0, ready: 1, nurture: 2 };
+        return rank[a.priority] - rank[b.priority];
+      })
+      .map(seg => {
+        // Conversion assumptions per segment — rough but honest. Hot
+        // segments are higher because intent is already validated;
+        // nurture segments are lower because they're already stalled.
+        const convRate = seg.priority === "hot" ? 0.6
+                        : seg.priority === "ready" ? 0.35
+                        : 0.2;
+        const projectedConversions = Math.round(seg.count * convRate);
+        const projectedRevenue = projectedConversions * ltv;
+        const gapCovered = gap > 0 ? Math.min(100, Math.round((projectedRevenue / gap) * 100)) : 0;
+        return `
+          <div class="path-card path-card--${seg.priority}">
+            <div class="path-card-eyebrow">${seg.eyebrow}</div>
+            <div class="path-card-title">${seg.title}</div>
+            <div class="path-card-count">${seg.count} member${seg.count === 1 ? "" : "s"}</div>
+            <div class="path-card-contribution">
+              ${seg.note}.<br>
+              Realistic: <strong>${projectedConversions} convert${projectedConversions === 1 ? "s" : ""}</strong>
+              ${ltv > 0 && projectedRevenue > 0
+                ? ` → <strong>${eur(projectedRevenue, 0)}</strong> ${gap > 0 ? `(${gapCovered}% of gap)` : ""}`
+                : ""}
+            </div>
+          </div>
+        `;
+      })
+      .join("");
   }
 
   function recalc() {
@@ -892,6 +1205,68 @@
     setInt("final-breakeven", Math.max(0, breakevenUpgrades));
     setVal("final-roas", roas);
 
+    // ===== Layer 3: gap-to-target + Path from Intelligence =====
+    // Profit target → gap → upgrades needed at the current LTV. Powers
+    // both the "Gap to target" / "Upgrades to close the gap" KPI fields
+    // and the action-card rendering below.
+    const profitTarget = n("final-profit-target");
+    const gapToTarget = Math.max(0, profitTarget - pnl);
+    const upgradesToTarget = ltv > 0 ? Math.ceil(gapToTarget / ltv) : 0;
+    setVal("final-gap-to-target", gapToTarget);
+    setInt("final-upgrades-to-target", upgradesToTarget);
+
+    renderIntelPath(gapToTarget, upgradesToTarget, ltv);
+
+    // ===== Layer 2: per-user economics + gap narrative =====
+    // Profit per Reset buyer = (avg Reset revenue per buyer) − CPA.
+    // Gives the per-customer money math at a glance.
+    const avgResetRev = totalPurchases > 0
+      ? (preRevenue + launchRevenue) / totalPurchases
+      : 0;
+    const profitPerBuyer = avgResetRev - cpa;
+    setVal("final-profit-per-buyer", profitPerBuyer);
+
+    // LTV / CAC ratio — the classic growth health metric. Above 3 is
+    // healthy SaaS territory. Below 1 means you're losing money on every
+    // acquisition. Uses Unlimited LTV as the lifetime value reference
+    // since that's where the long-term money actually is.
+    const ltvCac = cpa > 0 ? ltv / cpa : 0;
+    setVal("final-ltv-cac", ltvCac);
+
+    // Gap narrative: translates the math into a sentence that tells the
+    // user what to do next. Three sentiment buckets:
+    //   profitable (P&L > 100) — celebrate, suggest doubling down
+    //   breakeven (within ±100) — encourage the next conversion
+    //   loss (P&L < -100) — flag the gap and the closest fix
+    const gapEl = document.getElementById("gap-narrative");
+    if (gapEl) {
+      gapEl.classList.remove("is-profitable", "is-loss");
+      if (totalPurchases === 0 && unlTotal === 0) {
+        gapEl.textContent = "Fill in the numbers above and a recommended next move will appear here.";
+      } else if (pnl > 100) {
+        gapEl.classList.add("is-profitable");
+        const surplus = pnl;
+        const extraUpgrades = ltv > 0 ? Math.floor(surplus / ltv) : 0;
+        gapEl.innerHTML = `<strong>Profitable.</strong> You're <strong>${eur(surplus, 0)}</strong> ahead of break-even. ` +
+          (extraUpgrades > 0
+            ? `Every additional Unlimited upgrade is <strong>${eur(ltv, 0)}</strong> of clean profit — your next move is scaling acquisition without rebuilding the funnel.`
+            : `Hold the spend, raise prices on the next launch, or invest the surplus in retention.`);
+      } else if (pnl > -100) {
+        gapEl.innerHTML = `<strong>Breakeven.</strong> The launch is paying for itself. ` +
+          (ltv > 0
+            ? `Just <strong>${Math.max(1, Math.ceil(100 / ltv))} more Unlimited upgrade${Math.ceil(100 / ltv) === 1 ? "" : "s"}</strong> tips you firmly into profit — focus the next 48h on converting your Hot Reset graduates and Stuck Reset members from the Intelligence tab.`
+            : `Set an LTV above to see what conversion gets you to profit.`);
+      } else {
+        gapEl.classList.add("is-loss");
+        const deficit = Math.abs(pnl);
+        const upgradesNeeded = ltv > 0 ? Math.ceil(deficit / ltv) : 0;
+        gapEl.innerHTML = `<strong>Below break-even by ${eur(deficit, 0)}.</strong> ` +
+          (upgradesNeeded > 0
+            ? `To close the gap you need <strong>${upgradesNeeded} more Unlimited upgrade${upgradesNeeded === 1 ? "" : "s"}</strong> at the current LTV (${eur(ltv, 0)} each). Your Intelligence tab "Hot Reset graduates" and "Ready for higher-ticket offers" segments are the warmest leads to start with.`
+            : `Set an LTV above to size the gap in upgrades.`);
+      }
+    }
+
     // Summary cards
     document.getElementById("sum-spent").textContent = eur(totalSpend, 0);
     document.getElementById("sum-revenue").textContent = eur(totalRevenue, 0);
@@ -924,11 +1299,123 @@
     });
   }
 
+  // ===== Live-sync layer =====
+  // When the launch tracker is embedded in the admin dashboard, the parent
+  // posts a message with the real numbers from /api/admin/metrics. The
+  // fields named in SYNC_MAP get auto-filled and marked with a gold dot.
+  // If the user later types into a synced field, the dot fades and the
+  // field gets a "manual override" class so it's clear what's truth vs
+  // what's a guess.
+  const SYNC_MAP = {
+    "pre-purchases":     "preLaunchResetBuyers",
+    "pre-reset-price":   "preLaunchResetAvgPrice",
+    "pre-upgrades":      "preLaunchUpgrades",
+    "launch-purchases":  "publicLaunchResetBuyers",
+    "launch-reset-price":"publicLaunchResetAvgPrice",
+    "launch-upgrades":   "publicLaunchUpgrades",
+    "unl-monthly-count": "unlimitedMonthly",
+    "unl-yearly-count":  "unlimitedYearly",
+  };
+  // Intelligence segment counts arrive alongside the sync payload. Stored
+  // here for the Path-from-Intelligence renderer to use during recalc.
+  // Each value is just a count; the renderer translates it to "contributes
+  // €Y of the gap" based on the LTV the user has set.
+  let intelCounts = {
+    hot_reset_graduate: 0,
+    ready_for_upsell: 0,
+    book_launch_warmer: 0,
+    high_intent_buyer: 0,
+    stuck_reset: 0,
+    at_risk_subscriber: 0,
+  };
+  let intelSyncedAt = null;
+  // Tracks which fields are currently displaying synced live data so we
+  // can flip them to "manual override" on user input.
+  const syncedFields = new Set();
+  // Once a user manually edits a synced field, we record it here and skip
+  // it on subsequent syncs. Protects manual planning numbers from being
+  // overwritten the next time the tab is opened.
+  const overriddenFields = new Set();
+
+  function applySyncedValue(id, value) {
+    if (overriddenFields.has(id)) return; // respect prior manual override
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = value;
+    syncedFields.add(id);
+    const indicator = ensureSyncIndicator(el);
+    indicator.classList.remove("manual");
+    indicator.classList.add("synced");
+    indicator.title = "Synced from live data · " + new Date().toLocaleTimeString();
+  }
+
+  function markManualOverride(id) {
+    if (!syncedFields.has(id)) return;
+    syncedFields.delete(id);
+    overriddenFields.add(id);
+    const el = document.getElementById(id);
+    if (!el) return;
+    const indicator = ensureSyncIndicator(el);
+    indicator.classList.remove("synced");
+    indicator.classList.add("manual");
+    indicator.title = "Manual override · was auto-synced from live data";
+  }
+
+  // Creates the small dot next to a field, or returns the existing one.
+  // Lazy-created so we don't pollute the DOM with indicators on fields
+  // that never get synced.
+  function ensureSyncIndicator(el) {
+    if (el._syncIndicator) return el._syncIndicator;
+    const dot = document.createElement("span");
+    dot.className = "sync-dot";
+    el.parentNode.appendChild(dot);
+    el._syncIndicator = dot;
+    return dot;
+  }
+
+  // Receive sync payload from the admin parent. Validates the message shape
+  // and origin (Vercel deploys + localhost), then applies the values.
+  function handleSyncMessage(ev) {
+    const msg = ev && ev.data;
+    if (!msg || typeof msg !== "object") return;
+    if (msg.type !== "launch-tracker-sync") return;
+    const data = msg.data || {};
+    Object.keys(SYNC_MAP).forEach(fieldId => {
+      const dataKey = SYNC_MAP[fieldId];
+      const val = data[dataKey];
+      if (val == null) return;
+      applySyncedValue(fieldId, val);
+    });
+    // Capture Intelligence segment counts for the Path-from-Intelligence
+    // renderer. Falls back to 0s if the admin doesn't send them.
+    if (data.intel && typeof data.intel === "object") {
+      Object.keys(intelCounts).forEach(key => {
+        if (typeof data.intel[key] === "number") intelCounts[key] = data.intel[key];
+      });
+      intelSyncedAt = new Date();
+    }
+    recalc();
+    persist();
+    // Show the "last synced" banner if it exists.
+    const banner = document.getElementById("sync-banner");
+    if (banner) {
+      banner.style.display = "block";
+      const time = document.getElementById("sync-banner-time");
+      if (time) time.textContent = new Date().toLocaleTimeString();
+    }
+  }
+  window.addEventListener("message", handleSyncMessage);
+
   function wire() {
     FIELDS.forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
-      el.addEventListener("input", () => { recalc(); persist(); });
+      el.addEventListener("input", () => {
+        // Typing into a synced field flips it to "manual override" mode.
+        markManualOverride(id);
+        recalc();
+        persist();
+      });
     });
 
     document.getElementById("reset-btn").addEventListener("click", () => {
