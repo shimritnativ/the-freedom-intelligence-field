@@ -16,41 +16,24 @@
     // Self-heal against a stale cached admin.html. iOS Safari held on
     // to the un-cache-controlled version of this page for days even
     // after we shipped cache-control headers. This script runs at the
-    // very top of <head>, before any other JS, and:
+    // very top of <head>: if the URL has no cache-bust query param,
+    // add one once per session and reload. The next navigation then
+    // pulls a fresh copy from the server.
     //
-    //   1. Adds a one-time per-session cache-bust query param to the
-    //      URL if the user landed without one — guarantees the very
-    //      next navigation pulls a fresh copy from the server. The
-    //      sessionStorage key prevents an infinite reload loop.
-    //   2. Pings /api/admin/build-version on every load with
-    //      cache:'no-store'. If the server's build differs from what
-    //      this cached HTML has embedded, force a hard reload with a
-    //      fresh cache-bust. Means future deploys reach mobile within
-    //      seconds without any manual hard-refresh ritual.
+    // Why not also compare build versions: an earlier attempt to fetch
+    // a server build SHA and force-reload on mismatch caused an
+    // infinite reload loop (the embedded version never matched the
+    // VERCEL_GIT_COMMIT_SHA, so every load thought it was stale and
+    // reloaded forever, leaving the page stuck on "Loading metrics...").
+    // The simple one-time cache-bust below is enough for the use case.
     (function () {
       try {
         var params = new URLSearchParams(location.search);
         if (!params.has("v") && !sessionStorage.getItem("admin_v_reload")) {
           sessionStorage.setItem("admin_v_reload", "1");
           location.replace(location.pathname + "?v=" + Date.now() + location.hash);
-          return;
         }
       } catch {}
-      // Build version stamp — bump this string when shipping a change
-      // that mobile users MUST pick up immediately. The check below
-      // compares this to whatever /api/admin/build-version returns; a
-      // mismatch forces the cached page to discard itself.
-      window.__ADMIN_BUILD = "2026-06-19-T1";
-      fetch("/api/admin/build-version", { cache: "no-store" })
-        .then(function (r) { return r.ok ? r.text() : null; })
-        .then(function (serverBuild) {
-          if (!serverBuild) return;
-          if (serverBuild.trim() !== window.__ADMIN_BUILD) {
-            try { sessionStorage.removeItem("admin_v_reload"); } catch {}
-            location.replace(location.pathname + "?v=" + Date.now() + location.hash);
-          }
-        })
-        .catch(function () {});
     })();
   </script>
   <link rel="icon" type="image/png" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" />
