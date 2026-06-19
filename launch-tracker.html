@@ -1140,7 +1140,7 @@
        acquisition cost feel small. Default percentages are conservative;
        update from real conversions as the launch matures. -->
   <h3 style="font-family: Georgia, serif; font-style: italic; font-size: 16px; margin: 22px 0 6px; color: var(--text);">Upgrade ladder — Unlimited → premium tiers</h3>
-  <p class="section-desc" style="margin-bottom: 12px;">What share of Unlimited subscribers will eventually take a higher-ticket offer. Expands LTV substantially when realistic — Business Club at €55/mo recurring or RISE Mastermind at €9,999 one-time.</p>
+  <p class="section-desc" style="margin-bottom: 12px;">What share of Unlimited subscribers will eventually take a higher-ticket offer. Expands LTV substantially when realistic — Business Club at €55/mo recurring or Coaching Certification at €9,999 one-time.</p>
   <div class="grid grid-3">
     <div class="field">
       <label class="field-label" for="lad-bc-pct">% who join Business Club</label>
@@ -1157,22 +1157,22 @@
       <input type="number" id="lad-bc-revenue" readonly />
     </div>
     <div class="field">
-      <label class="field-label" for="lad-rise-pct">% who join RISE / Accelerator</label>
+      <label class="field-label" for="lad-rise-pct">% who join Coaching Certification</label>
       <input type="number" id="lad-rise-pct" value="3" min="0" max="100" step="1" />
-      <div class="field-hint">€5,000 - €9,999 one-time</div>
+      <div class="field-hint">€9,999 one-time program</div>
     </div>
     <div class="field">
-      <label class="field-label" for="lad-rise-price">RISE / Accelerator avg price (€)</label>
-      <input type="number" id="lad-rise-price" value="7500" min="0" step="100" />
+      <label class="field-label" for="lad-rise-price">Coaching Certification avg price (€)</label>
+      <input type="number" id="lad-rise-price" value="9999" min="0" step="100" />
     </div>
     <div class="field">
-      <label class="field-label" for="lad-rise-revenue">Projected ladder revenue from RISE (€)</label>
+      <label class="field-label" for="lad-rise-revenue">Projected ladder revenue from Cert (€)</label>
       <input type="number" id="lad-rise-revenue" readonly />
     </div>
     <div class="field">
       <label class="field-label" for="lad-total">Total ladder LTV expansion (€)</label>
       <input type="number" id="lad-total" readonly />
-      <div class="field-hint">Combined BC + RISE projected revenue</div>
+      <div class="field-hint">Combined Business Club + Certification</div>
     </div>
   </div>
 </section>
@@ -2081,7 +2081,8 @@
     const ltv = n("unl-ltv");
     const unlimitedRevenue = unlTotal * ltv;
 
-    // Upgrade ladder — % of Unlimited subs who join BC and RISE.
+    // Upgrade ladder — % of Unlimited subs who join Business Club and
+    // Coaching Certification.
     const bcPct = n("lad-bc-pct") / 100;
     const bcPrice = n("lad-bc-price");
     const bcRevenue = unlTotal * bcPct * bcPrice;
@@ -2109,7 +2110,7 @@
     // revenue (Reset + Bumps + Unlimited LTV + Upgrade ladder LTV).
     // Ladder revenue is the long-tail expansion most launches miss when
     // sizing ROI — a small % of Unlimited subs upgrading to BC at €55/mo
-    // or RISE at €5k+ adds real money over the lifetime of the cohort.
+    // or Coaching Certification at €9,999 adds real money over the lifetime of the cohort.
     const totalSpend = preTotalCost + launchTotalCost + opLaunchPortion;
     const totalRevenue = preRevenue + launchRevenue + unlimitedRevenue + ladderTotal;
     const pnl = totalRevenue - totalSpend;
