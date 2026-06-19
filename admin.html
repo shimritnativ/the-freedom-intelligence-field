@@ -2117,24 +2117,23 @@
             </div>
           </div>
 
-          <!-- Webhook activity -->
-          <div class="section" id="panel-webhooks">
-            <h2><span class="h2-eyebrow">Plumbing</span>Webhook activity (last 30d, rolling)</h2>
-            <table>
-              <thead><tr><th>Event type</th><th class="num">Count</th><th class="num">Most recent</th></tr></thead>
-              <tbody>
-                ${(d.webhookActivity || []).length === 0
-                  ? '<tr><td colspan="3" class="empty-state">No webhook activity in the last 30 days.</td></tr>'
-                  : (d.webhookActivity || []).map(w => `
-                    <tr>
-                      <td>${escapeHtml(w.event_type)}</td>
-                      <td class="num">${fmtNum(w.n)}</td>
-                      <td class="num">${fmtRelative(w.last_at)}</td>
-                    </tr>
-                  `).join("")}
-              </tbody>
-            </table>
-            <div class="footnote">Source: Kajabi offer webhooks + ThriveCart purchase webhooks (when wired up).</div>
+          <!-- Notification engagement — replaces the old "Plumbing" panel.
+               Shows whether messages are actually landing: subscriber count,
+               read rates per recent notification, and a visual sense of
+               reach. Rendered client-side from the inbox manage list +
+               push subscriber list we already load. -->
+          <div class="section" id="panel-notification-engagement">
+            <h2><span class="h2-eyebrow">Engagement</span>How members are receiving your messages</h2>
+            <p style="font-size: 12.5px; color: var(--text-dim); margin: 0 0 18px; line-height: 1.5;">
+              Subscriber reach, read rates per notification, and which messages landed. Surfaces whether to send more, less, or change the copy.
+            </p>
+            <div id="notification-engagement-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 22px;">
+              <!-- Stat tiles rendered by JS once the inbox + subscriber data loads -->
+            </div>
+            <div id="notification-engagement-list" style="display: grid; gap: 8px;">
+              <div style="color: var(--text-dim); font-style: italic; font-size: 13px;">Loading…</div>
+            </div>
+            <div class="footnote">Read rates calculated from members who opened the bell after each message was sent.</div>
           </div>
           </div>
           <!-- /end Notifications tab -->
@@ -2260,7 +2259,7 @@
           priority: "hot",
           priorityLabel: "Stacked purchases",
           title: "High-intent buyers",
-          action: "Personal Shimrit outreach. Pitch <strong>Business Accelerator (€5,000)</strong> or <strong>RISE Gold (€9,999)</strong>. Under €200 total spend → <strong>Business Club (€55/mo)</strong> first.",
+          action: "Personal Shimrit outreach. Pitch <strong>Business Accelerator (€5,000)</strong> or <strong>Coaching Certification (€9,999)</strong>. Under €200 total spend → <strong>Business Club (€55/mo)</strong> first.",
           rows: intel.high_intent_buyer || [],
           why: u => {
             const count = Number(u.purchase_count || 0);
@@ -2296,7 +2295,7 @@
           priority: "ready",
           priorityLabel: "Premium ladder",
           title: "Ready for higher-ticket offers",
-          action: "Book 15-min Shimrit consult. Natural ladder: <strong>Business Club (€55/mo)</strong> → <strong>Business Accelerator (€5,000)</strong> → <strong>Coaching Certification (€9,999)</strong> → <strong>RISE Mastermind (€9,999 – €33,333)</strong>.",
+          action: "Book 15-min Shimrit consult. Natural ladder: <strong>Business Club (€55/mo)</strong> → <strong>Business Accelerator (€5,000)</strong> → <strong>Coaching Certification (€9,999)</strong>.",
           rows: intel.ready_for_upsell || [],
           why: u => {
             const msgs = Number(u.messages_30d || 0);
@@ -2465,7 +2464,7 @@
           eyebrow: "Premium ladder",
           title: "Ready for higher-ticket offers",
           why: "Paid Unlimited members with 30+ messages in the last 30 days. They use the tool daily, they trust the methodology. This is the natural pool for Shimrit's mid-to-high-ticket offers.",
-          action: "Book a 15-min consult with Shimrit to assess fit. Natural ladder from here: <strong>Business Club (€55/mo or €555/yr)</strong> as a soft entry; <strong>Business Accelerator (€5,000)</strong> for entrepreneurs ready for direct strategic support; <strong>Coaching Certification (€9,999)</strong> for those who want to teach the methodology; <strong>RISE Mastermind (€9,999 – €33,333)</strong> for established leaders.",
+          action: "Book a 15-min consult with Shimrit to assess fit. Natural ladder from here: <strong>Business Club (€55/mo or €555/yr)</strong> as a soft entry; <strong>Business Accelerator (€5,000)</strong> for entrepreneurs ready for direct strategic support; <strong>Coaching Certification (€9,999)</strong> for those who want to teach the methodology.",
           rows: intel.ready_for_upsell || [],
           cols: [
             { label: "Member", key: "email", render: u => `${escapeHtml(u.email)}${u.display_name ? ` <span style="color:var(--text-dim)">(${escapeHtml(u.display_name)})</span>` : ""}` },
@@ -2478,7 +2477,7 @@
           eyebrow: "Stacked purchases",
           title: "High-intent buyers (multiple ThriveCart orders)",
           why: "Bought Reset and then Order Bump and/or NOW Shift OTO. They opted in at every step of your front-end funnel. Strong indicator of purchase intent for the next tier.",
-          action: "Personal Shimrit outreach + <strong>Business Accelerator (€5,000)</strong> or <strong>RISE Gold (€9,999)</strong> as the natural next ask. If under €200 total spend, lead with <strong>Business Club (€55/mo)</strong> to graduate them into the ecosystem first.",
+          action: "Personal Shimrit outreach + <strong>Business Accelerator (€5,000)</strong> or <strong>Coaching Certification (€9,999)</strong> as the natural next ask. If under €200 total spend, lead with <strong>Business Club (€55/mo)</strong> to graduate them into the ecosystem first.",
           rows: intel.high_intent_buyer || [],
           cols: [
             { label: "Member", key: "email", render: u => `${escapeHtml(u.email)}${u.display_name ? ` <span style="color:var(--text-dim)">(${escapeHtml(u.display_name)})</span>` : ""}` },
@@ -3117,6 +3116,9 @@
         }
         const data = await r.json();
         pushSubscribers = data.subscribers || [];
+        // Expose globally so the engagement panel can render from it.
+        window._pushSubscribers = pushSubscribers;
+        if (typeof renderNotificationEngagement === "function") renderNotificationEngagement();
         if (pushSubscribers.length === 0) {
           list.innerHTML = '<div style="font-size: 12px; color: var(--text-mute); font-style: italic; text-align: center; padding: 12px 0;">No members have enabled notifications yet.</div>';
           return;
@@ -3230,6 +3232,86 @@
     // Loads the recent inbox notifications and renders them with delete
     // buttons. Called when the Notifications tab is entered and after a
     // successful send so the new message shows up immediately.
+    // ===== Notification engagement =====
+    // Renders the engagement panel using the inbox manage list + push
+    // subscribers we already loaded. Stats: subscriber count, average
+    // read rate across recent notifications, today's activity. Per-row
+    // read rate is shown as a bar so the most-engaged messages stand out.
+    function renderNotificationEngagement() {
+      const stats = document.getElementById("notification-engagement-stats");
+      const list = document.getElementById("notification-engagement-list");
+      if (!stats || !list) return;
+
+      // Total members for the denominator. Use the same logic as the
+      // tier-count KPI so the "X of 13 members read" math is consistent.
+      const d = (state && state.data) || {};
+      const totalMembers = (d.tierCounts || []).reduce((s, t) => s + Number(t.n || 0), 0) || 1;
+      const subscribers = window._pushSubscribers || [];
+      const inboxItems = window._inboxNotifications || [];
+
+      // Average read rate across the most recent 10 inbox notifications.
+      const recent = inboxItems.slice(0, 10);
+      const readRates = recent
+        .filter(n => Number(n.read_count) >= 0)
+        .map(n => Math.min(100, (Number(n.read_count) / totalMembers) * 100));
+      const avgReadRate = readRates.length > 0
+        ? readRates.reduce((s, r) => s + r, 0) / readRates.length
+        : 0;
+
+      // How many distinct members opened the bell today (proxy: read
+      // activity in the last 24h from the notifications list).
+      const oneDayAgoMs = Date.now() - 24 * 60 * 60 * 1000;
+      const todayReads = inboxItems
+        .filter(n => n.created_at && new Date(n.created_at).getTime() >= oneDayAgoMs)
+        .reduce((s, n) => s + Number(n.read_count || 0), 0);
+
+      // Stat tiles
+      stats.innerHTML = `
+        <div style="background: var(--panel); border: 1px solid var(--gold-line); border-radius: 10px; padding: 14px;">
+          <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.16em; color: var(--gold); text-transform: uppercase;">Push subscribers</div>
+          <div style="font-family: Georgia, serif; font-size: 26px; color: var(--text); margin-top: 4px;">${fmtNum(subscribers.length)}</div>
+          <div style="font-size: 11.5px; color: var(--text-dim); margin-top: 2px;">members with push enabled</div>
+        </div>
+        <div style="background: var(--panel); border: 1px solid var(--gold-line); border-radius: 10px; padding: 14px;">
+          <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.16em; color: var(--gold); text-transform: uppercase;">Avg read rate</div>
+          <div style="font-family: Georgia, serif; font-size: 26px; color: var(--text); margin-top: 4px;">${avgReadRate.toFixed(0)}%</div>
+          <div style="font-size: 11.5px; color: var(--text-dim); margin-top: 2px;">across last ${readRates.length} message${readRates.length === 1 ? '' : 's'}</div>
+        </div>
+        <div style="background: var(--panel); border: 1px solid var(--gold-line); border-radius: 10px; padding: 14px;">
+          <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.16em; color: var(--gold); text-transform: uppercase;">Reads today</div>
+          <div style="font-family: Georgia, serif; font-size: 26px; color: var(--text); margin-top: 4px;">${fmtNum(todayReads)}</div>
+          <div style="font-size: 11.5px; color: var(--text-dim); margin-top: 2px;">across notifications sent in 24h</div>
+        </div>
+      `;
+
+      // Per-notification read rate list
+      if (recent.length === 0) {
+        list.innerHTML = '<div style="color: var(--text-dim); font-style: italic; font-size: 13px;">No notifications saved yet — once you send one to the inbox, engagement stats will appear here.</div>';
+        return;
+      }
+      list.innerHTML = recent.map(n => {
+        const reads = Number(n.read_count || 0);
+        const pct = totalMembers > 0 ? Math.min(100, (reads / totalMembers) * 100) : 0;
+        const barColor = pct >= 70 ? "var(--gold)" : pct >= 40 ? "rgba(154,110,16,0.5)" : "rgba(154,110,16,0.25)";
+        return `
+          <div style="background: var(--panel); border: 1px solid var(--gold-line); border-radius: 8px; padding: 10px 14px; display: grid; grid-template-columns: 1fr 100px 90px; gap: 12px; align-items: center;">
+            <div>
+              <div style="font-weight: 600; color: var(--text); font-size: 13px;">${escapeHtml(n.title || "(untitled)")}</div>
+              <div style="font-size: 11px; color: var(--text-mute); margin-top: 2px;">${fmtRelative(n.created_at)}</div>
+            </div>
+            <div style="height: 6px; background: var(--gold-soft); border-radius: 3px; overflow: hidden;">
+              <div style="height: 100%; width: ${pct}%; background: ${barColor};"></div>
+            </div>
+            <div style="text-align: right; font-variant-numeric: tabular-nums;">
+              <div style="font-size: 14px; font-weight: 600; color: var(--text);">${pct.toFixed(0)}%</div>
+              <div style="font-size: 10.5px; color: var(--text-mute);">${reads}/${totalMembers} read</div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+    window.renderNotificationEngagement = renderNotificationEngagement;
+
     async function loadInboxNotifications() {
       const container = document.getElementById("inbox-manage-list");
       if (!container) return;
@@ -3245,6 +3327,9 @@
         }
         const data = await r.json();
         const items = data.notifications || [];
+        // Expose for the engagement panel.
+        window._inboxNotifications = items;
+        if (typeof renderNotificationEngagement === "function") renderNotificationEngagement();
         if (items.length === 0) {
           container.innerHTML = '<div style="color: var(--text-dim); font-style: italic; font-size: 13px;">No notifications saved to the inbox yet.</div>';
           return;
