@@ -1233,7 +1233,15 @@
         if (frame && frame.getAttribute("src") === "about:blank") {
           const realSrc = frame.getAttribute("data-real-src");
           if (realSrc) {
-            frame.setAttribute("src", realSrc);
+            // Cache-bust the iframe load. iOS Safari was holding onto a
+            // stale launch-tracker.html for days even after deploys —
+            // appending a per-session token forces a fresh fetch every
+            // time the admin page itself loads. The token is the admin
+            // page's load time so reloading admin.html gives a new one.
+            const bust = window._launchTrackerBust
+              || (window._launchTrackerBust = Date.now());
+            const url = realSrc + (realSrc.includes("?") ? "&" : "?") + "v=" + bust;
+            frame.setAttribute("src", url);
             // First load — wait for the iframe to finish loading before
             // posting the sync message. After that, every tab re-entry
             // also re-syncs so updated metrics flow through.
@@ -1397,12 +1405,14 @@
       // term AND its coupon is in the cohort. Case-insensitive.
       const matchProduct = (row, term) =>
         String(row.product || "").toLowerCase().includes(term.toLowerCase());
-      // Pre-launch coupon list. POWER50 = current-clients 50%-off Reset
-      // (€4.50), LAUNCHTEAM = team Reset coupon, LAUNCHTEAMUNLIMITED =
-      // pre-launch Unlimited upgrade. Anyone using one of these is a
-      // pre-launch buyer, not a full-price public launch one.
-      const isPreLaunchCoupon = c =>
-        c === "POWER50" || c === "LAUNCHTEAM" || c === "LAUNCHTEAMUNLIMITED";
+      // Pre-launch Reset coupon. Only POWER50 (current-clients 50% off,
+      // €4.50). LAUNCHTEAM is a team/testing coupon — it should NOT
+      // appear in customer-facing cohort stats, otherwise team orders
+      // inflate the pre-launch buyer count (this was Geo's "why 7 if
+      // only 6 used POWER50?" report). LAUNCHTEAMUNLIMITED is the
+      // upgrade-side coupon and is matched explicitly in the upgrade
+      // filter below — it would never appear on a Reset purchase.
+      const isPreLaunchResetCoupon = c => c === "POWER50";
       // Public launch = ONLY full-price buyers (no coupon at all). The
       // metrics endpoint coerces a NULL coupon_code into the literal
       // string "(full price)", so that's the marker we match here.
@@ -1414,7 +1424,7 @@
 
       // Pre-launch Reset cohort
       const preResetRows = rows.filter(r =>
-        matchProduct(r, "Reset") && isPreLaunchCoupon(r.coupon)
+        matchProduct(r, "Reset") && isPreLaunchResetCoupon(r.coupon)
       );
       const preResetBuyers = preResetRows.reduce((s, r) => s + Number(r.orders || 0), 0);
       const preResetCents = preResetRows.reduce((s, r) => s + Number(r.revenue_cents || 0), 0);
