@@ -1054,13 +1054,9 @@
         align-items: center;
       }
 
-      /* Launch tracker iframe: fill the screen on mobile and let the iframe
-         handle its own scrolling. Drop the desktop min-height entirely so
-         we don't get a double-scroll (page + iframe) fighting each other. */
-      #launch-tracker-frame {
-        height: calc(100vh - 100px);
-        min-height: 0;
-      }
+      /* Launch tracker iframe: height is driven by postMessage from the
+         tracker itself so the admin page is the single scroll surface.
+         We just make sure the section frame doesn't add extra chrome. */
       #panel-launch { margin: 0 -14px; }
 
       /* Make every link/button big enough to thumb-tap (44px target). */
@@ -1226,6 +1222,21 @@
       }
     }
 
+    // Listen for height reports from the launch tracker iframe and resize
+    // it to match. Eliminates the nested scrollbar — the admin page is the
+    // only scroll surface, the tracker grows to show all its content
+    // inline. A small buffer prevents a thin vertical scroll inside the
+    // iframe from sub-pixel rounding.
+    window.addEventListener("message", (ev) => {
+      const msg = ev && ev.data;
+      if (!msg || typeof msg !== "object") return;
+      if (msg.type !== "launch-tracker-height") return;
+      const frame = document.getElementById("launch-tracker-frame");
+      if (!frame) return;
+      const h = Math.max(800, Math.ceil(Number(msg.height) || 0) + 8);
+      frame.style.height = h + "px";
+    });
+
     // Computes the launch-tracker sync payload from the latest metrics
     // response (state.data) and posts it to the iframe. Breaks purchases
     // into cohorts:
@@ -1300,6 +1311,15 @@
         at_risk_subscriber: (intel.at_risk_subscriber || []).length,
       };
 
+      // Actual revenue from ThriveCart — matches the admin's Net Revenue
+      // (ex VAT) KPI exactly so the launch tracker can show "real money
+      // in so far" alongside its LTV projection. Sums every event_type
+      // we surface in the dashboard.
+      const grossCents = Number((tc.summary && tc.summary.gross_cents) || 0);
+      const refundCents = Number((tc.summary && tc.summary.refund_cents) || 0);
+      const netCents = grossCents - refundCents;
+      const actualRevenue = Number(toMoney(netCents).toFixed(2));
+
       const payload = {
         type: "launch-tracker-sync",
         asOf: new Date().toISOString(),
@@ -1312,6 +1332,7 @@
           publicLaunchUpgrades: pubUpgrades,
           unlimitedMonthly: unlimitedMonthly,
           unlimitedYearly: unlimitedYearly,
+          actualRevenue: actualRevenue,
           intel: intelCounts,
         },
       };
@@ -1993,13 +2014,19 @@
                of all that markup here. Loaded lazily on tab entry so the
                iframe doesn't compete with the dashboard's initial paint. -->
           <div data-tab-content="launch" style="display: none;">
-            <div class="section" id="panel-launch" style="padding: 0; overflow: hidden;">
+            <div class="section" id="panel-launch" style="padding: 0; overflow: visible; background: transparent; border: none; box-shadow: none;">
+              <!-- Height is set dynamically via postMessage from the iframe
+                   so there's no internal scrollbar — the admin page is the
+                   single scroll surface. Initial fallback is a tall enough
+                   value to avoid a flash of clipped content while the
+                   tracker boots and reports its real height. -->
               <iframe
                 id="launch-tracker-frame"
                 title="Launch tracker"
                 src="about:blank"
                 data-real-src="/launch-tracker.html"
-                style="width: 100%; min-height: 1400px; height: calc(100vh - 60px); border: none; display: block; background: var(--bg);"
+                style="width: 100%; height: 1800px; border: none; display: block; background: var(--bg);"
+                scrolling="no"
                 loading="lazy"></iframe>
             </div>
           </div>
