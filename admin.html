@@ -1205,13 +1205,119 @@
       // Lazy-load the Launch Tracker iframe the first time the tab opens
       // so its 1000-line page doesn't compete with the dashboard's initial
       // paint. Subsequent switches just toggle visibility; the iframe stays
-      // mounted so any in-progress calculations aren't lost.
+      // mounted so any in-progress calculations aren't lost. After it
+      // loads, push the live data via postMessage so the "Actual" fields
+      // auto-fill from real purchases.
       if (tab === "launch") {
         const frame = document.getElementById("launch-tracker-frame");
         if (frame && frame.getAttribute("src") === "about:blank") {
           const realSrc = frame.getAttribute("data-real-src");
-          if (realSrc) frame.setAttribute("src", realSrc);
+          if (realSrc) {
+            frame.setAttribute("src", realSrc);
+            // First load — wait for the iframe to finish loading before
+            // posting the sync message. After that, every tab re-entry
+            // also re-syncs so updated metrics flow through.
+            frame.addEventListener("load", () => syncLaunchTracker(), { once: true });
+          }
+        } else {
+          // Already loaded — just push the latest data.
+          syncLaunchTracker();
         }
+      }
+    }
+
+    // Computes the launch-tracker sync payload from the latest metrics
+    // response (state.data) and posts it to the iframe. Breaks purchases
+    // into cohorts:
+    //   pre-launch  = LAUNCHTEAM / LAUNCHTEAMUNLIMITED coupons
+    //   public      = POWER50 / full-price / any other paid coupon
+    // The tracker's listener auto-fills its fields and marks them with
+    // a gold "synced" dot. Manual override stays possible — typing in
+    // any field flips its dot to muted amber.
+    function syncLaunchTracker() {
+      const frame = document.getElementById("launch-tracker-frame");
+      if (!frame || !frame.contentWindow) return;
+      const d = (state && state.data) || {};
+      const tc = d.thrivecart || {};
+      const rows = (tc.byProductCoupon || []);
+      const isNet = getRevenueVatMode() === "net";
+      const toMoney = c => isNet ? (Number(c) / VAT_DIVISOR) : Number(c);
+
+      // Filter helper: a row matches if its product name contains the
+      // term AND its coupon is in the cohort. Case-insensitive.
+      const matchProduct = (row, term) =>
+        String(row.product || "").toLowerCase().includes(term.toLowerCase());
+      const isPreLaunchCoupon = c =>
+        c === "LAUNCHTEAM" || c === "LAUNCHTEAMUNLIMITED";
+
+      // Pre-launch Reset cohort
+      const preResetRows = rows.filter(r =>
+        matchProduct(r, "Reset") && isPreLaunchCoupon(r.coupon)
+      );
+      const preResetBuyers = preResetRows.reduce((s, r) => s + Number(r.orders || 0), 0);
+      const preResetCents = preResetRows.reduce((s, r) => s + Number(r.revenue_cents || 0), 0);
+      const preResetAvg = preResetBuyers > 0 ? toMoney(preResetCents) / preResetBuyers : 0;
+
+      // Public launch Reset cohort
+      const pubResetRows = rows.filter(r =>
+        matchProduct(r, "Reset") && !isPreLaunchCoupon(r.coupon)
+      );
+      const pubResetBuyers = pubResetRows.reduce((s, r) => s + Number(r.orders || 0), 0);
+      const pubResetCents = pubResetRows.reduce((s, r) => s + Number(r.revenue_cents || 0), 0);
+      const pubResetAvg = pubResetBuyers > 0 ? toMoney(pubResetCents) / pubResetBuyers : 0;
+
+      // Pre-launch Unlimited upgrades (LAUNCHTEAMUNLIMITED)
+      const preUpgradesRows = rows.filter(r =>
+        matchProduct(r, "Unlimited") && r.coupon === "LAUNCHTEAMUNLIMITED"
+      );
+      const preUpgrades = preUpgradesRows.reduce((s, r) => s + Number(r.orders || 0), 0);
+
+      // Public launch Unlimited upgrades (any other coupon)
+      const pubUpgradesRows = rows.filter(r =>
+        matchProduct(r, "Unlimited") && r.coupon !== "LAUNCHTEAMUNLIMITED"
+      );
+      const pubUpgrades = pubUpgradesRows.reduce((s, r) => s + Number(r.orders || 0), 0);
+
+      // Total Unlimited monthly / yearly from the tier-mix counts.
+      const tiers = (d.tierCounts || []);
+      const unlimitedMonthly = tiers
+        .filter(t => t.tier === "full" && t.plan === "monthly")
+        .reduce((s, t) => s + Number(t.n || 0), 0);
+      const unlimitedYearly = tiers
+        .filter(t => t.tier === "full" && t.plan === "yearly")
+        .reduce((s, t) => s + Number(t.n || 0), 0);
+
+      // Intelligence segment counts — drives the Path-from-Intelligence
+      // section in the launch tracker. Each count is the # of members
+      // currently in that segment on the live admin.
+      const intel = d.intelligence || {};
+      const intelCounts = {
+        hot_reset_graduate: (intel.hot_reset_graduate || []).length,
+        ready_for_upsell: (intel.ready_for_upsell || []).length,
+        book_launch_warmer: (intel.book_launch_warmer || []).length,
+        high_intent_buyer: (intel.high_intent_buyer || []).length,
+        stuck_reset: (intel.stuck_reset || []).length,
+        at_risk_subscriber: (intel.at_risk_subscriber || []).length,
+      };
+
+      const payload = {
+        type: "launch-tracker-sync",
+        asOf: new Date().toISOString(),
+        data: {
+          preLaunchResetBuyers: preResetBuyers,
+          preLaunchResetAvgPrice: Number(preResetAvg.toFixed(2)),
+          preLaunchUpgrades: preUpgrades,
+          publicLaunchResetBuyers: pubResetBuyers,
+          publicLaunchResetAvgPrice: Number(pubResetAvg.toFixed(2)),
+          publicLaunchUpgrades: pubUpgrades,
+          unlimitedMonthly: unlimitedMonthly,
+          unlimitedYearly: unlimitedYearly,
+          intel: intelCounts,
+        },
+      };
+
+      try { frame.contentWindow.postMessage(payload, "*"); } catch (err) {
+        console.warn("launch_sync_failed", err);
       }
     }
 
