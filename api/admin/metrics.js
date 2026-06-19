@@ -117,17 +117,34 @@ export default async function handler(req, res) {
       todayActivity,
     ] = await Promise.all([
       // 1. Members by tier × plan (filtered)
+      //
+      // Reset (preview) members are counted as long as they're Kajabi-entitled.
+      // Unlimited (full) members are counted ONLY when they have a real paid
+      // ThriveCart purchase that didn't use an excluded coupon (GEO100). This
+      // keeps free comps (like Tomer) out of the headline Unlimited count
+      // while still letting them have access. Same rule applies anywhere
+      // we count Unlimited subscribers below.
       sql`
         SELECT
-          tier::text AS tier,
-          COALESCE(subscription_plan, 'none') AS plan,
+          u.tier::text AS tier,
+          COALESCE(u.subscription_plan, 'none') AS plan,
           COUNT(*)::int AS n
-        FROM users
-        WHERE kajabi_entitled = true
-          AND email NOT LIKE ${excludePattern}
-          AND created_at >= ${fromIso}
-          AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
-        GROUP BY tier, COALESCE(subscription_plan, 'none')
+        FROM users u
+        WHERE u.kajabi_entitled = true
+          AND u.email NOT LIKE ${excludePattern}
+          AND u.created_at >= ${fromIso}
+          AND (${toIso}::timestamptz IS NULL OR u.created_at <= ${toIso})
+          AND (
+            u.tier = 'preview'
+            OR EXISTS (
+              SELECT 1 FROM purchases p
+              WHERE p.email = u.email
+                AND p.event_type = 'order.success'
+                AND p.amount_cents > 0
+                AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+            )
+          )
+        GROUP BY u.tier, COALESCE(u.subscription_plan, 'none')
         ORDER BY tier, plan
       `,
       // 2. Completion funnel — Power Reset members only. The 72-Hour Power
