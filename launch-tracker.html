@@ -3,6 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- iOS Safari was holding the launch tracker in its HTTP cache across
+     deploys. These directives tell every browser to revalidate on each
+     load. Combined with the cache-bust query param on the iframe src
+     in admin.html, fresh deploys reach mobile devices immediately. -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>The Field — Launch Tracker</title>
 <style>
   :root {
@@ -1115,7 +1122,7 @@
     <h2 class="section-title">Pre-launch — past and current clients</h2>
     <span class="section-pill">€4.5 Power Reset</span>
   </div>
-  <p class="section-desc">298 people in the WhatsApp sequence at 50% off. The sequence is 2 initial messages plus a follow-up. Auto-counts every Reset purchase using POWER50 / LAUNCHTEAM, plus Unlimited upgrades using LAUNCHTEAMUNLIMITED.</p>
+  <p class="section-desc">298 people in the WhatsApp sequence at 50% off. The sequence is 2 initial messages plus a follow-up. Auto-counts every Reset purchase using POWER50, plus Unlimited upgrades using LAUNCHTEAMUNLIMITED. Team/testing coupons (LAUNCHTEAM) are excluded.</p>
 
   <div class="grid">
     <div class="field">
@@ -1220,7 +1227,7 @@
     <h2 class="section-title">Public launch — broader audience</h2>
     <span class="section-pill">Full Price</span>
   </div>
-  <p class="section-desc">The next launch wave. Targeting 2,000+ recipients. Only counts buyers who pay full price for the Reset (no coupon). Anyone using POWER50, LAUNCHTEAM, or LAUNCHTEAMUNLIMITED is counted in the pre-launch section above.</p>
+  <p class="section-desc">The next launch wave. Targeting 2,000+ recipients. Only counts buyers who pay full price for the Reset (no coupon). POWER50 buyers go in the pre-launch section above; team coupons (LAUNCHTEAM) are excluded from both sections.</p>
 
   <div class="grid">
     <div class="field">
