@@ -976,6 +976,16 @@
         scrollbar-width: none;
       }
       .tabs::-webkit-scrollbar { display: none; }
+      /* Right-padding so the rightmost tab (Launch tracker) can actually
+         scroll to visual center on mobile. Without it,
+         scrollIntoView(inline:"center") on the last tab maxes out the
+         scroll position and the tab still sits flush against the right
+         edge. We don't add left-padding because the first tab already
+         sits flush left at scroll position 0, and adding it would create
+         an awkward empty gap on initial load. */
+      .tabs {
+        padding-right: 40vw;
+      }
       .tab-btn {
         white-space: nowrap;
         padding: 10px 14px;
