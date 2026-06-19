@@ -12,6 +12,47 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>The Field — Team Metrics</title>
+  <script>
+    // Self-heal against a stale cached admin.html. iOS Safari held on
+    // to the un-cache-controlled version of this page for days even
+    // after we shipped cache-control headers. This script runs at the
+    // very top of <head>, before any other JS, and:
+    //
+    //   1. Adds a one-time per-session cache-bust query param to the
+    //      URL if the user landed without one — guarantees the very
+    //      next navigation pulls a fresh copy from the server. The
+    //      sessionStorage key prevents an infinite reload loop.
+    //   2. Pings /api/admin/build-version on every load with
+    //      cache:'no-store'. If the server's build differs from what
+    //      this cached HTML has embedded, force a hard reload with a
+    //      fresh cache-bust. Means future deploys reach mobile within
+    //      seconds without any manual hard-refresh ritual.
+    (function () {
+      try {
+        var params = new URLSearchParams(location.search);
+        if (!params.has("v") && !sessionStorage.getItem("admin_v_reload")) {
+          sessionStorage.setItem("admin_v_reload", "1");
+          location.replace(location.pathname + "?v=" + Date.now() + location.hash);
+          return;
+        }
+      } catch {}
+      // Build version stamp — bump this string when shipping a change
+      // that mobile users MUST pick up immediately. The check below
+      // compares this to whatever /api/admin/build-version returns; a
+      // mismatch forces the cached page to discard itself.
+      window.__ADMIN_BUILD = "2026-06-19-T1";
+      fetch("/api/admin/build-version", { cache: "no-store" })
+        .then(function (r) { return r.ok ? r.text() : null; })
+        .then(function (serverBuild) {
+          if (!serverBuild) return;
+          if (serverBuild.trim() !== window.__ADMIN_BUILD) {
+            try { sessionStorage.removeItem("admin_v_reload"); } catch {}
+            location.replace(location.pathname + "?v=" + Date.now() + location.hash);
+          }
+        })
+        .catch(function () {});
+    })();
+  </script>
   <link rel="icon" type="image/png" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" />
   <link rel="apple-touch-icon" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" />
   <style>
@@ -985,14 +1026,15 @@
       }
       .tabs::-webkit-scrollbar { display: none; }
       /* Right-padding so the rightmost tab (Launch tracker) can actually
-         scroll to visual center on mobile. Without it,
-         scrollIntoView(inline:"center") on the last tab maxes out the
-         scroll position and the tab still sits flush against the right
-         edge. We don't add left-padding because the first tab already
-         sits flush left at scroll position 0, and adding it would create
-         an awkward empty gap on initial load. */
+         scroll to visual center on mobile. 50vw guarantees there's
+         enough room past the last tab for the manual scrollTo math
+         (tabCenter - viewportCenter) to land on the actual viewport
+         center without the browser clamping to maxScroll. We don't add
+         left-padding because the first tab already sits flush left at
+         scroll position 0, and adding it would create an awkward empty
+         gap on initial load. */
       .tabs {
-        padding-right: 40vw;
+        padding-right: 50vw;
       }
       .tab-btn {
         white-space: nowrap;
@@ -1198,28 +1240,29 @@
         btn.classList.toggle("tab-btn--active", btn.dataset.tab === tab);
       });
       // On mobile the tab nav is a horizontal scroller — center the
-      // newly-active tab inside it. We used to call scrollIntoView with
-      // inline:"center", but Safari and Chrome both refuse to scroll
-      // past the natural content edge even when CSS padding-right adds
-      // room, so the rightmost tab (Launch tracker) ended up flush
-      // right instead of in the middle of the viewport.
+      // newly-active tab inside it. We compute scrollLeft directly so
+      // the browser will scroll into the padding-right area (which
+      // scrollIntoView(inline:"center") refuses to do, clamping at
+      // natural content edge instead).
       //
-      // Computing scrollLeft directly gives us a value the browser will
-      // actually honor: container.scrollTo() WILL scroll into padding
-      // area, putting the tab's center at the viewport's center
-      // regardless of which tab it is.
-      try {
-        const activeBtn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
-        const tabsContainer = document.querySelector(".tabs");
-        if (activeBtn && tabsContainer) {
+      // Fired twice: once immediately, once on the next animation frame
+      // after the active-class repaint settles. The first call usually
+      // wins; the second is insurance for cases where offsetLeft is
+      // briefly off because the active class shifts the tab's painted
+      // position by 1px (the active border).
+      const centerActiveTab = () => {
+        try {
+          const activeBtn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+          const tabsContainer = document.querySelector(".tabs");
+          if (!activeBtn || !tabsContainer) return;
           const tabCenter = activeBtn.offsetLeft + activeBtn.offsetWidth / 2;
           const viewportCenter = tabsContainer.clientWidth / 2;
-          tabsContainer.scrollTo({
-            left: Math.max(0, tabCenter - viewportCenter),
-            behavior: "smooth",
-          });
-        }
-      } catch {}
+          const target = Math.max(0, tabCenter - viewportCenter);
+          tabsContainer.scrollTo({ left: target, behavior: "smooth" });
+        } catch {}
+      };
+      centerActiveTab();
+      requestAnimationFrame(() => requestAnimationFrame(centerActiveTab));
       try { localStorage.setItem(TAB_STORAGE_KEY, tab); } catch {}
       // Scroll to the top of the dashboard so each tab starts cleanly.
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1489,12 +1532,13 @@
         }
       });
       // List prices for the LAUNCHTEAMUNLIMITED-discounted upgrades.
-      // Same reasoning as the Reset above — ThriveCart's per-order amount
-      // is post-fee, but for planning we want the offer's actual list
-      // price. Yearly: €777 - 75% = €194.25 gross → €163.23 net.
-      // Monthly: €77 - 75% = €19.25 gross → €16.18 net.
-      const PRE_LAUNCH_UPGRADE_YEARLY_PRICE_CENTS  = 19425;
-      const PRE_LAUNCH_UPGRADE_MONTHLY_PRICE_CENTS = 1925;
+      // These match what ThriveCart actually charges — Sofie and Maria
+      // each paid €160 net on the yearly plan (€190.40 gross), and the
+      // monthly plan is €48.52 net (€57.74 gross) per Geo's spec.
+      // Stored in gross cents so toMoney() can flip them to net based
+      // on the admin VAT toggle just like the Reset price above.
+      const PRE_LAUNCH_UPGRADE_YEARLY_PRICE_CENTS  = 19040;
+      const PRE_LAUNCH_UPGRADE_MONTHLY_PRICE_CENTS = 5774;
       const preUpgradeYearlyAvg = toMoney(PRE_LAUNCH_UPGRADE_YEARLY_PRICE_CENTS);
       const preUpgradeMonthlyAvg = toMoney(PRE_LAUNCH_UPGRADE_MONTHLY_PRICE_CENTS);
 
