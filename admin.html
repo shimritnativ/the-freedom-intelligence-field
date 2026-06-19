@@ -236,41 +236,63 @@
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 12px;
     }
+    /* Redesigned highlight tile — stacked vertical hierarchy reads cleanly:
+       small uppercase eyebrow at the top, serif value in the middle, soft
+       detail line at the bottom. Balanced proportions kill the "big number
+       + tiny squished label" sloppiness of the previous horizontal layout. */
     .highlight {
       background: rgba(255, 255, 255, 0.6);
       border: 1px solid var(--gold-line);
-      border-radius: 10px;
-      padding: 10px 14px;
+      border-radius: 12px;
+      padding: 14px 16px 12px;
       display: flex;
-      align-items: baseline;
-      gap: 10px;
+      flex-direction: column;
+      gap: 4px;
+      cursor: pointer;
+      transition: border-color 0.2s ease, transform 0.2s ease;
     }
-    /* Dark mode: the hardcoded white tile background washes out the light
-       dim-text color, making the label invisible. Swap to a dark surface
-       with a soft gold border so the tile reads as elevated on dark bg
-       and the text contrasts cleanly. */
+    .highlight:hover {
+      border-color: var(--gold);
+      transform: translateY(-1px);
+    }
+    /* Accent variant for the moment that matters most — Unlimited
+       conversions get a richer gold background so they stand out from the
+       rest of the row. The conversion is the win we want to celebrate. */
+    .highlight--accent {
+      background: linear-gradient(135deg, var(--gold-soft) 0%, rgba(255, 255, 255, 0.4) 100%);
+      border-color: var(--gold);
+    }
     [data-theme="dark"] .highlight {
       background: rgba(255, 255, 255, 0.06);
       border-color: rgba(196, 160, 90, 0.35);
     }
+    [data-theme="dark"] .highlight--accent {
+      background: linear-gradient(135deg, rgba(196, 160, 90, 0.18) 0%, rgba(196, 160, 90, 0.06) 100%);
+      border-color: var(--gold);
+    }
+    .highlight-eyebrow {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      color: var(--gold);
+      text-transform: uppercase;
+      line-height: 1.2;
+    }
     .highlight-value {
       font-family: Georgia, serif;
-      font-size: 22px;
+      font-size: 28px;
       font-weight: 600;
       color: var(--text);
       line-height: 1.1;
-      min-width: 32px;
+      margin-top: 2px;
     }
-    .highlight-label {
-      font-size: 11px;
+    .highlight-detail {
+      font-size: 12px;
       color: var(--text-dim);
-      line-height: 1.35;
-      flex: 1;
+      line-height: 1.4;
+      margin-top: 2px;
     }
-    .highlight-label strong { color: var(--text); font-weight: 600; }
-    /* Bumped contrast for the non-bold portion of the label in dark mode.
-       --text-dim is on the cusp of unreadable on the new dark tile. */
-    [data-theme="dark"] .highlight-label { color: #D4C9A8; }
+    [data-theme="dark"] .highlight-detail { color: #D4C9A8; }
     .highlights-quiet {
       font-style: italic;
       color: var(--text-mute);
@@ -2359,7 +2381,12 @@
       const completions = Number(t.completions_today || 0);
       const activeUnlimited = Number(t.active_unlimited_today || 0);
       const unlimitedMessages = Number(t.unlimited_messages_today || 0);
-      const nothingYet = signups === 0 && orders === 0 && completions === 0 && activeUnlimited === 0;
+      // Catches Unlimited conversions today — including returning customers
+      // who upgraded from Reset (like Maria), which signups_today misses.
+      const unlimitedBuyers = Number(t.unlimited_buyers_today || 0);
+      const unlimitedYearly = Number(t.unlimited_yearly_today || 0);
+      const unlimitedMonthly = Number(t.unlimited_monthly_today || 0);
+      const nothingYet = signups === 0 && orders === 0 && completions === 0 && activeUnlimited === 0 && unlimitedBuyers === 0;
 
       const todayLabel = new Date().toLocaleDateString(undefined, {
         weekday: "long", month: "long", day: "numeric"
@@ -2385,19 +2412,59 @@
         const breakdown = [];
         if (Number(t.signups_today_reset) > 0) breakdown.push(`${Number(t.signups_today_reset)} Reset`);
         if (Number(t.signups_today_unlimited) > 0) breakdown.push(`${Number(t.signups_today_unlimited)} Unlimited`);
-        tiles.push({ value: signups, label: `new <strong>signup${signups === 1 ? '' : 's'}</strong>${breakdown.length ? ' &middot; ' + breakdown.join(' &middot; ') : ''}`, target: "panel-roster" });
+        tiles.push({
+          value: signups,
+          eyebrow: "New signups",
+          detail: breakdown.length ? breakdown.join(" · ") : (signups === 1 ? "1 new member" : signups + " new members"),
+          target: "panel-roster",
+        });
+      }
+      if (unlimitedBuyers > 0) {
+        // Celebrate Unlimited conversions today — separate from "signups"
+        // because returning Reset buyers who upgrade aren't new accounts.
+        const planParts = [];
+        if (unlimitedYearly > 0) planParts.push(unlimitedYearly + " yearly");
+        if (unlimitedMonthly > 0) planParts.push(unlimitedMonthly + " monthly");
+        tiles.push({
+          value: unlimitedBuyers,
+          eyebrow: "Unlimited conversions",
+          detail: planParts.length ? planParts.join(" · ") : (unlimitedBuyers === 1 ? "1 member chose Unlimited" : unlimitedBuyers + " members chose Unlimited"),
+          target: "panel-revenue",
+          accent: true,
+        });
       }
       if (revenue > 0) {
         const isNet = getRevenueVatMode() === "net";
-        tiles.push({ value: fmtRev(revenue), label: `revenue from <strong>${orders} order${orders === 1 ? '' : 's'}</strong>${isNet ? ' <span style="opacity:0.7;font-style:italic;">(ex VAT)</span>' : ''}`, target: "panel-revenue", isCurrency: true });
+        tiles.push({
+          value: fmtRev(revenue),
+          eyebrow: isNet ? "Revenue (ex VAT)" : "Revenue",
+          detail: orders === 1 ? "from 1 order" : "from " + orders + " orders",
+          target: "panel-revenue",
+          isCurrency: true,
+        });
       } else if (orders > 0) {
-        tiles.push({ value: orders, label: `free <strong>order${orders === 1 ? '' : 's'}</strong> today`, target: "panel-revenue" });
+        tiles.push({
+          value: orders,
+          eyebrow: "Free orders",
+          detail: orders === 1 ? "1 free order processed" : orders + " free orders processed",
+          target: "panel-revenue",
+        });
       }
       if (completions > 0) {
-        tiles.push({ value: completions, label: `<strong>Day-step completion${completions === 1 ? '' : 's'}</strong> today (Day 1 + 2 + 3 combined)`, target: "panel-funnel" });
+        tiles.push({
+          value: completions,
+          eyebrow: "Day-step completions",
+          detail: "across Day 1 + 2 + 3 combined",
+          target: "panel-funnel",
+        });
       }
       if (activeUnlimited > 0) {
-        tiles.push({ value: activeUnlimited, label: `Unlimited member${activeUnlimited === 1 ? '' : 's'} active &middot; <strong>${unlimitedMessages} message${unlimitedMessages === 1 ? '' : 's'}</strong>`, target: "panel-unlimited-engagement" });
+        tiles.push({
+          value: activeUnlimited,
+          eyebrow: "Unlimited active today",
+          detail: unlimitedMessages + " message" + (unlimitedMessages === 1 ? "" : "s") + " sent",
+          target: "panel-unlimited-engagement",
+        });
       }
 
       return `
@@ -2411,9 +2478,10 @@
           </div>
           <div class="highlights-grid">
             ${tiles.map(tile => `
-              <div class="highlight" onclick="scrollToSection('${tile.target}')" style="cursor: pointer;">
+              <div class="highlight ${tile.accent ? 'highlight--accent' : ''}" onclick="scrollToSection('${tile.target}')">
+                <div class="highlight-eyebrow">${escapeHtml(tile.eyebrow || '')}</div>
                 <div class="highlight-value">${tile.isCurrency ? tile.value : fmtNum(tile.value)}</div>
-                <div class="highlight-label">${tile.label}</div>
+                <div class="highlight-detail">${tile.detail || ''}</div>
               </div>
             `).join("")}
           </div>
