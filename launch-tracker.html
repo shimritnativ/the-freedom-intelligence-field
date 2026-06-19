@@ -847,6 +847,10 @@
       <span class="cost-breakdown-total" id="cost-breakdown-total">—</span>
     </div>
     <div class="cost-breakdown-rows" id="cost-breakdown-rows"></div>
+    <!-- Scaling preview — most fixed costs stay flat as members grow,
+         so per-user cost drops sharply. This row makes the leverage
+         visible: at 100 members the same €133 splits to €1.33/user. -->
+    <div id="scaling-preview" style="background: var(--gold-soft); padding: 12px 14px; border-top: 1px solid var(--gold-line); display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px;"></div>
   </div>
 
   <!-- Claude usage cost per active member (variable). Claude is treated
@@ -1239,7 +1243,7 @@
 
 <section>
   <div class="section-head">
-    <h2 class="section-title">Final math — is it worth doing again?</h2>
+    <h2 class="section-title">Decisions, trajectory & final math</h2>
   </div>
   <p class="section-desc">Decisions, trajectory, and the math that supports them. The Decision Engine ranks the moves with the highest impact on profit; the trajectory shows where current pace leads.</p>
 
@@ -1738,15 +1742,17 @@
 
   // Renders the per-user cost breakdown table — each tool's monthly cost
   // converted to €, divided by active members, sorted by contribution.
-  // Highlights the biggest line so the cost driver is unmissable.
+  // Excludes Anthropic Claude — that's surfaced separately as variable
+  // usage in renderClaudeVariableCost() since Claude is a company tool
+  // whose monthly bill stays roughly constant regardless of member count.
   function renderCostBreakdown(activeMembers, fx) {
     const rows = document.getElementById("cost-breakdown-rows");
     const total = document.getElementById("cost-breakdown-total");
     if (!rows || !total) return;
 
     // Each line: USD-denominated services × FX + EUR-denominated services.
+    // Anthropic intentionally absent — see Claude variable cost section.
     const lines = [
-      { label: "AI — Anthropic Claude", monthlyEur: n("op-anthropic") * fx },
       { label: "Voice — ElevenLabs", monthlyEur: n("op-elevenlabs") * fx },
       { label: "Voice — OpenAI Whisper", monthlyEur: n("op-whisper") * fx },
       { label: "Database — Neon", monthlyEur: n("op-neon") * fx },
@@ -1778,6 +1784,60 @@
 
     const totalPerUser = activeMembers > 0 ? totalMonthly / activeMembers : 0;
     total.innerHTML = `Total: <strong>${eur(totalPerUser, 2)}/user/mo</strong> · ${eur(totalMonthly, 0)}/mo combined`;
+
+    // Scaling preview: project per-user cost at higher member counts to
+    // show that infrastructure cost dilutes as the membership grows.
+    // Most lines (Vercel, ElevenLabs, Neon, Domain) stay flat; GHL
+    // scales with WhatsApp volume so this is a slight under-estimate
+    // at very high member counts. Good enough to show the lever.
+    const scaling = document.getElementById("scaling-preview");
+    if (scaling) {
+      const milestones = [
+        { count: activeMembers, label: `${activeMembers} (now)`, isNow: true },
+        { count: 25 },
+        { count: 50 },
+        { count: 100 },
+        { count: 200 },
+      ].filter(m => m.count > 0);
+      scaling.innerHTML = `
+        <div style="grid-column: 1 / -1; font-size: 10px; font-weight: 700; letter-spacing: 0.16em; color: var(--gold); text-transform: uppercase; margin-bottom: 6px;">
+          Scaling preview — same ${eur(totalMonthly, 0)} / mo split across more members
+        </div>
+        ${milestones.map(m => {
+          const perUser = m.count > 0 ? totalMonthly / m.count : 0;
+          const isNow = !!m.isNow;
+          return `
+            <div style="text-align: center; padding: 8px 4px; border: 1px solid ${isNow ? "var(--gold)" : "rgba(154,110,16,0.15)"}; border-radius: 8px; background: ${isNow ? "var(--panel)" : "transparent"};">
+              <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 2px;">${m.label || m.count + " members"}</div>
+              <div style="font-family: Georgia, serif; font-size: 17px; font-weight: 600; color: ${isNow ? "var(--gold)" : "var(--text)"};">${eur(perUser, 2)}</div>
+              <div style="font-size: 10px; color: var(--text-mute);">/user/mo</div>
+            </div>
+          `;
+        }).join("")}
+      `;
+    }
+  }
+
+  // Renders the Claude variable-cost panel — per-message cost from the
+  // token pricing inputs, per-user monthly cost from messages × cost,
+  // total monthly variable cost from per-user × active members. This
+  // is the marginal cost of Claude that scales with usage, separate
+  // from the fixed Anthropic monthly bill in the snapshot.
+  function renderClaudeVariableCost(activeMembers) {
+    const total = document.getElementById("claude-variable-total");
+    if (!total) return;
+    const inputTokens = n("claude-input-tokens-per-msg");
+    const outputTokens = n("claude-output-tokens-per-msg");
+    const msgsPerUser = n("claude-msgs-per-user");
+    const inputPricePerM = n("claude-input-price-per-m");
+    const outputPricePerM = n("claude-output-price-per-m");
+    const costPerMsg = (inputTokens * inputPricePerM / 1_000_000) +
+                      (outputTokens * outputPricePerM / 1_000_000);
+    setVal("claude-cost-per-msg", costPerMsg, 4);
+    const costPerUser = costPerMsg * msgsPerUser;
+    const totalMonthly = costPerUser * activeMembers;
+    total.innerHTML = `Per user: <strong>${eur(costPerUser, 2)}/mo</strong> · ` +
+                      `Total: <strong>${eur(totalMonthly, 0)}/mo</strong> for ${activeMembers} members`;
   }
 
   // Marginal contribution of one new Unlimited subscriber per month.
@@ -2084,6 +2144,7 @@
     // Render the cost breakdown table — each line item from ops converted
     // to € and divided by active members for per-user contribution.
     renderCostBreakdown(activeMembers, fx);
+    renderClaudeVariableCost(activeMembers);
 
     // Stability + scale narrative — sentiment-tinted, talks about
     // profitability, the cost driver, and the next scale milestone.
