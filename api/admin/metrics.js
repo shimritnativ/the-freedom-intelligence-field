@@ -452,8 +452,15 @@ export default async function handler(req, res) {
       `),
       // 16. Completion details — one row per member (logged in OR not). The
       // frontend buckets these by login + completion stage to drive the
-      // clickable funnel rows, including the new "Joined but never logged in"
+      // clickable funnel rows, including the "Joined but never logged in"
       // row that surfaces paying members who haven't opened the app yet.
+      //
+      // No tier filter: query #2 above (the funnel headline counts) dropped
+      // the tier = 'preview' constraint so members who finished Day 1-3 then
+      // upgraded to Unlimited still show in the funnel. This detail query
+      // has to match — otherwise the counts and the clickable name lists
+      // disagree (e.g., Saskia counts in Day 2 but is missing from the Day 2
+      // detail list because her tier is now 'full').
       sql`
         SELECT
           email,
@@ -464,7 +471,6 @@ export default async function handler(req, res) {
           created_at
         FROM users
         WHERE kajabi_entitled = true
-          AND tier = 'preview'
           AND email NOT LIKE ${excludePattern}
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
