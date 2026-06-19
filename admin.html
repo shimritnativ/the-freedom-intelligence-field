@@ -1383,8 +1383,20 @@
       // term AND its coupon is in the cohort. Case-insensitive.
       const matchProduct = (row, term) =>
         String(row.product || "").toLowerCase().includes(term.toLowerCase());
+      // Pre-launch coupon list. POWER50 = current-clients 50%-off Reset
+      // (€4.50), LAUNCHTEAM = team Reset coupon, LAUNCHTEAMUNLIMITED =
+      // pre-launch Unlimited upgrade. Anyone using one of these is a
+      // pre-launch buyer, not a full-price public launch one.
       const isPreLaunchCoupon = c =>
-        c === "LAUNCHTEAM" || c === "LAUNCHTEAMUNLIMITED";
+        c === "POWER50" || c === "LAUNCHTEAM" || c === "LAUNCHTEAMUNLIMITED";
+      // Public launch = ONLY full-price buyers (no coupon at all). The
+      // metrics endpoint coerces a NULL coupon_code into the literal
+      // string "(full price)", so that's the marker we match here.
+      // Anything with a real coupon code goes into pre-launch (or, if it
+      // isn't a known pre-launch code, gets ignored from both buckets to
+      // avoid silently inflating public launch numbers).
+      const isFullPriceCoupon = c =>
+        !c || c === "(full price)" || c === "";
 
       // Pre-launch Reset cohort
       const preResetRows = rows.filter(r =>
@@ -1394,9 +1406,9 @@
       const preResetCents = preResetRows.reduce((s, r) => s + Number(r.revenue_cents || 0), 0);
       const preResetAvg = preResetBuyers > 0 ? toMoney(preResetCents) / preResetBuyers : 0;
 
-      // Public launch Reset cohort
+      // Public launch Reset cohort — strictly full-price, no coupons.
       const pubResetRows = rows.filter(r =>
-        matchProduct(r, "Reset") && !isPreLaunchCoupon(r.coupon)
+        matchProduct(r, "Reset") && isFullPriceCoupon(r.coupon)
       );
       const pubResetBuyers = pubResetRows.reduce((s, r) => s + Number(r.orders || 0), 0);
       const pubResetCents = pubResetRows.reduce((s, r) => s + Number(r.revenue_cents || 0), 0);
@@ -1426,9 +1438,11 @@
         else preUpgradesYearly += orders; // default unknown to yearly
       });
 
-      // Public launch Unlimited upgrades (any other coupon)
+      // Public launch Unlimited upgrades — strictly full-price (no coupon).
+      // Same logic as the Reset cohort: anything with a coupon belongs to
+      // a discount cohort, not the full-price public launch.
       const pubUpgradesRows = rows.filter(r =>
-        matchProduct(r, "Unlimited") && r.coupon !== "LAUNCHTEAMUNLIMITED"
+        matchProduct(r, "Unlimited") && isFullPriceCoupon(r.coupon)
       );
       const pubUpgrades = pubUpgradesRows.reduce((s, r) => s + Number(r.orders || 0), 0);
 
