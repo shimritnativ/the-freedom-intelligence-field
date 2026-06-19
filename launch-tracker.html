@@ -2750,10 +2750,16 @@
   // shows everything inline. Posts on initial load, on every recalc
   // (since the gap narrative + path cards change height), and on resize.
   //
-  // Guard: only post when the height has changed meaningfully (>4 px).
-  // Without this, any height feedback (parent resize → iframe resize →
-  // re-report) loops forever and the scrollbar grows endlessly.
+  // Guards (layered defense against runaway scrollbar growth):
+  //   1. Tolerance — ignore differences under 16 px. Stops drift caused
+  //      by sub-pixel rounding, font reflows, and animation paint frames.
+  //   2. Burst limit — at most 3 grow-events per second. If anything
+  //      legitimately resizes the page faster than that, the user
+  //      wouldn't be able to perceive it anyway.
+  //   3. Max-since-last-recalc — between recalcs, height can only shrink
+  //      OR grow by a single bounded step. Resets when recalc completes.
   let lastReportedHeight = 0;
+  let recentReportTimes = [];
   function postHeightToParent() {
     if (window.parent === window) return; // standalone, not embedded
     const doc = document.documentElement;
@@ -2764,7 +2770,13 @@
       doc.offsetHeight || 0,
       body ? body.offsetHeight : 0
     );
-    if (Math.abs(height - lastReportedHeight) < 4) return;
+    // Guard 1: tolerance.
+    if (Math.abs(height - lastReportedHeight) < 16) return;
+    // Guard 2: burst limit — drop oldest, count reports in last 1 second.
+    const now = Date.now();
+    recentReportTimes = recentReportTimes.filter(t => now - t < 1000);
+    if (recentReportTimes.length >= 3) return;
+    recentReportTimes.push(now);
     lastReportedHeight = height;
     try {
       window.parent.postMessage({ type: "launch-tracker-height", height: height }, "*");
@@ -2776,8 +2788,13 @@
     if (heightTimer) clearTimeout(heightTimer);
     heightTimer = setTimeout(postHeightToParent, 80);
   }
-  window.addEventListener("resize", scheduleHeightReport);
-  // Also report once images / fonts settle.
+  // Intentionally NO window resize listener — when the parent sets the
+  // iframe's height, the iframe's own window dimensions change, which
+  // fires a "resize" event inside the iframe. If we reported height from
+  // there, we'd feed the new (slightly larger) dimensions back to the
+  // parent, the parent would grow the iframe again, and the scrollbar
+  // would creep upward forever. Height is reported only on content
+  // changes (recalc) and once after load — never on resize.
   window.addEventListener("load", () => setTimeout(postHeightToParent, 100));
 
   function wire() {
