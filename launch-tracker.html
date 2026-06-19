@@ -290,6 +290,146 @@
     border-color: rgba(168, 42, 42, 0.25);
   }
   .eco-narrative.is-redflag strong { color: var(--danger); }
+  /* Decision Engine — ranked actions with impact/effort. Each card shows
+     a concrete move that would change the business, sized by leverage. */
+  .decision-engine {
+    margin-top: 22px;
+    padding: 18px 20px 16px;
+    background: var(--panel-2);
+    border: 1px solid var(--gold);
+    border-radius: 12px;
+  }
+  .decision-engine-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .decision-cards { display: grid; gap: 10px; }
+  .decision-card {
+    background: var(--panel);
+    border: 1px solid var(--gold-line);
+    border-radius: 10px;
+    padding: 12px 14px 14px;
+    display: grid;
+    grid-template-columns: 32px 1fr auto;
+    gap: 12px;
+    align-items: start;
+  }
+  .decision-card.is-top { border-color: var(--gold); background: var(--gold-soft); }
+  .decision-rank {
+    font-family: Georgia, serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1;
+    margin-top: 2px;
+  }
+  .decision-card.is-top .decision-rank { color: var(--gold); }
+  .decision-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.4;
+    margin-bottom: 4px;
+  }
+  .decision-note {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+  .decision-note strong { color: var(--text); font-weight: 600; }
+  .decision-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    min-width: 110px;
+    text-align: right;
+  }
+  .decision-impact {
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 14px;
+    color: var(--success);
+    font-weight: 600;
+  }
+  .decision-effort {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    background: var(--gold-soft);
+    padding: 2px 7px;
+    border-radius: 999px;
+  }
+  /* Trajectory forecast — where we'll be in 30/60/90 days and 12 months
+     if current acquisition + churn velocity holds. */
+  .trajectory {
+    margin-top: 22px;
+    padding: 18px 20px 16px;
+    background: var(--panel);
+    border: 1px solid var(--gold-line);
+    border-radius: 12px;
+  }
+  .trajectory-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .trajectory-grid {
+    display: grid;
+    grid-template-columns: 1fr repeat(4, 1fr);
+    gap: 0;
+    background: var(--panel-2);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--gold-line);
+  }
+  .trajectory-cell {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(154, 110, 16, 0.1);
+    border-right: 1px solid rgba(154, 110, 16, 0.1);
+    font-size: 13px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .trajectory-cell:last-child { border-right: none; }
+  .trajectory-cell:nth-last-child(-n+5) { border-bottom: none; }
+  .trajectory-cell.is-label {
+    text-align: left;
+    color: var(--text-dim);
+    font-weight: 500;
+    background: var(--gold-soft);
+    border-right: 1px solid var(--gold-line);
+  }
+  .trajectory-cell.is-header {
+    text-align: center;
+    background: var(--gold-soft);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    border-bottom: 1px solid var(--gold-line);
+    padding: 8px 12px;
+  }
+  .trajectory-cell.is-value { color: var(--text); font-weight: 500; }
+  .trajectory-cell.is-positive { color: var(--success); font-weight: 600; }
+  .trajectory-cell.is-negative { color: var(--danger); font-weight: 600; }
+  /* Inputs for trajectory assumptions sit above the grid in a row. */
+  .trajectory-inputs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
   /* Cost breakdown table — shows where each €/user goes. The "biggest"
      row (Claude usually) is highlighted so the cost driver is obvious. */
   .cost-breakdown {
@@ -1054,7 +1194,48 @@
   <div class="section-head">
     <h2 class="section-title">Final math — is it worth doing again?</h2>
   </div>
-  <p class="section-desc">The numbers that answer your real question. Update everything above, then read the breakeven analysis below.</p>
+  <p class="section-desc">Decisions, trajectory, and the math that supports them. The Decision Engine ranks the moves with the highest impact on profit; the trajectory shows where current pace leads.</p>
+
+  <!-- Decision Engine — ranked actions with quantified impact and effort.
+       Populated by JS from current Intelligence segments, costs, and prices.
+       Each card surfaces a concrete move so the tracker reads as an
+       advisor, not a calculator. -->
+  <div class="decision-engine">
+    <div class="decision-engine-head">
+      <div>
+        <span class="path-eyebrow">Decision engine</span>
+        <h3 style="font-family: Georgia, serif; font-style: italic; font-size: 18px; margin: 4px 0 0; color: var(--text);">Your highest-leverage moves right now</h3>
+      </div>
+      <span class="path-from-intel-source" id="decision-source">Ranked by impact ÷ effort</span>
+    </div>
+    <div class="decision-cards" id="decision-cards"></div>
+  </div>
+
+  <!-- 30/60/90 day trajectory forecast. Projects where the business
+       will be at current acquisition velocity and churn rate. Inputs
+       above the grid let the user tune assumptions. -->
+  <div class="trajectory">
+    <div class="trajectory-head">
+      <div>
+        <span class="path-eyebrow">Trajectory</span>
+        <h3 style="font-family: Georgia, serif; font-style: italic; font-size: 18px; margin: 4px 0 0; color: var(--text);">Where we'll be if current pace holds</h3>
+      </div>
+      <span class="path-from-intel-source" id="trajectory-source">Based on velocity + churn below</span>
+    </div>
+    <div class="trajectory-inputs">
+      <div class="field" style="margin: 0;">
+        <label class="field-label" for="traj-weekly-resets">New Reset members per week</label>
+        <input type="number" id="traj-weekly-resets" value="3" min="0" step="0.5" />
+        <div class="field-hint">Typical weekly acquisition</div>
+      </div>
+      <div class="field" style="margin: 0;">
+        <label class="field-label" for="traj-conversion-rate">Reset → Unlimited rate (%)</label>
+        <input type="number" id="traj-conversion-rate" value="15" min="0" max="100" step="1" />
+        <div class="field-hint">% of Reset buyers who upgrade</div>
+      </div>
+    </div>
+    <div class="trajectory-grid" id="trajectory-grid"></div>
+  </div>
 
   <!-- Profit target input — drives the gap narrative and the Path from
        Intelligence section. Defaults to €5,000 which is a reasonable
@@ -1187,7 +1368,8 @@
     "pre-bump-buyers", "pre-bump-price",
     "launch-bump-buyers", "launch-bump-price",
     "unl-churn-pct",
-    "lad-bc-pct", "lad-bc-price", "lad-rise-pct", "lad-rise-price"
+    "lad-bc-pct", "lad-bc-price", "lad-rise-pct", "lad-rise-price",
+    "traj-weekly-resets", "traj-conversion-rate"
   ];
 
   function loadState() {
@@ -1268,6 +1450,238 @@
       pill.textContent = "Below breakeven";
       sub.textContent = "Need more upgrades to turn this profitable";
     }
+  }
+
+  // ===== Decision Engine =====
+  // Builds a ranked list of concrete actions the user can take RIGHT NOW
+  // to improve profit. Each recommendation has a quantified impact, an
+  // effort tier, and a one-line "why this matters" explainer. Sources:
+  //   - Intelligence segments (member-based actions)
+  //   - Monthly cost snapshot (cost-cutting actions)
+  //   - Pricing (revenue-expansion actions)
+  // Sorted by impact ÷ effort weight so the top item is always the
+  // highest-leverage move.
+  function renderDecisionEngine(ctx) {
+    const grid = document.getElementById("decision-cards");
+    if (!grid) return;
+
+    const recs = [];
+
+    // --- Member-based recommendations from Intelligence segments ---
+    // Hot Reset graduates are the urgency case — peak intent window.
+    if (intelCounts.hot_reset_graduate > 0) {
+      const realistic = Math.max(1, Math.round(intelCounts.hot_reset_graduate * 0.6));
+      const impact = realistic * ctx.ltv;
+      recs.push({
+        title: `Convert ${intelCounts.hot_reset_graduate} Hot Reset graduate${intelCounts.hot_reset_graduate === 1 ? "" : "s"} to Unlimited TODAY`,
+        note: `Peak intent window expires within 24h. <strong>${realistic} realistic conversion${realistic === 1 ? "" : "s"}</strong> at the current LTV.`,
+        impact: impact,
+        effort: "Low",
+        effortWeight: 1,
+        ctaNote: "Intelligence → Hot Reset graduates segment",
+      });
+    }
+    if (intelCounts.book_launch_warmer > 0) {
+      const realistic = Math.max(1, Math.round(intelCounts.book_launch_warmer * 0.35));
+      const impact = realistic * ctx.ltv;
+      recs.push({
+        title: `Pitch Unlimited to ${intelCounts.book_launch_warmer} Book Launch attendees`,
+        note: `Already inside Shimrit's content world. <strong>${realistic} realistic conversion${realistic === 1 ? "" : "s"}</strong> via personalized outreach.`,
+        impact: impact,
+        effort: "Low",
+        effortWeight: 1.5,
+        ctaNote: "Intelligence → Book Launch attendees",
+      });
+    }
+    if (intelCounts.high_intent_buyer > 0) {
+      // High-intent buyers are candidates for higher-ticket (BC, Accelerator).
+      const realistic = Math.max(1, Math.round(intelCounts.high_intent_buyer * 0.4));
+      const impact = realistic * Math.max(ctx.ltv, ctx.bcPrice || 660);
+      recs.push({
+        title: `Personal outreach to ${intelCounts.high_intent_buyer} stacked-purchase buyer${intelCounts.high_intent_buyer === 1 ? "" : "s"}`,
+        note: `These said yes at every checkout step. Pitch Business Club or Accelerator. <strong>${realistic} realistic conversion${realistic === 1 ? "" : "s"}</strong>.`,
+        impact: impact,
+        effort: "Medium",
+        effortWeight: 2,
+        ctaNote: "Intelligence → High-intent buyers",
+      });
+    }
+    if (intelCounts.stuck_reset > 0) {
+      const realistic = Math.max(1, Math.round(intelCounts.stuck_reset * 0.2));
+      const impact = realistic * ctx.ltv;
+      recs.push({
+        title: `Re-engage ${intelCounts.stuck_reset} Stuck Reset member${intelCounts.stuck_reset === 1 ? "" : "s"}`,
+        note: `Paid but stalled — finish their journey first, then pitch Unlimited. <strong>${realistic} likely revival${realistic === 1 ? "" : "s"}</strong>.`,
+        impact: impact,
+        effort: "Medium",
+        effortWeight: 2.5,
+        ctaNote: "Intelligence → Stuck Reset members",
+      });
+    }
+    if (intelCounts.at_risk_subscriber > 0) {
+      // Retention — keeping a paying member is worth more than acquiring one.
+      const realistic = Math.max(1, Math.round(intelCounts.at_risk_subscriber * 0.5));
+      const impact = realistic * ctx.avgMonthlyRev * 12; // saved 12 months of revenue
+      recs.push({
+        title: `Win back ${intelCounts.at_risk_subscriber} at-risk Unlimited subscriber${intelCounts.at_risk_subscriber === 1 ? "" : "s"}`,
+        note: `Silence is the cancellation precursor. Saving <strong>${realistic} member${realistic === 1 ? "" : "s"}</strong> protects ~12 months of recurring revenue.`,
+        impact: impact,
+        effort: "Low",
+        effortWeight: 1.5,
+        ctaNote: "Intelligence → At-risk Unlimited",
+      });
+    }
+
+    // --- Cost-based recommendations ---
+    // Anthropic at >€60/mo: there's usually a bulk tier negotiation play.
+    const anthropicMo = n("op-anthropic");
+    if (anthropicMo > 60) {
+      const monthlySavings = anthropicMo - 60;
+      const yearlySavings = monthlySavings * 12;
+      recs.push({
+        title: "Negotiate Anthropic bulk billing tier",
+        note: `You're at <strong>${eur(anthropicMo, 0)}/mo</strong> on per-token. Bulk tiers typically save ~30%. One 30-min call could lock in <strong>${eur(yearlySavings, 0)}/year</strong> in margin.`,
+        impact: yearlySavings,
+        effort: "Low",
+        effortWeight: 1.5,
+        ctaNote: "Email sales@anthropic.com",
+      });
+    }
+    // GHL — typically has a downgrade or feature-trim option once spend stabilizes.
+    const ghlMo = n("op-ghl");
+    if (ghlMo > 80) {
+      const monthlySavings = ghlMo * 0.2; // 20% reduction typical from a plan review
+      const yearlySavings = monthlySavings * 12;
+      recs.push({
+        title: "Audit GHL plan + WhatsApp template costs",
+        note: `<strong>${eur(ghlMo, 0)}/mo</strong> is significant. Plan reviews often unlock ~20% savings via template optimization or tier downgrade.`,
+        impact: yearlySavings,
+        effort: "Medium",
+        effortWeight: 2,
+        ctaNote: "GHL Settings → Billing → Usage",
+      });
+    }
+
+    // --- Pricing recommendations ---
+    // Reset price test — if conversion is strong, raising price tests demand.
+    if (ctx.totalResetBuyers > 5 && ctx.launchResetPrice > 0 && ctx.launchResetPrice < 12) {
+      const newPrice = ctx.launchResetPrice * 1.3;
+      const projectedBuyers = ctx.totalResetBuyers * 0.92; // 8% conversion drop
+      const extraRev = (projectedBuyers * (newPrice - ctx.launchResetPrice)) * 4; // 4 months forward
+      recs.push({
+        title: `Test raising Reset price from ${eur(ctx.launchResetPrice, 2)} → ${eur(newPrice, 2)}`,
+        note: `Conversion typically drops ~8% on a 30% increase, but revenue per buyer rises. Net projected <strong>${eur(extraRev, 0)}</strong> over 4 months.`,
+        impact: extraRev,
+        effort: "Low",
+        effortWeight: 1,
+        ctaNote: "ThriveCart → Product → Price",
+      });
+    }
+
+    // Sort by impact ÷ effortWeight = highest leverage first.
+    recs.sort((a, b) => (b.impact / b.effortWeight) - (a.impact / a.effortWeight));
+    const top = recs.slice(0, 5);
+
+    if (top.length === 0) {
+      grid.innerHTML = `<div class="path-empty">Once members start hitting Intelligence segments and you've filled in monthly costs, ranked moves will appear here.</div>`;
+      return;
+    }
+
+    grid.innerHTML = top.map((rec, i) => `
+      <div class="decision-card ${i === 0 ? "is-top" : ""}">
+        <div class="decision-rank">${i + 1}</div>
+        <div>
+          <div class="decision-title">${rec.title}</div>
+          <div class="decision-note">${rec.note}<br><span style="color: var(--text-mute); font-size: 11px;">${rec.ctaNote}</span></div>
+        </div>
+        <div class="decision-meta">
+          <div class="decision-impact">+${eur(rec.impact, 0)}</div>
+          <div class="decision-effort">Effort: ${rec.effort}</div>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  // ===== 30/60/90 day trajectory =====
+  // Forecasts member count, MRR, and monthly net at each horizon based
+  // on current acquisition velocity, conversion to Unlimited, and churn.
+  // The honest "are we on track?" view — surfaces whether current pace
+  // gets us to where we want to be, or whether we need to accelerate.
+  function renderTrajectory(ctx) {
+    const grid = document.getElementById("trajectory-grid");
+    if (!grid) return;
+
+    const weeklyResets = n("traj-weekly-resets");
+    const monthlyResets = weeklyResets * 4.33;
+    const convRate = n("traj-conversion-rate") / 100;
+    const churnRate = (n("unl-churn-pct") || 8) / 100;
+    const currentUnlimited = ctx.unlTotal;
+    const currentMembers = ctx.activeMembers;
+
+    const horizons = [
+      { label: "30 days",   months: 1 },
+      { label: "60 days",   months: 2 },
+      { label: "90 days",   months: 3 },
+      { label: "12 months", months: 12 },
+    ];
+
+    // Project each horizon. Net new Unlimited per month accounts for
+    // both new conversions AND churn losses (compounded).
+    const blendedMonthlyRev = unlMonthlyPrice * 0.6 + (unlYearlyPrice / 12) * 0.4;
+
+    const rows = horizons.map(h => {
+      // Member growth (Reset signups − Reset churn ignored here; Reset is
+      // a one-time product so they stay as members but don't pay recurring).
+      const newResets = monthlyResets * h.months;
+      const newUnlimited = newResets * convRate;
+      // Compound churn over h.months on current Unlimited.
+      const retainedCurrent = currentUnlimited * Math.pow(1 - churnRate, h.months);
+      // Half-life approximation on new Unlimited (they came in over the period).
+      const retainedNew = newUnlimited * Math.pow(1 - churnRate, h.months / 2);
+      const projectedUnlimited = Math.round(retainedCurrent + retainedNew);
+      const projectedMembers = Math.round(currentMembers + newResets);
+      const projectedMrr = projectedUnlimited * blendedMonthlyRev;
+      const projectedMonthlyNet = projectedMrr - ctx.opMonthlyEur;
+      const projectedAnnualRecurring = projectedMonthlyNet * 12;
+
+      return {
+        label: h.label,
+        members: projectedMembers,
+        unlimited: projectedUnlimited,
+        mrr: projectedMrr,
+        monthlyNet: projectedMonthlyNet,
+        arr: projectedAnnualRecurring,
+      };
+    });
+
+    // Build the grid: 5 columns (label + 4 horizons) × 5 rows.
+    const headerRow = `
+      <div class="trajectory-cell is-header is-label">&nbsp;</div>
+      ${horizons.map(h => `<div class="trajectory-cell is-header">${h.label}</div>`).join("")}
+    `;
+
+    const buildRow = (label, key, fmt) => `
+      <div class="trajectory-cell is-label">${label}</div>
+      ${rows.map(r => {
+        const v = r[key];
+        const cls = key === "monthlyNet" || key === "arr"
+          ? (v > 0 ? "is-positive" : v < 0 ? "is-negative" : "is-value")
+          : "is-value";
+        return `<div class="trajectory-cell ${cls}">${fmt(v)}</div>`;
+      }).join("")}
+    `;
+
+    grid.innerHTML = headerRow +
+      buildRow("Total members",  "members",    v => fmtNumber(v)) +
+      buildRow("Unlimited subs", "unlimited",  v => fmtNumber(v)) +
+      buildRow("MRR",            "mrr",        v => eur(v, 0)) +
+      buildRow("Monthly net",    "monthlyNet", v => (v >= 0 ? "+" : "") + eur(v, 0)) +
+      buildRow("Annual recurring","arr",       v => (v >= 0 ? "+" : "") + eur(v, 0));
+  }
+
+  function fmtNumber(n) {
+    if (!isFinite(n)) return "0";
+    return Math.round(n).toLocaleString();
   }
 
   // Renders the per-user cost breakdown table — each tool's monthly cost
@@ -1678,6 +2092,27 @@
     setInt("final-upgrades-to-target", upgradesToTarget);
 
     renderIntelPath(gapToTarget, upgradesToTarget, ltv);
+
+    // Decision Engine + Trajectory — bundle the context they both need
+    // so they can each pull the few values they care about without us
+    // computing them twice.
+    const decisionCtx = {
+      ltv: ltv,
+      cpa: cpa,
+      bcPrice: n("lad-bc-price"),
+      launchResetPrice: n("launch-reset-price"),
+      totalResetBuyers: totalPurchases,
+      avgMonthlyRev: avgMonthlyRev,
+    };
+    renderDecisionEngine(decisionCtx);
+
+    const trajectoryCtx = {
+      ltv: ltv,
+      unlTotal: unlTotal,
+      activeMembers: activeMembers,
+      opMonthlyEur: opMonthlyEur,
+    };
+    renderTrajectory(trajectoryCtx);
 
     // ===== Layer 2: per-user economics + gap narrative =====
     // Profit per Reset buyer = (avg Reset revenue per buyer) − CPA.
