@@ -749,6 +749,7 @@ export default async function handler(req, res) {
         topBuyers: thrivecartTopBuyers ? thrivecartTopBuyers.rows : [],
         byDay: thrivecartRevenueByDay ? thrivecartRevenueByDay.rows : [],
       },
+      monthlyCosts: await fetchMonthlyCosts(),
     });
   } catch (err) {
     console.error("admin_metrics_error", { message: err?.message });
@@ -758,6 +759,33 @@ export default async function handler(req, res) {
 
 // Wrap a promise so a missing-table error (purchases not created yet) resolves
 // to null instead of crashing the whole metrics fan-out. Real errors still log.
+// Pull the monthly cost snapshot — one row per service (GHL, Anthropic,
+// Vercel, etc.). Used by the Launch Tracker to auto-fill its operational
+// cost fields without making the admin maintain costs in two places.
+// Returns an empty array if the table doesn't exist yet so callers don't
+// crash before migration 007 has been run.
+async function fetchMonthlyCosts() {
+  try {
+    const { rows } = await sql`
+      SELECT service_key, amount::text, currency, notes, updated_at
+      FROM monthly_costs
+      ORDER BY service_key
+    `;
+    return rows.map(r => ({
+      service_key: r.service_key,
+      amount: Number(r.amount || 0),
+      currency: r.currency || "USD",
+      notes: r.notes || "",
+      updated_at: r.updated_at || null,
+    }));
+  } catch (err) {
+    // Table missing or unreachable — return empty so the dashboard still
+    // renders. The admin will see zeros in the snapshot panel until they
+    // run migration 007.
+    return [];
+  }
+}
+
 async function safeQuery(promise) {
   try {
     return await promise;
