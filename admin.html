@@ -333,17 +333,23 @@
 
     /* ===== Mobile (phones, ≤640px) ===== */
     @media (max-width: 640px) {
-      /* Respect iOS safe-area-inset-top so the page title doesn't sit
-         under the dynamic island / notch on iPhones. Falls back to 20px
-         on browsers that don't support the env() var. */
+      /* Prevent any wide child (table, KPI grid, long word) from blowing
+         out the page width and causing the whole viewport to scroll
+         horizontally. Each panel manages its own internal scroll. */
+      html, body { overflow-x: hidden; max-width: 100vw; }
       .wrap {
+        max-width: 100vw;
+        overflow-x: hidden;
         padding: max(20px, env(safe-area-inset-top)) 14px 60px;
       }
+      .section { max-width: 100%; overflow-x: hidden; }
 
-      /* Section headings need to wrap on mobile — long phrases like
-         "By product × coupon (every SKU + coupon combination)" were
-         pushing off the right edge of the viewport. */
+      /* Section headings ALWAYS wrap on mobile — defeats any inherited
+         white-space rule and ensures long parenthetical phrases like
+         "By product × coupon (every SKU + coupon combination)" don't
+         push past the right edge. */
       .section h2 {
+        white-space: normal !important;
         word-break: break-word;
         overflow-wrap: anywhere;
       }
@@ -363,10 +369,18 @@
         font-size: 10px;
       }
 
-      /* KPI cards — 2 per row, smaller */
-      .kpi-grid { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 22px; }
-      .kpi { padding: 14px 14px 12px; }
-      .kpi-value { font-size: 24px; }
+      /* KPI cards — auto-fit so they adapt to screen width. On 393px
+         iPhones this fits 1 column with cards using the full width;
+         on slightly wider phones (430px+) it fits 2 columns. The
+         minmax(180px, 1fr) guarantees each card has room for its big
+         "€208.36" value and "REVENUE (EX VAT)" label without clipping. */
+      .kpi-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px;
+        margin-bottom: 22px;
+      }
+      .kpi { padding: 14px 14px 12px; min-width: 0; }
+      .kpi-value { font-size: 24px; word-break: break-word; }
       .kpi-label { font-size: 9px; }
       .kpi-sub { font-size: 10px; }
       .kpi.clickable::after { display: none; }
@@ -1098,6 +1112,15 @@
       document.querySelectorAll(".tab-btn").forEach(btn => {
         btn.classList.toggle("tab-btn--active", btn.dataset.tab === tab);
       });
+      // On mobile the tab nav is a horizontal scroller — make sure the
+      // newly-active tab is visible inside it. Without this, switching
+      // to a tab off-screen leaves the active highlight invisible.
+      try {
+        const activeBtn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+        if (activeBtn && activeBtn.scrollIntoView) {
+          activeBtn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+        }
+      } catch {}
       try { localStorage.setItem(TAB_STORAGE_KEY, tab); } catch {}
       // Scroll to the top of the dashboard so each tab starts cleanly.
       window.scrollTo({ top: 0, behavior: "smooth" });
