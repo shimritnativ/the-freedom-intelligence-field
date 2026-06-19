@@ -262,6 +262,34 @@
     border-color: rgba(168, 42, 42, 0.25);
   }
   .gap-narrative.is-loss strong { color: var(--danger); }
+  /* Per-user economics narrative — same patterns as gap-narrative but
+     four health tiers (excellent / healthy / concerning / red flag)
+     because unit-economics health has more nuance than profit vs loss. */
+  .eco-narrative {
+    margin-top: 18px;
+    padding: 16px 18px;
+    border-radius: 12px;
+    border: 1px solid var(--gold-line);
+    background: var(--gold-soft);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .eco-narrative strong { font-weight: 700; color: var(--gold); }
+  .eco-narrative.is-excellent {
+    background: var(--success-soft);
+    border-color: rgba(45, 107, 58, 0.3);
+  }
+  .eco-narrative.is-excellent strong { color: var(--success); }
+  .eco-narrative.is-concerning {
+    background: rgba(154, 110, 16, 0.10);
+    border-color: rgba(154, 110, 16, 0.35);
+  }
+  .eco-narrative.is-redflag {
+    background: var(--danger-soft);
+    border-color: rgba(168, 42, 42, 0.25);
+  }
+  .eco-narrative.is-redflag strong { color: var(--danger); }
   /* Path from Intelligence — Layer 3. Pulls live segment counts from the
      admin and shows the specific paths to close the gap. Each card is
      one Intelligence segment with the projected contribution. */
@@ -545,6 +573,58 @@
     from real purchases. Type into any field to override it manually.
   </span>
 </div>
+
+<!-- Per-user economics — the unit economics view. This is the section
+     that answers "is this worth doing again" with one glance. Sits at the
+     top because it's the highest-signal info on the page. -->
+<section>
+  <div class="section-head">
+    <span class="section-pill">Unit economics</span>
+    <h2 class="section-title">Per-user economics — is each member worth acquiring?</h2>
+  </div>
+  <p class="section-desc">The numbers that translate "we did a launch" into "we built a business." Cost per active user, revenue per user, margin, and the LTV / CAC ratio that decides whether to spend more or less next launch.</p>
+
+  <div class="grid grid-3">
+    <div class="field">
+      <label class="field-label" for="eco-active-members">Active members (synced)</label>
+      <input type="number" id="eco-active-members" value="0" min="0" />
+      <div class="field-hint">Total Reset + paid Unlimited members</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="eco-historical-cpu">Historical cost per user (€/mo)</label>
+      <input type="number" id="eco-historical-cpu" value="2.50" min="0" step="0.01" />
+      <div class="field-hint">Your baseline from prior calculations</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="eco-current-cpu">Current cost per user (€/mo)</label>
+      <input type="number" id="eco-current-cpu" readonly />
+      <div class="field-hint">Monthly ops ÷ active members</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="eco-revenue-per-user">Revenue per user (€)</label>
+      <input type="number" id="eco-revenue-per-user" readonly />
+      <div class="field-hint">Total revenue ÷ active members</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="eco-margin-per-user">Margin per user (€)</label>
+      <input type="number" id="eco-margin-per-user" readonly />
+      <div class="field-hint">Revenue per user − cost per user (lifetime)</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="eco-payback-months">Payback period (months)</label>
+      <input type="number" id="eco-payback-months" readonly />
+      <div class="field-hint">CAC ÷ monthly margin per user</div>
+    </div>
+  </div>
+
+  <!-- Unit economics narrative — translates the four numbers above into
+       a single sentence so the answer is unmistakable. Tinted by health:
+       green for excellent, gold for healthy, amber for concerning, red
+       for "fix this before the next launch." -->
+  <div class="eco-narrative" id="eco-narrative">
+    Fill in the operational costs and acquisition cost sections below and a unit-economics readout will appear here.
+  </div>
+</section>
 
 <section>
   <div class="section-head">
@@ -930,7 +1010,8 @@
     "unl-monthly-price", "unl-yearly-price", "unl-monthly-count", "unl-yearly-count", "unl-ltv",
     "op-vercel", "op-domain", "op-resend", "op-neon", "op-anthropic",
     "op-elevenlabs", "op-whisper", "op-ghl", "op-other", "op-fx",
-    "final-profit-target"
+    "final-profit-target",
+    "eco-active-members", "eco-historical-cpu"
   ];
 
   function loadState() {
@@ -1210,6 +1291,63 @@
     setInt("final-breakeven", Math.max(0, breakevenUpgrades));
     setVal("final-roas", roas);
 
+    // ===== Per-user economics — unit-economics view =====
+    // The four numbers that answer "is each member worth acquiring?":
+    //   cost per user/mo, revenue per user, margin, payback period.
+    // Compared against the historical €2.50/user/mo baseline so any
+    // creep in infrastructure costs is immediately visible.
+    const activeMembers = n("eco-active-members");
+    const historicalCpu = n("eco-historical-cpu");
+    const currentCpu = activeMembers > 0 ? opMonthlyEur / activeMembers : 0;
+    const revenuePerUser = activeMembers > 0 ? totalRevenue / activeMembers : 0;
+    const monthlyRevPerUser = activeMembers > 0 ? (mrr + (n("unl-yearly-count") * n("unl-yearly-price") / 12)) / activeMembers : 0;
+    const monthlyMarginPerUser = monthlyRevPerUser - currentCpu;
+    const lifetimeMarginPerUser = revenuePerUser - (currentCpu * 12); // 12-mo lifetime assumption
+    const paybackMonths = monthlyMarginPerUser > 0 ? cpa / monthlyMarginPerUser : 0;
+
+    setVal("eco-current-cpu", currentCpu);
+    setVal("eco-revenue-per-user", revenuePerUser);
+    setVal("eco-margin-per-user", lifetimeMarginPerUser);
+    setVal("eco-payback-months", paybackMonths, 1);
+
+    // Narrative — translates the math into a sentence with sentiment.
+    // Tiers based on LTV/CAC AND payback period together since either
+    // alone can mislead.
+    const ecoEl = document.getElementById("eco-narrative");
+    if (ecoEl) {
+      ecoEl.classList.remove("is-excellent", "is-concerning", "is-redflag");
+      if (activeMembers === 0 || cpa === 0) {
+        ecoEl.textContent = "Fill in the operational costs and acquisition cost sections below and a unit-economics readout will appear here.";
+      } else {
+        const cpuDelta = currentCpu - historicalCpu;
+        const cpuDeltaText = Math.abs(cpuDelta) < 0.1
+          ? "right at your historical baseline"
+          : cpuDelta > 0
+            ? `<strong>${eur(cpuDelta, 2)} above</strong> your historical baseline of ${eur(historicalCpu, 2)}/user/mo`
+            : `<strong>${eur(Math.abs(cpuDelta), 2)} below</strong> your historical baseline`;
+
+        let tier = "healthy";
+        let verdict = "";
+        if (ltvCac >= 3 && paybackMonths > 0 && paybackMonths < 6) {
+          tier = "excellent";
+          verdict = `<strong>Excellent unit economics.</strong> Spend more on acquisition next launch — every euro of CAC is buying a member worth ${eur(ltv, 0)} over their lifetime.`;
+        } else if (ltvCac >= 2 && paybackMonths > 0 && paybackMonths < 12) {
+          tier = "healthy";
+          verdict = `<strong>Healthy unit economics.</strong> Sustainable to scale. Watch the payback period — if it creeps past 12 months you'll be cash-constrained.`;
+        } else if (ltvCac >= 1) {
+          tier = "concerning";
+          verdict = `<strong>Concerning.</strong> Each acquisition pays back eventually but slowly. Tighten acquisition costs OR raise prices before the next launch.`;
+        } else {
+          tier = "redflag";
+          verdict = `<strong>Red flag.</strong> You're losing money on every acquisition. Either CAC is too high, LTV is too low, or both. Fix this before scaling.`;
+        }
+
+        ecoEl.classList.add("is-" + tier);
+        ecoEl.innerHTML = `Each active member costs ${eur(currentCpu, 2)} per month to serve — ${cpuDeltaText}. ` +
+          `Per-member CAC is ${eur(cpa, 2)} with ${eur(monthlyMarginPerUser, 2)} monthly margin, so payback is <strong>${paybackMonths.toFixed(1)} months</strong>. LTV/CAC is <strong>${ltvCac.toFixed(2)}</strong>. ${verdict}`;
+      }
+    }
+
     // ===== Layer 3: gap-to-target + Path from Intelligence =====
     // Profit target → gap → upgrades needed at the current LTV. Powers
     // both the "Gap to target" / "Upgrades to close the gap" KPI fields
@@ -1348,6 +1486,7 @@
     "launch-upgrades":   "publicLaunchUpgrades",
     "unl-monthly-count": "unlimitedMonthly",
     "unl-yearly-count":  "unlimitedYearly",
+    "eco-active-members":"activeMembers",
   };
   // Intelligence segment counts arrive alongside the sync payload. Stored
   // here for the Path-from-Intelligence renderer to use during recalc.
