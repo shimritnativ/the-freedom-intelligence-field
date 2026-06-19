@@ -243,6 +243,62 @@
     margin: 0 0 22px;
     max-width: 720px;
   }
+  /* ===== Collapsible sections ===== */
+  /* Every <section> gets a small chevron toggle injected by JS. Clicking
+     the section head (or the chevron) folds the body. Folded sections
+     keep the title + pill visible so the page reads like a table of
+     contents on mobile. On desktop everything stays open by default; on
+     mobile everything except the first section starts collapsed. */
+  section.is-collapsible .section-head {
+    cursor: pointer;
+    user-select: none;
+    /* Make sure the chevron sits on the far right of the head, with the
+       title + pill nicely grouped on the left so the head still feels
+       balanced after we add the button. */
+    flex-wrap: wrap;
+  }
+  .section-head-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .section-toggle {
+    background: transparent;
+    border: 1px solid var(--gold-line);
+    color: var(--gold);
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    flex-shrink: 0;
+    transition: transform 0.18s ease, background 0.15s ease;
+  }
+  .section-toggle:hover {
+    background: var(--gold-soft);
+  }
+  section.is-collapsed .section-toggle {
+    transform: rotate(-90deg);
+  }
+  section.is-collapsed .section-desc,
+  section.is-collapsed .section-body {
+    display: none;
+  }
+  /* When collapsed, tighten the head so a stack of folded sections feels
+     compact. Drop the bottom padding inherited from the section box. */
+  section.is-collapsed {
+    padding-bottom: 22px;
+  }
+  section.is-collapsed .section-head {
+    margin-bottom: 0;
+  }
   .grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -1502,7 +1558,7 @@
 </section>
 
 <div class="footer">
-  <strong>The Field — Launch Tracker</strong> · all data persists in your browser's localStorage · no servers touched · refresh any time
+  <strong>The Field — Launch Tracker</strong> · numbers sync across every admin device · <span id="last-saved-by">never saved yet</span>
 </div>
 
 </div>
@@ -1514,6 +1570,21 @@
   "use strict";
 
   const STORAGE_KEY = "field_launch_tracker_v1";
+  // Session token key matches admin.html — the launch tracker is loaded
+  // in an iframe inside admin.html on the same origin, so localStorage is
+  // shared. When opened standalone, the user must already have an admin
+  // session in this browser for the server sync to work.
+  const SESSION_KEY = "tfif_session_v1";
+  // Endpoint that holds the singleton state row. Both GET and POST go here.
+  const STATE_ENDPOINT = "/api/admin/launch-tracker-state";
+  // How long to wait after the last keystroke before pushing to the server.
+  // Short enough that you don't lose more than ~1 keystroke if you tab away,
+  // long enough that mashing the up-arrow on a number input doesn't fire
+  // dozens of requests.
+  const SAVE_DEBOUNCE_MS = 800;
+  // How often to poll for changes from other admins while the page is open.
+  // 60s is plenty — the launch tracker isn't a chat app.
+  const REFRESH_INTERVAL_MS = 60 * 1000;
   const FIELDS = [
     "pre-people", "pre-msgs-per", "pre-msg-cost", "pre-ghl-cost",
     "pre-replies", "pre-yes", "pre-clicks", "pre-purchases", "pre-reset-price", "pre-upgrades",
@@ -1533,15 +1604,109 @@
     "claude-msgs-per-user", "claude-input-price-per-m", "claude-output-price-per-m"
   ];
 
-  function loadState() {
+  // localStorage is now ONLY a cache — instant first paint and offline
+  // fallback. Server state is the truth. The cache gets overwritten as
+  // soon as the server responds.
+  function loadStateCache() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
       return JSON.parse(raw);
     } catch (e) { return null; }
   }
-  function saveState(s) {
+  function saveStateCache(s) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) {}
+  }
+  function getSessionToken() {
+    try { return localStorage.getItem(SESSION_KEY) || ""; } catch (e) { return ""; }
+  }
+  // Fetch the current shared state from the server. Returns null on any
+  // failure so the caller can fall back to the cache without throwing.
+  async function fetchServerState() {
+    const token = getSessionToken();
+    if (!token) return null;
+    try {
+      const res = await fetch(STATE_ENDPOINT, {
+        method: "GET",
+        headers: { "x-session-token": token },
+        credentials: "include",
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return {
+        state: data.state || {},
+        updated_by_email: data.updated_by_email || null,
+        updated_at: data.updated_at || null,
+      };
+    } catch (e) { return null; }
+  }
+  // Push state to the server. Quietly noop if there's no session — the
+  // local cache still has the change so the user doesn't lose it.
+  let inFlightSave = null;
+  async function pushServerState(state) {
+    const token = getSessionToken();
+    if (!token) return null;
+    // Coalesce overlapping saves: if a POST is mid-flight, queue this one
+    // to run after it completes with the latest state. Prevents a fast
+    // typer from stacking up dozens of concurrent requests.
+    if (inFlightSave) {
+      inFlightSave.pendingState = state;
+      return inFlightSave.promise;
+    }
+    const slot = { pendingState: null, promise: null };
+    slot.promise = (async () => {
+      try {
+        const res = await fetch(STATE_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-session-token": token,
+          },
+          credentials: "include",
+          body: JSON.stringify({ state }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          updateLastSavedBy(data.updated_by_email, data.updated_at);
+          return data;
+        }
+        return null;
+      } catch (e) { return null; }
+      finally {
+        inFlightSave = null;
+        // Drain any queued state that arrived during the request.
+        if (slot.pendingState) {
+          const next = slot.pendingState;
+          slot.pendingState = null;
+          pushServerState(next);
+        }
+      }
+    })();
+    inFlightSave = slot;
+    return slot.promise;
+  }
+  function updateLastSavedBy(email, at) {
+    const el = document.getElementById("last-saved-by");
+    if (!el) return;
+    if (!email && !at) { el.textContent = "never saved yet"; return; }
+    const when = at ? relativeTime(at) : "just now";
+    const who = (email || "").split("@")[0] || "someone";
+    el.textContent = `last saved by ${who} ${when}`;
+  }
+  function relativeTime(iso) {
+    try {
+      const t = new Date(iso).getTime();
+      if (!isFinite(t)) return "";
+      const diff = Math.max(0, Date.now() - t);
+      const m = Math.floor(diff / 60000);
+      if (m < 1) return "just now";
+      if (m < 60) return m + "m ago";
+      const h = Math.floor(m / 60);
+      if (h < 24) return h + "h ago";
+      const d = Math.floor(h / 24);
+      if (d < 7) return d + "d ago";
+      return new Date(iso).toLocaleDateString();
+    } catch (e) { return ""; }
   }
   function flashSaved() {
     const el = document.getElementById("save-indicator");
@@ -2581,25 +2746,81 @@
     setStatus(actualPnl);
   }
 
-  function persist() {
+  // Capture every field value into a plain object the API can store.
+  function snapshotState() {
     const state = {};
     FIELDS.forEach(id => {
       const el = document.getElementById(id);
       if (el) state[id] = el.value;
     });
-    saveState(state);
+    return state;
+  }
+  // Fire on every input change. Writes the cache immediately so a tab
+  // refresh never loses keystrokes, then debounces the server push so we
+  // batch rapid edits into one round-trip.
+  let _saveDebounce = null;
+  function persist() {
+    const state = snapshotState();
+    saveStateCache(state);
     flashSaved();
+    clearTimeout(_saveDebounce);
+    _saveDebounce = setTimeout(() => {
+      pushServerState(state);
+    }, SAVE_DEBOUNCE_MS);
   }
 
-  function hydrate() {
-    const state = loadState();
+  // Apply a state object to the form. Used both on initial load and when
+  // pulling fresh state from the server during background refresh.
+  function applyStateToFields(state) {
     if (!state) return;
     FIELDS.forEach(id => {
       if (state[id] != null) {
         const el = document.getElementById(id);
-        if (el) el.value = state[id];
+        // Only overwrite if the user isn't actively focused on this input
+        // — typing while a background refresh lands would clobber their
+        // current keystroke. The cache push happens on every keystroke so
+        // their value is already persisted; the next refresh will pick it
+        // up from the server anyway.
+        if (el && document.activeElement !== el) el.value = state[id];
       }
     });
+  }
+
+  // Two-stage hydrate: paint from cache instantly (so the page isn't blank
+  // on slow networks), then fetch the authoritative server state and apply
+  // it on top. The recalc happens after both stages so the final view
+  // reflects whichever source wrote last.
+  async function hydrate() {
+    const cached = loadStateCache();
+    if (cached) applyStateToFields(cached);
+    const server = await fetchServerState();
+    if (server) {
+      applyStateToFields(server.state);
+      saveStateCache(server.state);
+      updateLastSavedBy(server.updated_by_email, server.updated_at);
+      recalc();
+    }
+  }
+
+  // Background poll for other admins' edits. Quiet — no UI noise if the
+  // server is unreachable, and skips when the tab is hidden so we don't
+  // burn fetches on a backgrounded tab.
+  function startBackgroundRefresh() {
+    setInterval(async () => {
+      if (document.hidden) return;
+      const server = await fetchServerState();
+      if (!server) return;
+      // If the timestamp matches what we last saw, nothing changed —
+      // skip the field overwrite to avoid disrupting in-progress edits.
+      const el = document.getElementById("last-saved-by");
+      const currentLabel = el ? el.textContent : "";
+      const incoming = server.updated_at || "";
+      if (currentLabel && currentLabel.includes(relativeTime(incoming))) return;
+      applyStateToFields(server.state);
+      saveStateCache(server.state);
+      updateLastSavedBy(server.updated_by_email, server.updated_at);
+      recalc();
+    }, REFRESH_INTERVAL_MS);
   }
 
   // ===== Live-sync layer =====
@@ -2809,14 +3030,20 @@
       });
     });
 
-    document.getElementById("reset-btn").addEventListener("click", () => {
-      if (!confirm("Reset all numbers to defaults? This will clear what you've entered.")) return;
+    document.getElementById("reset-btn").addEventListener("click", async () => {
+      if (!confirm("Reset all numbers to defaults? This wipes the shared state for every admin device.")) return;
+      // Clear the local cache, the in-form values, AND the server row.
       localStorage.removeItem(STORAGE_KEY);
+      FIELDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = el.defaultValue || "";
+      });
+      await pushServerState({});
       location.reload();
     });
 
     document.getElementById("export-btn").addEventListener("click", () => {
-      const state = loadState() || {};
+      const state = snapshotState();
       state._exportedAt = new Date().toISOString();
       const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -2830,9 +3057,118 @@
     });
   }
 
-  hydrate();
+  // ===== Collapsible sections =====
+  // Auto-enhance every <section> with a fold toggle. Wraps the existing
+  // title + pill into a `.section-head-left` group, then appends a
+  // chevron button. Everything below the section-head (description +
+  // content) gets stuffed into a `.section-body` wrapper so we have one
+  // node to hide on collapse.
+  //
+  // Default open state:
+  //   - Desktop (>720px): every section open
+  //   - Mobile (<=720px): only the first section open, all others folded
+  // User toggles override the default and persist per-section in
+  // localStorage. Resetting the tracker clears these too.
+  const COLLAPSE_STATE_KEY = "field_launch_tracker_collapsed_v1";
+  function loadCollapsedState() {
+    try {
+      const raw = localStorage.getItem(COLLAPSE_STATE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) { return {}; }
+  }
+  function saveCollapsedState(map) {
+    try { localStorage.setItem(COLLAPSE_STATE_KEY, JSON.stringify(map)); } catch (e) {}
+  }
+  function enhanceCollapsibleSections() {
+    const sections = document.querySelectorAll("section");
+    const isMobile = window.matchMedia("(max-width: 720px)").matches;
+    const userState = loadCollapsedState();
+    sections.forEach((section, idx) => {
+      const head = section.querySelector(".section-head");
+      if (!head) return;
+      // Skip sections that don't follow the standard head/desc/body
+      // layout (e.g., the post-load brief at the top isn't a <section>).
+      section.classList.add("is-collapsible");
+
+      // Stable key: try the section-pill text, then the section-title,
+      // then the index. So the user's open/close choices survive markup
+      // tweaks as long as the title doesn't change.
+      const titleEl = head.querySelector(".section-title");
+      const pillEl = head.querySelector(".section-pill");
+      const key = (titleEl && titleEl.textContent.trim())
+                || (pillEl && pillEl.textContent.trim())
+                || `section-${idx}`;
+      section.dataset.sectionKey = key;
+
+      // Wrap existing head children (excluding our future toggle) into
+      // a left group so the chevron can sit on the right via flex.
+      const headChildren = Array.from(head.childNodes);
+      const left = document.createElement("div");
+      left.className = "section-head-left";
+      headChildren.forEach(node => left.appendChild(node));
+      head.appendChild(left);
+
+      // Build the toggle button. The chevron rotates via CSS based on
+      // `.is-collapsed` on the section.
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "section-toggle";
+      toggle.setAttribute("aria-label", "Toggle section");
+      toggle.innerHTML = "&#9662;"; // ▾
+      head.appendChild(toggle);
+
+      // Wrap everything after .section-head into a body container so we
+      // can hide the whole thing in one go on collapse.
+      const body = document.createElement("div");
+      body.className = "section-body";
+      let node = head.nextSibling;
+      while (node) {
+        const next = node.nextSibling;
+        body.appendChild(node);
+        node = next;
+      }
+      section.appendChild(body);
+
+      // Decide initial state: user choice wins, else mobile defaults to
+      // collapsed-except-first, else everything open.
+      let collapsed;
+      if (key in userState) {
+        collapsed = !!userState[key];
+      } else {
+        collapsed = isMobile && idx > 0;
+      }
+      if (collapsed) section.classList.add("is-collapsed");
+
+      // Click anywhere on the head to toggle. If the click landed on an
+      // interactive descendant that ISN'T our toggle (a link, input,
+      // select, textarea, or different button), respect that element's
+      // native behavior and don't fold.
+      const onToggle = (ev) => {
+        const target = ev.target;
+        if (target !== toggle && !toggle.contains(target)) {
+          const interactive = target.closest("input, select, textarea, a, button");
+          if (interactive) return;
+        }
+        section.classList.toggle("is-collapsed");
+        const map = loadCollapsedState();
+        map[key] = section.classList.contains("is-collapsed");
+        saveCollapsedState(map);
+        postHeightToParent();
+      };
+      head.addEventListener("click", onToggle);
+    });
+  }
+
+  // Initial paint runs from cache synchronously so the form isn't blank
+  // while we wait for the server. Then hydrate() awaits the server fetch
+  // and re-renders if the server has newer values than the cache.
+  const cachedAtBoot = loadStateCache();
+  if (cachedAtBoot) applyStateToFields(cachedAtBoot);
+  enhanceCollapsibleSections();
   wire();
   recalc();
+  hydrate().then(() => recalc());
+  startBackgroundRefresh();
 })();
 </script>
 
