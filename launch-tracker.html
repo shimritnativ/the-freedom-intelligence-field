@@ -252,10 +252,12 @@
   section.is-collapsible .section-head {
     cursor: pointer;
     user-select: none;
-    /* Make sure the chevron sits on the far right of the head, with the
-       title + pill nicely grouped on the left so the head still feels
-       balanced after we add the button. */
-    flex-wrap: wrap;
+    /* Top-align so when the title wraps to multiple lines on mobile, the
+       chevron stays anchored to the top-right corner instead of drifting
+       to the vertical centre of a tall title. No flex-wrap — the chevron
+       must always be on the same row as the title group, never below it. */
+    align-items: flex-start;
+    flex-wrap: nowrap;
   }
   .section-head-left {
     display: flex;
@@ -263,22 +265,29 @@
     gap: 12px;
     flex: 1 1 auto;
     min-width: 0;
+    /* Lets the title wrap naturally; the pill stays inline next to it
+       when there's room, drops to its own line when there isn't. */
+    flex-wrap: wrap;
   }
   .section-toggle {
     background: transparent;
     border: 1px solid var(--gold-line);
     color: var(--gold);
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     border-radius: 8px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1;
     padding: 0;
     flex-shrink: 0;
+    /* Stick to the top so a wrapping title pushes the toggle visually
+       down — instead, the toggle holds the top-right corner. */
+    align-self: flex-start;
+    margin-top: 2px;
     transition: transform 0.18s ease, background 0.15s ease;
   }
   .section-toggle:hover {
@@ -294,10 +303,40 @@
   /* When collapsed, tighten the head so a stack of folded sections feels
      compact. Drop the bottom padding inherited from the section box. */
   section.is-collapsed {
-    padding-bottom: 22px;
+    padding: 18px 22px;
   }
   section.is-collapsed .section-head {
     margin-bottom: 0;
+  }
+  /* Mobile polish: shrink the section title so a 3-word italic header
+     doesn't wrap to three lines and dwarf the card. Stack the pill below
+     the title (instead of sharing a line) so the title can breathe. */
+  @media (max-width: 720px) {
+    .section-title {
+      font-size: 17px;
+      line-height: 1.25;
+    }
+    .section-head-left {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .section-pill {
+      order: -1; /* pill sits on top of the title, like an eyebrow */
+      font-size: 9.5px;
+      padding: 3px 9px;
+    }
+    section {
+      padding: 20px 18px 18px;
+    }
+    section.is-collapsed {
+      padding: 14px 18px;
+    }
+    .section-toggle {
+      width: 30px;
+      height: 30px;
+      font-size: 14px;
+    }
   }
   .grid {
     display: grid;
