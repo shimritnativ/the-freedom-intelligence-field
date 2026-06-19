@@ -290,6 +290,80 @@
     border-color: rgba(168, 42, 42, 0.25);
   }
   .eco-narrative.is-redflag strong { color: var(--danger); }
+  /* Cost breakdown table — shows where each €/user goes. The "biggest"
+     row (Claude usually) is highlighted so the cost driver is obvious. */
+  .cost-breakdown {
+    margin-top: 18px;
+    border: 1px solid var(--gold-line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .cost-breakdown-head {
+    background: var(--gold-soft);
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid var(--gold-line);
+  }
+  .cost-breakdown-total {
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .cost-breakdown-total strong { font-weight: 600; }
+  .cost-breakdown-rows {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .cost-row {
+    display: grid;
+    grid-template-columns: 1fr auto 80px;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 14px;
+    border-bottom: 1px solid rgba(154, 110, 16, 0.08);
+    font-size: 13px;
+  }
+  .cost-row:last-child { border-bottom: none; }
+  .cost-row.is-biggest { background: rgba(154, 110, 16, 0.05); }
+  .cost-row-label { color: var(--text); font-weight: 500; }
+  .cost-row-share {
+    height: 5px;
+    background: var(--gold-soft);
+    border-radius: 3px;
+    overflow: hidden;
+    width: 100%;
+    min-width: 80px;
+  }
+  .cost-row-share-fill {
+    height: 100%;
+    background: var(--gold);
+    border-radius: 3px;
+  }
+  .cost-row-value {
+    text-align: right;
+    font-family: Georgia, serif;
+    font-weight: 500;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .cost-row-zero { color: var(--text-mute); }
+  /* Channel ROAS callout in launch sections — surfaces the per-channel
+     "did this channel pay back?" in one line. */
+  .channel-roas {
+    margin-top: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: var(--panel-2);
+    border: 1px dashed var(--gold-line);
+    font-size: 12.5px;
+    color: var(--text-dim);
+  }
+  .channel-roas strong { color: var(--text); font-weight: 600; }
+  .channel-roas.is-profitable { background: var(--success-soft); border-color: rgba(45, 107, 58, 0.25); }
+  .channel-roas.is-loss { background: var(--danger-soft); border-color: rgba(168, 42, 42, 0.25); }
   /* Path from Intelligence — Layer 3. Pulls live segment counts from the
      admin and shows the specific paths to close the gap. Each card is
      one Intelligence segment with the projected contribution. */
@@ -574,55 +648,66 @@
   </span>
 </div>
 
-<!-- Per-user economics — the unit economics view. This is the section
-     that answers "is this worth doing again" with one glance. Sits at the
-     top because it's the highest-signal info on the page. -->
+<!-- Investment vs profit — the financial health view. Three-tier readout:
+     (1) totals at the top (monthly investment / monthly revenue / monthly net),
+     (2) per-user breakdown (cost / revenue / margin per active member),
+     (3) cost breakdown by category so you see WHERE the money goes,
+     (4) stability narrative that translates everything into a sentence. -->
 <section>
   <div class="section-head">
-    <span class="section-pill">Unit economics</span>
-    <h2 class="section-title">Per-user economics — is each member worth acquiring?</h2>
+    <span class="section-pill">Investment vs profit</span>
+    <h2 class="section-title">What we're spending vs what we're earning</h2>
   </div>
-  <p class="section-desc">The numbers that translate "we did a launch" into "we built a business." Cost per active user, revenue per user, margin, and the LTV / CAC ratio that decides whether to spend more or less next launch.</p>
+  <p class="section-desc">Everything we put in (tools, GHL, Claude, hosting, voice, email) against everything coming back. Surfaces the cost per active member per month so we can see whether scale fixes the economics or amplifies the problem.</p>
 
   <div class="grid grid-3">
+    <div class="field">
+      <label class="field-label" for="eco-monthly-investment">Monthly investment (€)</label>
+      <input type="number" id="eco-monthly-investment" readonly />
+      <div class="field-hint">Every tool + service, converted to €</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="eco-monthly-revenue">Monthly revenue (€)</label>
+      <input type="number" id="eco-monthly-revenue" readonly />
+      <div class="field-hint">MRR + Reset purchases amortized over 12mo</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="eco-monthly-net">Monthly net (€)</label>
+      <input type="number" id="eco-monthly-net" readonly />
+      <div class="field-hint">Revenue − investment, this month forward</div>
+    </div>
     <div class="field">
       <label class="field-label" for="eco-active-members">Active members (synced)</label>
       <input type="number" id="eco-active-members" value="0" min="0" />
       <div class="field-hint">Total Reset + paid Unlimited members</div>
     </div>
     <div class="field">
-      <label class="field-label" for="eco-historical-cpu">Historical cost per user (€/mo)</label>
-      <input type="number" id="eco-historical-cpu" value="2.50" min="0" step="0.01" />
-      <div class="field-hint">Your baseline from prior calculations</div>
-    </div>
-    <div class="field">
-      <label class="field-label" for="eco-current-cpu">Current cost per user (€/mo)</label>
+      <label class="field-label" for="eco-current-cpu">Cost per user / month (€)</label>
       <input type="number" id="eco-current-cpu" readonly />
-      <div class="field-hint">Monthly ops ÷ active members</div>
+      <div class="field-hint">Monthly investment ÷ active members</div>
     </div>
     <div class="field">
-      <label class="field-label" for="eco-revenue-per-user">Revenue per user (€)</label>
-      <input type="number" id="eco-revenue-per-user" readonly />
-      <div class="field-hint">Total revenue ÷ active members</div>
-    </div>
-    <div class="field">
-      <label class="field-label" for="eco-margin-per-user">Margin per user (€)</label>
+      <label class="field-label" for="eco-margin-per-user">Net margin per user / mo (€)</label>
       <input type="number" id="eco-margin-per-user" readonly />
-      <div class="field-hint">Revenue per user − cost per user (lifetime)</div>
-    </div>
-    <div class="field">
-      <label class="field-label" for="eco-payback-months">Payback period (months)</label>
-      <input type="number" id="eco-payback-months" readonly />
-      <div class="field-hint">CAC ÷ monthly margin per user</div>
+      <div class="field-hint">What each member contributes to profit</div>
     </div>
   </div>
 
-  <!-- Unit economics narrative — translates the four numbers above into
-       a single sentence so the answer is unmistakable. Tinted by health:
-       green for excellent, gold for healthy, amber for concerning, red
-       for "fix this before the next launch." -->
+  <!-- Cost breakdown table — shows where each euro of "cost per user"
+       goes. Helps spot the line that's blowing up the budget (usually
+       Claude / AI for AI-native businesses). -->
+  <div class="cost-breakdown" id="cost-breakdown">
+    <div class="cost-breakdown-head">
+      <span class="path-eyebrow">Cost breakdown per active member / month</span>
+      <span class="cost-breakdown-total" id="cost-breakdown-total">—</span>
+    </div>
+    <div class="cost-breakdown-rows" id="cost-breakdown-rows"></div>
+  </div>
+
+  <!-- Stability + scale narrative — answers "what does this mean and
+       what's the next milestone?" without making the user do math. -->
   <div class="eco-narrative" id="eco-narrative">
-    Fill in the operational costs and acquisition cost sections below and a unit-economics readout will appear here.
+    Fill in the operational costs section below and the financial picture will appear here.
   </div>
 </section>
 
@@ -689,8 +774,18 @@
       <input type="number" id="pre-reset-price" value="4.5" min="0" step="0.01" />
     </div>
     <div class="field">
+      <label class="field-label" for="pre-bump-buyers">Power Activation bump buyers</label>
+      <input type="number" id="pre-bump-buyers" value="0" min="0" />
+      <div class="field-hint">How many added the Bump on checkout</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="pre-bump-price">Bump price (€)</label>
+      <input type="number" id="pre-bump-price" value="14.28" min="0" step="0.01" />
+    </div>
+    <div class="field">
       <label class="field-label" for="pre-revenue">Pre-launch revenue (€)</label>
       <input type="number" id="pre-revenue" readonly />
+      <div class="field-hint">Reset + Bump combined</div>
     </div>
     <div class="field">
       <label class="field-label" for="pre-upgrades">Upgrades to Unlimited from pre-launch</label>
@@ -702,6 +797,7 @@
       <div class="field-hint">Total pre-launch cost ÷ purchases</div>
     </div>
   </div>
+  <div class="channel-roas" id="pre-roas">Pre-launch ROAS will appear once costs and revenue are entered.</div>
 </section>
 
 <section>
@@ -764,8 +860,17 @@
       <input type="number" id="launch-reset-price" value="9" min="0" step="0.01" />
     </div>
     <div class="field">
+      <label class="field-label" for="launch-bump-buyers">Power Activation bump buyers</label>
+      <input type="number" id="launch-bump-buyers" value="0" min="0" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="launch-bump-price">Bump price (€)</label>
+      <input type="number" id="launch-bump-price" value="14.28" min="0" step="0.01" />
+    </div>
+    <div class="field">
       <label class="field-label" for="launch-revenue">Launch revenue (€)</label>
       <input type="number" id="launch-revenue" readonly />
+      <div class="field-hint">Reset + Bump combined</div>
     </div>
     <div class="field">
       <label class="field-label" for="launch-upgrades">Upgrades to Unlimited from launch</label>
@@ -776,11 +881,12 @@
       <input type="number" id="launch-cpa" readonly />
     </div>
   </div>
+  <div class="channel-roas" id="launch-roas">Public launch ROAS will appear once costs and revenue are entered.</div>
 </section>
 
 <section>
   <div class="section-head">
-    <h2 class="section-title">Unlimited upgrades</h2>
+    <h2 class="section-title">Upsells & Unlimited expansion</h2>
     <span class="section-pill">Recurring Revenue</span>
   </div>
   <p class="section-desc">This is where the real economics live. The Reset gets a member in; the upgrade to Unlimited (€77/month or €777/year) is what makes the launch profitable long-term. Update the totals as people convert.</p>
@@ -822,9 +928,55 @@
       <input type="number" id="unl-conversion" readonly />
     </div>
     <div class="field">
+      <label class="field-label" for="unl-churn-pct">Expected monthly churn (%)</label>
+      <input type="number" id="unl-churn-pct" value="8" min="0" max="100" step="0.5" />
+      <div class="field-hint">% of subs who cancel each month</div>
+    </div>
+    <div class="field">
       <label class="field-label" for="unl-ltv">Average LTV per Unlimited (€)</label>
       <input type="number" id="unl-ltv" value="500" min="0" step="0.01" />
-      <div class="field-hint">Typical 6-12 month retention estimate</div>
+      <div class="field-hint">Auto-calc from price ÷ churn (override if needed)</div>
+    </div>
+  </div>
+
+  <!-- Upgrade ladder — what % of Unlimited subs eventually buy higher-
+       ticket offers. This is the long-term LTV expansion that makes
+       acquisition cost feel small. Default percentages are conservative;
+       update from real conversions as the launch matures. -->
+  <h3 style="font-family: Georgia, serif; font-style: italic; font-size: 16px; margin: 22px 0 6px; color: var(--text);">Upgrade ladder — Unlimited → premium tiers</h3>
+  <p class="section-desc" style="margin-bottom: 12px;">What share of Unlimited subscribers will eventually take a higher-ticket offer. Expands LTV substantially when realistic — Business Club at €55/mo recurring or RISE Mastermind at €9,999 one-time.</p>
+  <div class="grid grid-3">
+    <div class="field">
+      <label class="field-label" for="lad-bc-pct">% who join Business Club</label>
+      <input type="number" id="lad-bc-pct" value="10" min="0" max="100" step="1" />
+      <div class="field-hint">€55/mo recurring</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="lad-bc-price">Business Club avg LTV (€)</label>
+      <input type="number" id="lad-bc-price" value="660" min="0" step="1" />
+      <div class="field-hint">12 months at €55/mo default</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="lad-bc-revenue">Projected ladder revenue from BC (€)</label>
+      <input type="number" id="lad-bc-revenue" readonly />
+    </div>
+    <div class="field">
+      <label class="field-label" for="lad-rise-pct">% who join RISE / Accelerator</label>
+      <input type="number" id="lad-rise-pct" value="3" min="0" max="100" step="1" />
+      <div class="field-hint">€5,000 - €9,999 one-time</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="lad-rise-price">RISE / Accelerator avg price (€)</label>
+      <input type="number" id="lad-rise-price" value="7500" min="0" step="100" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="lad-rise-revenue">Projected ladder revenue from RISE (€)</label>
+      <input type="number" id="lad-rise-revenue" readonly />
+    </div>
+    <div class="field">
+      <label class="field-label" for="lad-total">Total ladder LTV expansion (€)</label>
+      <input type="number" id="lad-total" readonly />
+      <div class="field-hint">Combined BC + RISE projected revenue</div>
     </div>
   </div>
 </section>
@@ -909,6 +1061,16 @@
       <div class="field-hint">What you're aiming to net by the end of this launch</div>
     </div>
     <div class="field">
+      <label class="field-label" for="final-refund-reserve-pct">Refund reserve (%)</label>
+      <input type="number" id="final-refund-reserve-pct" value="5" min="0" max="50" step="0.5" />
+      <div class="field-hint">% of revenue held back for expected refunds</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="final-revenue-after-refunds">Revenue after refund reserve (€)</label>
+      <input type="number" id="final-revenue-after-refunds" readonly />
+      <div class="field-hint">Total revenue × (1 − reserve%)</div>
+    </div>
+    <div class="field">
       <label class="field-label" for="final-gap-to-target">Gap to target (€)</label>
       <input type="number" id="final-gap-to-target" readonly />
       <div class="field-hint">Target − current P&L</div>
@@ -917,6 +1079,11 @@
       <label class="field-label" for="final-upgrades-to-target">Upgrades to close the gap</label>
       <input type="number" id="final-upgrades-to-target" readonly />
       <div class="field-hint">At the LTV set above</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="final-pnl-after-refunds">Net P&L after refund reserve (€)</label>
+      <input type="number" id="final-pnl-after-refunds" readonly />
+      <div class="field-hint">Conservative true P&L</div>
     </div>
   </div>
 
@@ -1010,8 +1177,12 @@
     "unl-monthly-price", "unl-yearly-price", "unl-monthly-count", "unl-yearly-count", "unl-ltv",
     "op-vercel", "op-domain", "op-resend", "op-neon", "op-anthropic",
     "op-elevenlabs", "op-whisper", "op-ghl", "op-other", "op-fx",
-    "final-profit-target",
-    "eco-active-members", "eco-historical-cpu"
+    "final-profit-target", "final-refund-reserve-pct",
+    "eco-active-members",
+    "pre-bump-buyers", "pre-bump-price",
+    "launch-bump-buyers", "launch-bump-price",
+    "unl-churn-pct",
+    "lad-bc-pct", "lad-bc-price", "lad-rise-pct", "lad-rise-price"
   ];
 
   function loadState() {
@@ -1092,6 +1263,58 @@
       pill.textContent = "Below breakeven";
       sub.textContent = "Need more upgrades to turn this profitable";
     }
+  }
+
+  // Renders the per-user cost breakdown table — each tool's monthly cost
+  // converted to €, divided by active members, sorted by contribution.
+  // Highlights the biggest line so the cost driver is unmissable.
+  function renderCostBreakdown(activeMembers, fx) {
+    const rows = document.getElementById("cost-breakdown-rows");
+    const total = document.getElementById("cost-breakdown-total");
+    if (!rows || !total) return;
+
+    // Each line: USD-denominated services × FX + EUR-denominated services.
+    const lines = [
+      { label: "AI — Anthropic Claude", monthlyEur: n("op-anthropic") * fx },
+      { label: "Voice — ElevenLabs", monthlyEur: n("op-elevenlabs") * fx },
+      { label: "Voice — OpenAI Whisper", monthlyEur: n("op-whisper") * fx },
+      { label: "Database — Neon", monthlyEur: n("op-neon") * fx },
+      { label: "Hosting — Vercel", monthlyEur: n("op-vercel") * fx },
+      { label: "Email — Resend", monthlyEur: n("op-resend") * fx },
+      { label: "WhatsApp / GHL", monthlyEur: n("op-ghl") * fx },
+      { label: "Other tools", monthlyEur: n("op-other") * fx },
+      { label: "Domain", monthlyEur: n("op-domain") },
+    ];
+
+    const totalMonthly = lines.reduce((s, l) => s + l.monthlyEur, 0);
+    const biggest = lines.reduce((m, l) => l.monthlyEur > m ? l.monthlyEur : m, 0);
+
+    rows.innerHTML = lines
+      .sort((a, b) => b.monthlyEur - a.monthlyEur)
+      .map(line => {
+        const perUser = activeMembers > 0 ? line.monthlyEur / activeMembers : 0;
+        const sharePct = totalMonthly > 0 ? (line.monthlyEur / totalMonthly) * 100 : 0;
+        const isBiggest = line.monthlyEur === biggest && line.monthlyEur > 0;
+        const isZero = line.monthlyEur === 0;
+        return `
+          <div class="cost-row ${isBiggest ? 'is-biggest' : ''}">
+            <div class="cost-row-label">${line.label}</div>
+            <div class="cost-row-share"><div class="cost-row-share-fill" style="width: ${sharePct}%"></div></div>
+            <div class="cost-row-value ${isZero ? 'cost-row-zero' : ''}">${eur(perUser, 2)}</div>
+          </div>
+        `;
+      }).join("");
+
+    const totalPerUser = activeMembers > 0 ? totalMonthly / activeMembers : 0;
+    total.innerHTML = `Total: <strong>${eur(totalPerUser, 2)}/user/mo</strong> · ${eur(totalMonthly, 0)}/mo combined`;
+  }
+
+  // Marginal contribution of one new Unlimited subscriber per month.
+  // Mix-weighted toward monthly since most Unlimited subs at launch tend
+  // to start monthly before annualizing.
+  function monthlyMarginContrib(monthlyPrice, yearlyPrice, perUserCost) {
+    const blended = monthlyPrice * 0.6 + (yearlyPrice / 12) * 0.4;
+    return Math.max(0.01, blended - perUserCost);
   }
 
   // Renders the Path-from-Intelligence cards: each Intelligence segment
@@ -1201,13 +1424,36 @@
 
     const prePurchases = n("pre-purchases");
     const preResetPrice = n("pre-reset-price");
-    const preRevenue = prePurchases * preResetPrice;
+    const preBumpBuyers = n("pre-bump-buyers");
+    const preBumpPrice = n("pre-bump-price");
+    const preResetRev = prePurchases * preResetPrice;
+    const preBumpRev = preBumpBuyers * preBumpPrice;
+    const preRevenue = preResetRev + preBumpRev;
     setVal("pre-revenue", preRevenue);
 
     const preGhl = n("pre-ghl-cost");
     const preTotalCost = preWhatsAppCost + preGhl;
     const preCpa = prePurchases > 0 ? preTotalCost / prePurchases : 0;
     setVal("pre-cpa", preCpa);
+
+    // Pre-launch per-channel ROAS — "did this channel pay back?".
+    const preRoasEl = document.getElementById("pre-roas");
+    if (preRoasEl) {
+      preRoasEl.classList.remove("is-profitable", "is-loss");
+      if (preTotalCost === 0 && preRevenue === 0) {
+        preRoasEl.textContent = "Pre-launch ROAS will appear once costs and revenue are entered.";
+      } else {
+        const ratio = preTotalCost > 0 ? preRevenue / preTotalCost : Infinity;
+        const profit = preRevenue - preTotalCost;
+        if (profit > 0) {
+          preRoasEl.classList.add("is-profitable");
+          preRoasEl.innerHTML = `<strong>Pre-launch ROAS: ${ratio.toFixed(2)}×</strong> — ${eur(preRevenue, 0)} revenue on ${eur(preTotalCost, 0)} spend = <strong>${eur(profit, 0)} net</strong> from this channel.`;
+        } else {
+          preRoasEl.classList.add("is-loss");
+          preRoasEl.innerHTML = `<strong>Pre-launch ROAS: ${ratio.toFixed(2)}×</strong> — ${eur(preRevenue, 0)} revenue on ${eur(preTotalCost, 0)} spend = <strong>${eur(profit, 0)} loss</strong>. This channel hasn't paid back yet.`;
+        }
+      }
+    }
 
     renderFunnel("pre-funnel", [
       { label: "Sent",      count: preMsgTotal },
@@ -1229,13 +1475,36 @@
 
     const launchPurchases = n("launch-purchases");
     const launchResetPrice = n("launch-reset-price");
-    const launchRevenue = launchPurchases * launchResetPrice;
+    const launchBumpBuyers = n("launch-bump-buyers");
+    const launchBumpPrice = n("launch-bump-price");
+    const launchResetRev = launchPurchases * launchResetPrice;
+    const launchBumpRev = launchBumpBuyers * launchBumpPrice;
+    const launchRevenue = launchResetRev + launchBumpRev;
     setVal("launch-revenue", launchRevenue);
 
     const launchAds = n("launch-ad-cost");
     const launchTotalCost = launchWhatsAppCost + launchAds;
     const launchCpa = launchPurchases > 0 ? launchTotalCost / launchPurchases : 0;
     setVal("launch-cpa", launchCpa);
+
+    // Public launch per-channel ROAS.
+    const launchRoasEl = document.getElementById("launch-roas");
+    if (launchRoasEl) {
+      launchRoasEl.classList.remove("is-profitable", "is-loss");
+      if (launchTotalCost === 0 && launchRevenue === 0) {
+        launchRoasEl.textContent = "Public launch ROAS will appear once costs and revenue are entered.";
+      } else {
+        const ratio = launchTotalCost > 0 ? launchRevenue / launchTotalCost : Infinity;
+        const profit = launchRevenue - launchTotalCost;
+        if (profit > 0) {
+          launchRoasEl.classList.add("is-profitable");
+          launchRoasEl.innerHTML = `<strong>Public launch ROAS: ${ratio.toFixed(2)}×</strong> — ${eur(launchRevenue, 0)} revenue on ${eur(launchTotalCost, 0)} spend = <strong>${eur(profit, 0)} net</strong> from this channel.`;
+        } else {
+          launchRoasEl.classList.add("is-loss");
+          launchRoasEl.innerHTML = `<strong>Public launch ROAS: ${ratio.toFixed(2)}×</strong> — ${eur(launchRevenue, 0)} revenue on ${eur(launchTotalCost, 0)} spend = <strong>${eur(profit, 0)} loss</strong>.`;
+        }
+      }
+    }
 
     renderFunnel("launch-funnel", [
       { label: "Sent",      count: launchMsgTotal },
@@ -1263,8 +1532,37 @@
     const conversionRate = totalPurchases > 0 ? (unlTotal / totalPurchases) * 100 : 0;
     setVal("unl-conversion", conversionRate, 1);
 
+    // Churn-derived LTV: LTV = avg_monthly_revenue ÷ monthly_churn_rate.
+    // The classic SaaS LTV formula — more honest than a fixed guess.
+    // The user can still override the LTV field; we only auto-update it
+    // if it's at the default value or if churn was just changed.
+    const churnPct = Math.max(0.5, Math.min(50, n("unl-churn-pct"))); // clamp 0.5-50%
+    const churnRate = churnPct / 100;
+    const avgMonthlyRev = unlTotal > 0
+      ? (mrr + (unlYearlyCount * unlYearlyPrice / 12)) / unlTotal
+      : (unlMonthlyPrice * 0.7 + (unlYearlyPrice / 12) * 0.3); // weighted assumption
+    const ltvFromChurn = churnRate > 0 ? Math.round(avgMonthlyRev / churnRate) : 0;
+    // Only auto-set if LTV hasn't been manually overridden by the user.
+    if (!overriddenFields.has("unl-ltv")) {
+      const ltvEl = document.getElementById("unl-ltv");
+      if (ltvEl && ltvFromChurn > 0) ltvEl.value = ltvFromChurn;
+    }
     const ltv = n("unl-ltv");
     const unlimitedRevenue = unlTotal * ltv;
+
+    // Upgrade ladder — % of Unlimited subs who join BC and RISE.
+    const bcPct = n("lad-bc-pct") / 100;
+    const bcPrice = n("lad-bc-price");
+    const bcRevenue = unlTotal * bcPct * bcPrice;
+    setVal("lad-bc-revenue", bcRevenue);
+
+    const risePct = n("lad-rise-pct") / 100;
+    const risePrice = n("lad-rise-price");
+    const riseRevenue = unlTotal * risePct * risePrice;
+    setVal("lad-rise-revenue", riseRevenue);
+
+    const ladderTotal = bcRevenue + riseRevenue;
+    setVal("lad-total", ladderTotal);
 
     // Ops
     const fx = n("op-fx") || 1;
@@ -1276,9 +1574,13 @@
     const opLaunchPortion = opMonthlyEur * 2;
     setVal("op-launch-portion", opLaunchPortion);
 
-    // Totals
+    // Totals — combined cost (acquisition + 2 months ops) vs combined
+    // revenue (Reset + Bumps + Unlimited LTV + Upgrade ladder LTV).
+    // Ladder revenue is the long-tail expansion most launches miss when
+    // sizing ROI — a small % of Unlimited subs upgrading to BC at €55/mo
+    // or RISE at €5k+ adds real money over the lifetime of the cohort.
     const totalSpend = preTotalCost + launchTotalCost + opLaunchPortion;
-    const totalRevenue = preRevenue + launchRevenue + unlimitedRevenue;
+    const totalRevenue = preRevenue + launchRevenue + unlimitedRevenue + ladderTotal;
     const pnl = totalRevenue - totalSpend;
     const cpa = totalPurchases > 0 ? totalSpend / totalPurchases : 0;
     const breakevenUpgrades = ltv > 0 ? Math.ceil((totalSpend - preRevenue - launchRevenue) / ltv) : 0;
@@ -1291,62 +1593,74 @@
     setInt("final-breakeven", Math.max(0, breakevenUpgrades));
     setVal("final-roas", roas);
 
-    // ===== Per-user economics — unit-economics view =====
-    // The four numbers that answer "is each member worth acquiring?":
-    //   cost per user/mo, revenue per user, margin, payback period.
-    // Compared against the historical €2.50/user/mo baseline so any
-    // creep in infrastructure costs is immediately visible.
+    // ===== Investment vs profit — the financial health view =====
+    // Total monthly investment (every tool + service), per-user breakdown,
+    // and a cost-by-category table so the line driving the budget is
+    // obvious at a glance.
     const activeMembers = n("eco-active-members");
-    const historicalCpu = n("eco-historical-cpu");
     const currentCpu = activeMembers > 0 ? opMonthlyEur / activeMembers : 0;
-    const revenuePerUser = activeMembers > 0 ? totalRevenue / activeMembers : 0;
-    const monthlyRevPerUser = activeMembers > 0 ? (mrr + (n("unl-yearly-count") * n("unl-yearly-price") / 12)) / activeMembers : 0;
-    const monthlyMarginPerUser = monthlyRevPerUser - currentCpu;
-    const lifetimeMarginPerUser = revenuePerUser - (currentCpu * 12); // 12-mo lifetime assumption
-    const paybackMonths = monthlyMarginPerUser > 0 ? cpa / monthlyMarginPerUser : 0;
+    const monthlyRevenue = mrr + (unlYearlyCount * unlYearlyPrice / 12) + ((preResetRev + launchResetRev + preBumpRev + launchBumpRev) / 12);
+    const monthlyNet = monthlyRevenue - opMonthlyEur;
+    const revPerUserMonthly = activeMembers > 0 ? monthlyRevenue / activeMembers : 0;
+    const marginPerUserMonthly = revPerUserMonthly - currentCpu;
 
+    setVal("eco-monthly-investment", opMonthlyEur);
+    setVal("eco-monthly-revenue", monthlyRevenue);
+    setVal("eco-monthly-net", monthlyNet);
     setVal("eco-current-cpu", currentCpu);
-    setVal("eco-revenue-per-user", revenuePerUser);
-    setVal("eco-margin-per-user", lifetimeMarginPerUser);
-    setVal("eco-payback-months", paybackMonths, 1);
+    setVal("eco-margin-per-user", marginPerUserMonthly);
 
-    // Narrative — translates the math into a sentence with sentiment.
-    // Tiers based on LTV/CAC AND payback period together since either
-    // alone can mislead.
+    // Render the cost breakdown table — each line item from ops converted
+    // to € and divided by active members for per-user contribution.
+    renderCostBreakdown(activeMembers, fx);
+
+    // Stability + scale narrative — sentiment-tinted, talks about
+    // profitability, the cost driver, and the next scale milestone.
     const ecoEl = document.getElementById("eco-narrative");
     if (ecoEl) {
       ecoEl.classList.remove("is-excellent", "is-concerning", "is-redflag");
-      if (activeMembers === 0 || cpa === 0) {
-        ecoEl.textContent = "Fill in the operational costs and acquisition cost sections below and a unit-economics readout will appear here.";
+      if (activeMembers === 0 || opMonthlyEur === 0) {
+        ecoEl.textContent = "Fill in the operational costs section below and the financial picture will appear here.";
       } else {
-        const cpuDelta = currentCpu - historicalCpu;
-        const cpuDeltaText = Math.abs(cpuDelta) < 0.1
-          ? "right at your historical baseline"
-          : cpuDelta > 0
-            ? `<strong>${eur(cpuDelta, 2)} above</strong> your historical baseline of ${eur(historicalCpu, 2)}/user/mo`
-            : `<strong>${eur(Math.abs(cpuDelta), 2)} below</strong> your historical baseline`;
+        // Months to a profit milestone — assume each new Unlimited sub
+        // adds marginPerUserMonthly × leverage to profit
+        const targetProfit = 1000; // €1k/mo profit milestone
+        const additionalSubs = marginPerUserMonthly > 0
+          ? Math.max(0, Math.ceil((targetProfit - monthlyNet) / monthlyMarginContrib(unlMonthlyPrice, unlYearlyPrice, currentCpu)))
+          : 0;
 
         let tier = "healthy";
         let verdict = "";
-        if (ltvCac >= 3 && paybackMonths > 0 && paybackMonths < 6) {
+        if (monthlyNet > 500 && marginPerUserMonthly > 0) {
           tier = "excellent";
-          verdict = `<strong>Excellent unit economics.</strong> Spend more on acquisition next launch — every euro of CAC is buying a member worth ${eur(ltv, 0)} over their lifetime.`;
-        } else if (ltvCac >= 2 && paybackMonths > 0 && paybackMonths < 12) {
+          verdict = `<strong>Stable and profitable.</strong> You're netting ${eur(monthlyNet, 0)}/month right now — this is recurring infrastructure paying for itself with margin to spare.`;
+        } else if (monthlyNet > 0) {
           tier = "healthy";
-          verdict = `<strong>Healthy unit economics.</strong> Sustainable to scale. Watch the payback period — if it creeps past 12 months you'll be cash-constrained.`;
-        } else if (ltvCac >= 1) {
+          verdict = `<strong>Profitable, room to grow.</strong> You're netting ${eur(monthlyNet, 0)}/month. Add ~${additionalSubs} more Unlimited subs to clear €1,000/month profit.`;
+        } else if (monthlyNet > -200) {
           tier = "concerning";
-          verdict = `<strong>Concerning.</strong> Each acquisition pays back eventually but slowly. Tighten acquisition costs OR raise prices before the next launch.`;
+          verdict = `<strong>Near breakeven.</strong> Infrastructure roughly covers itself. Every additional Unlimited sub at ${eur(unlMonthlyPrice, 0)}/mo adds ${eur(unlMonthlyPrice - currentCpu, 0)} of margin.`;
         } else {
           tier = "redflag";
-          verdict = `<strong>Red flag.</strong> You're losing money on every acquisition. Either CAC is too high, LTV is too low, or both. Fix this before scaling.`;
+          verdict = `<strong>Operating at a loss.</strong> Monthly investment exceeds revenue by ${eur(Math.abs(monthlyNet), 0)}. Acquisition needs to accelerate OR ops costs need to come down.`;
         }
 
         ecoEl.classList.add("is-" + tier);
-        ecoEl.innerHTML = `Each active member costs ${eur(currentCpu, 2)} per month to serve — ${cpuDeltaText}. ` +
-          `Per-member CAC is ${eur(cpa, 2)} with ${eur(monthlyMarginPerUser, 2)} monthly margin, so payback is <strong>${paybackMonths.toFixed(1)} months</strong>. LTV/CAC is <strong>${ltvCac.toFixed(2)}</strong>. ${verdict}`;
+        ecoEl.innerHTML = `Each active member costs <strong>${eur(currentCpu, 2)}/month</strong> in infrastructure. ` +
+          `At ${activeMembers} members, monthly investment is <strong>${eur(opMonthlyEur, 0)}</strong>, monthly revenue is <strong>${eur(monthlyRevenue, 0)}</strong>, net <strong>${eur(monthlyNet, 0)}</strong>. ` +
+          `Annualized: ${eur(monthlyNet * 12, 0)}/year recurring. ${verdict}`;
       }
     }
+
+    // ===== Refund reserve — conservative true P&L =====
+    // % of revenue held back assuming some buyers will refund. Keeps the
+    // P&L view honest — celebrating revenue you'll have to return is the
+    // classic launch hangover.
+    const refundReservePct = Math.max(0, Math.min(50, n("final-refund-reserve-pct"))) / 100;
+    const revenueAfterRefunds = totalRevenue * (1 - refundReservePct);
+    const pnlAfterRefunds = revenueAfterRefunds - totalSpend;
+    setVal("final-revenue-after-refunds", revenueAfterRefunds);
+    setVal("final-pnl-after-refunds", pnlAfterRefunds);
 
     // ===== Layer 3: gap-to-target + Path from Intelligence =====
     // Profit target → gap → upgrades needed at the current LTV. Powers
