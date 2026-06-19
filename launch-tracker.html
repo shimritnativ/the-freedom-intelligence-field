@@ -1184,11 +1184,27 @@
     <div class="field">
       <label class="field-label" for="pre-revenue">Pre-launch revenue (€)</label>
       <input type="number" id="pre-revenue" readonly />
-      <div class="field-hint">Reset + Bump combined</div>
+      <div class="field-hint">Reset + Bump + Unlimited upgrades</div>
     </div>
     <div class="field">
-      <label class="field-label" for="pre-upgrades">Upgrades to Unlimited from pre-launch</label>
-      <input type="number" id="pre-upgrades" value="0" min="0" />
+      <label class="field-label" for="pre-upgrades-yearly">Yearly Unlimited upgrades (pre-launch)</label>
+      <input type="number" id="pre-upgrades-yearly" value="0" min="0" />
+      <div class="field-hint">LAUNCHTEAMUNLIMITED 75% off — yearly plan</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="pre-upgrade-yearly-price">Yearly upgrade price (€)</label>
+      <input type="number" id="pre-upgrade-yearly-price" value="163.23" min="0" step="0.01" />
+      <div class="field-hint">What each yearly upgrader pays (net of VAT)</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="pre-upgrades-monthly">Monthly Unlimited upgrades (pre-launch)</label>
+      <input type="number" id="pre-upgrades-monthly" value="0" min="0" />
+      <div class="field-hint">LAUNCHTEAMUNLIMITED 75% off — monthly plan</div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="pre-upgrade-monthly-price">Monthly upgrade price (€)</label>
+      <input type="number" id="pre-upgrade-monthly-price" value="16.18" min="0" step="0.01" />
+      <div class="field-hint">What each monthly upgrader pays per month (net of VAT)</div>
     </div>
     <div class="field">
       <label class="field-label" for="pre-cpa">Cost per Reset customer (€)</label>
@@ -1626,7 +1642,9 @@
   const REFRESH_INTERVAL_MS = 60 * 1000;
   const FIELDS = [
     "pre-people", "pre-msgs-per", "pre-msg-cost", "pre-ghl-cost",
-    "pre-replies", "pre-yes", "pre-clicks", "pre-purchases", "pre-reset-price", "pre-upgrades",
+    "pre-replies", "pre-yes", "pre-clicks", "pre-purchases", "pre-reset-price",
+    "pre-upgrades-yearly", "pre-upgrade-yearly-price",
+    "pre-upgrades-monthly", "pre-upgrade-monthly-price",
     "launch-people", "launch-msgs-per", "launch-msg-cost", "launch-ad-cost",
     "launch-replies", "launch-yes", "launch-clicks", "launch-purchases", "launch-reset-price", "launch-upgrades",
     "unl-monthly-price", "unl-yearly-price", "unl-monthly-count", "unl-yearly-count", "unl-ltv",
@@ -2382,7 +2400,17 @@
     const preBumpPrice = n("pre-bump-price");
     const preResetRev = prePurchases * preResetPrice;
     const preBumpRev = preBumpBuyers * preBumpPrice;
-    const preRevenue = preResetRev + preBumpRev;
+    // Pre-launch Unlimited upgrade revenue. Yearly upgrades are billed up
+    // front so the full price hits pre-launch revenue. Monthly upgrades
+    // bring in their first month right now — the remaining recurring
+    // months are counted under the Unlimited section's monthly revenue.
+    const preUpgradesYearly = n("pre-upgrades-yearly");
+    const preUpgradeYearlyPrice = n("pre-upgrade-yearly-price");
+    const preUpgradesMonthly = n("pre-upgrades-monthly");
+    const preUpgradeMonthlyPrice = n("pre-upgrade-monthly-price");
+    const preUpgradeRev = (preUpgradesYearly * preUpgradeYearlyPrice)
+                       + (preUpgradesMonthly * preUpgradeMonthlyPrice);
+    const preRevenue = preResetRev + preBumpRev + preUpgradeRev;
     setVal("pre-revenue", preRevenue);
 
     const preGhl = n("pre-ghl-cost");
@@ -2870,9 +2898,10 @@
   // field gets a "manual override" class so it's clear what's truth vs
   // what's a guess.
   const SYNC_MAP = {
-    "pre-purchases":     "preLaunchResetBuyers",
-    "pre-reset-price":   "preLaunchResetAvgPrice",
-    "pre-upgrades":      "preLaunchUpgrades",
+    "pre-purchases":         "preLaunchResetBuyers",
+    "pre-reset-price":       "preLaunchResetAvgPrice",
+    "pre-upgrades-yearly":   "preLaunchUpgradesYearly",
+    "pre-upgrades-monthly":  "preLaunchUpgradesMonthly",
     "launch-purchases":  "publicLaunchResetBuyers",
     "launch-reset-price":"publicLaunchResetAvgPrice",
     "launch-upgrades":   "publicLaunchUpgrades",
