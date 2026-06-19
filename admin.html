@@ -1402,11 +1402,29 @@
       const pubResetCents = pubResetRows.reduce((s, r) => s + Number(r.revenue_cents || 0), 0);
       const pubResetAvg = pubResetBuyers > 0 ? toMoney(pubResetCents) / pubResetBuyers : 0;
 
-      // Pre-launch Unlimited upgrades (LAUNCHTEAMUNLIMITED)
+      // Pre-launch Unlimited upgrades (LAUNCHTEAMUNLIMITED). We split by
+      // billing plan so the tracker can apply the right discounted price
+      // to each cohort — yearly upgraders pay 75%-off €777 up front,
+      // monthly upgraders pay 75%-off €77/month recurring. The split is
+      // detected from the product name (ThriveCart names them like
+      // "Unlimited - Yearly" / "Unlimited - Monthly"). Anything we can't
+      // classify falls into "yearly" by default since yearly was the
+      // primary upgrade path advertised in the LAUNCHTEAM sequence.
       const preUpgradesRows = rows.filter(r =>
         matchProduct(r, "Unlimited") && r.coupon === "LAUNCHTEAMUNLIMITED"
       );
-      const preUpgrades = preUpgradesRows.reduce((s, r) => s + Number(r.orders || 0), 0);
+      const isMonthlyProduct = (name) =>
+        /month/i.test(String(name || ""));
+      const isYearlyProduct = (name) =>
+        /year|annual/i.test(String(name || ""));
+      let preUpgradesMonthly = 0;
+      let preUpgradesYearly = 0;
+      preUpgradesRows.forEach(r => {
+        const orders = Number(r.orders || 0);
+        if (isMonthlyProduct(r.product)) preUpgradesMonthly += orders;
+        else if (isYearlyProduct(r.product)) preUpgradesYearly += orders;
+        else preUpgradesYearly += orders; // default unknown to yearly
+      });
 
       // Public launch Unlimited upgrades (any other coupon)
       const pubUpgradesRows = rows.filter(r =>
@@ -1465,7 +1483,8 @@
         data: {
           preLaunchResetBuyers: preResetBuyers,
           preLaunchResetAvgPrice: Number(preResetAvg.toFixed(2)),
-          preLaunchUpgrades: preUpgrades,
+          preLaunchUpgradesMonthly: preUpgradesMonthly,
+          preLaunchUpgradesYearly: preUpgradesYearly,
           publicLaunchResetBuyers: pubResetBuyers,
           publicLaunchResetAvgPrice: Number(pubResetAvg.toFixed(2)),
           publicLaunchUpgrades: pubUpgrades,
