@@ -31,7 +31,10 @@
     background: var(--bg);
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    min-height: 100vh;
+    /* min-height: 100vh removed — it caused an infinite height feedback
+       loop when embedded: body grew to match iframe height, new height
+       got reported to parent, parent grew the iframe, repeat forever.
+       Launch tracker content is plenty tall on its own. */
   }
   .wrap {
     max-width: 1100px;
@@ -2746,6 +2749,11 @@
   // the admin page becomes the single scroll surface, the iframe just
   // shows everything inline. Posts on initial load, on every recalc
   // (since the gap narrative + path cards change height), and on resize.
+  //
+  // Guard: only post when the height has changed meaningfully (>4 px).
+  // Without this, any height feedback (parent resize → iframe resize →
+  // re-report) loops forever and the scrollbar grows endlessly.
+  let lastReportedHeight = 0;
   function postHeightToParent() {
     if (window.parent === window) return; // standalone, not embedded
     const doc = document.documentElement;
@@ -2756,6 +2764,8 @@
       doc.offsetHeight || 0,
       body ? body.offsetHeight : 0
     );
+    if (Math.abs(height - lastReportedHeight) < 4) return;
+    lastReportedHeight = height;
     try {
       window.parent.postMessage({ type: "launch-tracker-height", height: height }, "*");
     } catch {}
