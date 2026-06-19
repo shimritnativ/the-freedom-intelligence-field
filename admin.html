@@ -1227,15 +1227,18 @@
     // from state.data.monthlyCosts (delivered with /api/admin/metrics so
     // there's no extra round trip on tab open). Editable inline, saved
     // via POST /api/admin/monthly-costs.
+    // All costs are stored in EUR — convert from your tool's native
+    // currency (USD for most) before entering. Keeps the company-wide
+    // accounting consistent and avoids FX surprises in the launch math.
     const COST_SERVICES = [
-      { key: "ghl",        label: "GHL",                hint: "WhatsApp, workflows, email", currency: "USD" },
-      { key: "anthropic",  label: "Anthropic Claude",   hint: "AI for Reset + Unlimited chat", currency: "USD" },
-      { key: "elevenlabs", label: "ElevenLabs",         hint: "Voice synthesis", currency: "USD" },
-      { key: "whisper",    label: "OpenAI Whisper",     hint: "Transcription", currency: "USD" },
-      { key: "neon",       label: "Neon",               hint: "Postgres database", currency: "USD" },
-      { key: "vercel",     label: "Vercel",             hint: "Hosting + functions", currency: "USD" },
-      { key: "resend",     label: "Resend",             hint: "Transactional email", currency: "USD" },
-      { key: "other",      label: "Other tools",        hint: "Anything not listed", currency: "USD" },
+      { key: "ghl",        label: "GHL",                hint: "WhatsApp, workflows, email · convert to EUR", currency: "EUR" },
+      { key: "anthropic",  label: "Anthropic Claude",   hint: "AI for Reset + Unlimited · convert to EUR", currency: "EUR" },
+      { key: "elevenlabs", label: "ElevenLabs",         hint: "Voice synthesis · convert to EUR", currency: "EUR" },
+      { key: "whisper",    label: "OpenAI Whisper",     hint: "Transcription · convert to EUR", currency: "EUR" },
+      { key: "neon",       label: "Neon",               hint: "Postgres database · convert to EUR", currency: "EUR" },
+      { key: "vercel",     label: "Vercel",             hint: "Hosting + functions · convert to EUR", currency: "EUR" },
+      { key: "resend",     label: "Resend",             hint: "Transactional email · convert to EUR", currency: "EUR" },
+      { key: "other",      label: "Other tools",        hint: "Anything not listed · in EUR", currency: "EUR" },
       { key: "domain",     label: "Domain",             hint: "Annual fee amortized monthly", currency: "EUR" },
     ];
 
