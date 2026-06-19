@@ -251,20 +251,35 @@ export default async function handler(req, res) {
       // 6. Recent signups (newest 25 in range)
       sql`
         SELECT
-          email,
-          display_name,
-          tier::text AS tier,
-          subscription_plan,
-          created_at,
-          first_login_at,
-          last_completed_day,
-          preview_ends_at
-        FROM users
-        WHERE kajabi_entitled = true
-          AND email NOT LIKE ${excludePattern}
-          AND created_at >= ${fromIso}
-          AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
-        ORDER BY created_at DESC
+          u.email,
+          u.display_name,
+          u.tier::text AS tier,
+          u.subscription_plan,
+          u.created_at,
+          u.first_login_at,
+          u.last_completed_day,
+          u.preview_ends_at
+        FROM users u
+        WHERE u.kajabi_entitled = true
+          AND u.email NOT LIKE ${excludePattern}
+          AND u.email <> ALL(${extraExcluded})
+          AND u.created_at >= ${fromIso}
+          AND (${toIso}::timestamptz IS NULL OR u.created_at <= ${toIso})
+          AND (
+            -- Same filter as the tier-mix KPI: Reset members count
+            -- automatically, Unlimited members only when they have a paid
+            -- non-comp purchase. Hides free comps (Tomer/GEO100) from
+            -- the roster.
+            u.tier = 'preview'
+            OR EXISTS (
+              SELECT 1 FROM purchases p
+              WHERE p.email = u.email
+                AND p.event_type = 'order.success'
+                AND p.amount_cents > 0
+                AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+            )
+          )
+        ORDER BY u.created_at DESC
         LIMIT 25
       `,
       // 7. 72-Hour Reset window state
@@ -598,11 +613,23 @@ export default async function handler(req, res) {
       safeQuery(sql`
         SELECT
           COALESCE(SUM(amount_cents), 0)::bigint AS revenue_today_cents,
-          COUNT(*)::int AS orders_today
+          COUNT(*)::int AS orders_today,
+          -- Distinct buyers who picked up Unlimited today. Drives the
+          -- "Unlimited conversions" tile in Today's Highlights — catches
+          -- returning customers (like Maria who upgraded from Reset) that
+          -- the signups_today count misses.
+          COUNT(DISTINCT email) FILTER (WHERE product_name ILIKE '%Unlimited%')::int AS unlimited_buyers_today,
+          COUNT(DISTINCT email) FILTER (
+            WHERE product_name ILIKE '%Unlimited%' AND product_name ILIKE '%Yearly%'
+          )::int AS unlimited_yearly_today,
+          COUNT(DISTINCT email) FILTER (
+            WHERE product_name ILIKE '%Unlimited%' AND product_name NOT ILIKE '%Yearly%'
+          )::int AS unlimited_monthly_today
         FROM purchases
         WHERE event_type = 'order.success'
           AND email NOT LIKE ${excludePattern}
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
+          AND amount_cents > 0
           AND created_at >= date_trunc('day', NOW())
       `),
       safeQuery(sql`
