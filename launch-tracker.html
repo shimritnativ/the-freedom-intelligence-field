@@ -1802,6 +1802,20 @@
     "unl-yearly-count":  "unlimitedYearly",
     "eco-active-members":"activeMembers",
   };
+  // Map cost snapshot service keys → tracker operational-cost field IDs.
+  // The values are in the snapshot's native currency; the tracker handles
+  // USD→EUR conversion via op-fx at recalc time.
+  const COST_SYNC_MAP = {
+    "ghl":        "op-ghl",
+    "anthropic":  "op-anthropic",
+    "elevenlabs": "op-elevenlabs",
+    "whisper":    "op-whisper",
+    "neon":       "op-neon",
+    "vercel":     "op-vercel",
+    "resend":     "op-resend",
+    "other":      "op-other",
+    "domain":     "op-domain",
+  };
   // Intelligence segment counts arrive alongside the sync payload. Stored
   // here for the Path-from-Intelligence renderer to use during recalc.
   // Each value is just a count; the renderer translates it to "contributes
@@ -1887,6 +1901,18 @@
     // Actual revenue (live, matches admin Net Revenue ex VAT).
     if (typeof data.actualRevenue === "number") {
       actualRevenueLive = data.actualRevenue;
+    }
+    // Monthly cost snapshot — apply each service's amount to the
+    // matching op-* field. Same override rules as the other synced
+    // fields: a manually-edited value stays sticky.
+    if (data.monthlyCosts && typeof data.monthlyCosts === "object") {
+      Object.keys(COST_SYNC_MAP).forEach(serviceKey => {
+        const fieldId = COST_SYNC_MAP[serviceKey];
+        const amount = data.monthlyCosts[serviceKey];
+        if (typeof amount === "number") {
+          applySyncedValue(fieldId, amount);
+        }
+      });
     }
     recalc();
     persist();
