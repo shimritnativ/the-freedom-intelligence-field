@@ -3,6 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- iOS Safari was aggressively caching this whole admin page on
+       mobile, so deploys reached desktop within seconds but never
+       reached the phone — the browser kept serving the old admin.html
+       which in turn loaded the old launch-tracker.html. Force-revalidate
+       every load so a deploy is visible the moment the page refreshes. -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>The Field — Team Metrics</title>
   <link rel="icon" type="image/png" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" />
   <link rel="apple-touch-icon" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" />
@@ -1427,8 +1435,14 @@
         matchProduct(r, "Reset") && isPreLaunchResetCoupon(r.coupon)
       );
       const preResetBuyers = preResetRows.reduce((s, r) => s + Number(r.orders || 0), 0);
-      const preResetCents = preResetRows.reduce((s, r) => s + Number(r.revenue_cents || 0), 0);
-      const preResetAvg = preResetBuyers > 0 ? toMoney(preResetCents) / preResetBuyers : 0;
+      // We don't use the actual paid average for the price field — ThriveCart
+      // reports €3.63/order due to processing fees, but the LIST price the
+      // customer was charged is €4.50 gross (POWER50 = 50% off €9). The
+      // launch tracker is a planning tool, so we want the price the offer
+      // actually carried, not the post-fee net we kept. toMoney handles
+      // the gross→net flip based on the VAT toggle (€4.50 gross, €3.78 net).
+      const PRE_LAUNCH_RESET_PRICE_CENTS = 450;
+      const preResetAvg = toMoney(PRE_LAUNCH_RESET_PRICE_CENTS);
 
       // Public launch Reset cohort — strictly full-price, no coupons.
       const pubResetRows = rows.filter(r =>
@@ -1474,12 +1488,15 @@
           preUpgradesYearlyCents += cents;
         }
       });
-      const preUpgradeYearlyAvg = preUpgradesYearly > 0
-        ? toMoney(preUpgradesYearlyCents) / preUpgradesYearly
-        : 0;
-      const preUpgradeMonthlyAvg = preUpgradesMonthly > 0
-        ? toMoney(preUpgradesMonthlyCents) / preUpgradesMonthly
-        : 0;
+      // List prices for the LAUNCHTEAMUNLIMITED-discounted upgrades.
+      // Same reasoning as the Reset above — ThriveCart's per-order amount
+      // is post-fee, but for planning we want the offer's actual list
+      // price. Yearly: €777 - 75% = €194.25 gross → €163.23 net.
+      // Monthly: €77 - 75% = €19.25 gross → €16.18 net.
+      const PRE_LAUNCH_UPGRADE_YEARLY_PRICE_CENTS  = 19425;
+      const PRE_LAUNCH_UPGRADE_MONTHLY_PRICE_CENTS = 1925;
+      const preUpgradeYearlyAvg = toMoney(PRE_LAUNCH_UPGRADE_YEARLY_PRICE_CENTS);
+      const preUpgradeMonthlyAvg = toMoney(PRE_LAUNCH_UPGRADE_MONTHLY_PRICE_CENTS);
 
       // Public launch Unlimited upgrades — strictly full-price (no coupon).
       // Same logic as the Reset cohort: anything with a coupon belongs to
@@ -1542,19 +1559,13 @@
           preLaunchResetAvgPrice: Number(preResetAvg.toFixed(2)),
           preLaunchUpgradesMonthly: preUpgradesMonthly,
           preLaunchUpgradesYearly: preUpgradesYearly,
-          // Avg paid price for the discounted yearly/monthly cohorts.
-          // Lets the launch tracker render real upgrade revenue without
-          // making Geo type the LAUNCHTEAMUNLIMITED price by hand. We
-          // omit the key entirely (send undefined → null) when there
-          // are zero buyers in a cohort so the tracker's manual default
-          // (163.23 yearly / 16.18 monthly) doesn't get clobbered to 0
-          // before real data exists.
-          preLaunchUpgradeYearlyPrice: preUpgradesYearly > 0
-            ? Number(preUpgradeYearlyAvg.toFixed(2))
-            : null,
-          preLaunchUpgradeMonthlyPrice: preUpgradesMonthly > 0
-            ? Number(preUpgradeMonthlyAvg.toFixed(2))
-            : null,
+          // List prices for the discounted yearly/monthly upgrade
+          // cohorts. Always sent — these are the actual offer prices
+          // (computed from list × discount × VAT mode), not rolling
+          // averages, so they're meaningful even when zero buyers have
+          // upgraded yet.
+          preLaunchUpgradeYearlyPrice: Number(preUpgradeYearlyAvg.toFixed(2)),
+          preLaunchUpgradeMonthlyPrice: Number(preUpgradeMonthlyAvg.toFixed(2)),
           publicLaunchResetBuyers: pubResetBuyers,
           publicLaunchResetAvgPrice: Number(pubResetAvg.toFixed(2)),
           publicLaunchUpgrades: pubUpgrades,
