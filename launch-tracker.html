@@ -75,6 +75,94 @@
     margin: 0 auto;
     line-height: 1.5;
   }
+  /* Launch Status Brief — auto-generated executive summary at the top.
+     Designed to be the single piece someone could read and understand
+     the whole launch position. Sentiment-tinted background based on
+     current profitability state. */
+  .launch-brief {
+    background: var(--panel);
+    border: 1px solid var(--gold);
+    border-radius: 14px;
+    padding: 22px 26px 24px;
+    margin-bottom: 28px;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+  }
+  .launch-brief::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 5px; height: 100%;
+    background: var(--gold);
+  }
+  .launch-brief.is-profitable {
+    border-color: rgba(45, 107, 58, 0.5);
+  }
+  .launch-brief.is-profitable::before { background: var(--success); }
+  .launch-brief.is-loss {
+    border-color: rgba(168, 42, 42, 0.4);
+  }
+  .launch-brief.is-loss::before { background: var(--danger); }
+  .launch-brief-eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    color: var(--gold);
+    text-transform: uppercase;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .launch-brief-meta {
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    color: var(--text-mute);
+    font-style: italic;
+    text-transform: none;
+  }
+  .launch-brief-headline {
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 19px;
+    color: var(--text);
+    line-height: 1.45;
+    margin-bottom: 18px;
+  }
+  .launch-brief-headline strong { font-style: normal; font-weight: 700; color: var(--gold); }
+  .launch-brief.is-profitable .launch-brief-headline strong { color: var(--success); }
+  .launch-brief.is-loss .launch-brief-headline strong { color: var(--danger); }
+  .launch-brief-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+  }
+  .launch-brief-section {
+    padding-left: 14px;
+    border-left: 2px solid var(--gold-soft);
+  }
+  .launch-brief-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .launch-brief-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.55;
+  }
+  .launch-brief-text strong { font-weight: 700; }
+  .launch-brief-text em {
+    font-style: italic;
+    color: var(--text-dim);
+  }
   .summary-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -749,6 +837,22 @@
   <div class="divider"></div>
   <div class="subtitle">A living dashboard for the pre-launch and full launch of the 72-Hour Power Reset. All numbers persist in this browser. Update freely.</div>
 </header>
+
+<!-- Launch Status Brief — auto-generated executive summary. Sits at the
+     top so anyone (Shimrit, an investor, future Geo six months from now)
+     can read this single panel and understand the state of the business
+     without scrolling through every tile and section. Updates live from
+     the same data the rest of the tracker uses. -->
+<div class="launch-brief" id="launch-brief">
+  <div class="launch-brief-eyebrow">
+    Launch status brief
+    <span class="launch-brief-meta" id="launch-brief-meta">—</span>
+  </div>
+  <div class="launch-brief-headline" id="launch-brief-headline">
+    Fill in costs and revenue below to see your status brief here.
+  </div>
+  <div class="launch-brief-grid" id="launch-brief-grid"></div>
+</div>
 
 <div class="summary-row">
   <div class="summary-card">
@@ -1638,7 +1742,7 @@
 
     if (top.length === 0) {
       grid.innerHTML = `<div class="path-empty">Once members start hitting Intelligence segments and you've filled in monthly costs, ranked moves will appear here.</div>`;
-      return;
+      return null;
     }
 
     grid.innerHTML = top.map((rec, i) => `
@@ -1654,6 +1758,10 @@
         </div>
       </div>
     `).join("");
+
+    // Return the #1 recommendation so the Launch Status Brief at the top
+    // can echo it as the "Top move" line. Saves us recomputing the ranking.
+    return top[0] || null;
   }
 
   // ===== 30/60/90 day trajectory =====
@@ -1734,11 +1842,118 @@
       buildRow("MRR",            "mrr",        v => eur(v, 0)) +
       buildRow("Monthly net",    "monthlyNet", v => (v >= 0 ? "+" : "") + eur(v, 0)) +
       buildRow("Annual recurring","arr",       v => (v >= 0 ? "+" : "") + eur(v, 0));
+
+    // Return projections for the Launch Status Brief to read.
+    return {
+      proj90: rows[2],   // 90 days horizon
+      proj12: rows[3],   // 12 months horizon
+    };
   }
 
   function fmtNumber(n) {
     if (!isFinite(n)) return "0";
     return Math.round(n).toLocaleString();
+  }
+
+  // ===== Launch Status Brief =====
+  // Auto-generated executive summary at the top of the tracker. Reads
+  // the same numbers everything else does and produces 4 short sections
+  // anyone can skim: where we are, what's working, top move, trajectory.
+  // The headline + border color flip based on profitability so the
+  // sentiment is unmistakable at a glance.
+  function renderLaunchBrief(ctx) {
+    const brief = document.getElementById("launch-brief");
+    const headlineEl = document.getElementById("launch-brief-headline");
+    const gridEl = document.getElementById("launch-brief-grid");
+    const metaEl = document.getElementById("launch-brief-meta");
+    if (!brief || !headlineEl || !gridEl) return;
+
+    // Sentiment based on the ACTUAL P&L (real money in vs real money
+    // spent), not the projected. The headline tells you what's happening
+    // RIGHT NOW; the trajectory section says where it's going.
+    brief.classList.remove("is-profitable", "is-loss");
+    let headline = "";
+    if (ctx.activeMembers === 0 && ctx.totalSpend === 0) {
+      headlineEl.textContent = "Fill in costs and revenue below to see your status brief here.";
+      gridEl.innerHTML = "";
+      if (metaEl) metaEl.textContent = "";
+      return;
+    }
+
+    // === Headline — single-sentence verdict ===
+    if (ctx.actualPnl > 100) {
+      brief.classList.add("is-profitable");
+      headline = `<strong>The Field is paying for itself.</strong> You're ${eur(ctx.actualPnl, 0)} ahead on real money in vs out — every Unlimited conversion now widens the margin without rebuilding the funnel.`;
+    } else if (ctx.actualPnl > -100) {
+      headline = `<strong>Near breakeven.</strong> Real revenue and real spend are within ${eur(Math.abs(ctx.actualPnl), 0)} of each other — your next Unlimited upgrade likely tips the launch into profit.`;
+    } else {
+      brief.classList.add("is-loss");
+      const monthsToBreakeven = ctx.monthlyMarginPerUser > 0
+        ? Math.ceil(Math.abs(ctx.actualPnl) / (ctx.monthlyMarginPerUser * Math.max(1, ctx.activeMembers)))
+        : 0;
+      headline = `<strong>Operating at a ${eur(Math.abs(ctx.actualPnl), 0)} loss right now.</strong> Projected LTV closes ${eur(ctx.projectedRevenue - ctx.actualRevenue, 0)} of that as current subs renew${monthsToBreakeven > 0 ? `, with breakeven in roughly ${monthsToBreakeven} months at current margin` : ""}.`;
+    }
+    headlineEl.innerHTML = headline;
+
+    // === Section 1: Where we are (current state numbers) ===
+    const orderWord = ctx.totalSpend > 0 ? "spent" : "—";
+    const whereWeAre = `
+      <strong>${fmtNumber(ctx.activeMembers)}</strong> active members ·
+      <strong>${eur(ctx.actualRevenue, 0)}</strong> actual revenue ·
+      <strong>${eur(ctx.totalSpend, 0)}</strong> total spend.<br>
+      <em>${ctx.actualPnl >= 0 ? "+" : ""}${eur(ctx.actualPnl, 0)} real P&L · ${ctx.projectedPnl >= 0 ? "+" : ""}${eur(ctx.projectedPnl, 0)} projected with LTV.</em>
+    `;
+
+    // === Section 2: What's working (positive signals) ===
+    const workingBits = [];
+    if (ctx.unlTotal > 0) {
+      workingBits.push(`${fmtNumber(ctx.unlTotal)} Unlimited subscriber${ctx.unlTotal === 1 ? "" : "s"} locked in <strong>${eur(ctx.unlimitedRevenue, 0)}</strong> of LTV`);
+    }
+    if (ctx.ltvCac >= 3) {
+      workingBits.push(`LTV/CAC ratio of <strong>${ctx.ltvCac.toFixed(1)}</strong> is healthy growth territory`);
+    } else if (ctx.roas >= 2) {
+      workingBits.push(`ROAS of <strong>${ctx.roas.toFixed(1)}×</strong> means every euro spent returns more than two`);
+    }
+    if (ctx.activeMembers >= 5 && ctx.currentCpu > 0) {
+      const scaleAt100 = ctx.opMonthlyEur / 100;
+      workingBits.push(`Per-user infra cost (<strong>${eur(ctx.currentCpu, 2)}/mo</strong>) drops to <strong>${eur(scaleAt100, 2)}/mo</strong> at 100 members`);
+    }
+    const whatsWorking = workingBits.length > 0
+      ? workingBits.slice(0, 2).join(". ") + "."
+      : "<em>Not enough data yet to surface what's working — keep going.</em>";
+
+    // === Section 3: Top move (#1 from Decision Engine) ===
+    const topMove = ctx.topDecision
+      ? `<strong>${ctx.topDecision.title}</strong>.<br><em>+${eur(ctx.topDecision.impact, 0)} impact · ${ctx.topDecision.effort.toLowerCase()} effort.</em>`
+      : "<em>No urgent moves right now. Maintain pace and watch the Intelligence segments fill.</em>";
+
+    // === Section 4: Where we're heading (90-day projection) ===
+    const trajectory = ctx.proj90
+      ? `<strong>${fmtNumber(ctx.proj90.members)} members · ${eur(ctx.proj90.mrr, 0)} MRR · ${ctx.proj90.monthlyNet >= 0 ? "+" : ""}${eur(ctx.proj90.monthlyNet, 0)} monthly net</strong> in 90 days at current pace.<br><em>12-month annualized: ${ctx.proj12 ? (ctx.proj12.arr >= 0 ? "+" : "") + eur(ctx.proj12.arr, 0) : "—"}.</em>`
+      : "<em>Fill in trajectory inputs to see the 90-day projection.</em>";
+
+    gridEl.innerHTML = `
+      <div class="launch-brief-section">
+        <div class="launch-brief-label">Where we are</div>
+        <div class="launch-brief-text">${whereWeAre}</div>
+      </div>
+      <div class="launch-brief-section">
+        <div class="launch-brief-label">What's working</div>
+        <div class="launch-brief-text">${whatsWorking}</div>
+      </div>
+      <div class="launch-brief-section">
+        <div class="launch-brief-label">Top move</div>
+        <div class="launch-brief-text">${topMove}</div>
+      </div>
+      <div class="launch-brief-section">
+        <div class="launch-brief-label">Where we're heading</div>
+        <div class="launch-brief-text">${trajectory}</div>
+      </div>
+    `;
+
+    if (metaEl) {
+      metaEl.textContent = "Updated " + new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    }
   }
 
   // Renders the per-user cost breakdown table — each tool's monthly cost
@@ -2219,7 +2434,7 @@
       totalResetBuyers: totalPurchases,
       avgMonthlyRev: avgMonthlyRev,
     };
-    renderDecisionEngine(decisionCtx);
+    const topDecision = renderDecisionEngine(decisionCtx);
 
     const trajectoryCtx = {
       ltv: ltv,
@@ -2229,7 +2444,28 @@
       unlMonthlyPrice: unlMonthlyPrice,
       unlYearlyPrice: unlYearlyPrice,
     };
-    renderTrajectory(trajectoryCtx);
+    const trajectoryResult = renderTrajectory(trajectoryCtx);
+
+    // Launch Status Brief at the top — narrative summary that wraps
+    // everything into 4 short sections anyone can skim.
+    renderLaunchBrief({
+      activeMembers: activeMembers,
+      actualRevenue: actualRev,
+      actualPnl: actualPnl,
+      projectedRevenue: totalRevenue,
+      projectedPnl: pnl,
+      totalSpend: totalSpend,
+      unlTotal: unlTotal,
+      unlimitedRevenue: unlimitedRevenue,
+      ltvCac: ltvCac,
+      roas: roas,
+      currentCpu: currentCpu,
+      opMonthlyEur: opMonthlyEur,
+      monthlyMarginPerUser: marginPerUserMonthly,
+      topDecision: topDecision,
+      proj90: trajectoryResult ? trajectoryResult.proj90 : null,
+      proj12: trajectoryResult ? trajectoryResult.proj12 : null,
+    });
 
     // ===== Layer 2: per-user economics + gap narrative =====
     // Profit per Reset buyer = (avg Reset revenue per buyer) − CPA.
