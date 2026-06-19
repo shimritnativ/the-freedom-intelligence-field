@@ -1227,19 +1227,19 @@
     // from state.data.monthlyCosts (delivered with /api/admin/metrics so
     // there's no extra round trip on tab open). Editable inline, saved
     // via POST /api/admin/monthly-costs.
-    // All costs are stored in EUR — convert from your tool's native
-    // currency (USD for most) before entering. Keeps the company-wide
-    // accounting consistent and avoids FX surprises in the launch math.
+    // All costs are stored in EUR. For services billed in USD (most of
+    // them), convert before entering. Anthropic is billed in EUR
+    // directly so no conversion is needed.
     const COST_SERVICES = [
-      { key: "ghl",        label: "GHL",                hint: "WhatsApp, workflows, email · convert to EUR", currency: "EUR" },
-      { key: "anthropic",  label: "Anthropic Claude",   hint: "AI for Reset + Unlimited · convert to EUR", currency: "EUR" },
-      { key: "elevenlabs", label: "ElevenLabs",         hint: "Voice synthesis · convert to EUR", currency: "EUR" },
-      { key: "whisper",    label: "OpenAI Whisper",     hint: "Transcription · convert to EUR", currency: "EUR" },
-      { key: "neon",       label: "Neon",               hint: "Postgres database · convert to EUR", currency: "EUR" },
-      { key: "vercel",     label: "Vercel",             hint: "Hosting + functions · convert to EUR", currency: "EUR" },
-      { key: "resend",     label: "Resend",             hint: "Transactional email · convert to EUR", currency: "EUR" },
-      { key: "other",      label: "Other tools",        hint: "Anything not listed · in EUR", currency: "EUR" },
-      { key: "domain",     label: "Domain",             hint: "Annual fee amortized monthly", currency: "EUR" },
+      { key: "ghl",        label: "GHL",                hint: "WhatsApp, workflows · billed USD — enter EUR" },
+      { key: "anthropic",  label: "Anthropic Claude",   hint: "Reset + Unlimited AI · billed in EUR" },
+      { key: "elevenlabs", label: "ElevenLabs",         hint: "Voice synthesis · billed USD — enter EUR" },
+      { key: "whisper",    label: "OpenAI Whisper",     hint: "Transcription · billed USD — enter EUR" },
+      { key: "neon",       label: "Neon",               hint: "Postgres database · billed USD — enter EUR" },
+      { key: "vercel",     label: "Vercel",             hint: "Hosting + functions · billed USD — enter EUR" },
+      { key: "resend",     label: "Resend",             hint: "Transactional email · billed USD — enter EUR" },
+      { key: "other",      label: "Other tools",        hint: "Anything not listed" },
+      { key: "domain",     label: "Domain",             hint: "Annual fee amortized monthly" },
     ];
 
     function toggleCostSnapshot() {
@@ -1264,7 +1264,11 @@
       rows.innerHTML = COST_SERVICES.map(svc => {
         const existing = byKey[svc.key];
         const amount = existing ? Number(existing.amount || 0) : 0;
-        const currency = existing ? existing.currency : svc.currency;
+        // Always render labels as EUR — that's the canonical unit for the
+        // company. The DB might still hold "USD" from before the switch,
+        // but the value itself has been re-entered in EUR (or is about to
+        // be), so the UI shouldn't lie about the unit.
+        const currency = "EUR";
         return `
           <label style="display: flex; flex-direction: column; gap: 4px;">
             <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: var(--text-dim); text-transform: uppercase;">${escapeHtml(svc.label)} <span style="font-weight: 400; color: var(--text-mute); letter-spacing: 0;">(${currency})</span></span>
