@@ -1252,7 +1252,14 @@
       const tc = d.thrivecart || {};
       const rows = (tc.byProductCoupon || []);
       const isNet = getRevenueVatMode() === "net";
-      const toMoney = c => isNet ? (Number(c) / VAT_DIVISOR) : Number(c);
+      // Cents-to-euros first, then VAT division when in "ex VAT" mode.
+      // The launch tracker treats every value it receives as euros, so
+      // every money number that leaves this function needs to be in
+      // euro units, not cents.
+      const toMoney = c => {
+        const euros = Number(c) / 100;
+        return isNet ? (euros / VAT_DIVISOR) : euros;
+      };
 
       // Filter helper: a row matches if its product name contains the
       // term AND its coupon is in the cohort. Case-insensitive.
