@@ -514,14 +514,19 @@
     <div class="summary-card-sub" id="sum-spent-sub">All costs combined</div>
   </div>
   <div class="summary-card">
-    <div class="summary-card-label">Total Revenue</div>
+    <div class="summary-card-label">Actual Revenue</div>
+    <div class="summary-card-value" id="sum-actual-revenue">€0</div>
+    <div class="summary-card-sub" id="sum-actual-revenue-sub">Money collected so far</div>
+  </div>
+  <div class="summary-card">
+    <div class="summary-card-label">Projected Revenue</div>
     <div class="summary-card-value" id="sum-revenue">€0</div>
-    <div class="summary-card-sub" id="sum-revenue-sub">Reset + Unlimited</div>
+    <div class="summary-card-sub" id="sum-revenue-sub">Actual + future LTV forecast</div>
   </div>
   <div class="summary-card">
     <div class="summary-card-label">Net P&amp;L</div>
     <div class="summary-card-value" id="sum-pnl">€0</div>
-    <div class="summary-card-sub" id="sum-pnl-sub">Revenue minus spend</div>
+    <div class="summary-card-sub" id="sum-pnl-sub">Projected revenue minus spend</div>
   </div>
   <div class="summary-card">
     <div class="summary-card-label">Launch Status</div>
@@ -1270,6 +1275,29 @@
     // Summary cards
     document.getElementById("sum-spent").textContent = eur(totalSpend, 0);
     document.getElementById("sum-revenue").textContent = eur(totalRevenue, 0);
+
+    // Actual Revenue card — when synced from admin, shows real money in.
+    // Falls back to the sum of Reset cohorts (which are real) when the
+    // tracker is opened standalone with no admin sync.
+    const actualRev = actualRevenueLive != null
+      ? actualRevenueLive
+      : (preRevenue + launchRevenue);
+    const actualEl = document.getElementById("sum-actual-revenue");
+    const actualSub = document.getElementById("sum-actual-revenue-sub");
+    if (actualEl) actualEl.textContent = eur(actualRev, 0);
+    if (actualSub) {
+      actualSub.textContent = actualRevenueLive != null
+        ? "Live from Field admin · ex VAT"
+        : "Reset sales only (no live sync)";
+    }
+    // Update the projected revenue sub-line so the relationship is clear.
+    const revenueSub = document.getElementById("sum-revenue-sub");
+    if (revenueSub) {
+      const ltvPortion = unlimitedRevenue;
+      revenueSub.textContent = ltvPortion > 0
+        ? `Actual ${eur(actualRev, 0)} + ${eur(ltvPortion, 0)} LTV forecast`
+        : "Actual + future LTV forecast";
+    }
     const pnlEl = document.getElementById("sum-pnl");
     pnlEl.textContent = (pnl >= 0 ? "+" : "") + eur(pnl, 0).replace("€", "€");
     pnlEl.classList.remove("profit", "loss");
@@ -1329,6 +1357,10 @@
     at_risk_subscriber: 0,
   };
   let intelSyncedAt = null;
+  // Actual revenue collected (ex VAT) — comes straight from the admin's
+  // live ThriveCart totals. Distinct from projected revenue, which adds
+  // the forecasted LTV of current Unlimited subscribers.
+  let actualRevenueLive = null;
   // Tracks which fields are currently displaying synced live data so we
   // can flip them to "manual override" on user input.
   const syncedFields = new Set();
@@ -1393,6 +1425,10 @@
         if (typeof data.intel[key] === "number") intelCounts[key] = data.intel[key];
       });
       intelSyncedAt = new Date();
+    }
+    // Actual revenue (live, matches admin Net Revenue ex VAT).
+    if (typeof data.actualRevenue === "number") {
+      actualRevenueLive = data.actualRevenue;
     }
     recalc();
     persist();
