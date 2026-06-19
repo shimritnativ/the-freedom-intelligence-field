@@ -2446,27 +2446,6 @@
     };
     const trajectoryResult = renderTrajectory(trajectoryCtx);
 
-    // Launch Status Brief at the top — narrative summary that wraps
-    // everything into 4 short sections anyone can skim.
-    renderLaunchBrief({
-      activeMembers: activeMembers,
-      actualRevenue: actualRev,
-      actualPnl: actualPnl,
-      projectedRevenue: totalRevenue,
-      projectedPnl: pnl,
-      totalSpend: totalSpend,
-      unlTotal: unlTotal,
-      unlimitedRevenue: unlimitedRevenue,
-      ltvCac: ltvCac,
-      roas: roas,
-      currentCpu: currentCpu,
-      opMonthlyEur: opMonthlyEur,
-      monthlyMarginPerUser: marginPerUserMonthly,
-      topDecision: topDecision,
-      proj90: trajectoryResult ? trajectoryResult.proj90 : null,
-      proj12: trajectoryResult ? trajectoryResult.proj12 : null,
-    });
-
     // ===== Layer 2: per-user economics + gap narrative =====
     // Profit per Reset buyer = (avg Reset revenue per buyer) − CPA.
     // Gives the per-customer money math at a glance.
@@ -2557,6 +2536,29 @@
         ? "Real revenue minus real spend"
         : "Operating at a loss · " + eur(Math.abs(actualPnl), 0) + " behind";
     }
+
+    // Launch Status Brief at the top — narrative summary. Placed here
+    // (after actualRev/actualPnl are computed) so it has every number it
+    // needs in scope. Uses topDecision + trajectoryResult from earlier
+    // in this recalc which are still in scope as const declarations.
+    renderLaunchBrief({
+      activeMembers: activeMembers,
+      actualRevenue: actualRev,
+      actualPnl: actualPnl,
+      projectedRevenue: totalRevenue,
+      projectedPnl: pnl,
+      totalSpend: totalSpend,
+      unlTotal: unlTotal,
+      unlimitedRevenue: unlimitedRevenue,
+      ltvCac: ltvCac,
+      roas: roas,
+      currentCpu: currentCpu,
+      opMonthlyEur: opMonthlyEur,
+      monthlyMarginPerUser: marginPerUserMonthly,
+      topDecision: topDecision,
+      proj90: trajectoryResult ? trajectoryResult.proj90 : null,
+      proj12: trajectoryResult ? trajectoryResult.proj12 : null,
+    });
     // Update the projected revenue sub-line so the relationship is clear.
     const revenueSub = document.getElementById("sum-revenue-sub");
     if (revenueSub) {
