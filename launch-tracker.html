@@ -839,14 +839,61 @@
   </div>
 
   <!-- Cost breakdown table — shows where each euro of "cost per user"
-       goes. Helps spot the line that's blowing up the budget (usually
-       Claude / AI for AI-native businesses). -->
+       goes. Excludes Anthropic Claude (treated separately below as
+       variable usage rather than fixed infrastructure). -->
   <div class="cost-breakdown" id="cost-breakdown">
     <div class="cost-breakdown-head">
-      <span class="path-eyebrow">Cost breakdown per active member / month</span>
+      <span class="path-eyebrow">Infrastructure cost per active member / month</span>
       <span class="cost-breakdown-total" id="cost-breakdown-total">—</span>
     </div>
     <div class="cost-breakdown-rows" id="cost-breakdown-rows"></div>
+  </div>
+
+  <!-- Claude usage cost per active member (variable). Claude is treated
+       as variable, not fixed, because the cost scales with messages
+       actually sent. The €90/mo Anthropic line in the snapshot is the
+       company-wide infrastructure cost; this calculator surfaces the
+       per-user variable cost on top of that. -->
+  <div class="cost-breakdown" id="claude-variable-cost" style="margin-top: 14px;">
+    <div class="cost-breakdown-head">
+      <span class="path-eyebrow">Claude usage cost per active member / month — variable</span>
+      <span class="cost-breakdown-total" id="claude-variable-total">—</span>
+    </div>
+    <div style="padding: 12px 14px; font-size: 12px; color: var(--text-dim); line-height: 1.55; border-bottom: 1px solid rgba(154,110,16,0.08);">
+      Anthropic is a company tool — the monthly bill stays roughly constant whether or not members chat. This calculator estimates the <strong>variable</strong> Claude cost: the actual token consumption tied to each member's usage.
+    </div>
+    <div class="grid grid-3" style="padding: 14px;">
+      <div class="field" style="margin: 0;">
+        <label class="field-label" for="claude-msgs-per-user">Messages per active member / mo</label>
+        <input type="number" id="claude-msgs-per-user" value="30" min="0" step="1" />
+        <div class="field-hint">Typical chat volume per active member</div>
+      </div>
+      <div class="field" style="margin: 0;">
+        <label class="field-label" for="claude-input-tokens-per-msg">Input tokens per message</label>
+        <input type="number" id="claude-input-tokens-per-msg" value="3000" min="0" step="100" />
+        <div class="field-hint">System prompt + history + user input</div>
+      </div>
+      <div class="field" style="margin: 0;">
+        <label class="field-label" for="claude-output-tokens-per-msg">Output tokens per message</label>
+        <input type="number" id="claude-output-tokens-per-msg" value="500" min="0" step="100" />
+        <div class="field-hint">Average assistant reply length</div>
+      </div>
+      <div class="field" style="margin: 0;">
+        <label class="field-label" for="claude-input-price-per-m">Input price (€ per 1M tokens)</label>
+        <input type="number" id="claude-input-price-per-m" value="2.76" min="0" step="0.01" />
+        <div class="field-hint">Sonnet ~$3/M ≈ €2.76/M</div>
+      </div>
+      <div class="field" style="margin: 0;">
+        <label class="field-label" for="claude-output-price-per-m">Output price (€ per 1M tokens)</label>
+        <input type="number" id="claude-output-price-per-m" value="13.80" min="0" step="0.01" />
+        <div class="field-hint">Sonnet ~$15/M ≈ €13.80/M</div>
+      </div>
+      <div class="field" style="margin: 0;">
+        <label class="field-label" for="claude-cost-per-msg">Cost per message (€)</label>
+        <input type="number" id="claude-cost-per-msg" readonly />
+        <div class="field-hint">Auto-calculated from tokens × prices</div>
+      </div>
+    </div>
   </div>
 
   <!-- Stability + scale narrative — answers "what does this mean and
@@ -1369,7 +1416,9 @@
     "launch-bump-buyers", "launch-bump-price",
     "unl-churn-pct",
     "lad-bc-pct", "lad-bc-price", "lad-rise-pct", "lad-rise-price",
-    "traj-weekly-resets", "traj-conversion-rate"
+    "traj-weekly-resets", "traj-conversion-rate",
+    "claude-input-tokens-per-msg", "claude-output-tokens-per-msg",
+    "claude-msgs-per-user", "claude-input-price-per-m", "claude-output-price-per-m"
   ];
 
   function loadState() {
@@ -1626,8 +1675,11 @@
     ];
 
     // Project each horizon. Net new Unlimited per month accounts for
-    // both new conversions AND churn losses (compounded).
-    const blendedMonthlyRev = unlMonthlyPrice * 0.6 + (unlYearlyPrice / 12) * 0.4;
+    // both new conversions AND churn losses (compounded). Prices are
+    // passed in via ctx because they're locals of recalc, not globals.
+    const monthlyPrice = ctx.unlMonthlyPrice || 77;
+    const yearlyPrice = ctx.unlYearlyPrice || 777;
+    const blendedMonthlyRev = monthlyPrice * 0.6 + (yearlyPrice / 12) * 0.4;
 
     const rows = horizons.map(h => {
       // Member growth (Reset signups − Reset churn ignored here; Reset is
@@ -2111,6 +2163,8 @@
       unlTotal: unlTotal,
       activeMembers: activeMembers,
       opMonthlyEur: opMonthlyEur,
+      unlMonthlyPrice: unlMonthlyPrice,
+      unlYearlyPrice: unlYearlyPrice,
     };
     renderTrajectory(trajectoryCtx);
 
