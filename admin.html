@@ -52,9 +52,9 @@
       line-height: 1.5;
     }
     .wrap {
-      max-width: 1240px;
+      max-width: 1480px;
       margin: 0 auto;
-      padding: 36px 28px 80px;
+      padding: 36px 32px 80px;
     }
     .topbar {
       display: flex;
@@ -512,6 +512,13 @@
 
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    /* Dates and money cells stay on a single line. Long values like "Jun 17,
+       2026" or "€163.78 2 orders" were wrapping into two lines and making
+       every row taller than necessary. */
+    .section table td.num,
+    .section table td.date-cell {
+      white-space: nowrap;
+    }
     th {
       font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
       color: var(--text-dim); text-transform: uppercase; background: var(--panel);
@@ -1647,8 +1654,8 @@
                           <td><span class="tier-badge ${u.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(tierLabel(u.tier))}</span></td>
                           <td>${escapeHtml(u.subscription_plan || "—")}</td>
                           <td class="num">${spentCell}</td>
-                          <td>${fmtDate(u.created_at)}</td>
-                          <td>${u.first_login_at ? fmtDate(u.first_login_at) : "—"}</td>
+                          <td class="date-cell">${fmtDate(u.created_at)}</td>
+                          <td class="date-cell">${u.first_login_at ? fmtDate(u.first_login_at) : "—"}</td>
                           <td class="num">${u.last_completed_day || 0}</td>
                         </tr>
                       `;
