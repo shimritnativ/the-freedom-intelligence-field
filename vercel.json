@@ -56,7 +56,7 @@
   ],
   "headers": [
     {
-      "source": "/(app|demo|embed)\\.html",
+      "source": "/(app|admin|demo|embed|launch-tracker)\\.html",
       "headers": [
         {
           "key": "Cache-Control",
@@ -66,6 +66,15 @@
     },
     {
       "source": "/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/admin",
       "headers": [
         {
           "key": "Cache-Control",
