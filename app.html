@@ -821,6 +821,86 @@
     font-size: 13px;
   }
   .notif-empty-icon { font-size: 24px; margin-bottom: 8px; opacity: 0.5; }
+  /* Section headers — small gold eyebrows that visually group the inbox
+     into "New / Recent / Older" buckets. Unread badge sits on the right
+     so it's always visible even when the section is dense. */
+  .notif-section-header {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin: 14px 0 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--gold-line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .notif-section-header:first-child { margin-top: 4px; }
+  .notif-section-unread {
+    background: var(--gold);
+    color: var(--bg);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+  }
+  /* Toggle button for the Older section — looks like the section header
+     but clickable. Chevron rotates state. */
+  .notif-section-toggle {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--gold-line);
+    padding: 14px 0 6px;
+    margin: 6px 0;
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--gold);
+    text-transform: uppercase;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    gap: 8px;
+    text-align: left;
+  }
+  .notif-section-toggle:hover { color: var(--text); }
+  .notif-section-toggle > span:first-child {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .notif-section-chevron {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1;
+  }
+  /* "Collapse older" button at the bottom of the expanded older list. */
+  .notif-clear-all {
+    width: 100%;
+    background: transparent;
+    border: 1px dashed var(--gold-line);
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .notif-clear-all:hover {
+    border-color: var(--gold);
+    color: var(--text);
+  }
   .sidebar-aux button#logout-btn,
   .sidebar-aux button#reset-conv-btn {
     background: rgba(0, 0, 0, 0.5);
@@ -6329,6 +6409,68 @@ Begin.` },
     }
   }
 
+  // ===== Notification inbox sectioning =====
+  // Groups notifications into three buckets so the panel stays readable
+  // as the message history grows:
+  //   NEW    — unread + everything from the last 24 hours
+  //   RECENT — 1-7 days old, read
+  //   OLDER  — >7 days old, collapsed by default (one click to expand)
+  // Each section header shows an unread count when applicable, so the
+  // member knows whether anything in a collapsed section needs attention.
+  function categorizeNotifications(items) {
+    const now = Date.now();
+    const oneDayAgo = now - 24 * 60 * 60 * 1000;
+    const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+    const sections = { new: [], recent: [], older: [] };
+    items.forEach(n => {
+      const t = n.created_at ? new Date(n.created_at).getTime() : now;
+      if (!n.is_read || t >= oneDayAgo) sections.new.push(n);
+      else if (t >= sevenDaysAgo) sections.recent.push(n);
+      else sections.older.push(n);
+    });
+    return sections;
+  }
+
+  // Track whether the older section is expanded — sticky via localStorage
+  // so a member who opened it stays in expanded mode next time the panel
+  // is shown. Defaults to collapsed.
+  function isOlderExpanded() {
+    try { return localStorage.getItem("tfif_notif_older_expanded") === "1"; }
+    catch { return false; }
+  }
+  function toggleOlderSection() {
+    const next = !isOlderExpanded();
+    try { localStorage.setItem("tfif_notif_older_expanded", next ? "1" : "0"); } catch {}
+    renderNotifList();
+  }
+  window.toggleOlderSection = toggleOlderSection;
+
+  // Renders one notification row. Used by every section so the card
+  // layout stays consistent. The "is-read" class fades the gold tint.
+  function renderNotifCard(n) {
+    const ctaBtn = n.cta_url
+      ? `<button class="notif-item-cta" type="button" data-cta-url="${escapeHtml(n.cta_url)}" onclick="onNotifCtaClick(event)">${escapeHtml(n.cta_label || "Open")}</button>`
+      : "";
+    return `
+      <li class="notif-item ${n.is_read ? 'is-read' : ''}">
+        <div class="notif-item-head">
+          <div class="notif-item-title">${escapeHtml(n.title || '')}</div>
+          <div class="notif-item-time">${notifFmtRelative(n.created_at)}</div>
+        </div>
+        ${n.body ? `<div class="notif-item-body">${escapeHtml(n.body)}</div>` : ''}
+        ${ctaBtn}
+      </li>
+    `;
+  }
+
+  function renderSectionHeader(label, items) {
+    const unread = items.filter(n => !n.is_read).length;
+    const unreadBadge = unread > 0
+      ? `<span class="notif-section-unread">${unread} unread</span>`
+      : "";
+    return `<div class="notif-section-header">${label}${unreadBadge}</div>`;
+  }
+
   function renderNotifList() {
     const list = document.getElementById("notif-list");
     if (!list) return;
@@ -6341,25 +6483,53 @@ Begin.` },
       `;
       return;
     }
-    list.innerHTML = notifState.items.map(n => {
-      // Render the optional CTA button at the bottom of each card. The
-      // data-cta-url attribute carries the destination; clicking dispatches
-      // it through onNotifCtaClick which resolves internal routes (?process=,
-      // ?day=, ?continue=) or opens external URLs.
-      const ctaBtn = n.cta_url
-        ? `<button class="notif-item-cta" type="button" data-cta-url="${escapeHtml(n.cta_url)}" onclick="onNotifCtaClick(event)">${escapeHtml(n.cta_label || "Open")}</button>`
+
+    const sections = categorizeNotifications(notifState.items);
+    const olderExpanded = isOlderExpanded();
+    const olderUnread = sections.older.filter(n => !n.is_read).length;
+
+    let html = "";
+
+    // NEW section — always visible. Includes unread + last 24h.
+    if (sections.new.length > 0) {
+      html += renderSectionHeader("New", sections.new);
+      html += sections.new.map(renderNotifCard).join("");
+    }
+
+    // RECENT section — read, 1-7 days old. Always visible.
+    if (sections.recent.length > 0) {
+      html += renderSectionHeader("Recent", sections.recent);
+      html += sections.recent.map(renderNotifCard).join("");
+    }
+
+    // OLDER section — collapsible, click-to-expand. Unread badge always
+    // surfaces in the collapsed header so members never miss something.
+    if (sections.older.length > 0) {
+      const olderLabel = `Older (${sections.older.length})`;
+      const olderUnreadBadge = olderUnread > 0
+        ? `<span class="notif-section-unread">${olderUnread} unread</span>`
         : "";
-      return `
-        <li class="notif-item ${n.is_read ? 'is-read' : ''}">
-          <div class="notif-item-head">
-            <div class="notif-item-title">${escapeHtml(n.title || '')}</div>
-            <div class="notif-item-time">${notifFmtRelative(n.created_at)}</div>
-          </div>
-          ${n.body ? `<div class="notif-item-body">${escapeHtml(n.body)}</div>` : ''}
-          ${ctaBtn}
-        </li>
+      const chevron = olderExpanded ? "▴" : "▾";
+      html += `
+        <button class="notif-section-toggle" type="button" onclick="toggleOlderSection()">
+          <span>${olderLabel}${olderUnreadBadge}</span>
+          <span class="notif-section-chevron">${chevron}</span>
+        </button>
       `;
-    }).join("");
+      if (olderExpanded) {
+        html += sections.older.map(renderNotifCard).join("");
+        // Clear-all-read button: collapses the older section back so the
+        // inbox declutters in one tap. Doesn't delete data — older
+        // messages remain available next time someone expands.
+        html += `
+          <button class="notif-clear-all" type="button" onclick="toggleOlderSection()">
+            Done — collapse older
+          </button>
+        `;
+      }
+    }
+
+    list.innerHTML = html;
   }
 
   // Handle a click on a notification's tap-to-go button. Closes the inbox
@@ -6461,6 +6631,16 @@ Begin.` },
   // Tiny relative-time formatter scoped to the notifications panel.
   // Avoids reaching for a date library — covers the buckets that matter
   // (just now / Xh ago / yesterday / Xd ago / dated).
+  // Smart timestamp that gets progressively coarser as messages age.
+  // Keeps the row visually consistent — recent items get precise minutes,
+  // older ones collapse to short dates so they read at a glance:
+  //   < 2 min      → "just now"
+  //   < 1 hour     → "Xm ago"
+  //   < 24 hours   → "Xh ago"
+  //   1 - 2 days   → "yesterday"
+  //   2 - 7 days   → "Xd ago"
+  //   8 days - this year → "Jun 12"
+  //   prior years  → "Jun 12, 2025"
   function notifFmtRelative(iso) {
     if (!iso) return "";
     const then = new Date(iso).getTime();
@@ -6473,9 +6653,13 @@ Begin.` },
     if (hours < 24) return hours + "h ago";
     if (hours < 48) return "yesterday";
     const days = Math.floor(hours / 24);
-    if (days < 14) return days + "d ago";
+    if (days < 7) return days + "d ago";
     const d = new Date(iso);
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const now = new Date();
+    if (d.getFullYear() === now.getFullYear()) {
+      return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    }
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
   }
 
   async function onNotifBellClick(ev) {
