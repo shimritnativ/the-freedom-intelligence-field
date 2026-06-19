@@ -1222,6 +1222,107 @@
       }
     }
 
+    // ===== Monthly cost snapshot =====
+    // Single source of truth for what each tool costs us per month. Read
+    // from state.data.monthlyCosts (delivered with /api/admin/metrics so
+    // there's no extra round trip on tab open). Editable inline, saved
+    // via POST /api/admin/monthly-costs.
+    const COST_SERVICES = [
+      { key: "ghl",        label: "GHL",                hint: "WhatsApp, workflows, email", currency: "USD" },
+      { key: "anthropic",  label: "Anthropic Claude",   hint: "AI for Reset + Unlimited chat", currency: "USD" },
+      { key: "elevenlabs", label: "ElevenLabs",         hint: "Voice synthesis", currency: "USD" },
+      { key: "whisper",    label: "OpenAI Whisper",     hint: "Transcription", currency: "USD" },
+      { key: "neon",       label: "Neon",               hint: "Postgres database", currency: "USD" },
+      { key: "vercel",     label: "Vercel",             hint: "Hosting + functions", currency: "USD" },
+      { key: "resend",     label: "Resend",             hint: "Transactional email", currency: "USD" },
+      { key: "other",      label: "Other tools",        hint: "Anything not listed", currency: "USD" },
+      { key: "domain",     label: "Domain",             hint: "Annual fee amortized monthly", currency: "EUR" },
+    ];
+
+    function toggleCostSnapshot() {
+      const body = document.getElementById("cost-snapshot-body");
+      const btn = document.getElementById("cost-snapshot-toggle");
+      if (!body) return;
+      const opening = body.style.display === "none";
+      body.style.display = opening ? "block" : "none";
+      if (btn) btn.textContent = opening ? "Collapse" : "Expand";
+      if (opening) renderCostSnapshot();
+    }
+    window.toggleCostSnapshot = toggleCostSnapshot;
+
+    function renderCostSnapshot() {
+      const rows = document.getElementById("cost-snapshot-rows");
+      const status = document.getElementById("cost-snapshot-status");
+      if (!rows) return;
+      const costs = (state && state.data && state.data.monthlyCosts) || [];
+      const byKey = {};
+      costs.forEach(c => { byKey[c.service_key] = c; });
+
+      rows.innerHTML = COST_SERVICES.map(svc => {
+        const existing = byKey[svc.key];
+        const amount = existing ? Number(existing.amount || 0) : 0;
+        const currency = existing ? existing.currency : svc.currency;
+        return `
+          <label style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: var(--text-dim); text-transform: uppercase;">${escapeHtml(svc.label)} <span style="font-weight: 400; color: var(--text-mute); letter-spacing: 0;">(${currency})</span></span>
+            <input type="number" min="0" step="0.01" value="${amount}" data-cost-key="${escapeHtml(svc.key)}" data-cost-currency="${escapeHtml(currency)}" style="padding: 8px 10px; border: 1px solid var(--gold-line); border-radius: 6px; font-family: inherit; font-size: 14px; background: var(--bg-card); color: var(--text);" />
+            <span style="font-size: 10.5px; color: var(--text-mute);">${escapeHtml(svc.hint)}</span>
+          </label>
+        `;
+      }).join("");
+
+      // Status line — show the most recent update across all services so
+      // the admin knows how stale the snapshot is at a glance.
+      const mostRecent = costs.reduce((m, c) => {
+        if (!c.updated_at) return m;
+        return (!m || c.updated_at > m) ? c.updated_at : m;
+      }, null);
+      if (status) {
+        status.textContent = mostRecent
+          ? "Last updated " + fmtRelative(mostRecent)
+          : "No snapshot saved yet — fill in the numbers and click Save.";
+      }
+    }
+    window.renderCostSnapshot = renderCostSnapshot;
+
+    async function saveCostSnapshot(btnEl) {
+      const token = localStorage.getItem(STORAGE_KEY);
+      if (!token) return;
+      const inputs = Array.from(document.querySelectorAll("#cost-snapshot-rows input[data-cost-key]"));
+      const items = inputs.map(input => ({
+        service_key: input.dataset.costKey,
+        amount: Number(input.value || 0),
+        currency: input.dataset.costCurrency,
+      }));
+      const status = document.getElementById("cost-snapshot-status");
+      if (btnEl) { btnEl.disabled = true; btnEl.textContent = "Saving…"; }
+      try {
+        const r = await fetch("/api/admin/monthly-costs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-session-token": token },
+          body: JSON.stringify({ costs: items }),
+        });
+        if (!r.ok) {
+          if (status) status.textContent = "Save failed — try again.";
+          return;
+        }
+        const data = await r.json();
+        // Replace the in-memory snapshot so subsequent renders + the
+        // launch tracker sync see the new values without a full reload.
+        if (state && state.data && Array.isArray(data.costs)) {
+          state.data.monthlyCosts = data.costs;
+        }
+        if (status) status.textContent = "Saved · just now";
+        // Re-sync the launch tracker so its op-* fields update.
+        if (typeof syncLaunchTracker === "function") syncLaunchTracker();
+      } catch (err) {
+        if (status) status.textContent = "Network error — try again.";
+      } finally {
+        if (btnEl) { btnEl.disabled = false; btnEl.textContent = "Save snapshot"; }
+      }
+    }
+    window.saveCostSnapshot = saveCostSnapshot;
+
     // Listen for height reports from the launch tracker iframe and resize
     // it to match. Eliminates the nested scrollbar — the admin page is the
     // only scroll surface, the tracker grows to show all its content
@@ -1310,6 +1411,15 @@
       // what the launch tracker needs to compute cost-per-user math.
       const activeMembers = tiers.reduce((s, t) => s + Number(t.n || 0), 0);
 
+      // Monthly cost snapshot — flatten to a service_key → amount map
+      // so the launch tracker can apply each value to its matching op-*
+      // field. Currency is preserved on the receiving side via op-fx.
+      const costsArray = (d.monthlyCosts || []);
+      const monthlyCostsMap = {};
+      costsArray.forEach(c => {
+        monthlyCostsMap[c.service_key] = Number(c.amount || 0);
+      });
+
       // Intelligence segment counts — drives the Path-from-Intelligence
       // section in the launch tracker. Each count is the # of members
       // currently in that segment on the live admin.
@@ -1347,6 +1457,7 @@
           activeMembers: activeMembers,
           actualRevenue: actualRevenue,
           intel: intelCounts,
+          monthlyCosts: monthlyCostsMap,
         },
       };
 
@@ -2027,6 +2138,30 @@
                of all that markup here. Loaded lazily on tab entry so the
                iframe doesn't compete with the dashboard's initial paint. -->
           <div data-tab-content="launch" style="display: none;">
+            <!-- Monthly cost snapshot — single source of truth for what
+                 every tool costs us per month. The Launch Tracker below
+                 reads from this so we stop maintaining costs in two
+                 places. Values persist server-side; expanding/collapsing
+                 the panel toggles via the chevron. -->
+            <div class="section" id="panel-cost-snapshot" style="margin-bottom: 18px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; cursor: pointer;" onclick="toggleCostSnapshot()">
+                <div>
+                  <h2 style="margin: 0;"><span class="h2-eyebrow">Monthly costs</span>What each tool costs us per month</h2>
+                  <p style="font-size: 12.5px; color: var(--text-dim); margin: 6px 0 0; line-height: 1.5;">
+                    Update these once a month from your GHL wallet, Anthropic billing, Vercel usage, etc. The Launch Tracker auto-syncs from here.
+                  </p>
+                </div>
+                <button type="button" id="cost-snapshot-toggle" style="background: transparent; border: 1px solid var(--gold-line); color: var(--text-dim); padding: 6px 12px; border-radius: 8px; font-family: inherit; font-size: 11px; font-weight: 600; cursor: pointer; flex-shrink: 0;">Expand</button>
+              </div>
+              <div id="cost-snapshot-body" style="display: none; margin-top: 18px;">
+                <div id="cost-snapshot-rows" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;"></div>
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px;">
+                  <div id="cost-snapshot-status" style="font-size: 11.5px; color: var(--text-dim); font-style: italic;">Loading…</div>
+                  <button type="button" onclick="saveCostSnapshot(this)" id="cost-snapshot-save" style="background: var(--gold); color: var(--dark); border: 1px solid var(--gold); padding: 8px 18px; border-radius: 8px; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;">Save snapshot</button>
+                </div>
+              </div>
+            </div>
+
             <div class="section" id="panel-launch" style="padding: 0; overflow: visible; background: transparent; border: none; box-shadow: none;">
               <!-- Height is set dynamically via postMessage from the iframe
                    so there's no internal scrollbar — the admin page is the
