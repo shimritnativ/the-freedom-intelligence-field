@@ -333,16 +333,17 @@
 
     /* ===== Mobile (phones, ≤640px) ===== */
     @media (max-width: 640px) {
-      /* Prevent any wide child (table, KPI grid, long word) from blowing
-         out the page width and causing the whole viewport to scroll
-         horizontally. Each panel manages its own internal scroll. */
-      html, body { overflow-x: hidden; max-width: 100vw; }
+      /* Prevent any wide child from blowing out the page width. We use
+         overflow-x: clip on the wrap (rather than hidden on html/body)
+         because clip doesn't create a containing block for fixed/sticky
+         children — important so iOS native vertical scroll stays smooth
+         and the tab nav can still stick to the top of the viewport. */
       .wrap {
         max-width: 100vw;
-        overflow-x: hidden;
+        overflow-x: clip;
         padding: max(20px, env(safe-area-inset-top)) 14px 60px;
       }
-      .section { max-width: 100%; overflow-x: hidden; }
+      .section { max-width: 100%; }
 
       /* Section headings ALWAYS wrap on mobile — defeats any inherited
          white-space rule and ensures long parenthetical phrases like
@@ -397,47 +398,68 @@
       .section h2 { font-size: 15px; margin-bottom: 12px; padding-bottom: 10px; }
       .section h2 .h2-eyebrow { display: block; margin: 0 0 4px; }
 
-      /* Tables — let each table expand to fit its content and scroll
-         horizontally inside its own scroller. The old approach forced
-         table-layout: fixed at min-width: 480px which squeezed 7-column
-         tables (Roster, Revenue) so tight that adjacent cells visually
-         overlapped. New approach: cells size to content via max-content,
-         all text nowraps, the table BLOCK scrolls horizontally if the
-         total width exceeds the viewport. A faint right-edge fade hints
-         that more content lives off-screen. */
+      /* Tables become STACKED CARDS on mobile — same UX pattern as the
+         Intelligence segments. Each row becomes a small card with each
+         field as a labeled line. Eliminates horizontal scrolling entirely
+         since every column is visible vertically, and avoids the squeezed
+         overlap problem the table-layout: fixed approach had. The labels
+         in front of each cell come from data-label attrs set by JS at
+         render time (see applyMobileTableLabels). */
       .section table {
         display: block;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
         max-width: 100%;
-        white-space: nowrap;
-        position: relative;
+        white-space: normal;
+        background: transparent !important;
       }
-      .section table > thead,
+      .section table > thead { display: none; }
       .section table > tbody {
-        display: table;
-        width: max-content;
-        min-width: 100%;
-        table-layout: auto;
+        display: block;
+        width: 100%;
       }
-      .section table > thead > tr,
       .section table > tbody > tr {
-        display: table-row;
+        display: block;
+        background: var(--panel);
+        border: 1px solid var(--gold-line);
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin-bottom: 8px;
       }
-      .section table th,
-      .section table td {
-        white-space: nowrap;
-        padding: 8px 12px;
-        font-size: 12px;
-        max-width: none;
+      .section table > tbody > tr:hover { background: var(--panel); }
+      .section table > tbody > tr > td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 4px 0;
+        border: none !important;
+        font-size: 13px;
+        white-space: normal;
+        text-align: right;
+        word-break: break-word;
+        min-width: 0;
       }
-      .section table th { font-size: 9px; }
-      /* Long content cells (product names, email addresses) get truncated
-         with an ellipsis above a reasonable cap so a single row can't
-         force the whole table into a 1000px horizontal scroll. */
-      .section table td .tier-badge,
-      .section table td .comp-pill {
-        white-space: nowrap;
+      .section table > tbody > tr > td.num {
+        text-align: right;
+      }
+      .section table > tbody > tr > td::before {
+        content: attr(data-label);
+        font-weight: 700;
+        color: var(--text-dim);
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        flex-shrink: 0;
+        text-align: left;
+        min-width: 60px;
+      }
+      .section table > tbody > tr > td:empty,
+      .section table > tbody > tr > td[data-label=""] {
+        display: none;
+      }
+      /* Badges align to the right side of each field row. */
+      .section table > tbody > tr > td .tier-badge,
+      .section table > tbody > tr > td .comp-pill {
+        margin-left: auto;
       }
 
       /* Funnel — compact grid */
@@ -1083,6 +1105,26 @@
       if (savedTheme === "dark") applyTheme("dark");
     } catch {}
 
+    // Walk every table in the dashboard and copy each <th> text onto the
+    // matching <td> as a data-label attribute. The mobile CSS uses
+    // attr(data-label) on a ::before pseudo-element to render the column
+    // name in front of each cell value when the table is stacked into
+    // cards (no more horizontal-scroll fight on phones). Safe to call
+    // repeatedly — re-setting the attribute is a no-op when the value
+    // matches what's already there.
+    function applyMobileTableLabels() {
+      document.querySelectorAll(".section table").forEach(table => {
+        const headers = Array.from(table.querySelectorAll("thead th")).map(th => th.textContent.trim());
+        if (!headers.length) return;
+        table.querySelectorAll("tbody tr").forEach(row => {
+          row.querySelectorAll("td").forEach((cell, i) => {
+            if (headers[i]) cell.setAttribute("data-label", headers[i]);
+          });
+        });
+      });
+    }
+    window.applyMobileTableLabels = applyMobileTableLabels;
+
     // Switch the active tab. Hides all data-tab-content blocks except the
     // target, highlights the matching tab button, and saves the choice so
     // refresh restores the same tab. The is-revealing class triggers a
@@ -1347,6 +1389,13 @@
           state.launchDate = data.dateRange.launchDate.slice(0, 10);
         }
         renderDashboard(data);
+        // Once the dashboard is in the DOM, walk every table and copy
+        // each column header onto its corresponding <td> as a data-label
+        // attribute. The mobile CSS uses ::before content: attr(data-label)
+        // to render that label in front of each cell value when the table
+        // is stacked into cards. Runs once here and again after any future
+        // re-render that swaps tables out.
+        applyMobileTableLabels();
         // Load the push subscribers list and inbox manager lazily after
         // the main dashboard paints, so the "Send a notification" panel
         // is ready to use the moment the admin clicks into it.
