@@ -147,9 +147,13 @@ export default async function handler(req, res) {
         GROUP BY u.tier, COALESCE(u.subscription_plan, 'none')
         ORDER BY tier, plan
       `,
-      // 2. Completion funnel — Power Reset members only. The 72-Hour Power
-      // Reset funnel measures Reset-tier members specifically; Unlimited
-      // members aren't doing the Reset experience.
+      // 2. Completion funnel — every member who did the Reset, regardless
+      // of where they are now. The previous filter (tier = 'preview')
+      // hid members who completed Day 3 then upgraded to Unlimited, which
+      // is exactly the conversion story the funnel exists to surface.
+      // We base it on "ever started the Reset" instead — any member who
+      // logged in is by definition a Reset starter, since the Reset is
+      // the only on-ramp.
       sql`
         SELECT
           COUNT(*)::int AS total_members,
@@ -160,7 +164,6 @@ export default async function handler(req, res) {
           COUNT(*) FILTER (WHERE last_completed_day >= 3)::int AS d3
         FROM users
         WHERE kajabi_entitled = true
-          AND tier = 'preview'
           AND email NOT LIKE ${excludePattern}
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
@@ -539,7 +542,15 @@ export default async function handler(req, res) {
         GROUP BY u.id, u.email, u.display_name, u.last_completed_day, u.tier
         ORDER BY purchased_at DESC
       `),
-      // 21. At-risk Unlimited subscriber — paid but quiet for 14+ days
+      // 21. At-risk Unlimited subscriber — paid but quiet for 14+ days.
+      //
+      // Important: "quiet" is measured from the LATER of (a) their last
+      // Unlimited message, (b) their first paid Unlimited purchase. This
+      // gives fresh subscribers a built-in grace period — someone who
+      // upgraded today shouldn't be flagged as at-risk just because they
+      // haven't messaged yet. We also require their Unlimited tenure
+      // (days since first paid Unlimited purchase) to be at least 14 so
+      // brand-new subscribers never appear here at all.
       safeQuery(sql`
         WITH last_unlimited_msg AS (
           SELECT m.user_id, MAX(m.created_at) AS last_at
@@ -547,26 +558,39 @@ export default async function handler(req, res) {
           JOIN sessions s ON s.id = m.session_id
           WHERE s.session_type = 'unlimited' AND m.role = 'user'
           GROUP BY m.user_id
+        ),
+        first_unlimited_purchase AS (
+          SELECT p.email, MIN(p.created_at) AS subscribed_at
+          FROM purchases p
+          WHERE p.event_type = 'order.success'
+            AND p.amount_cents > 0
+            AND p.product_name ILIKE '%Unlimited%'
+            AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+          GROUP BY p.email
         )
         SELECT
           u.id, u.email, u.display_name,
           u.subscription_plan,
           lm.last_at AS last_message_at,
-          EXTRACT(DAY FROM (NOW() - COALESCE(lm.last_at, u.created_at)))::int AS days_quiet
+          -- Use greatest(last message, subscribed_at) as the "last activity"
+          -- baseline so a fresh sub with no messages reads as 0 days quiet
+          -- (not "days since they signed up for Reset months ago").
+          EXTRACT(DAY FROM (NOW() - GREATEST(
+            COALESCE(lm.last_at, fp.subscribed_at),
+            fp.subscribed_at
+          )))::int AS days_quiet
         FROM users u
+        JOIN first_unlimited_purchase fp ON fp.email = u.email
         LEFT JOIN last_unlimited_msg lm ON lm.user_id = u.id
         WHERE u.tier = 'full'
           AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
           AND u.email <> ALL(${extraExcluded})
+          -- Grace period: only flag subscribers who've been Unlimited
+          -- for at least 14 days.
+          AND fp.subscribed_at < NOW() - INTERVAL '14 days'
+          -- And their Unlimited message activity has been quiet for 14d.
           AND (lm.last_at IS NULL OR lm.last_at < NOW() - INTERVAL '14 days')
-          AND EXISTS (
-            SELECT 1 FROM purchases p
-            WHERE p.email = u.email
-              AND p.event_type = 'order.success'
-              AND p.amount_cents > 0
-              AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
-          )
         ORDER BY days_quiet DESC NULLS FIRST
       `),
       // 22. Stuck Reset — logged in but not completing within 3+ days
