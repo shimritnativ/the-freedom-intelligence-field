@@ -638,6 +638,25 @@ export default async function handler(req, res) {
              JOIN users u ON u.id = dc.user_id
              WHERE u.email NOT LIKE ${excludePattern}
                AND dc.completed_at >= date_trunc('day', NOW())) AS completions_today,
+          -- Per-day breakdowns so Today's Highlights can show specific,
+          -- meaningful tiles instead of a vague combined count. Day 3 is
+          -- the launch goal — when it's > 0 the tile gets the accent
+          -- treatment in the UI.
+          (SELECT COUNT(DISTINCT dc.user_id)::int FROM day_completions dc
+             JOIN users u ON u.id = dc.user_id
+             WHERE u.email NOT LIKE ${excludePattern}
+               AND dc.day = 1
+               AND dc.completed_at >= date_trunc('day', NOW())) AS day1_today,
+          (SELECT COUNT(DISTINCT dc.user_id)::int FROM day_completions dc
+             JOIN users u ON u.id = dc.user_id
+             WHERE u.email NOT LIKE ${excludePattern}
+               AND dc.day = 2
+               AND dc.completed_at >= date_trunc('day', NOW())) AS day2_today,
+          (SELECT COUNT(DISTINCT dc.user_id)::int FROM day_completions dc
+             JOIN users u ON u.id = dc.user_id
+             WHERE u.email NOT LIKE ${excludePattern}
+               AND dc.day = 3
+               AND dc.completed_at >= date_trunc('day', NOW())) AS day3_today,
           (SELECT COUNT(DISTINCT m.user_id)::int FROM messages m
              JOIN sessions s ON s.id = m.session_id
              JOIN users u ON u.id = m.user_id
