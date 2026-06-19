@@ -621,12 +621,17 @@
     <div class="summary-card-sub" id="sum-actual-revenue-sub">Money collected so far</div>
   </div>
   <div class="summary-card">
+    <div class="summary-card-label">Actual P&amp;L</div>
+    <div class="summary-card-value" id="sum-actual-pnl">€0</div>
+    <div class="summary-card-sub" id="sum-actual-pnl-sub">Real revenue minus real spend</div>
+  </div>
+  <div class="summary-card">
     <div class="summary-card-label">Projected Revenue</div>
     <div class="summary-card-value" id="sum-revenue">€0</div>
     <div class="summary-card-sub" id="sum-revenue-sub">Actual + future LTV forecast</div>
   </div>
   <div class="summary-card">
-    <div class="summary-card-label">Net P&amp;L</div>
+    <div class="summary-card-label">Projected P&amp;L</div>
     <div class="summary-card-value" id="sum-pnl">€0</div>
     <div class="summary-card-sub" id="sum-pnl-sub">Projected revenue minus spend</div>
   </div>
@@ -990,7 +995,7 @@
 
   <div class="grid grid-3">
     <div class="field">
-      <label class="field-label" for="op-vercel">Vercel Pro ($/month)</label>
+      <label class="field-label" for="op-vercel">Vercel Pro (€/month)</label>
       <input type="number" id="op-vercel" value="20" min="0" step="0.01" />
     </div>
     <div class="field">
@@ -998,40 +1003,40 @@
       <input type="number" id="op-domain" value="3" min="0" step="0.01" />
     </div>
     <div class="field">
-      <label class="field-label" for="op-resend">Resend email ($/month)</label>
+      <label class="field-label" for="op-resend">Resend email (€/month)</label>
       <input type="number" id="op-resend" value="0" min="0" step="0.01" />
       <div class="field-hint">Free tier covers most launches</div>
     </div>
     <div class="field">
-      <label class="field-label" for="op-neon">Neon Postgres ($/month)</label>
+      <label class="field-label" for="op-neon">Neon Postgres (€/month)</label>
       <input type="number" id="op-neon" value="0" min="0" step="0.01" />
     </div>
     <div class="field">
-      <label class="field-label" for="op-anthropic">Anthropic API ($/month)</label>
+      <label class="field-label" for="op-anthropic">Anthropic API (€/month)</label>
       <input type="number" id="op-anthropic" value="0" min="0" step="0.01" />
       <div class="field-hint">Check Anthropic Console weekly</div>
     </div>
     <div class="field">
-      <label class="field-label" for="op-elevenlabs">ElevenLabs ($/month)</label>
+      <label class="field-label" for="op-elevenlabs">ElevenLabs (€/month)</label>
       <input type="number" id="op-elevenlabs" value="0" min="0" step="0.01" />
       <div class="field-hint">Check ElevenLabs billing weekly</div>
     </div>
     <div class="field">
-      <label class="field-label" for="op-whisper">OpenAI Whisper ($/month)</label>
+      <label class="field-label" for="op-whisper">OpenAI Whisper (€/month)</label>
       <input type="number" id="op-whisper" value="0" min="0" step="0.01" />
     </div>
     <div class="field">
-      <label class="field-label" for="op-ghl">Go High Level ($/month)</label>
+      <label class="field-label" for="op-ghl">Go High Level (€/month)</label>
       <input type="number" id="op-ghl" value="0" min="0" step="0.01" />
     </div>
     <div class="field">
-      <label class="field-label" for="op-other">Other tools ($/month)</label>
+      <label class="field-label" for="op-other">Other tools (€/month)</label>
       <input type="number" id="op-other" value="0" min="0" step="0.01" />
     </div>
     <div class="field">
-      <label class="field-label" for="op-fx">EUR per USD (for conversion)</label>
-      <input type="number" id="op-fx" value="0.92" min="0" step="0.001" />
-      <div class="field-hint">Used to convert USD lines to EUR</div>
+      <label class="field-label" for="op-fx">FX multiplier (defaults to 1)</label>
+      <input type="number" id="op-fx" value="1" min="0" step="0.001" />
+      <div class="field-hint">All values are EUR — keep at 1.0</div>
     </div>
     <div class="field">
       <label class="field-label" for="op-monthly-eur">Monthly total (€)</label>
@@ -1747,6 +1752,23 @@
         ? "Live from Field admin · ex VAT"
         : "Reset sales only (no live sync)";
     }
+    // Actual P&L — real revenue collected minus real money spent. This
+    // is the honest "are we in profit or loss RIGHT NOW" tile. Colored
+    // red for loss, green for profit, neutral for breakeven.
+    const actualPnl = actualRev - totalSpend;
+    const actualPnlEl = document.getElementById("sum-actual-pnl");
+    const actualPnlSub = document.getElementById("sum-actual-pnl-sub");
+    if (actualPnlEl) {
+      actualPnlEl.textContent = (actualPnl >= 0 ? "+" : "") + eur(actualPnl, 0);
+      actualPnlEl.style.color = actualPnl > 50 ? "var(--success)"
+                              : actualPnl < -50 ? "var(--danger)"
+                              : "var(--text)";
+    }
+    if (actualPnlSub) {
+      actualPnlSub.textContent = actualPnl >= 0
+        ? "Real revenue minus real spend"
+        : "Operating at a loss · " + eur(Math.abs(actualPnl), 0) + " behind";
+    }
     // Update the projected revenue sub-line so the relationship is clear.
     const revenueSub = document.getElementById("sum-revenue-sub");
     if (revenueSub) {
@@ -1760,7 +1782,10 @@
     pnlEl.classList.remove("profit", "loss");
     if (pnl > 0) pnlEl.classList.add("profit");
     if (pnl < 0) pnlEl.classList.add("loss");
-    setStatus(pnl);
+    // Status pill reflects ACTUAL position, not projection — the launch
+    // can show "profitable" on paper while bleeding cash today. The
+    // projected P&L is still visible in its own tile for context.
+    setStatus(actualPnl);
   }
 
   function persist() {
