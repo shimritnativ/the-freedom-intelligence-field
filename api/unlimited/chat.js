@@ -15,6 +15,7 @@ import {
   formatRetrievedContext,
 } from "../../lib/brain/retrieval.js";
 import { findProcessByMessage, getProcessByKey } from "../../lib/prompts/processes/index.js";
+import { loadUserMemory, maybeRecordDurableFacts } from "../../lib/memory.js";
 
 const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 const MAX_MESSAGES_IN_CONTEXT = 20;
@@ -155,6 +156,15 @@ export default async function handler(req, res) {
     const user = await getUserBySessionToken(token);
     if (!user) return res.status(401).json({ error: "unauthorized" });
 
+    // Server-side tier gate. The Field Unlimited is for "full" tier members
+    // only. Real Kajabi members (kajabi_entitled = true) on the preview tier
+    // get blocked here, even if they pass ?tier=full in the URL or toggle
+    // the client-side tier. Anonymous demo accounts (kajabi_entitled = false)
+    // bypass the gate so the team can still test Unlimited in the demo flow.
+    if (user.tier !== "full" && user.kajabi_entitled === true) {
+      return res.status(403).json({ error: "unlimited_locked" });
+    }
+
     const anthropicKey = process.env.ANTHROPIC_API_KEY;
     if (!anthropicKey) {
       console.error("unlimited_chat_no_anthropic_key");
@@ -208,11 +218,14 @@ export default async function handler(req, res) {
     }
     const activeProcess = processKey ? getProcessByKey(processKey) : null;
 
-    // Persist the user's new message.
-    await sql`
+    // Persist the user's new message. Capture the row id so the fact
+    // extractor below can attribute saved memory back to this turn.
+    const { rows: userMsgRows } = await sql`
       INSERT INTO messages (session_id, user_id, role, content, system_prompt_version)
       VALUES (${sessionId}, ${user.id}, 'user', ${userMessage}, ${PROMPT_VERSION})
+      RETURNING id
     `;
+    const userMessageId = userMsgRows[0]?.id || null;
 
     // Retrieve the most relevant brain chunks for the current message.
     let retrievedChunks = [];
@@ -222,15 +235,26 @@ export default async function handler(req, res) {
       console.warn("retrieval_failed_continuing_without", e?.message);
     }
 
-    // Load the participant's full memory: prior Reset day work + prior
-    // Unlimited chats. Both are silent context for personalization.
+    // Load the participant's full memory across every process they've
+    // ever done. The unified memory block from lib/memory.js combines:
+    //   - profile basics (name, tier, member since)
+    //   - structured Day completion data (decisions, declarations)
+    //   - durable facts extracted from past chats (partner, work, etc.)
+    //   - process history (which Unlimited processes they've run)
+    // This replaces the older raw-message-excerpt approach that capped at
+    // 5 sessions × 8 messages — the new block is denser AND covers every
+    // process forever, not just the last 5.
+    const userMemoryBlock = await loadUserMemory(user.id);
+
+    // We still keep the raw recent-message excerpts as a complement to
+    // the structured memory: structured memory gives the FACTS, the
+    // excerpts give the VOICE / phrasing the participant tends to use.
     const resetBlocks = await loadResetMemory(user.id);
     const priorUnlBlocks = await loadPriorUnlimitedMemory(user.id, sessionId);
 
-    let participantBlock = "PARTICIPANT MEMORY (silent context — do not recite back to them verbatim, but reference naturally when relevant):\n";
-    if (resetBlocks.length === 0 && priorUnlBlocks.length === 0) {
-      participantBlock += "\nThis is a brand new participant. No prior Reset or Unlimited work to reference yet.";
-    } else {
+    let participantBlock = "";
+    if (resetBlocks.length > 0 || priorUnlBlocks.length > 0) {
+      participantBlock = "## RECENT CHAT EXCERPTS (silent context — do not recite back to them verbatim, but reference naturally when relevant):\n";
       if (resetBlocks.length > 0) {
         participantBlock += "\n\n### Their 72-Hour Power Reset work:\n\n" + resetBlocks.join("\n\n---\n\n");
       }
@@ -241,11 +265,14 @@ export default async function handler(req, res) {
 
     // Build the system prompt. The base is either the active process prompt
     // (a scripted guided process) or the general Unlimited prompt (free-form
-    // chat). Participant memory and retrieved brain context are layered on in
-    // both cases — the process gets the structure, retrieval gets the depth.
+    // chat). Cross-process memory + retrieved brain context are layered on
+    // in both cases — the process gets the structure, memory gives the
+    // personalization, retrieval gives the depth.
     const baseSystem = activeProcess ? activeProcess.prompt : getUnlimitedSystemPrompt();
     const retrievedBlock = formatRetrievedContext(retrievedChunks);
-    const systemPrompt = `${baseSystem}\n\n---\n\n${participantBlock}\n\n---\n\n${retrievedBlock}`;
+    const memorySection = userMemoryBlock ? `${userMemoryBlock}\n\n---\n\n` : "";
+    const excerptSection = participantBlock ? `${participantBlock}\n\n---\n\n` : "";
+    const systemPrompt = `${baseSystem}\n\n---\n\n${memorySection}${excerptSection}${retrievedBlock}`;
 
     // Build the message array for Claude. Use last MAX_MESSAGES_IN_CONTEXT
     // turns to keep context tight.
@@ -302,6 +329,18 @@ export default async function handler(req, res) {
     await sql`
       UPDATE sessions SET last_message_at = NOW() WHERE id = ${sessionId}
     `;
+
+    // Background fact extraction. Fires a Haiku call against the user's
+    // message to pull out anything durable (name, partner, work, recurring
+    // pattern) and persists to memory_summaries. Heuristic-gated so only
+    // ~20% of turns actually hit the API. We DON'T await this — the chat
+    // response shouldn't block on a memory side-effect, and any failure
+    // is logged inside the helper rather than thrown.
+    maybeRecordDurableFacts({
+      userMessage,
+      userId: user.id,
+      messageId: userMessageId,
+    }).catch(() => {});
 
     // If this was the first exchange, generate and save a title.
     let updatedTitle = session.title;
