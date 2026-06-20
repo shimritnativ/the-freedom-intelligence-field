@@ -3235,12 +3235,12 @@
     }
     window.runBackfill = runBackfill;
 
-    // Trigger the memory backfill endpoint. Mirrors runBackfill but talks
-    // to /api/admin/backfill-memory which walks every user message ever
-    // sent, runs the durable-fact heuristic + Haiku extraction, and
-    // populates memory_summaries so the Field knows users across past
-    // chats. dryRun=true returns counts without spending API tokens —
-    // recommended first to see the scale of work.
+    // Trigger the memory backfill endpoint. Loops chunks until the
+    // server reports `complete: true` so even multi-thousand-message
+    // histories finish without hitting Vercel's 5-minute function cap.
+    // Each chunk is resumable thanks to messages.memory_extracted_at —
+    // if the browser closes mid-loop, the next click picks up where it
+    // stopped instead of starting over.
     async function runMemoryBackfill(dryRun) {
       const status = document.getElementById("memory-backfill-status");
       const btn = document.getElementById("memory-backfill-btn");
@@ -3251,40 +3251,96 @@
         return;
       }
       if (!dryRun) {
-        const ok = confirm("Run the real memory backfill? This will extract facts from every past chat and may take a few minutes. Cost: ~€0.001 per heuristic-matched message (typically a few cents total).");
+        const ok = confirm("Run the real memory backfill? Extracts facts from every past chat — typically takes a few minutes for the whole history. Safe to run multiple times.");
         if (!ok) return;
       }
       btn.disabled = true;
       previewBtn.disabled = true;
-      status.textContent = dryRun
-        ? "Counting how many past messages would be processed…"
-        : "Extracting facts from past chats. This can take a few minutes. Keep this tab open.";
+
+      // Running totals across all chunks. The preview path only calls
+      // once so these collapse to a single chunk's numbers; the real
+      // path accumulates as it loops.
+      const totals = {
+        chunks: 0,
+        messages: 0,
+        heuristic_hits: 0,
+        extractions: 0,
+        facts_saved_new: 0,
+        facts_skipped_duplicate: 0,
+        users_touched_max: 0,
+        errors: 0,
+      };
+
       try {
-        const url = "/api/admin/backfill-memory" + (dryRun ? "?dry_run=1" : "");
-        const r = await fetch(url, {
-          method: "POST",
-          headers: { "x-session-token": token },
-        });
-        if (!r.ok) {
-          const errBody = await r.text().catch(() => "");
-          status.textContent = "Backfill failed (HTTP " + r.status + "). " + errBody.slice(0, 200);
+        if (dryRun) {
+          // Single call — server scans the next chunk without writing.
+          // For a true total estimate the user could re-click after each
+          // batch, but the first chunk is usually a representative read
+          // (server reports `remaining_before` so we show the real total).
+          status.textContent = "Counting how many past messages would be processed…";
+          const r = await fetch("/api/admin/backfill-memory?dry_run=1&chunk=1000", {
+            method: "POST",
+            headers: { "x-session-token": token },
+          });
+          if (!r.ok) {
+            const errBody = await r.text().catch(() => "");
+            status.textContent = "Preview failed (HTTP " + r.status + "). " + errBody.slice(0, 200);
+            return;
+          }
+          const data = await r.json();
+          status.innerHTML = "Preview: <strong>" + data.remaining_before + "</strong> past messages still to process, "
+            + "of which <strong>" + data.heuristic_hits + "</strong> in the first chunk look like they contain durable facts "
+            + "(roughly €" + (Math.round(data.remaining_before * 0.2 * 0.001 * 100) / 100) + " in Haiku calls if the rest follow the same ratio). "
+            + "Click <em>Refresh memory</em> to run for real.";
           return;
         }
-        const data = await r.json();
-        if (dryRun) {
-          status.innerHTML = "Preview: <strong>" + data.total_messages_scanned + "</strong> past messages, "
-            + "<strong>" + data.heuristic_hits + "</strong> look like they might contain durable facts "
-            + "(~" + Math.round(data.heuristic_hits * 0.001 * 100) / 100 + "€ in Haiku calls), "
-            + "across <strong>" + data.users_touched + "</strong> users. Click <em>Refresh memory</em> to run for real.";
-        } else {
-          status.innerHTML = "Done. Scanned <strong>" + data.total_messages_scanned + "</strong> messages, "
-            + "fired <strong>" + data.extraction_calls + "</strong> extractions, "
-            + "saved <strong>" + data.facts_saved_new + "</strong> new facts "
-            + "(skipped " + data.facts_skipped_duplicate + " duplicates) "
-            + "across <strong>" + data.users_touched + "</strong> users.";
+
+        // Real run — loop until the server says complete. Each call is
+        // a chunk of up to 300 messages processed with parallelism=8 on
+        // the server, taking 30-90s.
+        let safetyMax = 500; // sanity cap: 500 chunks × 300 = 150,000 messages
+        let lastUsers = 0;
+        while (safetyMax-- > 0) {
+          totals.chunks++;
+          status.textContent = "Working chunk " + totals.chunks
+            + (totals.messages > 0 ? " — " + totals.facts_saved_new + " facts saved so far across " + lastUsers + " members" : "")
+            + " — keep this tab open…";
+
+          const r = await fetch("/api/admin/backfill-memory?chunk=300", {
+            method: "POST",
+            headers: { "x-session-token": token },
+          });
+          if (!r.ok) {
+            const errBody = await r.text().catch(() => "");
+            status.innerHTML = "Stopped after " + totals.chunks + " chunk(s). HTTP " + r.status + ": "
+              + errBody.slice(0, 200) + ". Click <em>Refresh memory</em> again to resume from where it stopped.";
+            return;
+          }
+          const data = await r.json();
+          totals.messages += data.messages_in_this_chunk || 0;
+          totals.heuristic_hits += data.heuristic_hits || 0;
+          totals.extractions += data.extraction_calls || 0;
+          totals.facts_saved_new += data.facts_saved_new || 0;
+          totals.facts_skipped_duplicate += data.facts_skipped_duplicate || 0;
+          totals.errors += data.errors || 0;
+          if (typeof data.users_touched === "number" && data.users_touched > totals.users_touched_max) {
+            totals.users_touched_max = data.users_touched;
+            lastUsers = data.users_touched;
+          }
+
+          if (data.complete) break;
+          if (!data.messages_in_this_chunk) break; // safety — nothing in this chunk and not complete? bail
         }
+
+        status.innerHTML = "Done. Processed <strong>" + totals.messages + "</strong> messages across "
+          + totals.chunks + " chunk(s), "
+          + "fired <strong>" + totals.extractions + "</strong> extractions, "
+          + "saved <strong>" + totals.facts_saved_new + "</strong> new facts "
+          + "(skipped " + totals.facts_skipped_duplicate + " duplicates)."
+          + (totals.errors > 0 ? " <strong>" + totals.errors + " errors</strong> (see Vercel logs)." : "");
       } catch (err) {
-        status.textContent = "Network error: " + (err.message || err);
+        status.innerHTML = "Network error after " + totals.chunks + " chunk(s): " + (err.message || err)
+          + ". Click <em>Refresh memory</em> again to resume.";
       } finally {
         btn.disabled = false;
         previewBtn.disabled = false;
