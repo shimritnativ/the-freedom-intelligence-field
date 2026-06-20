@@ -1987,6 +1987,16 @@
                 <button class="preset-btn" onclick="runBackfill()" id="backfill-btn" style="background: var(--gold); color: var(--dark); border-color: var(--gold);">Refresh completions</button>
                 <div id="backfill-status" style="margin-top: 10px; font-size: 12px; color: var(--text-dim); font-style: italic;">Runs automatically once a day. Click any time to refresh now.</div>
               </div>
+              <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);">
+                <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px;">
+                  <strong style="color: var(--text);">Memory backfill</strong> — Pull durable facts (name, partner, work, recurring patterns) out of every member's past chats and save them so the Field remembers across all processes going forward.
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <button class="preset-btn" onclick="runMemoryBackfill(true)" id="memory-backfill-preview-btn">Preview (dry run)</button>
+                  <button class="preset-btn" onclick="runMemoryBackfill(false)" id="memory-backfill-btn" style="background: var(--gold); color: var(--dark); border-color: var(--gold);">Refresh memory</button>
+                </div>
+                <div id="memory-backfill-status" style="margin-top: 10px; font-size: 12px; color: var(--text-dim); font-style: italic;">Click Preview first to see how much it'll process without spending anything.</div>
+              </div>
             </div>
             <div class="section" id="panel-tier-mix">
               <h2><span class="h2-eyebrow">Tier mix</span>Members by tier &amp; plan</h2>
@@ -3224,6 +3234,63 @@
       }
     }
     window.runBackfill = runBackfill;
+
+    // Trigger the memory backfill endpoint. Mirrors runBackfill but talks
+    // to /api/admin/backfill-memory which walks every user message ever
+    // sent, runs the durable-fact heuristic + Haiku extraction, and
+    // populates memory_summaries so the Field knows users across past
+    // chats. dryRun=true returns counts without spending API tokens —
+    // recommended first to see the scale of work.
+    async function runMemoryBackfill(dryRun) {
+      const status = document.getElementById("memory-backfill-status");
+      const btn = document.getElementById("memory-backfill-btn");
+      const previewBtn = document.getElementById("memory-backfill-preview-btn");
+      const token = localStorage.getItem(STORAGE_KEY);
+      if (!token) {
+        status.textContent = "Session expired. Refresh the page and try again.";
+        return;
+      }
+      if (!dryRun) {
+        const ok = confirm("Run the real memory backfill? This will extract facts from every past chat and may take a few minutes. Cost: ~€0.001 per heuristic-matched message (typically a few cents total).");
+        if (!ok) return;
+      }
+      btn.disabled = true;
+      previewBtn.disabled = true;
+      status.textContent = dryRun
+        ? "Counting how many past messages would be processed…"
+        : "Extracting facts from past chats. This can take a few minutes. Keep this tab open.";
+      try {
+        const url = "/api/admin/backfill-memory" + (dryRun ? "?dry_run=1" : "");
+        const r = await fetch(url, {
+          method: "POST",
+          headers: { "x-session-token": token },
+        });
+        if (!r.ok) {
+          const errBody = await r.text().catch(() => "");
+          status.textContent = "Backfill failed (HTTP " + r.status + "). " + errBody.slice(0, 200);
+          return;
+        }
+        const data = await r.json();
+        if (dryRun) {
+          status.innerHTML = "Preview: <strong>" + data.total_messages_scanned + "</strong> past messages, "
+            + "<strong>" + data.heuristic_hits + "</strong> look like they might contain durable facts "
+            + "(~" + Math.round(data.heuristic_hits * 0.001 * 100) / 100 + "€ in Haiku calls), "
+            + "across <strong>" + data.users_touched + "</strong> users. Click <em>Refresh memory</em> to run for real.";
+        } else {
+          status.innerHTML = "Done. Scanned <strong>" + data.total_messages_scanned + "</strong> messages, "
+            + "fired <strong>" + data.extraction_calls + "</strong> extractions, "
+            + "saved <strong>" + data.facts_saved_new + "</strong> new facts "
+            + "(skipped " + data.facts_skipped_duplicate + " duplicates) "
+            + "across <strong>" + data.users_touched + "</strong> users.";
+        }
+      } catch (err) {
+        status.textContent = "Network error: " + (err.message || err);
+      } finally {
+        btn.disabled = false;
+        previewBtn.disabled = false;
+      }
+    }
+    window.runMemoryBackfill = runMemoryBackfill;
 
     // ===== Push notification sender =====
     // Loads subscribers on demand, lets admin pick recipients (one, many, all),
