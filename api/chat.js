@@ -27,6 +27,7 @@ import {
   hashSystemPrompt,
 } from "../lib/db.js";
 import { maybeRecordDayCompletion } from "../lib/dayExtraction.js";
+import { loadUserMemory, maybeRecordDurableFacts } from "../lib/memory.js";
 
 // ============================================================================
 // Constants
@@ -212,11 +213,22 @@ Then close with:
 This override applies only to the upgrade invitation and button at the end of the session. Everything else in the system prompt remains unchanged.`
       : "";
 
-    const systemPrompt = getSystemPromptForDay(day) + fullTierOverride + priorDayContext;
+    // Cross-process memory: same block the Unlimited chat uses, scoped to
+    // this user. Includes the structured Day completion data + durable
+    // facts extracted from past chats + their full process history. Lets
+    // the Field remember who they are across Reset days AND any Unlimited
+    // chats they've done since (e.g. a Day 2 re-run reminds the Field
+    // about a Decision-Alignment they did last week).
+    const userMemoryBlock = await loadUserMemory(user.id);
+    const memorySection = userMemoryBlock ? `\n\n---\n\n${userMemoryBlock}` : "";
+
+    const systemPrompt = getSystemPromptForDay(day) + fullTierOverride + memorySection + priorDayContext;
     const systemHash = hashSystemPrompt(systemPrompt);
 
     // ----- Persist user message FIRST so it never gets lost -----
-    await insertMessage({
+    // Capture the row id so the durable-fact extractor below can attribute
+    // any extracted memory back to this turn.
+    const userMessageRow = await insertMessage({
       sessionId: session.id,
       userId: user.id,
       role: "user",
@@ -289,6 +301,18 @@ This override applies only to the upgrade invitation and button at the end of th
       sessionId: session.id,
       messageId: assistantRow ? assistantRow.id : null,
     });
+
+    // ----- Durable-fact extraction (cross-process memory) -----
+    // Background pass against the user's message to pull out anything
+    // durable about them (name, partner, work, recurring pattern). Saved
+    // to memory_summaries and reused by loadUserMemory on every future
+    // chat turn across every process. Heuristic-gated so most turns skip
+    // the API call. Not awaited — chat response doesn't wait on memory.
+    maybeRecordDurableFacts({
+      userMessage: message.trim(),
+      userId: user.id,
+      messageId: userMessageRow ? userMessageRow.id : null,
+    }).catch(() => {});
 
     // ----- Return only the new reply + state -----
     return res.status(200).json({
