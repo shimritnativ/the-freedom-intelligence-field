@@ -139,7 +139,7 @@ export default async function handler(req, res) {
             OR EXISTS (
               SELECT 1 FROM purchases p
               WHERE p.email = u.email
-                AND p.event_type = 'order.success'
+                AND p.event_type IN ('order.success', 'order.subscription_payment')
                 AND p.amount_cents > 0
                 AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
             )
@@ -213,7 +213,7 @@ export default async function handler(req, res) {
           AND EXISTS (
             SELECT 1 FROM purchases p
             WHERE p.email = u.email
-              AND p.event_type = 'order.success'
+              AND p.event_type IN ('order.success', 'order.subscription_payment')
               AND p.amount_cents > 0
               AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
           )
@@ -234,7 +234,7 @@ export default async function handler(req, res) {
           EXISTS (
             SELECT 1 FROM purchases p
             WHERE p.email = u.email
-              AND p.event_type = 'order.success'
+              AND p.event_type IN ('order.success', 'order.subscription_payment')
               AND p.amount_cents > 0
               AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
           ) AS has_paid_purchase
@@ -271,7 +271,7 @@ export default async function handler(req, res) {
             SELECT SUM(p.amount_cents)
             FROM purchases p
             WHERE p.email = u.email
-              AND p.event_type = 'order.success'
+              AND p.event_type IN ('order.success', 'order.subscription_payment')
               AND p.amount_cents > 0
               AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
           ), 0)::bigint AS total_spent_cents,
@@ -279,7 +279,7 @@ export default async function handler(req, res) {
             SELECT COUNT(DISTINCT p.thrivecart_id)
             FROM purchases p
             WHERE p.email = u.email
-              AND p.event_type = 'order.success'
+              AND p.event_type IN ('order.success', 'order.subscription_payment')
               AND p.amount_cents > 0
               AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
           ), 0)::int AS purchase_count
@@ -298,7 +298,7 @@ export default async function handler(req, res) {
             OR EXISTS (
               SELECT 1 FROM purchases p
               WHERE p.email = u.email
-                AND p.event_type = 'order.success'
+                AND p.event_type IN ('order.success', 'order.subscription_payment')
                 AND p.amount_cents > 0
                 AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
             )
@@ -359,10 +359,10 @@ export default async function handler(req, res) {
       // 10. ThriveCart total revenue (excludes team + excluded coupons)
       safeQuery(sql`
         SELECT
-          COUNT(*) FILTER (WHERE event_type = 'order.success')::int AS orders,
-          COALESCE(SUM(amount_cents) FILTER (WHERE event_type = 'order.success'), 0)::bigint AS gross_cents,
+          COUNT(*) FILTER (WHERE event_type IN ('order.success', 'order.subscription_payment'))::int AS orders,
+          COALESCE(SUM(amount_cents) FILTER (WHERE event_type IN ('order.success', 'order.subscription_payment')), 0)::bigint AS gross_cents,
           COALESCE(SUM(amount_cents) FILTER (WHERE event_type = 'order.refund'), 0)::bigint AS refund_cents,
-          COUNT(DISTINCT email) FILTER (WHERE event_type = 'order.success')::int AS unique_buyers
+          COUNT(DISTINCT email) FILTER (WHERE event_type IN ('order.success', 'order.subscription_payment'))::int AS unique_buyers
         FROM purchases
         WHERE email NOT LIKE ${excludePattern}
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
@@ -376,7 +376,7 @@ export default async function handler(req, res) {
           COUNT(*)::int AS orders,
           COALESCE(SUM(amount_cents), 0)::bigint AS revenue_cents
         FROM purchases
-        WHERE event_type = 'order.success'
+        WHERE event_type IN ('order.success', 'order.subscription_payment')
           AND email NOT LIKE ${excludePattern}
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND created_at >= ${fromIso}
@@ -393,7 +393,7 @@ export default async function handler(req, res) {
           COALESCE(SUM(amount_cents), 0)::bigint AS revenue_cents,
           COALESCE(AVG(amount_cents), 0)::int AS avg_cents
         FROM purchases
-        WHERE event_type = 'order.success'
+        WHERE event_type IN ('order.success', 'order.subscription_payment')
           AND email NOT LIKE ${excludePattern}
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND created_at >= ${fromIso}
@@ -409,7 +409,7 @@ export default async function handler(req, res) {
           COALESCE(SUM(amount_cents), 0)::bigint AS revenue_cents,
           MAX(created_at) AS last_purchase
         FROM purchases
-        WHERE event_type = 'order.success'
+        WHERE event_type IN ('order.success', 'order.subscription_payment')
           AND email NOT LIKE ${excludePattern}
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND created_at >= ${fromIso}
@@ -425,7 +425,7 @@ export default async function handler(req, res) {
           COALESCE(SUM(amount_cents), 0)::bigint AS revenue_cents,
           COUNT(*)::int AS orders
         FROM purchases
-        WHERE event_type = 'order.success'
+        WHERE event_type IN ('order.success', 'order.subscription_payment')
           AND email NOT LIKE ${excludePattern}
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND created_at >= ${fromIso}
@@ -442,7 +442,7 @@ export default async function handler(req, res) {
           COALESCE(SUM(amount_cents), 0)::bigint AS revenue_cents,
           COALESCE(AVG(amount_cents), 0)::int AS avg_cents
         FROM purchases
-        WHERE event_type = 'order.success'
+        WHERE event_type IN ('order.success', 'order.subscription_payment')
           AND email NOT LIKE ${excludePattern}
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND created_at >= ${fromIso}
@@ -500,7 +500,7 @@ export default async function handler(req, res) {
           AND EXISTS (
             SELECT 1 FROM purchases p
             WHERE p.email = u.email
-              AND p.event_type = 'order.success'
+              AND p.event_type IN ('order.success', 'order.subscription_payment')
               AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
           )
         GROUP BY u.id, u.email, u.display_name
@@ -515,7 +515,7 @@ export default async function handler(req, res) {
           MAX(p.coupon_code) AS coupon_used
         FROM users u
         JOIN day_completions dc ON dc.user_id = u.id
-        LEFT JOIN purchases p ON p.email = u.email AND p.event_type = 'order.success'
+        LEFT JOIN purchases p ON p.email = u.email AND p.event_type IN ('order.success', 'order.subscription_payment')
         WHERE u.tier = 'preview'
           AND dc.day = 3
           AND u.email IS NOT NULL AND u.email <> ''
@@ -524,7 +524,7 @@ export default async function handler(req, res) {
           AND EXISTS (
             SELECT 1 FROM purchases p2
             WHERE p2.email = u.email
-              AND p2.event_type = 'order.success'
+              AND p2.event_type IN ('order.success', 'order.subscription_payment')
               AND COALESCE(p2.coupon_code, '') <> ALL(${excludedCoupons})
           )
         GROUP BY u.id, u.email, u.display_name
@@ -540,7 +540,7 @@ export default async function handler(req, res) {
           u.tier::text AS tier
         FROM users u
         JOIN purchases p ON p.email = u.email
-        WHERE p.event_type = 'order.success'
+        WHERE p.event_type IN ('order.success', 'order.subscription_payment')
           AND p.coupon_code IN ('LAUNCHTEAM', 'LAUNCHTEAMUNLIMITED')
           AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
@@ -568,7 +568,7 @@ export default async function handler(req, res) {
         first_unlimited_purchase AS (
           SELECT p.email, MIN(p.created_at) AS subscribed_at
           FROM purchases p
-          WHERE p.event_type = 'order.success'
+          WHERE p.event_type IN ('order.success', 'order.subscription_payment')
             AND p.amount_cents > 0
             AND p.product_name ILIKE '%Unlimited%'
             AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
@@ -618,7 +618,7 @@ export default async function handler(req, res) {
           AND EXISTS (
             SELECT 1 FROM purchases p
             WHERE p.email = u.email
-              AND p.event_type = 'order.success'
+              AND p.event_type IN ('order.success', 'order.subscription_payment')
               AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
           )
         ORDER BY days_since_login DESC
@@ -633,7 +633,7 @@ export default async function handler(req, res) {
           MAX(p.created_at) AS last_purchase_at
         FROM users u
         JOIN purchases p ON p.email = u.email
-        WHERE p.event_type = 'order.success'
+        WHERE p.event_type IN ('order.success', 'order.subscription_payment')
           AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
           AND u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE ${excludePattern}
@@ -677,7 +677,7 @@ export default async function handler(req, res) {
             WHERE product_name ILIKE '%Unlimited%' AND product_name NOT ILIKE '%Yearly%'
           )::int AS unlimited_monthly_today
         FROM purchases
-        WHERE event_type = 'order.success'
+        WHERE event_type IN ('order.success', 'order.subscription_payment')
           AND email NOT LIKE ${excludePattern}
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND amount_cents > 0
@@ -717,7 +717,7 @@ export default async function handler(req, res) {
                AND EXISTS (
                  SELECT 1 FROM purchases p
                  WHERE p.email = u.email
-                   AND p.event_type = 'order.success'
+                   AND p.event_type IN ('order.success', 'order.subscription_payment')
                    AND p.amount_cents > 0
                    AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
                )) AS active_unlimited_today,
@@ -731,7 +731,7 @@ export default async function handler(req, res) {
                AND EXISTS (
                  SELECT 1 FROM purchases p
                  WHERE p.email = u.email
-                   AND p.event_type = 'order.success'
+                   AND p.event_type IN ('order.success', 'order.subscription_payment')
                    AND p.amount_cents > 0
                    AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
                )) AS unlimited_messages_today
