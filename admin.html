@@ -2781,22 +2781,59 @@
             ${emails.length === 0
               ? '<div class="empty">No members in this stage.</div>'
               : `<ul>${emails.map(u => {
-                  // Pick the right "when did this start" line per stage so
-                  // Geo can see how long each person has been stuck.
-                  let when;
-                  if (r.stage === "never_logged_in") {
-                    when = u.created_at
-                      ? `Joined ${fmtRelative(u.created_at)}, hasn't opened the app`
-                      : "Hasn't opened the app";
-                  } else if (r.stage === "stuck") {
-                    when = u.first_login_at
-                      ? `Logged in ${fmtRelative(u.first_login_at)}, hasn't started Day 1`
-                      : "Hasn't started Day 1";
-                  } else {
-                    when = u.first_login_at
-                      ? `Started Reset ${fmtRelative(u.first_login_at)}`
-                      : (u.created_at ? `Joined ${fmtRelative(u.created_at)}` : "");
+                  // Build a meta line that shows enough context for Geo to
+                  // act on the right person at the right moment:
+                  //   - When they signed up (purchased the Reset)
+                  //   - When they first logged in (started the clock)
+                  //   - How much of the 72-hour window is left
+                  //   - Which day they SHOULD be on based on time elapsed
+                  // The Reset window is technically 96 hours from first
+                  // login (24h/day × 3 days + 24h grace), set in
+                  // grantEntitlement as preview_ends_at = login + 72h
+                  // initially but extended by the unlock logic. We use
+                  // preview_ends_at directly since that's what controls
+                  // whether they still have access.
+                  const parts = [];
+                  if (u.created_at) {
+                    parts.push(`Signed up ${fmtRelative(u.created_at)}`);
                   }
+                  if (u.first_login_at) {
+                    parts.push(`first login ${fmtRelative(u.first_login_at)}`);
+                    // Compute time-since-login → which day they should
+                    // be on. Days unlock progressively: Day 1 at first
+                    // login, Day 2 at +24h, Day 3 at +48h.
+                    const hoursSinceLogin = (Date.now() - new Date(u.first_login_at).getTime()) / 3600000;
+                    let shouldBeOn;
+                    if (hoursSinceLogin < 24) shouldBeOn = "Day 1";
+                    else if (hoursSinceLogin < 48) shouldBeOn = "Day 2";
+                    else shouldBeOn = "Day 3";
+                    parts.push(`should be on ${shouldBeOn}`);
+                  } else {
+                    parts.push("hasn't opened the app yet");
+                  }
+                  // Hours remaining in the window. Negative = window
+                  // already expired (shouldn't normally show here since
+                  // the funnel filters on active members, but defensive).
+                  if (u.preview_ends_at) {
+                    const msLeft = new Date(u.preview_ends_at).getTime() - Date.now();
+                    if (msLeft <= 0) {
+                      parts.push("window expired");
+                    } else if (msLeft < 3600000) {
+                      parts.push("under 1h left");
+                    } else if (msLeft < 86400000) {
+                      parts.push(`${Math.round(msLeft / 3600000)}h left in window`);
+                    } else {
+                      const daysLeft = Math.floor(msLeft / 86400000);
+                      const hoursLeftRemainder = Math.round((msLeft % 86400000) / 3600000);
+                      parts.push(`${daysLeft}d ${hoursLeftRemainder}h left in window`);
+                    }
+                  }
+                  // Add a stage-specific suffix only when it's not
+                  // redundant with the time math above.
+                  if (r.stage === "stuck") {
+                    parts.push("hasn't started Day 1");
+                  }
+                  const when = parts.join(" · ");
                   return `
                     <li>
                       <span>${escapeHtml(u.email)}</span>
