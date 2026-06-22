@@ -3645,26 +3645,38 @@
     }
     window.renderRoster = renderRoster;
 
-    // Wire up the filter inputs once the page loads. Every change
-    // re-renders. Search box uses input event for live filtering.
-    document.addEventListener("DOMContentLoaded", () => {
-      const ids = ["roster-search", "roster-filter-tier", "roster-filter-plan", "roster-filter-spent", "roster-filter-day", "roster-filter-login"];
-      ids.forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        const ev = id === "roster-search" ? "input" : "change";
-        el.addEventListener(ev, () => { rosterPage = 0; renderRoster(); });
-      });
-      const clearBtn = document.getElementById("roster-clear");
-      if (clearBtn) {
-        clearBtn.addEventListener("click", () => {
-          ids.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.value = "";
-          });
-          rosterPage = 0;
-          renderRoster();
+    // Wire up the filter inputs via DELEGATED listeners on document.body.
+    // Why delegation: renderDashboard rebuilds the entire dashboard DOM
+    // on every metrics refresh, which destroys per-element listeners
+    // attached on initial load. Delegated listeners survive DOM rebuilds
+    // because they live on document.body, not on the inputs themselves.
+    // This was the bug Geo hit — filters appeared to do nothing after
+    // the first Refresh because their listeners were attached to
+    // elements that no longer existed.
+    const ROSTER_FILTER_IDS = [
+      "roster-search", "roster-filter-tier", "roster-filter-plan",
+      "roster-filter-spent", "roster-filter-day", "roster-filter-login",
+    ];
+    document.body.addEventListener("input", (e) => {
+      if (e.target && e.target.id === "roster-search") {
+        rosterPage = 0;
+        renderRoster();
+      }
+    });
+    document.body.addEventListener("change", (e) => {
+      if (e.target && ROSTER_FILTER_IDS.includes(e.target.id) && e.target.id !== "roster-search") {
+        rosterPage = 0;
+        renderRoster();
+      }
+    });
+    document.body.addEventListener("click", (e) => {
+      if (e.target && e.target.id === "roster-clear") {
+        ROSTER_FILTER_IDS.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = "";
         });
+        rosterPage = 0;
+        renderRoster();
       }
     });
 
