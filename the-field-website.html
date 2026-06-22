@@ -885,9 +885,11 @@
   .inside-panel--library   .inside-panel-bg { background: linear-gradient(135deg, #E8DDBE, #D4BE8C); }
   .inside-panel--memory    .inside-panel-bg { background: linear-gradient(135deg, #2A2218, #0E0B07); }
 
-  /* The mockup image itself — large, drop-shadowed, perfectly readable. */
+  /* Single hero mockup variant — used for tabs that show one screen
+     at full size (e.g. Process Library). Large, drop-shadowed,
+     perfectly readable. */
   .inside-panel-mockup {
-    max-width: 700px;
+    max-width: 880px;
     width: 100%;
     height: auto;
     display: block;
@@ -896,9 +898,89 @@
     position: relative;
     z-index: 1;
   }
-  .inside-panel--chat .inside-panel-mockup,
-  .inside-panel--memory .inside-panel-mockup {
-    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+  .inside-panel--library .inside-panel-mockup {
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.18);
+  }
+
+  /* Dual-device stage — desktop browser large on the left, mobile
+     phone overlapping the bottom-right. Used on Welcome + Continuity
+     tabs to show "works everywhere you do" without needing copy. */
+  .inside-devices {
+    position: relative;
+    width: 100%;
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 30px 0 60px;
+    z-index: 1;
+  }
+  .inside-device-desktop {
+    width: 78%;
+    height: auto;
+    display: block;
+    border-radius: var(--radius-md);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35),
+                0 0 0 1px rgba(255, 255, 255, 0.04);
+  }
+  .inside-device-mobile {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 26%;
+    max-width: 230px;
+    height: auto;
+    display: block;
+    border-radius: 28px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(201, 168, 76, 0.18);
+    /* Subtle gold halo so the phone "lifts" off the desktop visually. */
+    outline: 1px solid rgba(201, 168, 76, 0.25);
+    outline-offset: -1px;
+  }
+  /* Sync indicator on the Continuity tab — pulsing gold arc between
+     the two devices. Pure SVG, positioned absolutely. */
+  .inside-sync-arc {
+    position: absolute;
+    top: 35%;
+    left: 50%;
+    width: 28%;
+    height: 80px;
+    transform: translateX(-30%);
+    pointer-events: none;
+    z-index: 2;
+  }
+  .inside-sync-arc svg { width: 100%; height: 100%; overflow: visible; }
+  .inside-sync-dot {
+    fill: var(--gold);
+    filter: drop-shadow(0 0 6px rgba(201, 168, 76, 0.8));
+    animation: sync-pulse 2.4s ease-in-out infinite;
+  }
+  .inside-sync-dot--two { animation-delay: 1.2s; }
+  @keyframes sync-pulse {
+    0%, 100% { opacity: 0.3; r: 3; }
+    50%      { opacity: 1;   r: 5; }
+  }
+  .inside-sync-path {
+    stroke: var(--gold);
+    stroke-width: 1;
+    fill: none;
+    stroke-dasharray: 3 6;
+    opacity: 0.55;
+  }
+  @media (max-width: 720px) {
+    /* On mobile the dual-device split becomes single-device since
+       there's no room to stack them gracefully. We show the mobile
+       mockup centered and hide the desktop one. */
+    .inside-device-desktop { display: none; }
+    .inside-device-mobile {
+      position: relative;
+      width: 60%;
+      max-width: 280px;
+      margin: 0 auto;
+      right: auto;
+      bottom: auto;
+    }
+    .inside-devices { padding: 0; }
+    .inside-sync-arc { display: none; }
   }
 
   /* Optional callout cards anchored to one side of the stage, like
@@ -1744,9 +1826,11 @@
   }
 
   /* --- Magnetic CTA — base transition only. JS handles the actual
-         transform on mousemove. --- */
+         transform on mousemove. Slower easing here means the button
+         lags slightly behind the cursor rather than tracking 1:1,
+         which reads as smooth drift instead of jittery snap. --- */
   .magnetic {
-    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
     will-change: transform;
   }
 
@@ -2203,7 +2287,7 @@
       <p class="lead reveal reveal-up reveal-delay-2" style="margin: 0 auto;">No noise. No distractions. Just the conversation, the process, and the structured outputs that come out of it.</p>
     </div>
 
-    <!-- Tab bar -->
+    <!-- Tab bar — 3 tabs telling a story: home, library, sync -->
     <div class="inside-tabs-wrap reveal reveal-up reveal-delay-3">
       <div class="inside-tabs" role="tablist">
         <button class="inside-tab is-active" type="button" role="tab" data-inside-tab="welcome" aria-selected="true">
@@ -2211,13 +2295,6 @@
             <path d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h4M19 10v10a1 1 0 01-1 1h-4M10 21V14h4v7"/>
           </svg>
           Welcome
-        </button>
-        <button class="inside-tab" type="button" role="tab" data-inside-tab="chat" aria-selected="false">
-          <svg class="inside-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <path d="M21 12a9 9 0 11-3.3-6.9L21 3v6h-6"/>
-            <path d="M8 11h.01M12 11h.01M16 11h.01"/>
-          </svg>
-          Conversation
         </button>
         <button class="inside-tab" type="button" role="tab" data-inside-tab="library" aria-selected="false">
           <svg class="inside-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
@@ -2239,42 +2316,29 @@
     <!-- Stage — each panel absolute-positioned, only the active one visible -->
     <div class="inside-stage reveal reveal-up reveal-delay-4">
 
-      <!-- Panel 1: Welcome -->
+      <!-- Panel 1: Welcome — desktop + mobile of home screen -->
       <div class="inside-panel inside-panel--welcome is-active" data-inside-panel="welcome">
         <div class="inside-panel-bg">
-          <img class="inside-panel-mockup" src="landing-page-assets/welcome-page-mockup.png" alt="The Field welcome screen. Quiet entry, no feed, no inbox" loading="lazy" />
+          <div class="inside-devices">
+            <img class="inside-device-desktop" src="https://i.ibb.co/7xT8JcSw/Screenshot-2026-06-22-at-16-27-57.png" alt="The Field's home screen on desktop, quiet and uncluttered" loading="lazy" />
+            <img class="inside-device-mobile" src="https://i.ibb.co/8DMWdzwk/Screenshot-2026-06-22-at-16-28-11.png" alt="The Field's home screen on mobile, designed for daily practice in your pocket" loading="lazy" />
+          </div>
           <aside class="inside-callout inside-callout--top-right">
             <div class="inside-callout-label">Today's Field</div>
             <div class="inside-callout-body">"What you declare here is not a wish. It is a remembering." <strong>One open prompt, one process to begin.</strong></div>
           </aside>
         </div>
         <div class="inside-caption">
-          <div class="inside-caption-eyebrow">Entry</div>
+          <div class="inside-caption-eyebrow">Welcome</div>
           <h3>A welcome built for arrival.</h3>
-          <p>Open The Field and there's no feed, no inbox, no urgency. Just one quiet door. The work you're here to do today.</p>
+          <p>Open The Field on your laptop, on your phone, anywhere you are. No feed, no inbox, no urgency. Just one quiet door. The work you're here to do today.</p>
         </div>
       </div>
 
-      <!-- Panel 2: Conversation -->
-      <div class="inside-panel inside-panel--chat" data-inside-panel="chat">
-        <div class="inside-panel-bg">
-          <img class="inside-panel-mockup" src="landing-page-assets/chat-menu-mockup.png" alt="A live session inside The Field. Every reply lands inside the structure of a guided process" loading="lazy" />
-          <aside class="inside-callout inside-callout--bottom-left">
-            <div class="inside-callout-label">In Session</div>
-            <div class="inside-callout-body">Pinned, recent, and archived chats all in one place. <strong>The Field knows which process you opened them in.</strong></div>
-          </aside>
-        </div>
-        <div class="inside-caption">
-          <div class="inside-caption-eyebrow">In Session</div>
-          <h3>Conversation, not interrogation.</h3>
-          <p>Every reply lands inside the structure of a specific process. The Field meets you where you are and walks you exactly as far as you're ready to go.</p>
-        </div>
-      </div>
-
-      <!-- Panel 3: Process Library -->
+      <!-- Panel 2: Process Library — single hero mockup -->
       <div class="inside-panel inside-panel--library" data-inside-panel="library">
         <div class="inside-panel-bg">
-          <img class="inside-panel-mockup" src="landing-page-assets/categories-mockup.png" alt="The Field's library of guided processes. Decision Alignment, Frequency Booster, Identity Upgrade, Worthy to Receive, and more" loading="lazy" />
+          <img class="inside-panel-mockup" src="https://i.ibb.co/k2Jnxr7s/Screenshot-2026-06-22-at-16-28-56.png" alt="The Field's library of guided processes, organized by intention" loading="lazy" />
           <aside class="inside-callout inside-callout--top-right">
             <div class="inside-callout-label">The Library</div>
             <div class="inside-callout-body">Sixteen processes organized by intention. <strong>Pick the one that fits the moment. No scrolling, no decision fatigue.</strong></div>
@@ -2287,19 +2351,31 @@
         </div>
       </div>
 
-      <!-- Panel 4: Continuity (Memory across processes) -->
+      <!-- Panel 3: Continuity — desktop + mobile of the same conversation, synced -->
       <div class="inside-panel inside-panel--memory" data-inside-panel="memory">
         <div class="inside-panel-bg">
-          <img class="inside-panel-mockup" src="sidebar-mockup%202.png" alt="The Field's sidebar showing every past conversation across every process, organized chronologically" loading="lazy" />
+          <div class="inside-devices">
+            <img class="inside-device-desktop" src="https://i.ibb.co/SX6bZzfY/Screenshot-2026-06-22-at-16-29-46.png" alt="A live conversation inside The Field on desktop" loading="lazy" />
+            <img class="inside-device-mobile" src="https://i.ibb.co/Hf51tk9d/Screenshot-2026-06-22-at-16-29-57.png" alt="The same conversation continued on mobile, perfectly in sync" loading="lazy" />
+            <!-- Sync indicator: two pulsing gold dots suggesting data
+                 flowing between desktop and mobile. Hidden on mobile. -->
+            <div class="inside-sync-arc" aria-hidden="true">
+              <svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+                <path class="inside-sync-path" d="M 10 50 Q 100 -20 190 50" />
+                <circle class="inside-sync-dot" cx="40" cy="36" r="4" />
+                <circle class="inside-sync-dot inside-sync-dot--two" cx="160" cy="36" r="4" />
+              </svg>
+            </div>
+          </div>
           <aside class="inside-callout inside-callout--top-left">
             <div class="inside-callout-label">Continuity</div>
-            <div class="inside-callout-body">Every chat, every process, every Day of every Reset. <strong>The Field remembers what you said in week one when you return in week ten.</strong></div>
+            <div class="inside-callout-body">Same conversation. Every device. <strong>Pick up on the phone exactly where the desktop left off, mid-sentence, mid-process, mid-week.</strong></div>
           </aside>
         </div>
         <div class="inside-caption">
           <div class="inside-caption-eyebrow">Continuity</div>
-          <h3>One memory across every conversation.</h3>
-          <p>The Field doesn't reset when you switch processes. It carries your decisions, your patterns, your declared identity. Everything you've said, into every future session.</p>
+          <h3>One thread, every device.</h3>
+          <p>The Field doesn't reset when you switch screens or processes. Your conversation, your decisions, your declared identity. Everything carries forward, perfectly synced from desktop to phone and back.</p>
         </div>
       </div>
 
@@ -2443,7 +2519,7 @@
   <div class="container">
     <div class="founder-grid">
       <div class="founder-portrait reveal reveal-scale">
-        <img src="shimrit pic.jpg" alt="Shimrit Nativ, founder of Master Your Path and The Field" />
+        <img src="https://i.ibb.co/WvVPkT4q/shimrit-pic.jpg" alt="Shimrit Nativ, founder of Master Your Path and The Field" />
         <div class="founder-portrait-caption">
           <div class="founder-portrait-name">Shimrit Nativ</div>
           <div class="founder-portrait-role">Founder · Master Your Path</div>
@@ -2690,7 +2766,7 @@
       <div class="footer-links">
         <a href="https://thefieldai.app/">Launch app</a>
         <a href="https://www.shimritnativ.com/">Master Your Path</a>
-        <a href="mailto:support@shimritnativ.com">Contact</a>
+        <a href="mailto:support@masteryourpath.org">Contact</a>
       </div>
       <div class="footer-meta">© 2026 Master Your Path · Built with care</div>
     </div>
@@ -2851,19 +2927,29 @@
   })();
 
   // ===== Magnetic CTA hover =====
-  // Subtly pulls the button toward the cursor on mousemove. Works for
-  // any element with class="magnetic". On touch devices the events
-  // never fire so the effect quietly disappears.
+  // Subtly pulls the button toward the cursor on mousemove. Tuned to
+  // feel like a soft drift rather than a jittery snap:
+  //   - throttled via requestAnimationFrame so we don't re-style on
+  //     every single pixel of cursor movement
+  //   - shorter max-travel distance (was 14px → now 6px)
+  //   - eased cubic curve in CSS does the smoothing (transition 0.6s)
+  // Touch devices never fire mousemove so the effect quietly disappears.
   (function setupMagnetic() {
-    const strength = 14; // max px the button can travel
+    const strength = 6; // max px the button can travel (was 14)
     document.querySelectorAll('.magnetic').forEach(el => {
+      let ticking = false;
       el.addEventListener('mousemove', (e) => {
-        const rect = el.getBoundingClientRect();
-        const x = e.clientX - rect.left - rect.width / 2;
-        const y = e.clientY - rect.top - rect.height / 2;
-        const dx = (x / rect.width) * strength * 2;
-        const dy = (y / rect.height) * strength * 2;
-        el.style.transform = `translate(${dx}px, ${dy}px)`;
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+          const rect = el.getBoundingClientRect();
+          const x = e.clientX - rect.left - rect.width / 2;
+          const y = e.clientY - rect.top - rect.height / 2;
+          const dx = (x / rect.width) * strength;
+          const dy = (y / rect.height) * strength;
+          el.style.transform = `translate(${dx}px, ${dy}px)`;
+          ticking = false;
+        });
       });
       el.addEventListener('mouseleave', () => {
         el.style.transform = '';
