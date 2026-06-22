@@ -757,6 +757,22 @@
   @media (max-width: 720px) {
     .constellation { display: none; }
     .process-pills { display: flex; }
+    /* Fallback pills reuse the .process-pill class but live outside
+       .constellation, so the `.constellation.is-revealed .process-pill`
+       opacity rule never matches them. Force them visible + drop the
+       float animation so they sit as a clean static chip grid. */
+    .process-pills .process-pill {
+      opacity: 1;
+      animation: none;
+      transition: none;
+      padding: 8px 14px;
+      font-size: 12px;
+      color: var(--gold);
+      background: rgba(201, 168, 76, 0.08);
+      border-color: var(--gold-line);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
     .unlimited-block { padding: 50px 28px 40px; }
     .unlimited-block p { margin-bottom: 30px; }
   }
