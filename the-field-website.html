@@ -755,26 +755,27 @@
     font-weight: 500;
   }
   @media (max-width: 720px) {
-    .constellation { display: none; }
-    .process-pills { display: flex; }
-    /* Fallback pills reuse the .process-pill class but live outside
-       .constellation, so the `.constellation.is-revealed .process-pill`
-       opacity rule never matches them. Force them visible + drop the
-       float animation so they sit as a clean static chip grid. */
-    .process-pills .process-pill {
-      opacity: 1;
-      animation: none;
-      transition: none;
-      padding: 8px 14px;
-      font-size: 12px;
-      color: var(--gold);
-      background: rgba(201, 168, 76, 0.08);
-      border-color: var(--gold-line);
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
+    /* Keep the constellation on mobile — just scale it down. Hide the
+       fallback chip grid since the orbit is the more beautiful read. */
+    .process-pills { display: none; }
+    .constellation { max-width: 520px; }
+    .process-pill {
+      font-size: 11px;
+      padding: 6px 11px;
     }
-    .unlimited-block { padding: 50px 28px 40px; }
-    .unlimited-block p { margin-bottom: 30px; }
+    .process-pill--small {
+      font-size: 9.5px;
+      padding: 4px 8px;
+    }
+    /* On mobile cursor proximity doesn't exist, so pills auto-cycle
+       through the "is-hot" state via a JS-driven rotation. The CSS
+       only needs to make the .is-hot effect cheaper (no big shadow). */
+    .process-pill.is-hot {
+      box-shadow: 0 0 18px rgba(201, 168, 76, 0.4);
+    }
+    .constellation-center-label { font-size: 16px; }
+    .unlimited-block { padding: 50px 24px 40px; }
+    .unlimited-block p { margin-bottom: 24px; }
   }
 
   /* ===== Section: See inside The Field — tabbed showcase =====
@@ -985,23 +986,31 @@
     opacity: 0.55;
   }
   @media (max-width: 720px) {
+    /* Stack devices above callout instead of squishing them side-by-side
+       (the parent .inside-panel-bg is a flex row by default). */
+    .inside-panel-bg {
+      flex-direction: column;
+      padding: 36px 22px;
+    }
     /* Keep the dual-device composition on mobile — desktop mockup
        reads as a small browser window, phone overlaps bottom-right
-       like on desktop. Looks like the same proportional layout, just
-       scaled into a narrower stage. */
-    .inside-devices { padding: 18px 0 30px; }
+       like on desktop. Now full-width since the callout dropped below. */
+    .inside-devices {
+      padding: 6px 0 0;
+      width: 100%;
+    }
     .inside-device-desktop {
-      width: 88%;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4),
+      width: 78%;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4),
                   0 0 0 1px rgba(255, 255, 255, 0.04);
     }
     .inside-device-mobile {
-      width: 32%;
-      max-width: 140px;
-      border-radius: 18px;
+      width: 28%;
+      max-width: 160px;
+      border-radius: 20px;
       box-shadow: 0 14px 32px rgba(0, 0, 0, 0.55),
                   0 0 0 1px rgba(201, 168, 76, 0.18);
-      right: 2%;
+      right: 0;
     }
     /* Re-tune the sync arc for the smaller stage so it still bridges
        desktop edge → phone top. */
@@ -1152,9 +1161,72 @@
   }
   .diff-icon-yes { color: var(--gold); font-size: 18px; line-height: 1; }
   .diff-icon-no { color: var(--text-mute); font-size: 18px; line-height: 1; }
-  @media (max-width: 800px) {
-    .diff-table th, .diff-table td { padding: 12px 14px; font-size: 13px; }
-    .diff-table th { font-size: 11px; }
+  /* On mobile the 4-column table can't fit horizontally without
+     either shrinking text to unreadable or scrolling sideways. We
+     transform it into a stack of cards: one card per feature, with
+     the three competitor responses listed inside, prefixed by their
+     column name (pulled from data-label). The Field row gets gold-
+     tinted treatment so it visually wins on every card. */
+  @media (max-width: 720px) {
+    .diff-table-wrap {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      overflow: visible;
+    }
+    .diff-table,
+    .diff-table thead,
+    .diff-table tbody,
+    .diff-table tr,
+    .diff-table th,
+    .diff-table td {
+      display: block;
+      width: 100%;
+    }
+    .diff-table thead { display: none; }
+    .diff-table tr {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      margin-bottom: 14px;
+      padding: 6px 0;
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+    .diff-table td {
+      border-bottom: 1px solid var(--border);
+      padding: 12px 18px;
+      font-size: 13.5px;
+      line-height: 1.5;
+    }
+    .diff-table tr td:last-child { border-bottom: none; }
+    /* Feature name becomes the card header */
+    .diff-table .diff-feature {
+      background: var(--bg-warm);
+      font-weight: 600;
+      font-size: 13.5px;
+      color: var(--text);
+      padding: 13px 18px;
+      letter-spacing: 0.01em;
+    }
+    /* Each comparison cell shows its column label inline */
+    .diff-cell::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+      margin-bottom: 4px;
+    }
+    /* The Field row gets a gold-tinted background to stay distinctive */
+    .diff-cell.diff-cell-field {
+      background: var(--gold-soft);
+    }
+    .diff-cell.diff-cell-field::before {
+      color: var(--gold);
+    }
   }
 
   /* ===== Section: Testimonials ===== */
@@ -2450,45 +2522,45 @@
         <tbody>
           <tr>
             <td class="diff-feature">Built on real coaching methodology</td>
-            <td class="diff-cell"><span class="diff-icon-no">○</span> Generic prompts</td>
-            <td class="diff-cell"><span class="diff-icon-no">○</span> Adapted frameworks</td>
-            <td class="diff-cell diff-cell-field"><span class="diff-icon-yes">●</span> 10+ years of Human Instrument® work</td>
+            <td class="diff-cell" data-label="Generic AI chatbots"><span class="diff-icon-no">○</span> Generic prompts</td>
+            <td class="diff-cell" data-label="Mainstream AI coaches"><span class="diff-icon-no">○</span> Adapted frameworks</td>
+            <td class="diff-cell diff-cell-field" data-label="The Field"><span class="diff-icon-yes">●</span> 10+ years of Human Instrument® work</td>
           </tr>
           <tr>
             <td class="diff-feature">Memory across every session</td>
-            <td class="diff-cell"><span class="diff-icon-no">○</span> Resets each chat</td>
-            <td class="diff-cell"><span class="diff-icon-no">○</span> Per-thread context only</td>
-            <td class="diff-cell diff-cell-field"><span class="diff-icon-yes">●</span> Persistent across all processes</td>
+            <td class="diff-cell" data-label="Generic AI chatbots"><span class="diff-icon-no">○</span> Resets each chat</td>
+            <td class="diff-cell" data-label="Mainstream AI coaches"><span class="diff-icon-no">○</span> Per-thread context only</td>
+            <td class="diff-cell diff-cell-field" data-label="The Field"><span class="diff-icon-yes">●</span> Persistent across all processes</td>
           </tr>
           <tr>
             <td class="diff-feature">Structured guided processes</td>
-            <td class="diff-cell"><span class="diff-icon-no">○</span> Open conversation</td>
-            <td class="diff-cell"><span class="diff-icon-no">○</span> 1-3 templated flows</td>
-            <td class="diff-cell diff-cell-field"><span class="diff-icon-yes">●</span> 16+ purpose-built processes</td>
+            <td class="diff-cell" data-label="Generic AI chatbots"><span class="diff-icon-no">○</span> Open conversation</td>
+            <td class="diff-cell" data-label="Mainstream AI coaches"><span class="diff-icon-no">○</span> 1-3 templated flows</td>
+            <td class="diff-cell diff-cell-field" data-label="The Field"><span class="diff-icon-yes">●</span> 16+ purpose-built processes</td>
           </tr>
           <tr>
             <td class="diff-feature">Embodied (Mind + Heart + Body)</td>
-            <td class="diff-cell"><span class="diff-icon-no">○</span> Cognitive only</td>
-            <td class="diff-cell"><span class="diff-icon-no">○</span> Cognitive + journaling</td>
-            <td class="diff-cell diff-cell-field"><span class="diff-icon-yes">●</span> Three-system integration</td>
+            <td class="diff-cell" data-label="Generic AI chatbots"><span class="diff-icon-no">○</span> Cognitive only</td>
+            <td class="diff-cell" data-label="Mainstream AI coaches"><span class="diff-icon-no">○</span> Cognitive + journaling</td>
+            <td class="diff-cell diff-cell-field" data-label="The Field"><span class="diff-icon-yes">●</span> Three-system integration</td>
           </tr>
           <tr>
             <td class="diff-feature">Produces durable outputs</td>
-            <td class="diff-cell"><span class="diff-icon-no">○</span> Chat transcript</td>
-            <td class="diff-cell"><span class="diff-icon-no">○</span> Summaries</td>
-            <td class="diff-cell diff-cell-field"><span class="diff-icon-yes">●</span> Living Power Declarations, Imagination Scenes, Return Thoughts</td>
+            <td class="diff-cell" data-label="Generic AI chatbots"><span class="diff-icon-no">○</span> Chat transcript</td>
+            <td class="diff-cell" data-label="Mainstream AI coaches"><span class="diff-icon-no">○</span> Summaries</td>
+            <td class="diff-cell diff-cell-field" data-label="The Field"><span class="diff-icon-yes">●</span> Living Power Declarations, Imagination Scenes, Return Thoughts</td>
           </tr>
           <tr>
             <td class="diff-feature">Built on frontier model</td>
-            <td class="diff-cell"><span class="diff-icon-yes">●</span> Varies</td>
-            <td class="diff-cell"><span class="diff-icon-yes">●</span> GPT-class</td>
-            <td class="diff-cell diff-cell-field"><span class="diff-icon-yes">●</span> Latest frontier AI</td>
+            <td class="diff-cell" data-label="Generic AI chatbots"><span class="diff-icon-yes">●</span> Varies</td>
+            <td class="diff-cell" data-label="Mainstream AI coaches"><span class="diff-icon-yes">●</span> GPT-class</td>
+            <td class="diff-cell diff-cell-field" data-label="The Field"><span class="diff-icon-yes">●</span> Latest frontier AI</td>
           </tr>
           <tr>
             <td class="diff-feature">Designed by a working coach</td>
-            <td class="diff-cell"><span class="diff-icon-no">○</span> AI researchers</td>
-            <td class="diff-cell"><span class="diff-icon-no">○</span> Product teams</td>
-            <td class="diff-cell diff-cell-field"><span class="diff-icon-yes">●</span> 15-year coach, bestselling author</td>
+            <td class="diff-cell" data-label="Generic AI chatbots"><span class="diff-icon-no">○</span> AI researchers</td>
+            <td class="diff-cell" data-label="Mainstream AI coaches"><span class="diff-icon-no">○</span> Product teams</td>
+            <td class="diff-cell diff-cell-field" data-label="The Field"><span class="diff-icon-yes">●</span> 15-year coach, bestselling author</td>
           </tr>
         </tbody>
       </table>
@@ -3093,6 +3165,50 @@
         ticking = false;
       });
     });
+  })();
+
+  // ===== Constellation auto-cycle (touch / no-cursor devices) =====
+  // On touch devices the mousemove proximity effect never fires, so
+  // the constellation reads as static. Cycle through pills one at a
+  // time, lighting each one up briefly with a soft glow. Detection
+  // is via pointer media query so desktops still use the cursor mode.
+  (function setupConstellationAutoCycle() {
+    const stage = document.getElementById('constellation');
+    if (!stage) return;
+    const pills = Array.from(stage.querySelectorAll('.process-pill'));
+    if (!pills.length) return;
+    // Only auto-cycle on touch/coarse-pointer devices.
+    const isTouch = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+    if (!isTouch) return;
+
+    let i = 0;
+    let prev = null;
+    // Wait for constellation to be revealed (scrolled into view) before
+    // starting the cycle, so it doesn't run invisibly.
+    function startCycle() {
+      setInterval(() => {
+        if (prev) prev.classList.remove('is-hot');
+        // Random pill instead of strict round-robin so it feels alive
+        // rather than mechanical. Skip the same pill twice in a row.
+        let next;
+        do {
+          next = pills[Math.floor(Math.random() * pills.length)];
+        } while (next === prev && pills.length > 1);
+        next.classList.add('is-hot');
+        prev = next;
+        i++;
+      }, 1400);
+    }
+    // Wait until the section becomes visible to start cycling.
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          startCycle();
+          io.disconnect();
+        }
+      });
+    }, { threshold: 0.2 });
+    io.observe(stage);
   })();
 
   // ===== Subtle parallax on the hero gradient orbs =====
