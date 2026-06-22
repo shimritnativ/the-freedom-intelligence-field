@@ -118,12 +118,13 @@ export default async function handler(req, res) {
     ] = await Promise.all([
       // 1. Members by tier × plan (filtered)
       //
-      // Reset (preview) members are counted as long as they're Kajabi-entitled.
-      // Unlimited (full) members are counted ONLY when they have a real paid
-      // ThriveCart purchase that didn't use an excluded coupon (GEO100). This
-      // keeps free comps (like Tomer) out of the headline Unlimited count
-      // while still letting them have access. Same rule applies anywhere
-      // we count Unlimited subscribers below.
+      // Reset (preview) members are counted when they're Kajabi-entitled
+      // AND aren't comp-only (their only purchase was an excluded coupon
+      // like GEO100). Unlimited (full) members are counted ONLY when they
+      // have a real paid ThriveCart purchase. Same rule applies anywhere
+      // we count members below — the comp-only exclusion keeps test
+      // accounts like Tomer (GEO100) out of every member roster, count,
+      // and funnel without manual per-email blocklisting.
       sql`
         SELECT
           u.tier::text AS tier,
@@ -134,6 +135,16 @@ export default async function handler(req, res) {
           AND u.email NOT LIKE ${excludePattern}
           AND u.created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR u.created_at <= ${toIso})
+          AND (
+            -- No purchases at all → Kajabi-only grant (legit free signup)
+            NOT EXISTS (SELECT 1 FROM purchases p WHERE LOWER(p.email) = LOWER(u.email))
+            -- OR at least one non-comp purchase exists
+            OR EXISTS (
+              SELECT 1 FROM purchases p
+              WHERE LOWER(p.email) = LOWER(u.email)
+                AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+            )
+          )
           AND (
             u.tier = 'preview'
             OR EXISTS (
@@ -148,12 +159,8 @@ export default async function handler(req, res) {
         ORDER BY tier, plan
       `,
       // 2. Completion funnel — every member who did the Reset, regardless
-      // of where they are now. The previous filter (tier = 'preview')
-      // hid members who completed Day 3 then upgraded to Unlimited, which
-      // is exactly the conversion story the funnel exists to surface.
-      // We base it on "ever started the Reset" instead — any member who
-      // logged in is by definition a Reset starter, since the Reset is
-      // the only on-ramp.
+      // of where they are now. Comp-only users (GEO100) are excluded so
+      // the funnel reflects real launch performance, not seeded test data.
       sql`
         SELECT
           COUNT(*)::int AS total_members,
@@ -162,24 +169,40 @@ export default async function handler(req, res) {
           COUNT(*) FILTER (WHERE last_completed_day >= 1)::int AS d1,
           COUNT(*) FILTER (WHERE last_completed_day >= 2)::int AS d2,
           COUNT(*) FILTER (WHERE last_completed_day >= 3)::int AS d3
-        FROM users
-        WHERE kajabi_entitled = true
-          AND email NOT LIKE ${excludePattern}
-          AND created_at >= ${fromIso}
-          AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
+        FROM users u
+        WHERE u.kajabi_entitled = true
+          AND u.email NOT LIKE ${excludePattern}
+          AND u.created_at >= ${fromIso}
+          AND (${toIso}::timestamptz IS NULL OR u.created_at <= ${toIso})
+          AND (
+            NOT EXISTS (SELECT 1 FROM purchases p WHERE LOWER(p.email) = LOWER(u.email))
+            OR EXISTS (
+              SELECT 1 FROM purchases p
+              WHERE LOWER(p.email) = LOWER(u.email)
+                AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+            )
+          )
       `,
-      // 3. Signups per day
+      // 3. Signups per day — comp-only users excluded.
       sql`
         SELECT
-          date_trunc('day', created_at)::date AS day,
-          tier::text AS tier,
+          date_trunc('day', u.created_at)::date AS day,
+          u.tier::text AS tier,
           COUNT(*)::int AS n
-        FROM users
-        WHERE kajabi_entitled = true
-          AND email NOT LIKE ${excludePattern}
-          AND created_at >= ${fromIso}
-          AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
-        GROUP BY day, tier
+        FROM users u
+        WHERE u.kajabi_entitled = true
+          AND u.email NOT LIKE ${excludePattern}
+          AND u.created_at >= ${fromIso}
+          AND (${toIso}::timestamptz IS NULL OR u.created_at <= ${toIso})
+          AND (
+            NOT EXISTS (SELECT 1 FROM purchases p WHERE LOWER(p.email) = LOWER(u.email))
+            OR EXISTS (
+              SELECT 1 FROM purchases p
+              WHERE LOWER(p.email) = LOWER(u.email)
+                AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+            )
+          )
+        GROUP BY day, u.tier
         ORDER BY day DESC
       `,
       // 4. Unlimited engagement — rolling windows, team excluded, AND only
@@ -290,10 +313,19 @@ export default async function handler(req, res) {
           AND u.created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR u.created_at <= ${toIso})
           AND (
-            -- Same filter as the tier-mix KPI: Reset members count
-            -- automatically, Unlimited members only when they have a paid
-            -- non-comp purchase. Hides free comps (Tomer/GEO100) from
-            -- the roster.
+            -- Comp-only filter: hide users whose only purchases used an
+            -- excluded coupon (Tomer / GEO100). No-purchase Kajabi grants
+            -- still count.
+            NOT EXISTS (SELECT 1 FROM purchases p WHERE LOWER(p.email) = LOWER(u.email))
+            OR EXISTS (
+              SELECT 1 FROM purchases p
+              WHERE LOWER(p.email) = LOWER(u.email)
+                AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+            )
+          )
+          AND (
+            -- Tier filter unchanged: Reset members count automatically,
+            -- Unlimited members only when they have a paid non-comp purchase.
             u.tier = 'preview'
             OR EXISTS (
               SELECT 1 FROM purchases p
@@ -463,22 +495,30 @@ export default async function handler(req, res) {
       // detail list because her tier is now 'full').
       sql`
         SELECT
-          email,
-          display_name,
-          tier::text AS tier,
-          COALESCE(last_completed_day, 0)::int AS last_completed_day,
-          first_login_at,
-          created_at,
-          preview_ends_at
-        FROM users
-        WHERE kajabi_entitled = true
-          AND email NOT LIKE ${excludePattern}
-          AND created_at >= ${fromIso}
-          AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
+          u.email,
+          u.display_name,
+          u.tier::text AS tier,
+          COALESCE(u.last_completed_day, 0)::int AS last_completed_day,
+          u.first_login_at,
+          u.created_at,
+          u.preview_ends_at
+        FROM users u
+        WHERE u.kajabi_entitled = true
+          AND u.email NOT LIKE ${excludePattern}
+          AND u.created_at >= ${fromIso}
+          AND (${toIso}::timestamptz IS NULL OR u.created_at <= ${toIso})
+          AND (
+            NOT EXISTS (SELECT 1 FROM purchases p WHERE LOWER(p.email) = LOWER(u.email))
+            OR EXISTS (
+              SELECT 1 FROM purchases p
+              WHERE LOWER(p.email) = LOWER(u.email)
+                AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+            )
+          )
         ORDER BY
-          CASE WHEN first_login_at IS NULL THEN 1 ELSE 0 END,
-          last_completed_day DESC NULLS LAST,
-          first_login_at DESC NULLS LAST
+          CASE WHEN u.first_login_at IS NULL THEN 1 ELSE 0 END,
+          u.last_completed_day DESC NULLS LAST,
+          u.first_login_at DESC NULLS LAST
       `,
       // ===== Intelligence segments (6 sales/marketing-actionable buckets) =====
       // Each query returns the named members who currently fit the segment,
