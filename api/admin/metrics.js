@@ -468,7 +468,8 @@ export default async function handler(req, res) {
           tier::text AS tier,
           COALESCE(last_completed_day, 0)::int AS last_completed_day,
           first_login_at,
-          created_at
+          created_at,
+          preview_ends_at
         FROM users
         WHERE kajabi_entitled = true
           AND email NOT LIKE ${excludePattern}
