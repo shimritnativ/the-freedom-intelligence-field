@@ -149,15 +149,33 @@ export default async function handler(req, res) {
           AND created_at > NOW() - INTERVAL '7 days'
       `;
     }
-    // Backfill display_name for users created via Kajabi (email only). Only
-    // updates rows where display_name is currently empty — we never overwrite
-    // a name the member set themselves in Your Account.
-    if (fullName && email) {
+    // Backfill display_name for users created via Kajabi (email only).
+    // Updates when display_name is empty OR looks like a Kajabi-derived
+    // email-prefix placeholder (no spaces, looks like the email prefix).
+    // We DO want to preserve real names users have set themselves, so
+    // the rule is: only overwrite if the existing name has no space AND
+    // matches the local-part of the email (case-insensitive, with
+    // letters/digits compared).
+    //
+    // ThriveCart sends proper first + last name fields, so its names
+    // almost always contain a space — that's what we trust over the
+    // Kajabi placeholder.
+    if (fullName && email && fullName.includes(" ")) {
+      const localPart = email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
       await sql`
         UPDATE users
         SET display_name = ${fullName}, updated_at = NOW()
         WHERE email = ${email}
-          AND (display_name IS NULL OR display_name = '')
+          AND (
+            display_name IS NULL
+            OR display_name = ''
+            OR (
+              -- Looks like an email-prefix placeholder: no space, and
+              -- the alphanumeric chars match the email's local-part.
+              POSITION(' ' IN display_name) = 0
+              AND LOWER(REGEXP_REPLACE(display_name, '[^a-zA-Z0-9]', '', 'g')) = ${localPart}
+            )
+          )
       `;
     }
     return res.status(200).json({ ok: true });
