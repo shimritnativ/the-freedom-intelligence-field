@@ -819,8 +819,101 @@
       border-radius: 8px;
       border: 1px solid transparent;
       transition: border-color 0.15s ease;
+      position: relative;
     }
     .intel-member:hover { border-color: var(--gold-line); }
+    /* Per-row dismiss button — small X in the top-right of each card.
+       Always visible (mobile has no hover) but kept small and muted so
+       it never competes with the member info. Brightens on hover/focus. */
+    .intel-member-dismiss {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-mute);
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+    .intel-member-dismiss:hover,
+    .intel-member-dismiss:focus {
+      background: var(--gold-soft);
+      color: var(--gold);
+      border-color: var(--gold-line);
+      outline: none;
+    }
+    /* Toast that confirms a dismissal — fades in then auto-dismisses. */
+    .intel-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--text);
+      color: var(--panel);
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 1000;
+    }
+    .intel-toast.is-shown {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    /* "X dismissed (show)" toggle under each segment header. */
+    .intel-dismissed-toggle {
+      display: inline-block;
+      margin: 6px 0 0;
+      font-size: 12px;
+      color: var(--text-dim);
+      cursor: pointer;
+      text-decoration: underline;
+      text-decoration-style: dotted;
+      text-underline-offset: 3px;
+    }
+    .intel-dismissed-toggle:hover { color: var(--gold); }
+    .intel-dismissed-list {
+      margin-top: 8px;
+      padding: 8px 10px;
+      background: var(--gold-soft);
+      border: 1px dashed var(--gold-line);
+      border-radius: 8px;
+      font-size: 12px;
+      display: none;
+    }
+    .intel-dismissed-list.is-shown { display: block; }
+    .intel-dismissed-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 4px 0;
+    }
+    .intel-dismissed-row + .intel-dismissed-row {
+      border-top: 1px solid var(--gold-line);
+    }
+    .intel-restore-btn {
+      background: transparent;
+      border: 1px solid var(--gold-line);
+      color: var(--gold);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .intel-restore-btn:hover { background: var(--gold); color: var(--panel); }
     .intel-member-head {
       display: flex;
       align-items: baseline;
@@ -1563,7 +1656,6 @@
       const intelCounts = {
         hot_reset_graduate: (intel.hot_reset_graduate || []).length,
         ready_for_upsell: (intel.ready_for_upsell || []).length,
-        book_launch_warmer: (intel.book_launch_warmer || []).length,
         high_intent_buyer: (intel.high_intent_buyer || []).length,
         stuck_reset: (intel.stuck_reset || []).length,
         at_risk_subscriber: (intel.at_risk_subscriber || []).length,
@@ -1777,6 +1869,108 @@
       `;
     }
 
+    // ===== Intelligence dismissals =====
+    // Fetched alongside metrics so renderIntelligence can hide rows the
+    // admin has dismissed (default 7-day expiry). State lives on
+    // window._intelDismissalsBySegment (map of segment_key → Set of
+    // user_ids) and window._intelDismissalsList (raw rows with metadata).
+    async function fetchIntelDismissals() {
+      const token = localStorage.getItem(STORAGE_KEY);
+      if (!token) return;
+      try {
+        const r = await fetch("/api/admin/intelligence-dismissals", {
+          method: "GET",
+          headers: { "x-session-token": token },
+        });
+        if (!r.ok) return;
+        const data = await r.json();
+        const list = data.dismissals || [];
+        const bySegment = {};
+        for (const d of list) {
+          if (!bySegment[d.segment_key]) bySegment[d.segment_key] = new Set();
+          bySegment[d.segment_key].add(d.target_user_id);
+        }
+        window._intelDismissalsBySegment = bySegment;
+        window._intelDismissalsList = list;
+      } catch (e) {}
+    }
+
+    // Brief toast in the bottom-center of the screen confirming a
+    // dismissal or restore action. Auto-fades after 2 seconds.
+    let _toastTimer = null;
+    function showIntelToast(message) {
+      let el = document.getElementById("intel-toast");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "intel-toast";
+        el.className = "intel-toast";
+        document.body.appendChild(el);
+      }
+      el.textContent = message;
+      requestAnimationFrame(() => el.classList.add("is-shown"));
+      if (_toastTimer) clearTimeout(_toastTimer);
+      _toastTimer = setTimeout(() => el.classList.remove("is-shown"), 2200);
+    }
+
+    async function dismissIntelMember(segmentKey, userId, displayName) {
+      if (!userId) return;
+      const token = localStorage.getItem(STORAGE_KEY);
+      if (!token) { alert("Session expired. Refresh the page."); return; }
+      // Optimistic update: remove the row from view immediately, then
+      // record in the DB. On failure, we re-render to put the row back.
+      const card = document.querySelector(`.intel-member[data-segment="${segmentKey}"][data-user-id="${userId}"]`);
+      if (card) card.style.display = "none";
+      try {
+        const r = await fetch("/api/admin/intelligence-dismissals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-session-token": token },
+          body: JSON.stringify({ segment_key: segmentKey, target_user_id: userId }),
+        });
+        if (!r.ok) throw new Error("save_failed");
+        showIntelToast(`Dismissed ${displayName || "member"} for 7 days`);
+        // Refresh dismissals state + re-render so the "X dismissed (show)"
+        // count updates and the toggle appears.
+        await fetchIntelDismissals();
+        if (typeof renderDashboard === "function" && state.data) {
+          renderDashboard(state.data);
+        }
+      } catch (e) {
+        // Roll back the optimistic hide.
+        if (card) card.style.display = "";
+        showIntelToast("Couldn't save the dismissal. Try again.");
+      }
+    }
+    window.dismissIntelMember = dismissIntelMember;
+
+    async function restoreIntelMember(segmentKey, userId) {
+      if (!userId) return;
+      const token = localStorage.getItem(STORAGE_KEY);
+      if (!token) return;
+      try {
+        const url = `/api/admin/intelligence-dismissals?segment_key=${encodeURIComponent(segmentKey)}&target_user_id=${encodeURIComponent(userId)}`;
+        const r = await fetch(url, {
+          method: "DELETE",
+          headers: { "x-session-token": token },
+        });
+        if (!r.ok) throw new Error("delete_failed");
+        showIntelToast("Restored. They'll show up again on next refresh.");
+        await fetchIntelDismissals();
+        if (typeof renderDashboard === "function" && state.data) {
+          renderDashboard(state.data);
+        }
+      } catch (e) {
+        showIntelToast("Couldn't restore. Try again.");
+      }
+    }
+    window.restoreIntelMember = restoreIntelMember;
+
+    function toggleDismissedList(segmentKey) {
+      const el = document.getElementById(`intel-dismissed-${segmentKey}`);
+      if (!el) return;
+      el.classList.toggle("is-shown");
+    }
+    window.toggleDismissedList = toggleDismissedList;
+
     // Wrapper around loadMetrics that ALSO fires the ThriveCart auto-
     // reconcile first. Wired to the top-right Refresh button so one
     // click both catches any missing webhook sales AND reloads the
@@ -1851,6 +2045,12 @@
         if (data.dateRange && data.dateRange.launchDate) {
           state.launchDate = data.dateRange.launchDate.slice(0, 10);
         }
+        // Fetch the Intelligence dismissals state BEFORE rendering so
+        // the first paint already hides anything Geo previously
+        // dismissed. Non-blocking fallback: if the fetch fails we
+        // render without dismissals applied (visually identical to old
+        // behavior, no breakage).
+        try { await fetchIntelDismissals(); } catch (e) {}
         renderDashboard(data);
         // Re-populate the filterable roster table from the freshly loaded
         // recentSignups data. renderRoster reads state.data which was
@@ -1956,12 +2156,13 @@
       const refundCents = Number(tcSummary.refund_cents || 0);
       const netCents = grossCents - refundCents;
 
-      // Intelligence tab — sum of all six segment sizes for the nav badge.
+      // Intelligence tab — sum of every active segment size for the
+      // nav badge. Book Launch attendees segment was removed: those
+      // members came in free and are already in Shimrit's world.
       const intel = d.intelligence || {};
       const intelligenceTotal =
         (intel.ready_for_upsell || []).length +
         (intel.hot_reset_graduate || []).length +
-        (intel.book_launch_warmer || []).length +
         (intel.at_risk_subscriber || []).length +
         (intel.stuck_reset || []).length +
         (intel.high_intent_buyer || []).length;
@@ -2542,24 +2743,10 @@
             ];
           },
         },
-        {
-          key: "book_launch_warmer",
-          priority: "ready",
-          priorityLabel: "Book community",
-          title: "Book Launch attendees",
-          action: "Nurture with Skill of Freedom themes. Entrepreneurs → <strong>Business Club (€55/mo)</strong>. Coaches → <strong>Coaching Certification (€9,999)</strong>. Seekers → <strong>HIM Mastery</strong>.",
-          rows: intel.book_launch_warmer || [],
-          why: u => {
-            const coupons = u.coupons || "Book Launch coupon";
-            const day = Number(u.last_completed_day || 0);
-            return [
-              `Came in via <strong>${escapeHtml(coupons)}</strong> (Shimrit's book promo)`,
-              day > 0 ? `Made it to <strong>Day ${day}</strong> of the Reset` : "Hasn't started the Reset yet",
-              "Already opted into a known content world",
-              "High lifetime value potential",
-            ];
-          },
-        },
+        // Book Launch attendees segment removed — these people mostly
+        // came in free via LAUNCHTEAM/LAUNCHTEAMUNLIMITED and are
+        // already in Shimrit's content world, so they don't need
+        // surfacing as a separate actionable segment.
         {
           key: "stuck_reset",
           priority: "nurture",
@@ -2627,9 +2814,22 @@
         </div>
       `;
 
+      // Pull the latest dismissals into a lookup map keyed by
+      // segment_key → Set(target_user_id). Loaded once on metrics
+      // refresh via fetchIntelDismissals; falls back to empty if not
+      // loaded yet so the first paint isn't blocked.
+      const dismissalsBySegment = window._intelDismissalsBySegment || {};
+      const dismissalsList = window._intelDismissalsList || [];
+
       // Segment cards
       const segmentsHtml = segments.map(s => {
-        if (s.rows.length === 0) {
+        const dismissedSet = dismissalsBySegment[s.key] || new Set();
+        // Split rows into active (still actionable) and dismissed (hidden
+        // unless the user clicks "show dismissed").
+        const activeRows = s.rows.filter(u => !dismissedSet.has(u.id));
+        const dismissedRows = dismissalsList.filter(d => d.segment_key === s.key);
+
+        if (activeRows.length === 0 && dismissedRows.length === 0) {
           return `
             <div class="intel-card intel-card--empty" id="intel-seg-${s.key}">
               <div class="intel-card-head">
@@ -2642,17 +2842,17 @@
             </div>
           `;
         }
-        const memberCards = s.rows.map(u => {
+        const memberCards = activeRows.map(u => {
           const dbName = u.display_name && String(u.display_name).trim();
           const email = (u.email || "").trim();
-          // Prefer DB display name, then humanized email local part, then
-          // a last-resort placeholder. The email is always shown on its own
-          // line beneath so you can still copy/identify the member.
           const primary = dbName || humanizeEmail(email) || "Unknown member";
           const isReal = !!dbName;
           const bullets = (s.why(u) || []).map(b => `<li>${b}</li>`).join("");
           return `
-            <div class="intel-member">
+            <div class="intel-member" data-segment="${escapeHtml(s.key)}" data-user-id="${escapeHtml(u.id || '')}">
+              <button type="button" class="intel-member-dismiss" title="Dismiss for 7 days"
+                      onclick="dismissIntelMember('${escapeHtml(s.key)}', '${escapeHtml(u.id || '')}', '${escapeHtml(primary)}')"
+                      aria-label="Dismiss this suggestion">✕</button>
               <div class="intel-member-head">
                 <span class="intel-member-name ${isReal ? '' : 'intel-member-name--anon'}">${escapeHtml(primary)}</span>
                 ${email ? `<span class="intel-member-email">${escapeHtml(email)}</span>` : ''}
@@ -2661,6 +2861,31 @@
             </div>
           `;
         }).join("");
+
+        // "X dismissed (show)" toggle + restore list. Hidden by default;
+        // clicking the toggle reveals the dismissed members with a
+        // Restore button each.
+        const dismissedToggleHtml = dismissedRows.length > 0
+          ? `
+            <span class="intel-dismissed-toggle" onclick="toggleDismissedList('${escapeHtml(s.key)}')">
+              ${dismissedRows.length} dismissed (show)
+            </span>
+            <div class="intel-dismissed-list" id="intel-dismissed-${escapeHtml(s.key)}">
+              ${dismissedRows.map(d => {
+                const name = (d.display_name && d.display_name.trim()) || humanizeEmail(d.email) || d.email;
+                const expIso = d.expires_at;
+                const expRel = expIso ? fmtRelative(expIso) : "soon";
+                return `
+                  <div class="intel-dismissed-row">
+                    <span><strong>${escapeHtml(name)}</strong> <span style="color: var(--text-mute);">— reappears ${escapeHtml(expRel)}</span></span>
+                    <button class="intel-restore-btn" onclick="restoreIntelMember('${escapeHtml(s.key)}', '${escapeHtml(d.target_user_id)}')">Restore</button>
+                  </div>
+                `;
+              }).join("")}
+            </div>
+          `
+          : "";
+
         return `
           <div class="intel-card" id="intel-seg-${s.key}">
             <div class="intel-card-head">
@@ -2668,10 +2893,11 @@
                 <span class="intel-priority-chip intel-priority-chip--${s.priority}">${escapeHtml(s.priorityLabel)}</span>
                 <span class="intel-card-title">${escapeHtml(s.title)}</span>
               </div>
-              <span class="intel-card-count"><strong>${fmtNum(s.rows.length)}</strong> ${s.rows.length === 1 ? 'member' : 'members'}</span>
+              <span class="intel-card-count"><strong>${fmtNum(activeRows.length)}</strong> ${activeRows.length === 1 ? 'member' : 'members'}</span>
             </div>
             <div class="intel-card-action">${s.action}</div>
-            <div class="intel-member-list">${memberCards}</div>
+            <div class="intel-member-list">${memberCards || '<div style="color: var(--text-dim); font-size: 13px; padding: 6px 2px;">All dismissed for now.</div>'}</div>
+            ${dismissedToggleHtml}
           </div>
         `;
       }).join("");
@@ -2721,20 +2947,7 @@
             { label: "Total spend", key: "total_cents", num: true, render: u => fmtEur(u.total_cents) },
           ],
         },
-        {
-          key: "book_launch_warmer",
-          eyebrow: "Book community",
-          title: "Book Launch attendees who showed up",
-          why: "Used LAUNCHTEAM or LAUNCHTEAMUNLIMITED coupons. They are part of Shimrit's book community already, opted in to a known content world, and they engaged with the Reset (or Unlimited at 75% off). High lifetime value potential.",
-          action: "Nurture sequence on book themes (Skill of Freedom chapters). If they liked the Reset: pitch <strong>Human Instrument Mastery</strong> as the deeper layer of the same work. If entrepreneur: <strong>Business Club (€55/mo)</strong>. If interested in teaching: <strong>Coaching Certification (€9,999)</strong>.",
-          rows: intel.book_launch_warmer || [],
-          cols: [
-            { label: "Member", key: "email", render: u => `${escapeHtml(u.email)}${u.display_name ? ` <span style="color:var(--text-dim)">(${escapeHtml(u.display_name)})</span>` : ""}` },
-            { label: "Coupons", key: "coupons", render: u => `<span class="tier-badge tier-preview">${escapeHtml(u.coupons || "—")}</span>` },
-            { label: "Tier", key: "tier", render: u => `<span class="tier-badge ${u.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(tierLabel(u.tier))}</span>` },
-            { label: "Day reached", key: "last_completed_day", num: true, render: u => fmtNum(u.last_completed_day || 0) },
-          ],
-        },
+        // book_launch_warmer segment removed — see comment in renderIntelligence.
         {
           key: "at_risk_subscriber",
           eyebrow: "Win-back",
