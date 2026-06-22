@@ -20,6 +20,7 @@
 // from ThriveCart never double-count revenue.
 
 import { sql } from "@vercel/postgres";
+import { notifyAdmins } from "../../lib/adminNotify.js";
 
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -178,11 +179,105 @@ export default async function handler(req, res) {
           )
       `;
     }
+
+    // Push notification on real successful sales. Skip rebills, refunds,
+    // and zero-amount events — those aren't "new sales" from Geo's
+    // mental model. Fire-and-forget so a notification failure can't
+    // break the webhook response (ThriveCart would retry uselessly).
+    if (event === "order.success" && amountCents > 0) {
+      maybeNotifyNewSale({
+        email,
+        fullName,
+        productName,
+        amountCents,
+        coupon,
+      }).catch((e) => console.warn("sale_notify_failed", e?.message));
+    }
+
     return res.status(200).json({ ok: true });
   } catch (err) {
     console.error("thrivecart_webhook_error", { message: err?.message, event, orderId });
     // 200 to avoid ThriveCart retry storms; error is in the server logs.
     return res.status(200).json({ ok: false, error: "server_error" });
+  }
+}
+
+// ============================================================================
+// Sale + milestone push notifications
+// ============================================================================
+//
+// Detects three flavors of notable event on every successful sale and
+// fires a single notification per event. Geo wanted:
+//   - Every successful sale (with amount + customer)
+//   - First sale of the day → "🎉 First sale of the day!"
+//   - New Unlimited subscriber → "💎 New Unlimited subscriber!"
+//   - Daily revenue passing each €500 round number
+//
+// Everything is silent-fail. ThriveCart retries on non-200; we always
+// 200 the webhook response, so a notification miss never causes data
+// reprocessing.
+
+async function maybeNotifyNewSale({ email, fullName, productName, amountCents, coupon }) {
+  const amountEur = (amountCents / 100).toFixed(2);
+  const buyerName = fullName || (email ? email.split("@")[0] : "Someone");
+  const product = productName || "a product";
+
+  // Detect: is this the first sale of the day (Berlin time)?
+  // We use a 24-hour rolling window since "since midnight" depends on
+  // timezone and Postgres' default tz config; rolling is simpler and
+  // captures the spirit of the milestone.
+  const { rows: priorTodayRows } = await sql`
+    SELECT COUNT(*)::int AS n
+    FROM purchases
+    WHERE event_type = 'order.success'
+      AND amount_cents > 0
+      AND created_at > NOW() - INTERVAL '24 hours'
+      AND LOWER(email) <> LOWER(${email})
+  `;
+  const isFirstSaleOfDay = (priorTodayRows[0]?.n || 0) === 0;
+
+  // Detect: is this an Unlimited upgrade? Heuristic — the product name
+  // contains "unlimited" (case-insensitive). Reset / Bump / etc. don't.
+  const isUnlimited = /unlimited/i.test(product);
+
+  // The main sale notification.
+  const couponSuffix = coupon ? ` · ${coupon}` : "";
+  await notifyAdmins({
+    title: isFirstSaleOfDay
+      ? "🎉 First sale of the day!"
+      : (isUnlimited ? "💎 New Unlimited subscriber!" : "💰 New sale"),
+    body: `€${amountEur} from ${buyerName} — ${product}${couponSuffix}`,
+    url: "/admin",
+    tag: `sale-${Date.now()}`,
+    notificationKey: `sale-${email}-${amountCents}-${Date.now()}`,
+  });
+
+  // Threshold milestones — every €500 of revenue passed in the rolling
+  // 24h window. We check whether THIS sale crossed a multiple of 500.
+  try {
+    const { rows: totals } = await sql`
+      SELECT COALESCE(SUM(amount_cents), 0)::bigint AS cents_after
+      FROM purchases
+      WHERE event_type IN ('order.success', 'order.subscription_payment')
+        AND amount_cents > 0
+        AND created_at > NOW() - INTERVAL '24 hours'
+    `;
+    const after = Number(totals[0]?.cents_after || 0);
+    const before = after - amountCents;
+    const beforeThreshold = Math.floor(before / 50000); // 50000 cents = €500
+    const afterThreshold = Math.floor(after / 50000);
+    if (afterThreshold > beforeThreshold && afterThreshold > 0) {
+      const milestoneEur = afterThreshold * 500;
+      await notifyAdmins({
+        title: `📈 €${milestoneEur} in sales today!`,
+        body: `Revenue just crossed €${milestoneEur} in the last 24 hours. Keep going.`,
+        url: "/admin",
+        tag: `revenue-milestone-${afterThreshold}`,
+        notificationKey: `revenue-milestone-${new Date().toISOString().slice(0, 10)}-${afterThreshold}`,
+      });
+    }
+  } catch (e) {
+    console.warn("revenue_milestone_check_failed", e?.message);
   }
 }
 
