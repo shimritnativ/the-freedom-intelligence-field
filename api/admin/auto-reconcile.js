@@ -32,9 +32,10 @@ const ALLOWED_DOMAIN = "@shimritnativ.com";
 
 // How long to wait after a Kajabi activation before declaring the
 // ThriveCart webhook a no-show. ThriveCart usually fires within
-// seconds, but we've seen rare 5-minute lags. 15 min is the safe
-// threshold — anything later than that is genuinely missing.
-const GRACE_WINDOW_MINUTES = 15;
+// seconds. 5 min covers the rare lag we've seen without making Geo
+// wait forever to see fresh sales. The Refresh button passes
+// ?force=1 to bypass this entirely for immediate manual triggers.
+const GRACE_WINDOW_MINUTES = 5;
 
 // How far back to look for orphan activations. 24 hours covers a full
 // day of misses while keeping the query indexed and fast.
@@ -82,8 +83,13 @@ export default async function handler(req, res) {
     // Note on intervals: @vercel/postgres parameterizes interpolations,
     // so they must be passed as cast strings ("24 hours"::interval)
     // rather than embedded inside INTERVAL '24 hours' literals.
+    // Force mode bypasses the grace window so the Refresh button can
+    // immediately reconcile sales that JUST landed without waiting 5min.
+    // Used by the admin Refresh button — Geo just saw a sale come in
+    // and wants it on the dashboard NOW, not in 5 minutes.
+    const force = req.query && (req.query.force === "1" || req.query.force === "true");
     const lookback = `${LOOKBACK_HOURS} hours`;
-    const grace = `${GRACE_WINDOW_MINUTES} minutes`;
+    const grace = force ? "0 seconds" : `${GRACE_WINDOW_MINUTES} minutes`;
     const { rows: gaps } = await sql`
       WITH activations AS (
         SELECT
