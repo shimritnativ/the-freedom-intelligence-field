@@ -26,7 +26,7 @@
 
 import { sql } from "@vercel/postgres";
 import { getUserBySessionToken } from "../../lib/db.js";
-import { sendPushToUser } from "../../lib/push.js";
+// sendPushToUser no longer imported — auto-reconcile is silent now.
 
 const ALLOWED_DOMAIN = "@shimritnativ.com";
 
@@ -186,37 +186,10 @@ export default async function handler(req, res) {
           basis: defaults.basis,
         });
 
-        // Fire push notifications to every @shimritnativ.com admin with
-        // a push subscription. The notification CTA deep-links into the
-        // admin manual-purchase form so a tap → verify in seconds.
-        try {
-          const { rows: admins } = await sql`
-            SELECT DISTINCT u.id, u.email
-            FROM users u
-            JOIN push_subscriptions ps ON ps.user_id = u.id
-            WHERE LOWER(u.email) LIKE ${"%" + ALLOWED_DOMAIN}
-          `;
-          for (const a of admins) {
-            const sent = await sendPushToUser({
-              userId: a.id,
-              payload: {
-                title: "Missing ThriveCart webhook auto-filled",
-                body: `${g.email} — ${g.activation_event.replace("activate:", "")}. Defaulted to €${(defaults.amount_cents / 100).toFixed(2)}. Tap to verify.`,
-                url: `/admin?verify=${encodeURIComponent(syntheticId)}`,
-                tag: `auto-reconcile-${syntheticId}`,
-                requireInteraction: false,
-              },
-              notificationKey: `auto-reconcile-${syntheticId}`,
-            });
-            if (sent.sent > 0) summary.notifications_sent++;
-          }
-        } catch (notifyErr) {
-          // Notification failure shouldn't roll back the placeholder.
-          console.warn("auto_reconcile_notify_failed", {
-            email: g.email,
-            error: notifyErr?.message,
-          });
-        }
+        // No push notification for auto-reconciled placeholders. These
+        // are silent system recoveries — Geo doesn't want to be pinged
+        // for every webhook gap, only for actual sales (which fire from
+        // the ThriveCart webhook handler itself) and the 8pm summary.
       } catch (err) {
         summary.errors++;
         console.warn("auto_reconcile_gap_error", {
