@@ -103,10 +103,16 @@ export default async function handler(req, res) {
           AND we.processed_at < NOW() - ${grace}::interval
       ),
       latest_per_user AS (
-        SELECT DISTINCT ON (email)
+        -- One row per (email, event_type) so a user who activated both
+        -- Reset AND Unlimited within the lookback window gets BOTH
+        -- considered as separate gaps. Previously this was DISTINCT ON
+        -- email which collapsed multi-product buyers into a single row
+        -- and hid the earlier activation (Antonella: Reset + Unlimited
+        -- both missed → only Unlimited placeholder was created).
+        SELECT DISTINCT ON (email, event_type)
           email, event_type, processed_at
         FROM activations
-        ORDER BY email, processed_at DESC
+        ORDER BY email, event_type, processed_at DESC
       )
       SELECT
         lpu.email,
@@ -126,12 +132,15 @@ export default async function handler(req, res) {
                                AND lpu.processed_at + INTERVAL '2 hours'
       )
       AND NOT EXISTS (
-        -- We haven't already auto-created a placeholder for them in
-        -- this activation window — prevents the cron from spamming
-        -- the same gap over and over.
+        -- We haven't already auto-created a placeholder for THIS
+        -- specific activation event in the window. Scoped on
+        -- activation_event in raw_payload so a Reset placeholder
+        -- doesn't dedup the matching Unlimited placeholder for the
+        -- same user (and vice versa).
         SELECT 1 FROM purchases p
         WHERE LOWER(p.email) = lpu.email
           AND (p.raw_payload->>'auto_created')::boolean = true
+          AND p.raw_payload->>'activation_event' = lpu.event_type
           AND p.created_at > lpu.processed_at - INTERVAL '1 day'
       )
     `;
@@ -222,42 +231,72 @@ export default async function handler(req, res) {
 // Stored as GROSS cents to match how ThriveCart webhooks store amounts.
 
 function inferDefaults(tier, plan, activationEvent) {
-  if (tier === "full" && plan === "yearly") {
-    // Yearly Unlimited — assume full price €777. Antonella's invoice
-    // shows the standard yearly offer is €777 (sometimes with a 10%-
-    // off promo applied to year 1). For LAUNCHTEAMUNLIMITED yearly at
-    // €190.40 (Sofie's case), Geo edits manually. €777 covers the
-    // common case better post-launch.
-    return {
-      product_name: "The Freedom Intelligence Field - Unlimited (Yearly)",
-      amount_cents: 77700,
-      coupon_code: null,
-      basis: "default: yearly full price (€777 gross)",
-    };
-  }
-  if (tier === "full" && plan === "monthly") {
-    // Monthly Unlimited — full price €77.
-    return {
-      product_name: "The Freedom Intelligence Field - Unlimited (Monthly)",
-      amount_cents: 7700,
-      coupon_code: null,
-      basis: "default: monthly full price (€77 gross)",
-    };
-  }
-  if (tier === "preview") {
-    // Reset — POWER50 launch price (€4.50 gross). During the active
-    // launch wave most Reset buyers use POWER50; full-price €9 buyers
-    // are the exception. Geo edits if needed.
+  // PRIMARY signal: the Kajabi activation event itself names the product.
+  // Reading this BEFORE the user's current tier means a Reset buyer who
+  // later upgrades to Unlimited still gets a Reset placeholder for the
+  // Reset activation (and a separate Unlimited placeholder for the
+  // Unlimited activation), instead of both activations being collapsed
+  // into a single Unlimited-tier inference.
+  // Antonella's case: she bought Reset (€4.50 POWER50) THEN upgraded to
+  // Unlimited Yearly. Both webhooks missed. Old logic looked at her
+  // current tier=full and created an Unlimited placeholder for both
+  // activations, hiding the Reset purchase entirely.
+  const ev = String(activationEvent || "").toLowerCase();
+  if (ev.includes("power_reset") || ev.includes("power-reset") || ev.includes("reset")) {
     return {
       product_name: "The Power Reset",
       amount_cents: 450,
       coupon_code: "POWER50",
-      basis: "default: POWER50 Reset (€4.50 gross)",
+      basis: "activation event indicates Reset (POWER50 default €4.50 gross)",
     };
   }
-  // Shouldn't hit this — but if tier/plan combo is unknown, default to
-  // €0 and flag for review. Better to make Geo enter the amount than
-  // to invent one.
+  if (ev.includes("unlimited")) {
+    // Sub-classify yearly vs monthly via the user's plan field — by the
+    // time an Unlimited activation arrives the subscription_plan column
+    // is set, so this is reliable.
+    if (plan === "yearly") {
+      return {
+        product_name: "The Freedom Intelligence Field - Unlimited (Yearly)",
+        amount_cents: 77700,
+        coupon_code: null,
+        basis: "activation event indicates Unlimited Yearly (€777 gross default)",
+      };
+    }
+    return {
+      product_name: "The Freedom Intelligence Field - Unlimited (Monthly)",
+      amount_cents: 7700,
+      coupon_code: null,
+      basis: "activation event indicates Unlimited Monthly (€77 gross default)",
+    };
+  }
+
+  // FALLBACK: if the activation event string is opaque, fall back to
+  // tier-based inference (the original behavior). Still a reasonable
+  // guess for the common single-product case.
+  if (tier === "full" && plan === "yearly") {
+    return {
+      product_name: "The Freedom Intelligence Field - Unlimited (Yearly)",
+      amount_cents: 77700,
+      coupon_code: null,
+      basis: "fallback: tier=full plan=yearly → €777 gross",
+    };
+  }
+  if (tier === "full" && plan === "monthly") {
+    return {
+      product_name: "The Freedom Intelligence Field - Unlimited (Monthly)",
+      amount_cents: 7700,
+      coupon_code: null,
+      basis: "fallback: tier=full plan=monthly → €77 gross",
+    };
+  }
+  if (tier === "preview") {
+    return {
+      product_name: "The Power Reset",
+      amount_cents: 450,
+      coupon_code: "POWER50",
+      basis: "fallback: tier=preview → POWER50 Reset (€4.50 gross)",
+    };
+  }
   return {
     product_name: "Unknown product (auto-reconcile placeholder)",
     amount_cents: 0,
