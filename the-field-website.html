@@ -783,6 +783,75 @@
      each tab swaps a large themed stage below. Mockups are big
      enough to actually read, each tab gets its own background tint
      so the visual context shifts as you click through. */
+  /* ===== Section: Human Component band =====
+     Dark band between Unlimited and See Inside that humanizes the
+     product — live Q&As + community — so the offer doesn't read as
+     "just AI". Sits as a narrow band, not a full hero section. */
+  .human-band {
+    background: var(--bg-dark);
+    color: var(--text-inverse);
+    padding: 80px 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .human-band::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(201, 168, 76, 0.08), transparent 70%);
+    pointer-events: none;
+  }
+  .human-band-inner {
+    text-align: center;
+    max-width: 920px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+  .human-band-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    margin-top: 36px;
+  }
+  .human-band-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--gold-line);
+    border-radius: var(--radius-md);
+    padding: 28px 28px 26px;
+    text-align: left;
+    transition: transform 0.3s ease, border-color 0.3s ease;
+  }
+  .human-band-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--gold);
+  }
+  .human-band-icon {
+    color: var(--gold);
+    font-size: 22px;
+    margin-bottom: 12px;
+  }
+  .human-band-title {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 22px;
+    line-height: 1.25;
+    color: var(--text-inverse);
+    margin: 0 0 10px;
+  }
+  .human-band-body {
+    color: var(--text-inverse-dim);
+    font-size: 15px;
+    line-height: 1.65;
+    margin: 0;
+  }
+  @media (max-width: 720px) {
+    .human-band { padding: 56px 0; }
+    .human-band-grid { grid-template-columns: 1fr; gap: 16px; margin-top: 28px; }
+    .human-band-card { padding: 22px 22px 20px; }
+    .human-band-title { font-size: 20px; }
+  }
+
   .inside-section {
     background: var(--bg-cream);
     position: relative;
@@ -1177,6 +1246,51 @@
   }
   .diff-icon-yes { color: var(--gold); font-size: 18px; line-height: 1; }
   .diff-icon-no { color: var(--text-mute); font-size: 18px; line-height: 1; }
+  /* Swipe hint pill — only visible on mobile, sits above the table,
+     gently pulses to draw the eye, fades out once the user scrolls. */
+  .diff-swipe-hint {
+    display: none;
+  }
+  @media (max-width: 720px) {
+    .diff-swipe-hint {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin: 0 auto 14px;
+      padding: 10px 18px;
+      max-width: fit-content;
+      background: var(--gold-soft);
+      border: 1px solid var(--gold-line);
+      border-radius: var(--radius-pill);
+      color: var(--gold);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      animation: hint-breathe 2.2s ease-in-out infinite;
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .diff-swipe-hint.is-dismissed {
+      opacity: 0;
+      transform: translateY(-4px);
+      pointer-events: none;
+    }
+    .diff-swipe-arrow {
+      display: inline-block;
+      font-size: 14px;
+      animation: hint-arrow 1.6s ease-in-out infinite;
+    }
+    .diff-swipe-arrow:last-child { animation-delay: 0.8s; }
+  }
+  @keyframes hint-breathe {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(201, 168, 76, 0); }
+    50%      { box-shadow: 0 0 0 6px rgba(201, 168, 76, 0.12); }
+  }
+  @keyframes hint-arrow {
+    0%, 100% { transform: translateX(0); opacity: 0.6; }
+    50%      { transform: translateX(3px); opacity: 1; }
+  }
+
   /* On mobile we keep the full side-by-side table but enable
      horizontal scroll, with the Feature column pinned to the left so
      users can swipe through the three comparison columns while
@@ -1190,16 +1304,18 @@
       scrollbar-width: thin;
       position: relative;
     }
-    /* Faint right-edge gradient hinting more content is scrollable. */
+    /* Stronger right-edge gradient — sits inside the scroll viewport
+       so it always hints at hidden content on the right. */
     .diff-table-wrap::after {
       content: '';
       position: sticky;
       top: 0;
       right: 0;
-      width: 24px;
+      width: 40px;
       height: 100%;
-      background: linear-gradient(to left, var(--bg-card), transparent);
+      background: linear-gradient(to left, var(--bg-card), rgba(255,255,255,0));
       pointer-events: none;
+      align-self: stretch;
     }
     .diff-table {
       min-width: 640px; /* forces horizontal scroll on narrow screens */
@@ -2087,7 +2203,7 @@
   <div class="hero-inner">
     <div class="hero-eyebrow reveal reveal-up">
       <span class="hero-eyebrow-dot"></span>
-      Now in early access · 16+ guided processes live
+      Now in early access · Growing library of 16+ guided processes
     </div>
     <h1 class="hero-headline" id="hero-headline">
       <!-- words get split + wrapped by JS for the stagger reveal -->
@@ -2095,10 +2211,10 @@
       Not just listens.
     </h1>
     <p class="hero-subhead reveal reveal-up reveal-delay-5">
-      The Freedom Intelligence Field is the first AI system built on 10+ years of embodied coaching methodology. It remembers who you are across every conversation, runs structured processes that produce real outputs, and works at the level where the pattern is actually held.
+      The Freedom Intelligence Field is the first AI system built on 10+ years of embodied The Human Instrument® Mastery coaching methodology. It remembers who you are across every conversation, runs structured processes that produce real outputs, and guides the member through every area of their life.
     </p>
     <div class="hero-ctas reveal reveal-up reveal-delay-6">
-      <a href="#start" class="btn btn-primary magnetic pulse-ring">Start the 72-Hour Power Reset →</a>
+      <a href="https://masteryourpath.thrivecart.com/the-power-reset/" class="btn btn-primary magnetic pulse-ring">Start the 72-Hour Power Reset →</a>
       <a href="#how-it-works" class="btn btn-ghost magnetic">See how it works</a>
     </div>
     <div class="hero-trust reveal reveal-up reveal-delay-6">
@@ -2106,7 +2222,7 @@
       <span class="hero-trust-divider"></span>
       <span>10+ YEARS OF METHODOLOGY</span>
       <span class="hero-trust-divider"></span>
-      <span>USED BY MEMBERS IN 12+ COUNTRIES</span>
+      <span>ACCESSIBLE IN ANY LANGUAGE</span>
     </div>
   </div>
 </section>
@@ -2116,7 +2232,7 @@
   <div class="container">
     <div class="trust-strip-inner">
       <div class="trust-strip-item reveal reveal-up">
-        <strong data-count-to="16" data-count-suffix="+">16+</strong> guided processes
+        <strong data-count-to="16" data-count-suffix="+">16+</strong> guided processes (and growing)
       </div>
       <div class="trust-strip-item reveal reveal-up reveal-delay-1">
         <strong data-count-to="72">72</strong> hour entry experience
@@ -2125,7 +2241,7 @@
         <strong>4.9★</strong> early member rating
       </div>
       <div class="trust-strip-item reveal reveal-up reveal-delay-3">
-        <strong>24/7</strong> always available
+        <strong>12+</strong> countries with members
       </div>
     </div>
   </div>
@@ -2177,7 +2293,7 @@
           Not a chatbot. <em>A process</em>.
         </h2>
         <p class="lead lead-inverse reveal reveal-up reveal-delay-2">
-          Most AI coaching products are wrappers around generic language models. The Field is something different. It's a structured experience built on the Human Instrument® framework, a methodology developed over 10+ years by coach and author Shimrit Nativ, refined with thousands of clients before a single line of AI code was written.
+          Most AI coaching products are wrappers around generic language models. The Field is something different. It's a structured experience built on the Human Instrument® framework, a methodology developed over 10+ years by coach, entrepreneur and author Shimrit Nativ, refined with thousands of clients before a single line of AI code was written.
         </p>
 
         <div class="method-list">
@@ -2256,7 +2372,7 @@
       <div class="eyebrow reveal reveal-up" style="margin-bottom: 18px;">How It Works</div>
       <div class="gold-divider reveal"></div>
       <h2 class="h-section reveal reveal-up reveal-delay-1">A 72-hour onramp. <span class="shimmer">A lifetime of access.</span></h2>
-      <p class="lead reveal reveal-up reveal-delay-2">Start with The Power Reset: three guided days designed to install the foundation. Then optionally continue with Unlimited for access to every advanced process whenever you need it.</p>
+      <p class="lead reveal reveal-up reveal-delay-2">Start with The Power Reset: three guided days designed to install the foundation. Then optionally continue with Unlimited for access to a growing library of advanced processes, or interact with The Field in your own way: open conversations about anything alive for you, anytime.</p>
     </div>
 
     <div class="how-grid">
@@ -2283,8 +2399,8 @@
     <div class="unlimited-block reveal reveal-up reveal-delay-4">
       <div class="unlimited-block-inner">
         <div class="eyebrow" style="color: var(--gold);">After the Reset</div>
-        <h3>The Unlimited Field. <span class="shimmer">16+ processes, on demand.</span></h3>
-        <p>Once the foundation is set, the Field opens up. Every member gets unlimited access to guided processes designed for specific moments: when a decision is sitting heavy, when energy needs recalibrating, when an old pattern is asking for attention. The Field remembers what you said in every prior process and meets you exactly where you left off.</p>
+        <h3>The Unlimited Field. <span class="shimmer">A growing library of 16+ processes, on demand.</span></h3>
+        <p>Once the foundation is set, the Field opens up. Every member gets unlimited access to a growing library of guided processes designed for specific moments: when a decision is sitting heavy, when energy needs recalibrating, when an old pattern is asking for attention. Or skip the structure entirely and just talk: The Field meets you in open conversation about anything alive for you. It remembers what you said in every prior session and meets you exactly where you left off.</p>
       </div>
 
       <!-- ===== Process constellation =====
@@ -2399,6 +2515,32 @@
   </div>
 </section>
 
+<!-- =================== HUMAN COMPONENT BAND =================== -->
+<!-- Quick callout strip reminding visitors the Field isn't only AI:
+     monthly live Q&As with Shimrit and an actual member community
+     are part of what they're joining. Sits between Unlimited and
+     See Inside so it lands when the "what do I get" question peaks. -->
+<section class="human-band">
+  <div class="container">
+    <div class="human-band-inner reveal reveal-up">
+      <div class="eyebrow" style="color: var(--gold); margin-bottom: 14px;">More than AI</div>
+      <h2 class="h-section" style="font-size: clamp(28px, 3.8vw, 40px); margin-bottom: 18px;">The Field has a <span class="shimmer">human pulse</span> too.</h2>
+      <div class="human-band-grid">
+        <div class="human-band-card">
+          <div class="human-band-icon" aria-hidden="true">✦</div>
+          <h3 class="human-band-title">Monthly live Q&amp;As with Shimrit</h3>
+          <p class="human-band-body">Show up live with the methodology's creator. Ask the question you're stuck on, get the nuance the AI can't yet hold, and stay close to where the work originates.</p>
+        </div>
+        <div class="human-band-card">
+          <div class="human-band-icon" aria-hidden="true">✦</div>
+          <h3 class="human-band-title">The Freedom Hub community</h3>
+          <p class="human-band-body">A private space for members who are doing the work alongside you. Real conversations, real reflections, real people on the path. The Field is private; the journey doesn't have to be lonely.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- =================== SEE INSIDE THE FIELD =================== -->
 <!-- Tabbed showcase like Claude's: tab bar at top, one large themed
      stage below that swaps between four views of the product. Each
@@ -2409,8 +2551,8 @@
     <div class="inside-header">
       <div class="eyebrow reveal reveal-up" style="margin-bottom: 18px;">See Inside The Field</div>
       <div class="gold-divider reveal"></div>
-      <h2 class="h-section reveal reveal-up reveal-delay-1">A surface as quiet as the work it holds.</h2>
-      <p class="lead reveal reveal-up reveal-delay-2" style="margin: 0 auto;">No noise. No distractions. Just the conversation, the process, and the structured outputs that come out of it.</p>
+      <h2 class="h-section reveal reveal-up reveal-delay-1">Built to actually <span class="shimmer">work in your daily life.</span></h2>
+      <p class="lead reveal reveal-up reveal-delay-2" style="margin: 0 auto;">Open The Field on your laptop in the morning, finish the same conversation from your phone on the train, drop in for a five-minute reset between meetings. One private space that travels with you and remembers every step.</p>
     </div>
 
     <!-- Tab bar — 3 tabs telling a story: home, library, sync -->
@@ -2519,7 +2661,16 @@
       <p class="lead reveal reveal-up reveal-delay-2" style="margin: 0 auto;">A direct, honest comparison with what's currently on the market in AI-powered coaching and personal development tools.</p>
     </div>
 
-    <div class="diff-table-wrap reveal reveal-up reveal-delay-3">
+    <!-- Mobile-only hint indicating the table scrolls horizontally.
+         Auto-fades after the first horizontal scroll so it doesn't
+         linger once the user already knows. -->
+    <div class="diff-swipe-hint" aria-hidden="true">
+      <span class="diff-swipe-arrow">←</span>
+      Swipe to compare all three
+      <span class="diff-swipe-arrow">→</span>
+    </div>
+
+    <div class="diff-table-wrap reveal reveal-up reveal-delay-3" id="diff-scroll">
       <table class="diff-table">
         <thead>
           <tr>
@@ -2546,7 +2697,7 @@
             <td class="diff-feature">Structured guided processes</td>
             <td class="diff-cell" data-label="Generic AI chatbots"><span class="diff-icon-no">○</span> Open conversation</td>
             <td class="diff-cell" data-label="Mainstream AI coaches"><span class="diff-icon-no">○</span> 1-3 templated flows</td>
-            <td class="diff-cell diff-cell-field" data-label="The Field"><span class="diff-icon-yes">●</span> 16+ purpose-built processes</td>
+            <td class="diff-cell diff-cell-field" data-label="The Field"><span class="diff-icon-yes">●</span> Growing library of 16+ purpose-built processes</td>
           </tr>
           <tr>
             <td class="diff-feature">Embodied (Mind + Heart + Body)</td>
@@ -2590,7 +2741,7 @@
 
     <div class="testimonials-grid">
       <article class="testimonial lift reveal reveal-up reveal-delay-1">
-        <p class="testimonial-body">I just finished Day 1. It feels soooo good. I am already loving this AI of ours. It is been an amazing session.</p>
+        <p class="testimonial-body">I just finished Day 1. <strong>It feels soooo good. I am already loving this AI of ours.</strong> It is been an amazing session.</p>
         <div class="testimonial-meta">
           <div class="testimonial-avatar">M</div>
           <p class="testimonial-author">Member, Day 1 of the Power Reset</p>
@@ -2598,7 +2749,7 @@
       </article>
 
       <article class="testimonial lift reveal reveal-up reveal-delay-2">
-        <p class="testimonial-body">Hi everybody! Shimrit is totally right. This is truly, truly amazing. I encourage you to try, at least. Think that I am not a big fan of AI, and this one… I am on the 9 cloud!</p>
+        <p class="testimonial-body">Hi everybody! Shimrit is totally right. <strong>This is truly, truly amazing.</strong> I encourage you to try, at least. Think that I am not a big fan of AI, and this one… <strong>I am on the 9 cloud!</strong></p>
         <div class="testimonial-meta">
           <div class="testimonial-avatar">M</div>
           <p class="testimonial-author">Member, after Day 2 of the Power Reset</p>
@@ -2606,7 +2757,7 @@
       </article>
 
       <article class="testimonial lift reveal reveal-up reveal-delay-3">
-        <p class="testimonial-body">I'm following the 72 Hours Power Reset: it's so powerful. As a boomer, I could never imagine to have such a deep, intimate, sincere, powerful and practice relation with AI. I'm following the path and I feel my energy renewed, I feel more alive. And that's fantastic.</p>
+        <p class="testimonial-body">I'm following the 72 Hours Power Reset: <strong>it's so powerful.</strong> As a boomer, I could never imagine to have such a <strong>deep, intimate, sincere, powerful</strong> and practice relation with AI. I'm following the path and <strong>I feel my energy renewed, I feel more alive.</strong> And that's fantastic.</p>
         <div class="testimonial-meta">
           <div class="testimonial-avatar">M</div>
           <p class="testimonial-author">Member, mid-Reset reflection</p>
@@ -2614,7 +2765,7 @@
       </article>
 
       <article class="testimonial lift reveal reveal-up reveal-delay-4">
-        <p class="testimonial-body">It is my pleasure. I am the first one surprised, because I was a bit skeptical with AI in general; what this one… has blown my mind. It is really beyond any expectation I could have had. Happy to be in the Field!</p>
+        <p class="testimonial-body">It is my pleasure. I am the first one surprised, because <strong>I was a bit skeptical with AI in general; what this one… has blown my mind.</strong> It is really <strong>beyond any expectation I could have had.</strong> Happy to be in the Field!</p>
         <div class="testimonial-meta">
           <div class="testimonial-avatar">M</div>
           <p class="testimonial-author">Member, first week in the Field</p>
@@ -2622,7 +2773,7 @@
       </article>
 
       <article class="testimonial lift reveal reveal-up reveal-delay-5">
-        <p class="testimonial-body">I tried to enter the WhatsApp group but my request is still waiting to be accepted… Anyway I have done 2 days in the field. No words to describe. It is so simple and powerful.</p>
+        <p class="testimonial-body">I tried to enter the WhatsApp group but my request is still waiting to be accepted… Anyway I have done 2 days in the field. <strong>No words to describe. It is so simple and powerful.</strong></p>
         <div class="testimonial-meta">
           <div class="testimonial-avatar">M</div>
           <p class="testimonial-author">Member, after Day 2 of the Power Reset</p>
@@ -2630,7 +2781,7 @@
       </article>
 
       <article class="testimonial lift reveal reveal-up reveal-delay-6">
-        <p class="testimonial-body">Made it to Day 2 of the Reset. Already opted into a known content world. The structured outputs are unlike anything I've used in coaching AI before.</p>
+        <p class="testimonial-body">Made it to Day 2 of the Reset. Already opted into a known content world. <strong>The structured outputs are unlike anything I've used in coaching AI before.</strong></p>
         <div class="testimonial-meta">
           <div class="testimonial-avatar">M</div>
           <p class="testimonial-author">Member, Reset graduate</p>
@@ -2660,18 +2811,13 @@
           The Freedom Intelligence Field isn't a startup experiment. It's the third evolution of Master Your Path: Shimrit Nativ's coaching methodology, refined across more than a decade of one-on-one work, group programs, and a bestselling book on what she calls the Human Instrument®.
         </p>
         <p class="founder-body reveal reveal-up reveal-delay-3">
+          Shimrit is the author of <em>The Skill of Freedom</em>, with a foreword by Neale Donald Walsch, and has spent over a decade coaching thousands of clients across her ecosystem.
+        </p>
+        <p class="founder-body reveal reveal-up reveal-delay-3">
           When AI became capable enough to actually hold a process (not just simulate one), The Field was the result. Every prompt, every guided sequence, every memory rule was designed by the same coach who taught the methodology to thousands of clients first.
         </p>
 
         <div class="founder-credentials">
-          <div class="founder-cred reveal reveal-up reveal-delay-3">
-            <div class="founder-cred-label">Author</div>
-            <div class="founder-cred-value">The Skill of Freedom</div>
-          </div>
-          <div class="founder-cred reveal reveal-up reveal-delay-4">
-            <div class="founder-cred-label">Foreword by</div>
-            <div class="founder-cred-value">Neale Donald Walsch</div>
-          </div>
           <div class="founder-cred reveal reveal-up reveal-delay-5">
             <div class="founder-cred-label">Coached</div>
             <div class="founder-cred-value">Thousands of clients</div>
@@ -2710,12 +2856,13 @@
         <div class="pricing-divider"></div>
         <ul class="pricing-features">
           <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> All three guided Reset days</li>
-          <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> Living Power Declaration</li>
+          <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> Living Power Declaration (with MP3 audio download)</li>
           <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> Determined Imagination Scene</li>
           <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> Return Thought + Daily Practice</li>
           <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> Export your conversations forever</li>
+          <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> Available in any language</li>
         </ul>
-        <a href="https://thefieldai.app/" class="pricing-cta pricing-cta-light">Start the Reset →</a>
+        <a href="https://masteryourpath.thrivecart.com/the-power-reset/" class="pricing-cta pricing-cta-light">Start the Reset →</a>
       </article>
 
       <!-- Card 2: Unlimited Monthly (Founding) -->
@@ -2732,11 +2879,12 @@
         <div class="pricing-divider"></div>
         <ul class="pricing-features">
           <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> Everything in The Power Reset</li>
-          <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> 16+ advanced guided processes</li>
+          <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> Growing library of 16+ advanced guided processes</li>
           <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> Cross-process memory of every conversation</li>
           <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> Open chat for the moments between processes</li>
           <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> Monthly live Q&amp;A with Shimrit</li>
           <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> The Freedom Hub community</li>
+          <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> Available in any language</li>
         </ul>
         <a href="https://masteryourpath.thrivecart.com/the-field/" class="pricing-cta pricing-cta-light">Join Monthly →</a>
       </article>
@@ -2758,6 +2906,7 @@
           <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> Everything in Unlimited Monthly</li>
           <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> 12 months of full Field access</li>
           <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> Save €147 vs paying monthly</li>
+          <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> Available in any language</li>
         </ul>
 
         <div class="pricing-bonuses">
@@ -2875,7 +3024,7 @@
       Start the 72-Hour Power Reset for €9. If it doesn't deliver, you've only spent the cost of a coffee. If it does, the Unlimited Field is waiting.
     </p>
     <div class="hero-ctas reveal reveal-up reveal-delay-3" style="margin-bottom: 0;">
-      <a href="https://thefieldai.app/" class="btn btn-primary magnetic pulse-ring">Start the 72-Hour Reset →</a>
+      <a href="https://masteryourpath.thrivecart.com/the-power-reset/" class="btn btn-primary magnetic pulse-ring">Start the 72-Hour Reset →</a>
       <a href="#pricing" class="btn btn-ghost magnetic">See all plans</a>
     </div>
   </div>
@@ -3175,6 +3324,26 @@
         ticking = false;
       });
     });
+  })();
+
+  // ===== Comparison table: dismiss swipe hint on first scroll =====
+  // The hint pill above the diff table is only useful until the user
+  // actually scrolls — at that point they know it scrolls horizontally,
+  // so we fade the hint out gracefully.
+  (function setupDiffSwipeHint() {
+    const scroller = document.getElementById('diff-scroll');
+    const hint = document.querySelector('.diff-swipe-hint');
+    if (!scroller || !hint) return;
+    let dismissed = false;
+    function dismiss() {
+      if (dismissed) return;
+      dismissed = true;
+      hint.classList.add('is-dismissed');
+    }
+    // Fire on any horizontal scroll inside the table viewport.
+    scroller.addEventListener('scroll', () => {
+      if (scroller.scrollLeft > 8) dismiss();
+    }, { passive: true });
   })();
 
   // ===== Constellation auto-cycle (touch / no-cursor devices) =====
