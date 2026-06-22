@@ -1200,7 +1200,7 @@
     </div>
     <div class="field">
       <label class="field-label" for="pre-upgrade-yearly-price">Yearly upgrade price (€)</label>
-      <input type="number" id="pre-upgrade-yearly-price" value="163.23" min="0" step="0.01" />
+      <input type="number" id="pre-upgrade-yearly-price" value="160" min="0" step="0.01" />
       <div class="field-hint">What each yearly upgrader pays (net of VAT)</div>
     </div>
     <div class="field">
@@ -1210,7 +1210,7 @@
     </div>
     <div class="field">
       <label class="field-label" for="pre-upgrade-monthly-price">Monthly upgrade price (€)</label>
-      <input type="number" id="pre-upgrade-monthly-price" value="16.18" min="0" step="0.01" />
+      <input type="number" id="pre-upgrade-monthly-price" value="48.52" min="0" step="0.01" />
       <div class="field-hint">What each monthly upgrader pays per month (net of VAT)</div>
     </div>
     <div class="field">
@@ -1873,18 +1873,9 @@
         ctaNote: "Intelligence → Hot Reset graduates segment",
       });
     }
-    if (intelCounts.book_launch_warmer > 0) {
-      const realistic = Math.max(1, Math.round(intelCounts.book_launch_warmer * 0.35));
-      const impact = realistic * ctx.ltv;
-      recs.push({
-        title: `Pitch Unlimited to ${intelCounts.book_launch_warmer} Book Launch attendees`,
-        note: `Already inside Shimrit's content world. <strong>${realistic} realistic conversion${realistic === 1 ? "" : "s"}</strong> via personalized outreach.`,
-        impact: impact,
-        effort: "Low",
-        effortWeight: 1.5,
-        ctaNote: "Intelligence → Book Launch attendees",
-      });
-    }
+    // Book Launch attendees recommendation removed — segment was retired.
+    // Most of those members came in free and are already in Shimrit's world,
+    // so pitching them as a separate action wasn't moving the launch needle.
     if (intelCounts.high_intent_buyer > 0) {
       // High-intent buyers are candidates for higher-ticket (BC, Accelerator).
       const realistic = Math.max(1, Math.round(intelCounts.high_intent_buyer * 0.4));
@@ -2337,13 +2328,7 @@
         count: intelCounts.ready_for_upsell,
         note: "Daily active Unlimited users",
       },
-      {
-        priority: "ready",
-        title: "Book Launch attendees",
-        eyebrow: "Book community",
-        count: intelCounts.book_launch_warmer,
-        note: "Already inside Shimrit's content world",
-      },
+      // Book Launch attendees tile removed — see admin renderIntelligence.
       {
         priority: "nurture",
         title: "Stuck Reset members",
@@ -3013,7 +2998,6 @@
   let intelCounts = {
     hot_reset_graduate: 0,
     ready_for_upsell: 0,
-    book_launch_warmer: 0,
     high_intent_buyer: 0,
     stuck_reset: 0,
     at_risk_subscriber: 0,
