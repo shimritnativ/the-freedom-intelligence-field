@@ -336,7 +336,6 @@ export default async function handler(req, res) {
             )
           )
         ORDER BY u.created_at DESC
-        LIMIT 25
       `,
       // 7. 72-Hour Reset window state
       sql`
