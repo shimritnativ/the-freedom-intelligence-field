@@ -32,6 +32,10 @@
     {
       "path": "/api/admin/auto-reconcile",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/admin/daily-summary",
+      "schedule": "0 18 * * *"
     }
   ],
   "redirects": [
