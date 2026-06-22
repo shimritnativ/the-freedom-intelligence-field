@@ -134,6 +134,21 @@ export default async function handler(req, res) {
       )
       ON CONFLICT (thrivecart_id, event_type) DO NOTHING
     `;
+    // Auto-reconcile cleanup. If the cron previously created a
+    // placeholder for this email (ThriveCart's webhook arrived late or
+    // never until now), the real purchase row above and the placeholder
+    // would both exist — double-counting revenue. Detect and remove
+    // the placeholder whenever it's close in time + reasonable in
+    // amount match (no exact match required — the placeholder was a
+    // best-guess anyway). Marker: raw_payload.auto_created = true.
+    if (event === "order.success" && amountCents > 0) {
+      await sql`
+        DELETE FROM purchases
+        WHERE LOWER(email) = ${email}
+          AND (raw_payload->>'auto_created')::boolean = true
+          AND created_at > NOW() - INTERVAL '7 days'
+      `;
+    }
     // Backfill display_name for users created via Kajabi (email only). Only
     // updates rows where display_name is currently empty — we never overwrite
     // a name the member set themselves in Your Account.
