@@ -1777,6 +1777,43 @@
       `;
     }
 
+    // Wrapper around loadMetrics that ALSO fires the ThriveCart auto-
+    // reconcile first. Wired to the top-right Refresh button so one
+    // click both catches any missing webhook sales AND reloads the
+    // dashboard numbers — Geo doesn't have to wait for the next 10-min
+    // cron tick if she spotted a missing sale and wants it in NOW.
+    //
+    // Reconcile runs in parallel with the metrics fetch (no await on
+    // it before loadMetrics), so the dashboard doesn't get slower when
+    // there's nothing to reconcile. If a placeholder gets created
+    // during the reconcile, it'll show up on the NEXT refresh — but
+    // most clicks are just to see fresh data, not to backfill.
+    async function refreshWithReconcile() {
+      const token = localStorage.getItem(STORAGE_KEY);
+      if (token) {
+        // Fire and forget — don't block the metrics load on the
+        // reconcile call. If reconcile creates a placeholder, the
+        // next refresh will pick it up.
+        fetch("/api/admin/auto-reconcile", {
+          method: "POST",
+          headers: { "x-session-token": token },
+        }).then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (data && data.placeholders_created > 0) {
+              console.log("auto_reconcile_created", data.placeholders_created, "placeholder(s)");
+              // Re-load metrics one more time so the just-created
+              // placeholders show in the numbers without requiring
+              // another click.
+              setTimeout(() => loadMetrics(), 500);
+            }
+          })
+          .catch(() => {});
+      }
+      // Load metrics immediately — don't wait on the reconcile.
+      loadMetrics();
+    }
+    window.refreshWithReconcile = refreshWithReconcile;
+
     async function loadMetrics() {
       let token;
       try { token = localStorage.getItem(STORAGE_KEY); } catch { token = null; }
@@ -1931,7 +1968,7 @@
               <div>Viewing as <span class="v-email">${escapeHtml(d.viewer.email)}</span></div>
               <div>Last refresh: ${new Date(d.asOf).toLocaleTimeString()}</div>
               <div style="margin-top: 6px; display: flex; align-items: center; justify-content: flex-end;">
-                <button class="preset-btn" onclick="loadMetrics()">↻ Refresh</button>
+                <button class="preset-btn" onclick="refreshWithReconcile()">↻ Refresh</button>
                 <button class="theme-toggle" onclick="toggleTheme()" id="theme-toggle-btn" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">☾</button>
               </div>
             </div>
@@ -1996,6 +2033,38 @@
                   <button class="preset-btn" onclick="runMemoryBackfill(false)" id="memory-backfill-btn" style="background: var(--gold); color: var(--dark); border-color: var(--gold);">Refresh memory</button>
                 </div>
                 <div id="memory-backfill-status" style="margin-top: 10px; font-size: 12px; color: var(--text-dim); font-style: italic;">Click Preview first to see how much it'll process without spending anything.</div>
+              </div>
+              <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);">
+                <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px;">
+                  <strong style="color: var(--text);">Reconcile against ThriveCart</strong> — Download a transactions CSV from ThriveCart (Dashboard → Transactions → Export), paste it here, and we'll surface every paid order that didn't reach our DB. One click to backfill each missing row.
+                </div>
+                <textarea id="rec-csv" placeholder="Paste ThriveCart CSV here (whole file including header row)" style="width: 100%; height: 100px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 11px; font-family: monospace;"></textarea>
+                <div style="margin-top: 6px;">
+                  <button class="preset-btn" onclick="runReconcile()" id="rec-btn" style="background: var(--gold); color: var(--dark); border-color: var(--gold);">Find missing purchases</button>
+                </div>
+                <div id="rec-status" style="margin-top: 10px; font-size: 12px; color: var(--text-dim); font-style: italic;">Pulls every ThriveCart order from the CSV, diffs against our table, lists what's missing.</div>
+                <div id="rec-results" style="margin-top: 10px;"></div>
+              </div>
+              <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);">
+                <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px;">
+                  <strong style="color: var(--text);">Log a manual purchase</strong> — Use when a real ThriveCart payment didn't reach our webhook (rare but happens). Paste the invoice ID, customer email, amount, and click Save. Idempotent — re-submitting the same invoice is safe.
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
+                  <input type="text" id="mp-thrivecart-id" placeholder="Invoice ID (e.g. MYP-000100586)" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;" />
+                  <input type="email" id="mp-email" placeholder="Customer email" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;" />
+                  <input type="text" id="mp-product" placeholder="Product name (e.g. The Power Reset)" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;" />
+                  <input type="number" id="mp-amount" placeholder="Amount in EUR (e.g. 4.50)" step="0.01" min="0" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;" />
+                  <input type="text" id="mp-coupon" placeholder="Coupon code (optional, e.g. POWER50)" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;" />
+                  <select id="mp-event-type" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;">
+                    <option value="order.success">order.success (new purchase / first sub payment)</option>
+                    <option value="order.subscription_payment">order.subscription_payment (recurring)</option>
+                    <option value="order.refund">order.refund</option>
+                  </select>
+                </div>
+                <div style="margin-top: 6px;">
+                  <button class="preset-btn" onclick="runManualPurchase()" id="mp-btn" style="background: var(--gold); color: var(--dark); border-color: var(--gold);">Save purchase</button>
+                </div>
+                <div id="mp-status" style="margin-top: 10px; font-size: 12px; color: var(--text-dim); font-style: italic;">Amount is the gross price the customer paid (including VAT). System converts to net automatically per VAT toggle.</div>
               </div>
             </div>
             <div class="section" id="panel-tier-mix">
@@ -3384,6 +3453,195 @@
       }
     }
     window.runMemoryBackfill = runMemoryBackfill;
+
+    // Submit the manual purchase form to /api/admin/manual-purchase.
+    // Used to log a ThriveCart payment that never reached our webhook,
+    // so the dashboard's revenue numbers catch up immediately.
+    async function runManualPurchase() {
+      const status = document.getElementById("mp-status");
+      const btn = document.getElementById("mp-btn");
+      const token = localStorage.getItem(STORAGE_KEY);
+      if (!token) {
+        status.textContent = "Session expired. Refresh the page and try again.";
+        return;
+      }
+      const thrivecartId = (document.getElementById("mp-thrivecart-id").value || "").trim();
+      const email = (document.getElementById("mp-email").value || "").trim().toLowerCase();
+      const productName = (document.getElementById("mp-product").value || "").trim();
+      const amountEuros = Number(document.getElementById("mp-amount").value || 0);
+      const couponCode = (document.getElementById("mp-coupon").value || "").trim() || null;
+      const eventType = document.getElementById("mp-event-type").value || "order.success";
+
+      if (!thrivecartId) { status.textContent = "Invoice ID is required."; return; }
+      if (!email || !email.includes("@")) { status.textContent = "Valid email is required."; return; }
+      if (!productName) { status.textContent = "Product name is required."; return; }
+      if (!isFinite(amountEuros) || amountEuros < 0) { status.textContent = "Amount must be a positive number."; return; }
+
+      btn.disabled = true;
+      status.textContent = "Saving…";
+      try {
+        const r = await fetch("/api/admin/manual-purchase", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-session-token": token },
+          body: JSON.stringify({
+            thrivecart_id: thrivecartId,
+            event_type: eventType,
+            email,
+            product_name: productName,
+            amount_cents: Math.round(amountEuros * 100),
+            currency: "EUR",
+            coupon_code: couponCode,
+            notes: "Entered via admin manual-purchase form",
+          }),
+        });
+        if (!r.ok) {
+          const errBody = await r.text().catch(() => "");
+          status.textContent = "Save failed (HTTP " + r.status + "). " + errBody.slice(0, 200);
+          return;
+        }
+        const data = await r.json();
+        if (data.already_existed) {
+          status.innerHTML = "This purchase was already on file (idempotent skip). Existing row: <strong>"
+            + thrivecartId + "</strong> · " + email + ".";
+        } else {
+          status.innerHTML = "Saved. Revenue numbers will pick this up on the next refresh.";
+          // Clear form so a second entry doesn't accidentally re-submit the same one.
+          document.getElementById("mp-thrivecart-id").value = "";
+          document.getElementById("mp-email").value = "";
+          document.getElementById("mp-product").value = "";
+          document.getElementById("mp-amount").value = "";
+          document.getElementById("mp-coupon").value = "";
+          // Refresh metrics so the new total shows immediately.
+          setTimeout(() => loadMetrics(), 1200);
+        }
+      } catch (err) {
+        status.textContent = "Network error: " + (err.message || err);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+    window.runManualPurchase = runManualPurchase;
+
+    // Send a pasted ThriveCart CSV to the reconciliation endpoint and
+    // render the list of missing purchases with one-click import buttons
+    // per row. Surfaces every paid order that didn't reach our DB.
+    let recMissingCache = []; // keep parsed rows in scope for the import-row handlers
+    async function runReconcile() {
+      const status = document.getElementById("rec-status");
+      const results = document.getElementById("rec-results");
+      const btn = document.getElementById("rec-btn");
+      const csv = document.getElementById("rec-csv").value || "";
+      const token = localStorage.getItem(STORAGE_KEY);
+      if (!token) { status.textContent = "Session expired. Refresh and try again."; return; }
+      if (!csv.trim()) { status.textContent = "Paste a ThriveCart CSV first."; return; }
+      btn.disabled = true;
+      status.textContent = "Diffing CSV against the database…";
+      results.innerHTML = "";
+      try {
+        const r = await fetch("/api/admin/reconcile-thrivecart", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-session-token": token },
+          body: JSON.stringify({ csv }),
+        });
+        if (!r.ok) {
+          const errBody = await r.text().catch(() => "");
+          status.textContent = "Reconcile failed (HTTP " + r.status + "). " + errBody.slice(0, 200);
+          return;
+        }
+        const data = await r.json();
+        recMissingCache = data.missing || [];
+        const warnLine = (data.parse_warnings && data.parse_warnings.length > 0)
+          ? '<div style="color: var(--warning); margin-bottom: 8px;">Parse warnings: ' + escapeHtml(data.parse_warnings.join("; ")) + '</div>'
+          : "";
+        status.innerHTML = "Found <strong>" + data.total_csv_rows + "</strong> rows in CSV. "
+          + "<strong>" + data.in_db + "</strong> already on file. "
+          + "<strong>" + data.missing_count + "</strong> missing.";
+        if (recMissingCache.length === 0) {
+          results.innerHTML = warnLine + '<div style="color: var(--success); font-size: 12px;">All ThriveCart orders are accounted for. Nothing to backfill.</div>';
+          return;
+        }
+        const rowsHtml = recMissingCache.map((m, idx) => {
+          const amtEur = (m.amount_cents / 100).toFixed(2);
+          return '<tr>'
+            + '<td style="padding: 4px 6px; font-family: monospace; font-size: 11px;">' + escapeHtml(m.thrivecart_id) + '</td>'
+            + '<td style="padding: 4px 6px; font-size: 11px;">' + escapeHtml(m.email) + '</td>'
+            + '<td style="padding: 4px 6px; font-size: 11px;">' + escapeHtml(m.product_name || "—") + '</td>'
+            + '<td style="padding: 4px 6px; font-size: 11px; text-align: right;">€' + amtEur + '</td>'
+            + '<td style="padding: 4px 6px; font-size: 11px;">' + escapeHtml(m.coupon_code || "—") + '</td>'
+            + '<td style="padding: 4px 6px;"><button class="preset-btn" style="font-size: 10px; padding: 4px 8px;" onclick="importMissing(' + idx + ')" id="rec-import-' + idx + '">Import</button></td>'
+            + '</tr>';
+        }).join("");
+        results.innerHTML = warnLine
+          + '<div style="margin-bottom: 6px;">'
+          + '<button class="preset-btn" onclick="importAllMissing()" id="rec-import-all-btn" style="background: var(--gold); color: var(--dark); border-color: var(--gold);">Import all ' + recMissingCache.length + ' missing</button>'
+          + '</div>'
+          + '<table style="width: 100%; border-collapse: collapse;">'
+          + '<thead><tr style="border-bottom: 1px solid var(--border); text-align: left; font-size: 10px; color: var(--text-dim);">'
+          + '<th style="padding: 4px 6px;">Invoice</th><th style="padding: 4px 6px;">Email</th><th style="padding: 4px 6px;">Product</th><th style="padding: 4px 6px; text-align: right;">Amount</th><th style="padding: 4px 6px;">Coupon</th><th></th>'
+          + '</tr></thead>'
+          + '<tbody>' + rowsHtml + '</tbody></table>';
+      } catch (err) {
+        status.textContent = "Network error: " + (err.message || err);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+    window.runReconcile = runReconcile;
+
+    // Import one missing row from the reconcile results. Posts to the
+    // same manual-purchase endpoint so the audit trail stays consistent
+    // (raw_payload marked as manual entry with the actor email).
+    async function importMissing(idx) {
+      const m = recMissingCache[idx];
+      if (!m) return;
+      const btn = document.getElementById("rec-import-" + idx);
+      const token = localStorage.getItem(STORAGE_KEY);
+      if (!token || !btn) return;
+      btn.disabled = true;
+      btn.textContent = "Saving…";
+      try {
+        const r = await fetch("/api/admin/manual-purchase", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-session-token": token },
+          body: JSON.stringify({
+            thrivecart_id: m.thrivecart_id,
+            event_type: "order.success",
+            email: m.email,
+            product_name: m.product_name || "Unknown",
+            amount_cents: m.amount_cents,
+            currency: m.currency || "EUR",
+            coupon_code: m.coupon_code,
+            notes: "Imported via ThriveCart CSV reconciliation",
+          }),
+        });
+        if (!r.ok) { btn.textContent = "Failed"; return; }
+        const data = await r.json();
+        btn.textContent = data.already_existed ? "Already exists" : "Saved ✓";
+        btn.style.background = "var(--success-soft)";
+        btn.style.color = "var(--success)";
+        btn.style.borderColor = "var(--success-soft)";
+      } catch (err) {
+        btn.textContent = "Error";
+      }
+    }
+    window.importMissing = importMissing;
+
+    // Loop through every missing row sequentially. Sequential rather
+    // than parallel so we don't hammer the DB with simultaneous inserts
+    // and to keep the per-row button feedback meaningful.
+    async function importAllMissing() {
+      const btn = document.getElementById("rec-import-all-btn");
+      if (!btn) return;
+      btn.disabled = true;
+      btn.textContent = "Importing…";
+      for (let i = 0; i < recMissingCache.length; i++) {
+        btn.textContent = "Importing " + (i + 1) + "/" + recMissingCache.length + "…";
+        await importMissing(i);
+      }
+      btn.textContent = "Done — reloading…";
+      setTimeout(() => loadMetrics(), 1500);
+    }
+    window.importAllMissing = importAllMissing;
 
     // ===== Push notification sender =====
     // Loads subscribers on demand, lets admin pick recipients (one, many, all),
