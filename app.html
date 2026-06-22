@@ -2909,8 +2909,8 @@
   const THEME_KEY = "tfif_theme_v1";
   const DAY_META = [
     { label: "Day 1", theme: "State Reset" },
-    { label: "Day 2", theme: "Decision" },
-    { label: "Day 3", theme: "Action" }
+    { label: "Day 2", theme: "Decision & Action" },
+    { label: "Day 3", theme: "Frequency Calibration" }
   ];
 
   // ===== Daily quotes =====
@@ -4586,7 +4586,7 @@ Begin.` },
   // Uses the browser's built-in PDF engine so rendering is always correct
   // — fonts, page breaks, colors, layout all native. Works on every browser
   // including iOS Safari (Save to Files).
-  const RESET_DAY_TITLES = { 1: "State Reset", 2: "Decision", 3: "Action" };
+  const RESET_DAY_TITLES = { 1: "State Reset", 2: "Decision & Action", 3: "Frequency Calibration" };
 
   async function onExportWorkClick(e) {
     if (e && e.preventDefault) e.preventDefault();
