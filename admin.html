@@ -1792,9 +1792,11 @@
       const token = localStorage.getItem(STORAGE_KEY);
       if (token) {
         // Fire and forget — don't block the metrics load on the
-        // reconcile call. If reconcile creates a placeholder, the
-        // next refresh will pick it up.
-        fetch("/api/admin/auto-reconcile", {
+        // reconcile call. force=1 bypasses the 5-min grace window so
+        // sales that JUST landed on Kajabi get a placeholder right
+        // away. If reconcile creates a placeholder, we re-load metrics
+        // once more so the new numbers show without another click.
+        fetch("/api/admin/auto-reconcile?force=1", {
           method: "POST",
           headers: { "x-session-token": token },
         }).then(r => r.ok ? r.json() : null)
@@ -1850,6 +1852,13 @@
           state.launchDate = data.dateRange.launchDate.slice(0, 10);
         }
         renderDashboard(data);
+        // Re-populate the filterable roster table from the freshly loaded
+        // recentSignups data. renderRoster reads state.data which was
+        // just updated above, applies the current filter UI values, and
+        // paints the visible page of rows.
+        if (typeof renderRoster === "function") {
+          try { renderRoster(); } catch (e) { console.warn("renderRoster_failed", e); }
+        }
         // Once the dashboard is in the DOM, walk every table and copy
         // each column header onto its corresponding <td> as a data-label
         // attribute. The mobile CSS uses ::before content: attr(data-label)
@@ -2097,46 +2106,56 @@
 
           <!-- ===== MEMBERS TAB ===== -->
           <div data-tab-content="members" style="display: none;">
-            <!-- Recent signups roster -->
+            <!-- Recent signups roster — fully filterable + paginated, rendered by JS -->
             <div class="section" id="panel-roster">
-              <h2><span class="h2-eyebrow">Roster</span>Most recent signups in this range (newest 25)</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Email</th><th>Name</th><th>Tier</th><th>Plan</th>
-                  <th class="num">Spent</th>
-                  <th>Joined</th><th>1st login</th><th class="num">Day</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${(d.recentSignups || []).length === 0
-                  ? '<tr><td colspan="8" class="empty-state">No signups in this range.</td></tr>'
-                  : (d.recentSignups || []).map(u => {
-                      // Total spend respects the global VAT toggle — fmtRev
-                      // divides by 1.19 when the admin is viewing "ex VAT".
-                      // Zero spend (free members like Tomer would be here
-                      // if we hadn't filtered him) renders as a dash.
-                      const spent = Number(u.total_spent_cents || 0);
-                      const count = Number(u.purchase_count || 0);
-                      const spentCell = spent > 0
-                        ? `${fmtRev(spent)}<span style="color: var(--text-mute); font-weight: 400; font-size: 11px; margin-left: 6px;">${count} order${count === 1 ? '' : 's'}</span>`
-                        : '<span style="color: var(--text-mute);">—</span>';
-                      return `
-                        <tr>
-                          <td>${escapeHtml(u.email)}</td>
-                          <td>${escapeHtml(nameOrFallback(u))}</td>
-                          <td><span class="tier-badge ${u.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(tierLabel(u.tier))}</span></td>
-                          <td>${escapeHtml(u.subscription_plan || "—")}</td>
-                          <td class="num">${spentCell}</td>
-                          <td class="date-cell">${fmtDate(u.created_at)}</td>
-                          <td class="date-cell">${u.first_login_at ? fmtDate(u.first_login_at) : "—"}</td>
-                          <td class="num">${u.last_completed_day || 0}</td>
-                        </tr>
-                      `;
-                    }).join("")}
-              </tbody>
-            </table>
-          </div>
+              <h2><span class="h2-eyebrow">Roster</span><span id="roster-title">Every member in this range</span></h2>
+              <!-- Filter + search bar -->
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 16px; align-items: center;">
+                <input type="text" id="roster-search" placeholder="Search email or name…"
+                       style="flex: 1 1 220px; min-width: 180px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;" />
+                <select id="roster-filter-tier" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;">
+                  <option value="">All tiers</option>
+                  <option value="preview">Power Reset</option>
+                  <option value="full">Unlimited</option>
+                </select>
+                <select id="roster-filter-plan" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;">
+                  <option value="">All plans</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                  <option value="none">No plan</option>
+                </select>
+                <select id="roster-filter-spent" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;">
+                  <option value="">Paid + free</option>
+                  <option value="paid">Paid only</option>
+                  <option value="unpaid">No payment yet</option>
+                </select>
+                <select id="roster-filter-day" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;">
+                  <option value="">All days</option>
+                  <option value="0">Day 0 (not started)</option>
+                  <option value="1">Day 1</option>
+                  <option value="2">Day 2</option>
+                  <option value="3">Day 3 (complete)</option>
+                </select>
+                <select id="roster-filter-login" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;">
+                  <option value="">Logged in or not</option>
+                  <option value="logged_in">Logged in</option>
+                  <option value="never">Never logged in</option>
+                </select>
+                <button id="roster-clear" class="preset-btn" style="font-size: 11px; padding: 6px 10px;">Clear</button>
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Email</th><th>Name</th><th>Tier</th><th>Plan</th>
+                    <th class="num">Spent</th>
+                    <th>Joined</th><th>1st login</th><th class="num">Day</th>
+                  </tr>
+                </thead>
+                <tbody id="roster-tbody"></tbody>
+              </table>
+              <!-- Pagination controls — populated by JS based on filter results -->
+              <div id="roster-pagination" style="display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-top: 14px; font-size: 12px; color: var(--text-dim);"></div>
+            </div>
           <!-- Signups by day -->
           <div class="section" id="panel-signups">
             <h2><span class="h2-eyebrow">Recent</span>Signups by day</h2>
@@ -3521,6 +3540,133 @@
       }
     }
     window.runManualPurchase = runManualPurchase;
+
+    // ===== Members roster filtering + pagination =====
+    // The backend (metrics.js) now returns ALL members in this range
+    // (no LIMIT 25). We filter and paginate entirely client-side so
+    // every keystroke in the search box feels instant. For thousands of
+    // members this stays fast — filtering an array of a few thousand
+    // objects is sub-millisecond in any browser.
+    const ROSTER_PAGE_SIZE = 25;
+    let rosterPage = 0;
+    function readRosterFilters() {
+      return {
+        q: (document.getElementById("roster-search")?.value || "").trim().toLowerCase(),
+        tier: document.getElementById("roster-filter-tier")?.value || "",
+        plan: document.getElementById("roster-filter-plan")?.value || "",
+        spent: document.getElementById("roster-filter-spent")?.value || "",
+        day: document.getElementById("roster-filter-day")?.value || "",
+        login: document.getElementById("roster-filter-login")?.value || "",
+      };
+    }
+    function applyRosterFilters(rows, f) {
+      return rows.filter(u => {
+        if (f.q) {
+          const hay = ((u.email || "") + " " + (u.display_name || "")).toLowerCase();
+          if (!hay.includes(f.q)) return false;
+        }
+        if (f.tier && u.tier !== f.tier) return false;
+        if (f.plan) {
+          const plan = u.subscription_plan || "none";
+          if (plan !== f.plan) return false;
+        }
+        if (f.spent === "paid" && !(Number(u.total_spent_cents || 0) > 0)) return false;
+        if (f.spent === "unpaid" && Number(u.total_spent_cents || 0) > 0) return false;
+        if (f.day !== "" && String(u.last_completed_day || 0) !== f.day) return false;
+        if (f.login === "logged_in" && !u.first_login_at) return false;
+        if (f.login === "never" && u.first_login_at) return false;
+        return true;
+      });
+    }
+    function renderRoster() {
+      const tbody = document.getElementById("roster-tbody");
+      const pager = document.getElementById("roster-pagination");
+      const title = document.getElementById("roster-title");
+      if (!tbody) return;
+      const all = (state.data && state.data.recentSignups) || [];
+      const filtered = applyRosterFilters(all, readRosterFilters());
+
+      // Reset to page 0 if the current page would be empty after a filter change.
+      const totalPages = Math.max(1, Math.ceil(filtered.length / ROSTER_PAGE_SIZE));
+      if (rosterPage >= totalPages) rosterPage = 0;
+      const start = rosterPage * ROSTER_PAGE_SIZE;
+      const slice = filtered.slice(start, start + ROSTER_PAGE_SIZE);
+
+      if (title) {
+        if (filtered.length === all.length) {
+          title.textContent = `Every member in this range (${all.length})`;
+        } else {
+          title.textContent = `Showing ${filtered.length} of ${all.length} members`;
+        }
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No members match these filters.</td></tr>';
+        pager.innerHTML = "";
+        return;
+      }
+
+      tbody.innerHTML = slice.map(u => {
+        const spent = Number(u.total_spent_cents || 0);
+        const count = Number(u.purchase_count || 0);
+        const spentCell = spent > 0
+          ? `${fmtRev(spent)}<span style="color: var(--text-mute); font-weight: 400; font-size: 11px; margin-left: 6px;">${count} order${count === 1 ? '' : 's'}</span>`
+          : '<span style="color: var(--text-mute);">—</span>';
+        return `
+          <tr>
+            <td>${escapeHtml(u.email)}</td>
+            <td>${escapeHtml(nameOrFallback(u))}</td>
+            <td><span class="tier-badge ${u.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(tierLabel(u.tier))}</span></td>
+            <td>${escapeHtml(u.subscription_plan || "—")}</td>
+            <td class="num">${spentCell}</td>
+            <td class="date-cell">${fmtDate(u.created_at)}</td>
+            <td class="date-cell">${u.first_login_at ? fmtDate(u.first_login_at) : "—"}</td>
+            <td class="num">${u.last_completed_day || 0}</td>
+          </tr>
+        `;
+      }).join("");
+
+      // Pagination footer. Shows "1-25 of 138 · Prev | Page X of N | Next"
+      // and disables prev/next at the boundaries.
+      const from = start + 1;
+      const to = Math.min(start + ROSTER_PAGE_SIZE, filtered.length);
+      pager.innerHTML = `
+        <span>Showing <strong>${from}-${to}</strong> of <strong>${filtered.length}</strong></span>
+        <span style="display: flex; gap: 6px;">
+          <button class="preset-btn" id="roster-prev" style="font-size: 11px; padding: 6px 12px;" ${rosterPage === 0 ? 'disabled' : ''}>‹ Prev</button>
+          <span style="padding: 6px 4px;">Page ${rosterPage + 1} of ${totalPages}</span>
+          <button class="preset-btn" id="roster-next" style="font-size: 11px; padding: 6px 12px;" ${rosterPage + 1 >= totalPages ? 'disabled' : ''}>Next ›</button>
+        </span>
+      `;
+      const prev = document.getElementById("roster-prev");
+      const next = document.getElementById("roster-next");
+      if (prev) prev.onclick = () => { rosterPage = Math.max(0, rosterPage - 1); renderRoster(); };
+      if (next) next.onclick = () => { rosterPage = Math.min(totalPages - 1, rosterPage + 1); renderRoster(); };
+    }
+    window.renderRoster = renderRoster;
+
+    // Wire up the filter inputs once the page loads. Every change
+    // re-renders. Search box uses input event for live filtering.
+    document.addEventListener("DOMContentLoaded", () => {
+      const ids = ["roster-search", "roster-filter-tier", "roster-filter-plan", "roster-filter-spent", "roster-filter-day", "roster-filter-login"];
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const ev = id === "roster-search" ? "input" : "change";
+        el.addEventListener(ev, () => { rosterPage = 0; renderRoster(); });
+      });
+      const clearBtn = document.getElementById("roster-clear");
+      if (clearBtn) {
+        clearBtn.addEventListener("click", () => {
+          ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = "";
+          });
+          rosterPage = 0;
+          renderRoster();
+        });
+      }
+    });
 
     // Send a pasted ThriveCart CSV to the reconciliation endpoint and
     // render the list of missing purchases with one-click import buttons
