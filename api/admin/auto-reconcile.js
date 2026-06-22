@@ -244,20 +244,20 @@ export default async function handler(req, res) {
 
 function inferDefaults(tier, plan, activationEvent) {
   if (tier === "full" && plan === "yearly") {
-    // Launch-period yearly upgrade — €190.40 gross with LAUNCHTEAMUNLIMITED.
-    // For full-price yearly (€777), Geo edits manually. Most yearly
-    // upgrades during launch are coupon-discounted so this is the
-    // higher-confidence default.
+    // Yearly Unlimited — assume full price €777. Antonella's invoice
+    // shows the standard yearly offer is €777 (sometimes with a 10%-
+    // off promo applied to year 1). For LAUNCHTEAMUNLIMITED yearly at
+    // €190.40 (Sofie's case), Geo edits manually. €777 covers the
+    // common case better post-launch.
     return {
       product_name: "The Freedom Intelligence Field - Unlimited (Yearly)",
-      amount_cents: 19040,
-      coupon_code: "LAUNCHTEAMUNLIMITED",
-      basis: "default: yearly LAUNCHTEAMUNLIMITED (€190.40 gross)",
+      amount_cents: 77700,
+      coupon_code: null,
+      basis: "default: yearly full price (€777 gross)",
     };
   }
   if (tier === "full" && plan === "monthly") {
-    // Monthly Unlimited — assume full price (€77) since LAUNCHTEAMUNLIMITED
-    // monthly is rarer in practice. Geo can adjust.
+    // Monthly Unlimited — full price €77.
     return {
       product_name: "The Freedom Intelligence Field - Unlimited (Monthly)",
       amount_cents: 7700,
@@ -266,8 +266,9 @@ function inferDefaults(tier, plan, activationEvent) {
     };
   }
   if (tier === "preview") {
-    // Reset — assume POWER50 launch price (€4.50 gross). For full-price
-    // €9 Reset buyers (rare during launch), Geo edits.
+    // Reset — POWER50 launch price (€4.50 gross). During the active
+    // launch wave most Reset buyers use POWER50; full-price €9 buyers
+    // are the exception. Geo edits if needed.
     return {
       product_name: "The Power Reset",
       amount_cents: 450,
