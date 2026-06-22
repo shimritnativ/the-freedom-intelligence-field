@@ -990,35 +990,38 @@
        (the parent .inside-panel-bg is a flex row by default). */
     .inside-panel-bg {
       flex-direction: column;
-      padding: 36px 22px;
+      padding: 32px 18px 36px;
     }
     /* Keep the dual-device composition on mobile — desktop mockup
        reads as a small browser window, phone overlaps bottom-right
-       like on desktop. Now full-width since the callout dropped below. */
+       like on desktop. Extra bottom padding so the phone (which is
+       taller proportionally than the desktop screenshot) has breathing
+       room and isn't clipped by the panel's overflow:hidden. */
     .inside-devices {
-      padding: 6px 0 0;
+      padding: 0 0 70px;
       width: 100%;
     }
     .inside-device-desktop {
-      width: 78%;
+      width: 70%;
       box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4),
                   0 0 0 1px rgba(255, 255, 255, 0.04);
     }
     .inside-device-mobile {
-      width: 28%;
-      max-width: 160px;
-      border-radius: 20px;
+      width: 26%;
+      max-width: 140px;
+      border-radius: 18px;
       box-shadow: 0 14px 32px rgba(0, 0, 0, 0.55),
                   0 0 0 1px rgba(201, 168, 76, 0.18);
-      right: 0;
+      right: 4%;
+      bottom: 12px;
     }
     /* Re-tune the sync arc for the smaller stage so it still bridges
        desktop edge → phone top. */
     .inside-sync-arc {
       width: 38%;
       height: 50px;
-      bottom: 30%;
-      right: 8%;
+      bottom: 38%;
+      right: 6%;
     }
   }
 
@@ -1161,71 +1164,65 @@
   }
   .diff-icon-yes { color: var(--gold); font-size: 18px; line-height: 1; }
   .diff-icon-no { color: var(--text-mute); font-size: 18px; line-height: 1; }
-  /* On mobile the 4-column table can't fit horizontally without
-     either shrinking text to unreadable or scrolling sideways. We
-     transform it into a stack of cards: one card per feature, with
-     the three competitor responses listed inside, prefixed by their
-     column name (pulled from data-label). The Field row gets gold-
-     tinted treatment so it visually wins on every card. */
+  /* On mobile we keep the full side-by-side table but enable
+     horizontal scroll, with the Feature column pinned to the left so
+     users can swipe through the three comparison columns while
+     always seeing which row they're reading. A right-edge fade hints
+     at the scrollable content. */
   @media (max-width: 720px) {
     .diff-table-wrap {
-      background: transparent;
-      border: none;
-      box-shadow: none;
-      overflow: visible;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      position: relative;
     }
-    .diff-table,
-    .diff-table thead,
-    .diff-table tbody,
-    .diff-table tr,
+    /* Faint right-edge gradient hinting more content is scrollable. */
+    .diff-table-wrap::after {
+      content: '';
+      position: sticky;
+      top: 0;
+      right: 0;
+      width: 24px;
+      height: 100%;
+      background: linear-gradient(to left, var(--bg-card), transparent);
+      pointer-events: none;
+    }
+    .diff-table {
+      min-width: 640px; /* forces horizontal scroll on narrow screens */
+    }
     .diff-table th,
     .diff-table td {
-      display: block;
-      width: 100%;
-    }
-    .diff-table thead { display: none; }
-    .diff-table tr {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      margin-bottom: 14px;
-      padding: 6px 0;
-      box-shadow: var(--shadow-md);
-      overflow: hidden;
-    }
-    .diff-table td {
-      border-bottom: 1px solid var(--border);
-      padding: 12px 18px;
-      font-size: 13.5px;
+      padding: 12px 14px;
+      font-size: 12.5px;
       line-height: 1.5;
+      vertical-align: top;
     }
-    .diff-table tr td:last-child { border-bottom: none; }
-    /* Feature name becomes the card header */
+    .diff-table th { font-size: 10.5px; padding: 14px 14px; }
+    /* Pin the Feature column so it stays visible while scrolling */
+    .diff-table th:first-child,
     .diff-table .diff-feature {
+      position: sticky;
+      left: 0;
+      z-index: 2;
       background: var(--bg-warm);
-      font-weight: 600;
-      font-size: 13.5px;
-      color: var(--text);
-      padding: 13px 18px;
-      letter-spacing: 0.01em;
+      min-width: 140px;
+      max-width: 160px;
+      box-shadow: 4px 0 8px -4px rgba(0, 0, 0, 0.1);
     }
-    /* Each comparison cell shows its column label inline */
-    .diff-cell::before {
-      content: attr(data-label);
-      display: block;
-      font-size: 10.5px;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--text-mute);
-      margin-bottom: 4px;
+    /* Even-row body cells need a solid background so the sticky
+       feature col doesn't blend into overlapping cells. */
+    .diff-table .diff-feature {
+      background: var(--bg-card);
     }
-    /* The Field row gets a gold-tinted background to stay distinctive */
-    .diff-cell.diff-cell-field {
-      background: var(--gold-soft);
+    /* Comparison column widths — tight but readable. */
+    .diff-table th:not(:first-child),
+    .diff-table td:not(:first-child) {
+      min-width: 140px;
     }
-    .diff-cell.diff-cell-field::before {
-      color: var(--gold);
+    .diff-table th.diff-th-field,
+    .diff-table td.diff-cell-field {
+      min-width: 160px;
     }
   }
 
