@@ -952,15 +952,17 @@
     outline: 1px solid rgba(201, 168, 76, 0.25);
     outline-offset: -1px;
   }
-  /* Sync indicator on the Continuity tab — pulsing gold arc between
-     the two devices. Pure SVG, positioned absolutely. */
+  /* Sync indicator on the Continuity tab — pulsing gold arc that
+     visually bridges the desktop's right side and the phone's top.
+     Anchored bottom-right so it sits just above the phone, with width
+     reaching back into the desktop screen for a believable "data
+     flowing between devices" read. */
   .inside-sync-arc {
     position: absolute;
-    top: 35%;
-    left: 50%;
-    width: 28%;
+    bottom: 36%;
+    right: 10%;
+    width: 32%;
     height: 80px;
-    transform: translateX(-30%);
     pointer-events: none;
     z-index: 2;
   }
@@ -983,20 +985,32 @@
     opacity: 0.55;
   }
   @media (max-width: 720px) {
-    /* On mobile the dual-device split becomes single-device since
-       there's no room to stack them gracefully. We show the mobile
-       mockup centered and hide the desktop one. */
-    .inside-device-desktop { display: none; }
-    .inside-device-mobile {
-      position: relative;
-      width: 60%;
-      max-width: 280px;
-      margin: 0 auto;
-      right: auto;
-      bottom: auto;
+    /* Keep the dual-device composition on mobile — desktop mockup
+       reads as a small browser window, phone overlaps bottom-right
+       like on desktop. Looks like the same proportional layout, just
+       scaled into a narrower stage. */
+    .inside-devices { padding: 18px 0 30px; }
+    .inside-device-desktop {
+      width: 88%;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4),
+                  0 0 0 1px rgba(255, 255, 255, 0.04);
     }
-    .inside-devices { padding: 0; }
-    .inside-sync-arc { display: none; }
+    .inside-device-mobile {
+      width: 32%;
+      max-width: 140px;
+      border-radius: 18px;
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.55),
+                  0 0 0 1px rgba(201, 168, 76, 0.18);
+      right: 2%;
+    }
+    /* Re-tune the sync arc for the smaller stage so it still bridges
+       desktop edge → phone top. */
+    .inside-sync-arc {
+      width: 38%;
+      height: 50px;
+      bottom: 30%;
+      right: 8%;
+    }
   }
 
   /* Optional callout cards anchored to one side of the stage, like
@@ -1032,8 +1046,22 @@
   .inside-callout--bottom-right { bottom: 30px; right: 30px; }
   .inside-callout--bottom-left  { bottom: 30px; left: 30px; }
   .inside-callout--top-left     { top: 30px; left: 30px; }
+  /* On narrow screens, the absolute-positioned callout would overlap
+     the mockups, so we let it flow below the device stage instead —
+     keeping the same content visible without crowding the screenshot. */
   @media (max-width: 900px) {
-    .inside-callout { display: none; } /* not enough room on narrow */
+    .inside-callout {
+      position: relative;
+      display: block;
+      top: auto !important;
+      right: auto !important;
+      bottom: auto !important;
+      left: auto !important;
+      margin: 22px auto 8px;
+      max-width: 320px;
+      padding: 14px 16px;
+      font-size: 12.5px;
+    }
   }
 
   /* Caption that lives below the stage describing the panel. */
