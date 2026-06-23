@@ -440,12 +440,37 @@
       .kpi-sub { font-size: 10px; }
       .kpi.clickable::after { display: none; }
 
-      /* Today's Highlights — single column */
-      .highlights { padding: 14px 16px 12px; margin-bottom: 18px; }
-      .highlights-grid { grid-template-columns: 1fr; gap: 8px; }
-      .highlights-title { font-size: 15px; }
-      .highlight { padding: 8px 12px; }
-      .highlight-value { font-size: 19px; min-width: 28px; }
+      /* Today's Highlights — single column, fully constrained so neither
+         the wrapper nor any tile can blow out the viewport width. The
+         previous version let tile content stay horizontal which was
+         clipping past the right edge on narrow phones. */
+      .highlights {
+        padding: 14px 16px 12px;
+        margin-bottom: 18px;
+        max-width: 100%;
+        overflow: hidden;
+      }
+      .highlights-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        max-width: 100%;
+      }
+      .highlights-header { flex-wrap: wrap; gap: 8px; }
+      .highlights-title { font-size: 15px; word-break: break-word; }
+      .highlight {
+        padding: 12px 14px;
+        max-width: 100%;
+        min-width: 0;
+        flex-direction: column !important;
+        align-items: flex-start;
+      }
+      .highlight-eyebrow { font-size: 9px; }
+      .highlight-value {
+        font-size: 22px;
+        min-width: 0;
+        word-break: break-word;
+      }
+      .highlight-detail { font-size: 11px; word-break: break-word; }
 
       /* Sections — tighter */
       .section { padding: 16px 14px; margin-bottom: 14px; border-radius: 12px; }
@@ -3825,19 +3850,31 @@
         const spentCell = spent > 0
           ? `${fmtRev(spent)}<span style="color: var(--text-mute); font-weight: 400; font-size: 11px; margin-left: 6px;">${count} order${count === 1 ? '' : 's'}</span>`
           : '<span style="color: var(--text-mute);">—</span>';
+        // Each <td> has an explicit data-label so the mobile stacked-card
+        // layout shows the column name in front of each value. (Without
+        // this, the CSS ::before { content: attr(data-label) } renders
+        // empty and the flex justify-content: space-between pushes all
+        // data right, leaving a blank left side — the "weird member list"
+        // bug Geo reported.)
         return `
           <tr>
-            <td>${escapeHtml(u.email)}</td>
-            <td>${escapeHtml(nameOrFallback(u))}</td>
-            <td><span class="tier-badge ${u.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(tierLabel(u.tier))}</span></td>
-            <td>${escapeHtml(u.subscription_plan || "—")}</td>
-            <td class="num">${spentCell}</td>
-            <td class="date-cell">${fmtDate(u.created_at)}</td>
-            <td class="date-cell">${u.first_login_at ? fmtDate(u.first_login_at) : "—"}</td>
-            <td class="num">${u.last_completed_day || 0}</td>
+            <td data-label="Email">${escapeHtml(u.email)}</td>
+            <td data-label="Name">${escapeHtml(nameOrFallback(u))}</td>
+            <td data-label="Tier"><span class="tier-badge ${u.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(tierLabel(u.tier))}</span></td>
+            <td data-label="Plan">${escapeHtml(u.subscription_plan || "—")}</td>
+            <td class="num" data-label="Spent">${spentCell}</td>
+            <td class="date-cell" data-label="Joined">${fmtDate(u.created_at)}</td>
+            <td class="date-cell" data-label="1st login">${u.first_login_at ? fmtDate(u.first_login_at) : "—"}</td>
+            <td class="num" data-label="Day">${u.last_completed_day || 0}</td>
           </tr>
         `;
       }).join("");
+
+      // Safety net: also fire applyMobileTableLabels in case JS-rendered
+      // tables elsewhere were missed. Cheap re-run, idempotent.
+      if (typeof window.applyMobileTableLabels === 'function') {
+        try { window.applyMobileTableLabels(); } catch {}
+      }
 
       // Pagination footer. Shows "1-25 of 138 · Prev | Page X of N | Next"
       // and disables prev/next at the boundaries.
