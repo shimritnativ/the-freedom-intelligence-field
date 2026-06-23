@@ -22,25 +22,16 @@
 // rather than blocking the user.
 
 const TO_EMAIL = "support@shimritnativ.com";
-const ALLOWED_ORIGINS = [
-  "https://hello.thefieldai.app",
-  "https://thefieldai.app",
-  "https://the-freedom-intelligence-field.vercel.app",
-  // Allow local file:// open for dev preview of the marketing page.
-  "null",
-];
 
+// This is a PUBLIC contact form — no credentials, no auth, no PII
+// beyond what the user voluntarily submits. Safe to allow any origin.
+// Simpler than maintaining an allowlist, and means the form works no
+// matter which domain the marketing page is served from.
 function applyCors(req, res) {
-  const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Vary", "Origin");
-  } else if (!origin) {
-    // Direct fetch with no Origin header (e.g. server-to-server or local).
-    res.setHeader("Access-Control-Allow-Origin", "*");
-  }
+  res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept");
+  res.setHeader("Access-Control-Max-Age", "86400");
 }
 
 function escapeHtml(s) {
