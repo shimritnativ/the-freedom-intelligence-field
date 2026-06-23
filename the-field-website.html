@@ -295,47 +295,155 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 24px;
+    gap: 12px;
     flex-wrap: wrap;
-    color: var(--text-inverse-mute);
-    font-size: 12px;
-    letter-spacing: 0.05em;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    margin-top: 36px;
   }
+  /* Trust pills — gold-tinted bordered chips so they read as proof
+     elements rather than fine print. Subtle glow on hover. */
+  .hero-trust > span:not(.hero-trust-divider) {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(201, 168, 76, 0.08);
+    border: 1px solid rgba(201, 168, 76, 0.35);
+    border-radius: var(--radius-pill);
+    color: var(--gold);
+    font-weight: 600;
+    text-transform: uppercase;
+    transition: background 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+  }
+  .hero-trust > span:not(.hero-trust-divider):hover {
+    background: rgba(201, 168, 76, 0.14);
+    border-color: var(--gold);
+    transform: translateY(-1px);
+  }
+  /* Gold dot before each badge for extra polish */
+  .hero-trust > span:not(.hero-trust-divider)::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 8px rgba(201, 168, 76, 0.6);
+    flex-shrink: 0;
+  }
+  /* Hide the old divider lines — pills don't need them */
   .hero-trust-divider {
-    width: 1px;
-    height: 14px;
-    background: var(--text-inverse-mute);
-    opacity: 0.4;
+    display: none;
+  }
+  @media (max-width: 720px) {
+    .hero-trust {
+      gap: 8px;
+      margin-top: 28px;
+    }
+    .hero-trust > span:not(.hero-trust-divider) {
+      font-size: 10px;
+      padding: 7px 13px;
+      letter-spacing: 0.08em;
+    }
   }
 
-  /* ===== Logos / Trust strip ===== */
+  /* ===== Trust strip — proof bar =====
+     Four stats laid out as glowing stat cards. Big gold numbers, small
+     uppercase labels, hairline dividers between cells on desktop, a
+     soft inner glow and subtle hover lift. The eye should land on the
+     numbers first, then read the label. */
   .trust-strip {
     background: var(--bg-dark);
-    padding: 40px 0;
+    padding: 56px 0;
     border-top: 1px solid var(--border-dark);
     color: var(--text-inverse-dim);
+    position: relative;
+    overflow: hidden;
+  }
+  /* Subtle gold gradient glow at top to lift the section off black */
+  .trust-strip::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(201, 168, 76, 0.4), transparent);
+    pointer-events: none;
   }
   .trust-strip-inner {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
     align-items: center;
-    justify-content: center;
-    gap: 60px;
-    flex-wrap: wrap;
-    font-family: var(--font-serif);
-    font-style: italic;
-    font-size: 15px;
+    justify-items: center;
+    gap: 0;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px;
   }
   .trust-strip-item {
     display: flex;
+    flex-direction: column;
     align-items: center;
+    text-align: center;
     gap: 8px;
+    padding: 16px 24px;
+    position: relative;
+    transition: transform 0.4s ease;
+    width: 100%;
+  }
+  .trust-strip-item:hover { transform: translateY(-3px); }
+  /* Vertical hairline dividers between cells (not after the last one). */
+  .trust-strip-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 25%;
+    right: 0;
+    width: 1px;
+    height: 50%;
+    background: linear-gradient(180deg,
+      transparent,
+      rgba(201, 168, 76, 0.3),
+      transparent);
   }
   .trust-strip-item strong {
     color: var(--gold);
     font-style: normal;
     font-weight: 600;
+    font-family: var(--font-serif);
+    font-size: clamp(40px, 5vw, 56px);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    text-shadow: 0 0 24px rgba(201, 168, 76, 0.25);
+    transition: text-shadow 0.4s ease;
+  }
+  .trust-strip-item:hover strong {
+    text-shadow: 0 0 32px rgba(201, 168, 76, 0.5);
+  }
+  /* The label after the number — short, uppercase, dimmer. */
+  .trust-strip-item-label {
     font-family: var(--font-sans);
-    font-size: 14px;
+    font-style: normal;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-inverse-mute);
+    max-width: 180px;
+    line-height: 1.4;
+  }
+  @media (max-width: 900px) {
+    .trust-strip { padding: 40px 0; }
+    .trust-strip-inner {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px 0;
+    }
+    .trust-strip-item { padding: 12px 16px; }
+    /* On 2-col mobile: hide right-side dividers on cells that end a row */
+    .trust-strip-item:nth-child(2n)::after { display: none; }
+    .trust-strip-item strong { font-size: 38px; }
+    .trust-strip-item-label { font-size: 10px; letter-spacing: 0.12em; }
   }
 
   /* ===== Section: The Gap ===== */
@@ -695,14 +803,53 @@
   .process-pill[data-i="10"] { transition-delay: 0.85s; }
   .process-pill[data-i="11"] { transition-delay: 0.93s; }
 
-  /* Per-pill subtle float — gentle drift applied to the .process-pill
-     ONLY, so it doesn't collide with the orbit's translate centering
-     or the magnet wrapper's cursor-pull transform. Each pill picks
-     its own duration via inline --float-duration to desync. */
+  /* Per-pill drift — applied to the .process-pill ONLY so it doesn't
+     collide with the orbit's translate centering or the magnet
+     wrapper's cursor-pull transform. Each pill picks its own duration
+     via inline --float-duration to desync. Three keyframes assigned
+     by data-i to break the "all moving in unison" feel — pills now
+     drift in figure-8s, arcs, and back-and-forth sways. Amplitude
+     bumped from 6px to ~14px so pills visibly move past each other
+     even when starting close. */
+  @keyframes pill-float-a {
+    0%   { transform: translate(0, 0); }
+    25%  { transform: translate(6px, -8px); }
+    50%  { transform: translate(0, -14px); }
+    75%  { transform: translate(-6px, -8px); }
+    100% { transform: translate(0, 0); }
+  }
+  @keyframes pill-float-b {
+    0%   { transform: translate(0, 0); }
+    25%  { transform: translate(-10px, -4px); }
+    50%  { transform: translate(-6px, -12px); }
+    75%  { transform: translate(8px, -6px); }
+    100% { transform: translate(0, 0); }
+  }
+  @keyframes pill-float-c {
+    0%   { transform: translate(0, 0); }
+    33%  { transform: translate(10px, -6px); }
+    66%  { transform: translate(-8px, -10px); }
+    100% { transform: translate(0, 0); }
+  }
+  /* Assign keyframes per pill index so neighbors animate differently. */
+  .process-pill[data-i="0"],
+  .process-pill[data-i="3"],
+  .process-pill[data-i="6"],
+  .process-pill[data-i="9"] { animation-name: pill-float-a; }
+  .process-pill[data-i="1"],
+  .process-pill[data-i="4"],
+  .process-pill[data-i="7"],
+  .process-pill[data-i="10"] { animation-name: pill-float-b; }
+  .process-pill[data-i="2"],
+  .process-pill[data-i="5"],
+  .process-pill[data-i="8"],
+  .process-pill[data-i="11"] { animation-name: pill-float-c; }
+  /* Fallback for the original single keyframe so nothing breaks if a
+     pill is missing data-i (and gives us a clean default). */
   @keyframes pill-float {
-    0%   { transform: translateY(0); }
-    50%  { transform: translateY(-6px); }
-    100% { transform: translateY(0); }
+    0%   { transform: translate(0, 0); }
+    50%  { transform: translate(4px, -10px); }
+    100% { transform: translate(0, 0); }
   }
 
   /* Cursor proximity → pill brightens, scales, and lights its border. */
@@ -758,13 +905,20 @@
     /* Keep the constellation on mobile — just scale it down. Hide the
        fallback chip grid since the orbit is the more beautiful read. */
     .process-pills { display: none; }
-    .constellation { max-width: 520px; }
+    /* Constellation shrunk MORE on mobile (was 520px) so pill labels at
+       3 and 9 o'clock stop overflowing the parent unlimited-block. Plus
+       generous horizontal margin so the rings have breathing room. */
+    .constellation {
+      max-width: 380px;
+      margin: 0 auto;
+    }
     .process-pill {
-      font-size: 11px;
-      padding: 6px 11px;
+      font-size: 10.5px;
+      padding: 5px 10px;
+      white-space: nowrap;
     }
     .process-pill--small {
-      font-size: 9.5px;
+      font-size: 9px;
       padding: 4px 8px;
     }
     /* On mobile cursor proximity doesn't exist, so pills auto-cycle
@@ -773,8 +927,10 @@
     .process-pill.is-hot {
       box-shadow: 0 0 18px rgba(201, 168, 76, 0.4);
     }
-    .constellation-center-label { font-size: 16px; }
-    .unlimited-block { padding: 50px 24px 40px; }
+    .constellation-center-label { font-size: 14px; }
+    /* Extra side padding on unlimited-block so the constellation has
+       room for its outer pills without hitting the block edges. */
+    .unlimited-block { padding: 50px 14px 40px; }
     .unlimited-block p { margin-bottom: 24px; }
   }
 
@@ -1242,6 +1398,38 @@
   .diff-table th.diff-th-field {
     color: var(--gold);
     background: var(--gold-soft);
+    text-transform: none;
+    letter-spacing: 0;
+    padding-top: 22px;
+    padding-bottom: 22px;
+  }
+  /* The Field column header — branded with logo + serif name so it
+     visually stands apart from the generic competitor columns. */
+  .diff-th-field-inner {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+  }
+  .diff-th-field-logo {
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(0 0 6px rgba(201, 168, 76, 0.4));
+  }
+  .diff-th-field-name {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--gold);
+    letter-spacing: 0.01em;
+    line-height: 1;
+  }
+  .diff-th-field-name em {
+    font-style: italic;
+    font-weight: 400;
+    margin-right: 2px;
   }
   .diff-table tbody tr:last-child td { border-bottom: none; }
   .diff-feature {
@@ -2229,7 +2417,7 @@
       <a href="#how-it-works" class="btn btn-ghost magnetic">See how it works</a>
     </div>
     <div class="hero-trust reveal reveal-up reveal-delay-6">
-      <span>BUILT ON FRONTIER AI</span>
+      <span>BUILT ON ADVANCED AI</span>
       <span class="hero-trust-divider"></span>
       <span>10+ YEARS OF METHODOLOGY</span>
       <span class="hero-trust-divider"></span>
@@ -2243,16 +2431,20 @@
   <div class="container">
     <div class="trust-strip-inner">
       <div class="trust-strip-item reveal reveal-up">
-        <strong data-count-to="16" data-count-suffix="+">16+</strong> guided processes (and growing)
+        <strong data-count-to="16" data-count-suffix="+">16+</strong>
+        <span class="trust-strip-item-label">Guided processes &amp; growing</span>
       </div>
       <div class="trust-strip-item reveal reveal-up reveal-delay-1">
-        <strong data-count-to="72">72</strong> hour entry experience
+        <strong data-count-to="72">72</strong>
+        <span class="trust-strip-item-label">Hour entry experience</span>
       </div>
       <div class="trust-strip-item reveal reveal-up reveal-delay-2">
-        <strong>4.9★</strong> early member rating
+        <strong>4.9★</strong>
+        <span class="trust-strip-item-label">Early member rating</span>
       </div>
       <div class="trust-strip-item reveal reveal-up reveal-delay-3">
-        <strong>12+</strong> countries with members
+        <strong>12+</strong>
+        <span class="trust-strip-item-label">Countries with members</span>
       </div>
     </div>
   </div>
@@ -2382,7 +2574,7 @@
     <div class="how-header">
       <div class="eyebrow reveal reveal-up" style="margin-bottom: 18px;">How It Works</div>
       <div class="gold-divider reveal"></div>
-      <h2 class="h-section reveal reveal-up reveal-delay-1">A 72-hour onramp. <span class="shimmer">A lifetime of access.</span></h2>
+      <h2 class="h-section reveal reveal-up reveal-delay-1">A 72-hour onramp.<br><span class="shimmer">A lifetime of access.</span></h2>
       <p class="lead reveal reveal-up reveal-delay-2">Start with The Power Reset: three guided days designed to install the foundation. Then optionally continue with Unlimited for access to a growing library of advanced processes, or interact with The Field in your own way: open conversations about anything alive for you, anytime.</p>
     </div>
 
@@ -2410,8 +2602,9 @@
     <div class="unlimited-block reveal reveal-up reveal-delay-4">
       <div class="unlimited-block-inner">
         <div class="eyebrow" style="color: var(--gold);">After the Reset</div>
-        <h3>The Unlimited Field. <span class="shimmer">A growing library of 16+ processes, on demand.</span></h3>
-        <p>Once the foundation is set, the Field opens up. Every member gets unlimited access to a growing library of guided processes designed for specific moments: when a decision is sitting heavy, when energy needs recalibrating, when an old pattern is asking for attention. Or skip the structure entirely and just talk: The Field meets you in open conversation about anything alive for you. It remembers what you said in every prior session and meets you exactly where you left off.</p>
+        <h3>The Field that <span class="shimmer">knows you.</span></h3>
+        <p>Once the foundation is set, the Field opens up. Talk to it about anything alive for you: a decision sitting heavy, a question you haven't dared to ask, a pattern asking for attention. The Field listens with 10+ years of Shimrit's lived methodology behind every response, and it remembers every conversation, every declaration, every shift.</p>
+        <p>And when you want more structure, a growing library of guided processes is right there: pick one for the moment you're in, or just keep talking. <strong>Open conversation when you need to be heard. A guided journey when you need to be moved.</strong></p>
       </div>
 
       <!-- ===== Process constellation =====
@@ -2490,21 +2683,26 @@
                top = 50 - r*cos(θ)%, left = 50 + r*sin(θ)%
              Primary ring r=40%, secondary ring r=25%. -->
 
-        <!-- Primary orbit (8 pills, radius 40%) -->
+        <!-- Primary orbit (8 pills, radius 40%) — pulled in slightly at
+             horizontal extremes (12% / 88% instead of 10% / 90%) so the
+             pill labels at 3 and 9 o'clock don't clip the parent block. -->
         <div class="process-orbit" style="top: 10%;   left: 50%;">  <span class="process-magnet"><span class="process-pill" data-i="0"  style="--float-duration: 6s;   animation-delay: 0s;">Decision Alignment</span></span></div>
         <div class="process-orbit" style="top: 18.5%; left: 74.6%;"><span class="process-magnet"><span class="process-pill" data-i="1"  style="--float-duration: 7s;   animation-delay: -1s;">Frequency Booster</span></span></div>
-        <div class="process-orbit" style="top: 50%;   left: 90%;">  <span class="process-magnet"><span class="process-pill" data-i="2"  style="--float-duration: 8s;   animation-delay: -2s;">Morning Activation</span></span></div>
+        <div class="process-orbit" style="top: 50%;   left: 88%;">  <span class="process-magnet"><span class="process-pill" data-i="2"  style="--float-duration: 8s;   animation-delay: -2s;">Morning Activation</span></span></div>
         <div class="process-orbit" style="top: 81.5%; left: 74.6%;"><span class="process-magnet"><span class="process-pill" data-i="3"  style="--float-duration: 6.5s; animation-delay: -0.5s;">Identity Upgrade</span></span></div>
         <div class="process-orbit" style="top: 90%;   left: 50%;">  <span class="process-magnet"><span class="process-pill" data-i="4"  style="--float-duration: 7.5s; animation-delay: -3s;">Root Pattern Release</span></span></div>
         <div class="process-orbit" style="top: 81.5%; left: 25.4%;"><span class="process-magnet"><span class="process-pill" data-i="5"  style="--float-duration: 6s;   animation-delay: -1.5s;">Evening Reset</span></span></div>
-        <div class="process-orbit" style="top: 50%;   left: 10%;">  <span class="process-magnet"><span class="process-pill" data-i="6"  style="--float-duration: 7s;   animation-delay: -2.5s;">Abundance Projection</span></span></div>
+        <div class="process-orbit" style="top: 50%;   left: 12%;">  <span class="process-magnet"><span class="process-pill" data-i="6"  style="--float-duration: 7s;   animation-delay: -2.5s;">Abundance Projection</span></span></div>
         <div class="process-orbit" style="top: 18.5%; left: 25.4%;"><span class="process-magnet"><span class="process-pill" data-i="7"  style="--float-duration: 8s;   animation-delay: -0.8s;">Dream Reading</span></span></div>
 
-        <!-- Secondary orbit (4 smaller pills, radius 25%) -->
-        <div class="process-orbit" style="top: 32.3%; left: 67.7%;"><span class="process-magnet"><span class="process-pill process-pill--small" data-i="8"  style="--float-duration: 5.5s; animation-delay: -1.2s;">Emotional Addiction Release</span></span></div>
-        <div class="process-orbit" style="top: 67.7%; left: 67.7%;"><span class="process-magnet"><span class="process-pill process-pill--small" data-i="9"  style="--float-duration: 6.2s; animation-delay: -2.2s;">Worthy to Receive</span></span></div>
-        <div class="process-orbit" style="top: 67.7%; left: 32.3%;"><span class="process-magnet"><span class="process-pill process-pill--small" data-i="10" style="--float-duration: 5.8s; animation-delay: -0.4s;">Setting the Destination</span></span></div>
-        <div class="process-orbit" style="top: 32.3%; left: 32.3%;"><span class="process-magnet"><span class="process-pill process-pill--small" data-i="11" style="--float-duration: 6s;   animation-delay: -1.8s;">Grand Vision</span></span></div>
+        <!-- Secondary orbit (4 smaller pills, radius 20%) — rotated 22.5°
+             from the primary ring AND pulled closer to center so the
+             rings are clearly visually distinct. Inner pills cluster
+             around the logo, outer pills orbit further out. -->
+        <div class="process-orbit" style="top: 31.5%; left: 57.7%;"><span class="process-magnet"><span class="process-pill process-pill--small" data-i="8"  style="--float-duration: 5.5s; animation-delay: -1.2s;">Emotional Addiction Release</span></span></div>
+        <div class="process-orbit" style="top: 57.7%; left: 68.5%;"><span class="process-magnet"><span class="process-pill process-pill--small" data-i="9"  style="--float-duration: 6.2s; animation-delay: -2.2s;">Worthy to Receive</span></span></div>
+        <div class="process-orbit" style="top: 68.5%; left: 42.3%;"><span class="process-magnet"><span class="process-pill process-pill--small" data-i="10" style="--float-duration: 5.8s; animation-delay: -0.4s;">Setting the Destination</span></span></div>
+        <div class="process-orbit" style="top: 42.3%; left: 31.5%;"><span class="process-magnet"><span class="process-pill process-pill--small" data-i="11" style="--float-duration: 6s;   animation-delay: -1.8s;">Grand Vision</span></span></div>
       </div>
 
       <!-- Fallback pills for mobile (constellation hides under 720px) -->
@@ -2668,7 +2866,7 @@
     <div class="diff-header">
       <div class="eyebrow reveal reveal-up" style="margin-bottom: 18px;">What Makes The Field Different</div>
       <div class="gold-divider reveal"></div>
-      <h2 class="h-section reveal reveal-up reveal-delay-1">Not a wrapper. <span class="shimmer">An entirely different category.</span></h2>
+      <h2 class="h-section reveal reveal-up reveal-delay-1">Not a wrapper.<br><span class="shimmer">An entirely different category.</span></h2>
       <p class="lead reveal reveal-up reveal-delay-2" style="margin: 0 auto;">A direct, honest comparison with what's currently on the market in AI-powered coaching and personal development tools.</p>
     </div>
 
@@ -2688,7 +2886,12 @@
             <th>Feature</th>
             <th>Generic AI chatbots</th>
             <th>Mainstream AI coaches</th>
-            <th class="diff-th-field">The Field</th>
+            <th class="diff-th-field">
+              <span class="diff-th-field-inner">
+                <img src="logomyp.png" alt="" class="diff-th-field-logo" aria-hidden="true" />
+                <span class="diff-th-field-name"><em>The</em> Field</span>
+              </span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -2732,7 +2935,7 @@
             <td class="diff-feature">Designed by a working coach</td>
             <td class="diff-cell" data-label="Generic AI chatbots"><span class="diff-icon-no">○</span> AI researchers</td>
             <td class="diff-cell" data-label="Mainstream AI coaches"><span class="diff-icon-no">○</span> Product teams</td>
-            <td class="diff-cell diff-cell-field" data-label="The Field"><span class="diff-icon-yes">●</span> 15-year coach, bestselling author</td>
+            <td class="diff-cell diff-cell-field" data-label="The Field"><span class="diff-icon-yes">●</span> 10+ year coach, bestselling author</td>
           </tr>
         </tbody>
       </table>
@@ -2760,7 +2963,7 @@
       </article>
 
       <article class="testimonial lift reveal reveal-up reveal-delay-2">
-        <p class="testimonial-body">Hi everybody! Shimrit is totally right. <strong>This is truly, truly amazing.</strong> I encourage you to try, at least. Think that I am not a big fan of AI, and this one… <strong>I am on the 9 cloud!</strong></p>
+        <p class="testimonial-body"><strong>This is truly, truly amazing.</strong> I encourage you to try, at least. Think that I am not a big fan of AI, and this one… <strong>I am on the 9 cloud!</strong></p>
         <div class="testimonial-meta">
           <div class="testimonial-avatar">M</div>
           <p class="testimonial-author">Member, after Day 2 of the Power Reset</p>
@@ -2784,7 +2987,7 @@
       </article>
 
       <article class="testimonial lift reveal reveal-up reveal-delay-5">
-        <p class="testimonial-body">I tried to enter the WhatsApp group but my request is still waiting to be accepted… Anyway I have done 2 days in the field. <strong>No words to describe. It is so simple and powerful.</strong></p>
+        <p class="testimonial-body">I have done 2 days in the field. <strong>No words to describe. It is so simple and powerful.</strong></p>
         <div class="testimonial-meta">
           <div class="testimonial-avatar">M</div>
           <p class="testimonial-author">Member, after Day 2 of the Power Reset</p>
