@@ -1364,6 +1364,16 @@
       }
       const btn = document.getElementById("theme-toggle-btn");
       if (btn) btn.textContent = theme === "dark" ? "☀" : "☾";
+      // Sync the launch-tracker iframe so it doesn't stay light when
+      // the rest of the admin goes dark (and vice versa). Safe to call
+      // even if the iframe isn't loaded yet — postMessage is a no-op
+      // against about:blank.
+      try {
+        const frame = document.getElementById("launch-tracker-frame");
+        if (frame && frame.contentWindow) {
+          frame.contentWindow.postMessage({ type: "set-theme", theme }, "*");
+        }
+      } catch {}
     }
     function toggleTheme() {
       const current = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
@@ -1534,7 +1544,12 @@
             // page's load time so reloading admin.html gives a new one.
             const bust = window._launchTrackerBust
               || (window._launchTrackerBust = Date.now());
-            const url = realSrc + (realSrc.includes("?") ? "&" : "?") + "v=" + bust;
+            // Pass the current admin theme so the iframe boots with
+            // matching colors instead of a flash of light mode first.
+            const adminTheme = document.documentElement.getAttribute("data-theme") === "dark"
+              ? "dark" : "light";
+            const sep = realSrc.includes("?") ? "&" : "?";
+            const url = realSrc + sep + "v=" + bust + "&theme=" + adminTheme;
             frame.setAttribute("src", url);
             // First load — wait for the iframe to finish loading before
             // posting the sync message. After that, every tab re-entry
