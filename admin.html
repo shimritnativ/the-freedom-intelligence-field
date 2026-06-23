@@ -1232,7 +1232,22 @@
         min-width: 0;
       }
       /* Iframes (launch tracker, kajabi embeds) never push beyond viewport */
-      iframe { max-width: 100%; }
+      iframe { max-width: 100%; display: block; }
+      /* Launch tracker panel — strip any padding/border discrepancy so
+         the iframe sits flush with the admin background on both sides.
+         Without this the inline padding:0 didn't beat the mobile
+         .section { padding: 16px 14px } override below it in cascade. */
+      #panel-launch {
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        background: transparent !important;
+      }
+      #panel-launch iframe {
+        width: 100%;
+        margin: 0;
+        background: var(--bg);
+      }
 
       /* Intelligence tab — chips become 2-up grid, cards tighten up, the
          member row drops its title/email size by a notch so long emails
