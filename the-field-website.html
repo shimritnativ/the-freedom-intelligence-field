@@ -1743,17 +1743,16 @@
   .pricing-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
-    /* Cards align to the top of their column rather than stretching
-       to match the tallest. Reset has only 5 features so its card
-       stays compact; Annual is taller because of the bonus stack.
-       Visually: a natural step-up of value as you read left-to-right. */
+    gap: 24px;
     align-items: start;
   }
-  /* Pricing section gets a wider container override so 4 cards can
-     breathe rather than squeeze inside the standard 1180px frame. */
+  /* Pricing section gets a much wider container so 4 cards have real
+     breathing room. Pushed to 1600px so even at large desktops each
+     card feels substantial. Also reduces side padding so cards can
+     stretch closer to the edges. */
   .pricing-section .container {
-    max-width: 1440px;
+    max-width: 1600px;
+    padding: 0 24px;
   }
   /* Was-price strikethrough — shown next to the new price for the
      "Founding" Monthly + Annual tiers so the value of the lifetime-
@@ -1860,59 +1859,71 @@
   }
 
   /* ===== Business tier card (4th column in pricing grid) =====
-     Same skeleton as the other pricing cards so the grid stays aligned,
-     but with dark background + gold accents to signal "different
-     conversation — let's talk" rather than "click to buy". */
-  .pricing-card--business {
-    background: linear-gradient(135deg, #1A1612, #0E0B07);
-    border-color: rgba(201, 168, 76, 0.35);
+     Dark themed to clearly stand apart from the cream consumer cards.
+     Uses !important on the background so cache stales or specificity
+     fights from .pricing-card don't accidentally render it light. */
+  .pricing-card.pricing-card--business {
+    background: linear-gradient(135deg, #1F1A14 0%, #0E0B07 100%) !important;
+    border: 1px solid rgba(201, 168, 76, 0.45) !important;
     color: var(--text-inverse);
     position: relative;
     overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
   }
-  .pricing-card--business::before {
+  /* Soft gold halo at top-left for a hint of "warm depth" — same
+     visual cue used on the Unlimited section and dark callouts. */
+  .pricing-card.pricing-card--business::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse 60% 50% at 15% 0%,
-      rgba(201, 168, 76, 0.12), transparent 60%);
+    background:
+      radial-gradient(ellipse 70% 50% at 20% 0%, rgba(201, 168, 76, 0.18), transparent 60%),
+      radial-gradient(ellipse 50% 40% at 80% 100%, rgba(201, 168, 76, 0.10), transparent 60%);
     pointer-events: none;
   }
-  .pricing-card--business > * { position: relative; z-index: 1; }
-  .pricing-card--business .pricing-name,
-  .pricing-card--business .pricing-tagline,
-  .pricing-card--business .pricing-feature {
+  /* Hairline gold accent at the very top, mirroring the trust strip. */
+  .pricing-card.pricing-card--business::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 15%;
+    right: 15%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(201, 168, 76, 0.6), transparent);
+    pointer-events: none;
+  }
+  .pricing-card.pricing-card--business > * { position: relative; z-index: 1; }
+  .pricing-card.pricing-card--business .pricing-name {
     color: var(--text-inverse);
-  }
-  .pricing-card--business .pricing-tagline {
-    color: var(--text-inverse-dim);
-  }
-  .pricing-card--business .pricing-feature {
-    color: var(--text-inverse-dim);
-  }
-  .pricing-card--business .pricing-divider {
-    background: rgba(201, 168, 76, 0.2);
-  }
-  /* Serif italic title with bold "Field" — matches the comparison
-     column header treatment. */
-  .pricing-card--business .pricing-name {
     font-family: var(--font-serif);
     font-style: italic;
     font-weight: 400;
   }
-  .pricing-card--business .pricing-name em {
+  .pricing-card.pricing-card--business .pricing-name em {
     font-style: italic;
     font-weight: 400;
     color: var(--gold);
   }
-  .pricing-card--business .pricing-name em.pricing-name-bold {
+  .pricing-card.pricing-card--business .pricing-name em.pricing-name-bold {
     font-weight: 700;
   }
-  /* "For Teams" badge — green-coded "Founding" doesn't fit here. */
-  .pricing-founding--business {
-    background: rgba(201, 168, 76, 0.15);
+  .pricing-card.pricing-card--business .pricing-tagline {
+    color: rgba(247, 241, 225, 0.7);
+  }
+  .pricing-card.pricing-card--business .pricing-feature {
+    color: rgba(247, 241, 225, 0.85);
+  }
+  .pricing-card.pricing-card--business .pricing-feature-icon {
     color: var(--gold);
-    border: 1px solid rgba(201, 168, 76, 0.4);
+  }
+  .pricing-card.pricing-card--business .pricing-divider {
+    background: rgba(201, 168, 76, 0.25);
+  }
+  /* "For Teams" badge — clearly gold-coded on dark. */
+  .pricing-founding--business {
+    background: rgba(201, 168, 76, 0.18) !important;
+    color: var(--gold) !important;
+    border: 1px solid rgba(201, 168, 76, 0.5) !important;
   }
 
   /* ===== Legacy banner styles (kept in case re-used elsewhere) ===== */
