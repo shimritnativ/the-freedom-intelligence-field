@@ -36,24 +36,29 @@
      postMessage when the admin theme toggle is clicked). All component
      CSS reads from these variables, so flipping the variables flips
      the whole tracker. */
+  /* Dark theme palette matches admin.html exactly (--bg #1A1612,
+     --panel #2C2416, --gold #D4B864, --text #F4ECD0). This way an
+     embedded launch tracker inside the admin's Launch tab blends
+     seamlessly with the surrounding dashboard background — no two-tone
+     seam at the iframe boundary. */
   [data-theme="dark"] {
-    --bg: #0E0B07;
-    --panel: #1A1612;
-    --panel-2: #15110D;
-    --text: #F7F1E1;
-    --text-dim: rgba(247, 241, 225, 0.72);
-    --text-mute: rgba(247, 241, 225, 0.42);
-    --gold: #C9A84C;
-    --gold-soft: rgba(201, 168, 76, 0.1);
-    --gold-line: rgba(201, 168, 76, 0.25);
-    --gold-strong: rgba(201, 168, 76, 0.5);
-    --border: rgba(247, 241, 225, 0.08);
-    --success: #6EC46E;
-    --success-soft: rgba(110, 196, 110, 0.1);
+    --bg: #1A1612;
+    --panel: #2C2416;
+    --panel-2: #251F18;
+    --text: #F4ECD0;
+    --text-dim: #B8AB8B;
+    --text-mute: #8A8064;
+    --gold: #D4B864;
+    --gold-soft: rgba(212, 184, 100, 0.12);
+    --gold-line: rgba(212, 184, 100, 0.32);
+    --gold-strong: rgba(212, 184, 100, 0.55);
+    --border: rgba(212, 184, 100, 0.2);
+    --success: #7AAE5E;
+    --success-soft: rgba(122, 174, 94, 0.12);
     --warning: #D9A35A;
-    --danger: #F08C8C;
-    --danger-soft: rgba(240, 140, 140, 0.1);
-    --shadow: 0 6px 24px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.3);
+    --danger: #E08580;
+    --danger-soft: rgba(224, 133, 128, 0.12);
+    --shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.3);
   }
   * { box-sizing: border-box; }
   html, body {
