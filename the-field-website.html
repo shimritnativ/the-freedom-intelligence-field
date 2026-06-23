@@ -668,13 +668,24 @@
     .how-grid { grid-template-columns: 1fr; }
   }
 
+  /* === Unlimited block ===
+     Escapes the parent .container to span the full viewport width using
+     the classic full-bleed trick (width:100vw + negative margin shift).
+     On desktop, lays out as a 2-column grid: copy on the left, the
+     constellation on the right — much shorter scroll than the original
+     stacked version. On mobile, collapses back to single-column with
+     copy on top, constellation below. */
   .unlimited-block {
     background: var(--bg-dark);
     color: var(--text-inverse);
-    border-radius: var(--radius-lg);
-    padding: 80px 50px 60px;
-    margin-top: 60px;
-    text-align: center;
+    padding: 100px clamp(40px, 6vw, 100px);
+    margin-top: 80px;
+    /* Full-bleed: pull the block to the viewport edges regardless of
+       the parent container's max-width. */
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+    border-radius: 0;
+    text-align: left;
     position: relative;
     overflow: hidden;
   }
@@ -682,29 +693,55 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse at center, rgba(201, 168, 76, 0.08), transparent 70%);
+    background: radial-gradient(ellipse 60% 50% at 75% 50%, rgba(201, 168, 76, 0.1), transparent 60%);
     pointer-events: none;
   }
+  /* 2-column inner: copy left, constellation right. Centered vertically
+     so a tall constellation aligns nicely with shorter copy. */
   .unlimited-block-inner {
     position: relative;
     z-index: 1;
-    max-width: 720px;
+    max-width: 1400px;
     margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(420px, 1fr) minmax(420px, 1.05fr);
+    gap: clamp(40px, 6vw, 90px);
+    align-items: center;
+  }
+  .unlimited-block-copy {
+    max-width: 540px;
   }
   .unlimited-block .eyebrow { color: var(--gold); }
   .unlimited-block h3 {
     font-family: var(--font-serif);
     font-style: italic;
-    font-size: clamp(28px, 3.8vw, 44px);
+    font-size: clamp(28px, 3.8vw, 48px);
     line-height: 1.15;
-    margin: 14px 0 18px;
+    margin: 14px 0 22px;
   }
   .unlimited-block p {
     color: var(--text-inverse-dim);
     font-size: 16px;
-    line-height: 1.65;
-    margin: 0 auto 56px;
-    max-width: 620px;
+    line-height: 1.7;
+    margin: 0 0 18px;
+    max-width: 520px;
+  }
+  .unlimited-block p:last-child { margin-bottom: 0; }
+  /* Single-column stack under 980px — copy on top, diagram below. */
+  @media (max-width: 980px) {
+    .unlimited-block {
+      padding: 70px clamp(28px, 5vw, 60px);
+      text-align: center;
+    }
+    .unlimited-block-inner {
+      grid-template-columns: 1fr;
+      gap: 50px;
+    }
+    .unlimited-block-copy {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .unlimited-block p { margin-left: auto; margin-right: auto; }
   }
 
   /* === Process constellation ===
@@ -3024,11 +3061,12 @@
 
     <div class="unlimited-block reveal reveal-up reveal-delay-4">
       <div class="unlimited-block-inner">
-        <div class="eyebrow" style="color: var(--gold);">After the Reset</div>
-        <h3>The Field that <span class="shimmer">knows you.</span></h3>
-        <p>Once the foundation is set, the Field opens up. Talk to it about anything alive for you: a decision sitting heavy, a question you haven't dared to ask, a pattern asking for attention. The Field listens with 10+ years of Shimrit's lived methodology behind every response, and it remembers every conversation, every declaration, every shift.</p>
-        <p>And when you want more structure, a growing library of guided processes is right there: pick one for the moment you're in, or just keep talking. <strong>Open conversation when you need to be heard. A guided journey when you need to be moved.</strong></p>
-      </div>
+        <div class="unlimited-block-copy">
+          <div class="eyebrow" style="color: var(--gold);">After the Reset</div>
+          <h3>The Field that <span class="shimmer">knows you.</span></h3>
+          <p>Once the foundation is set, the Field opens up. Talk to it about anything alive for you: a decision sitting heavy, a question you haven't dared to ask, a pattern asking for attention. The Field listens with 10+ years of Shimrit's lived methodology behind every response, and it remembers every conversation, every declaration, every shift.</p>
+          <p>And when you want more structure, a growing library of guided processes is right there: pick one for the moment you're in, or just keep talking. <strong>Open conversation when you need to be heard. A guided journey when you need to be moved.</strong></p>
+        </div>
 
       <!-- ===== Process constellation =====
            Hybrid layout: SVG for background, rings, center, and
@@ -3143,6 +3181,7 @@
         <span class="process-pill">Worthy to Receive</span>
         <span class="process-pill">+ 5 more</span>
       </div>
+      </div><!-- /.unlimited-block-inner -->
     </div>
   </div>
 </section>
@@ -4158,11 +4197,13 @@
       if (e.key === 'Escape' && modal.classList.contains('is-open')) close();
     });
 
-    // The endpoint lives on the Vercel-deployed app, NOT necessarily on
-    // the same host the marketing site is served from. We hit the
-    // canonical app domain so it works whether this page is at
-    // hello.thefieldai.app or the-freedom-intelligence-field.vercel.app.
-    const ENDPOINT = 'https://thefieldai.app/api/business-inquiry';
+    // The marketing site is served by the same Vercel project that
+    // hosts the API, so a RELATIVE path works on every domain
+    // (hello.thefieldai.app, thefieldai.app, the-freedom-intelligence-
+    // field.vercel.app). Using a relative URL keeps the request
+    // SAME-ORIGIN, which means no CORS preflight at all — the browser
+    // skips the OPTIONS roundtrip entirely.
+    const ENDPOINT = '/api/business-inquiry';
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
