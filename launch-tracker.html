@@ -31,6 +31,30 @@
     --danger-soft: rgba(168, 42, 42, 0.08);
     --shadow: 0 6px 24px rgba(26, 22, 18, 0.06), 0 1px 4px rgba(26, 22, 18, 0.04);
   }
+  /* Dark theme — applied when admin.html sets data-theme="dark" on this
+     iframe's html element (via URL param ?theme=dark on load OR via
+     postMessage when the admin theme toggle is clicked). All component
+     CSS reads from these variables, so flipping the variables flips
+     the whole tracker. */
+  [data-theme="dark"] {
+    --bg: #0E0B07;
+    --panel: #1A1612;
+    --panel-2: #15110D;
+    --text: #F7F1E1;
+    --text-dim: rgba(247, 241, 225, 0.72);
+    --text-mute: rgba(247, 241, 225, 0.42);
+    --gold: #C9A84C;
+    --gold-soft: rgba(201, 168, 76, 0.1);
+    --gold-line: rgba(201, 168, 76, 0.25);
+    --gold-strong: rgba(201, 168, 76, 0.5);
+    --border: rgba(247, 241, 225, 0.08);
+    --success: #6EC46E;
+    --success-soft: rgba(110, 196, 110, 0.1);
+    --warning: #D9A35A;
+    --danger: #F08C8C;
+    --danger-soft: rgba(240, 140, 140, 0.1);
+    --shadow: 0 6px 24px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.3);
+  }
   * { box-sizing: border-box; }
   html, body {
     margin: 0;
@@ -925,11 +949,33 @@
     transform: translateY(0);
   }
   @media (max-width: 720px) {
-    .wrap { padding: 28px 16px 60px; }
-    h1 { font-size: 30px; }
+    /* Constrain everything to viewport — the embedded iframe was
+       overflowing past the right edge because nothing forced .wrap
+       and its descendants to respect the parent width. */
+    html, body { max-width: 100vw; overflow-x: hidden; }
+    .wrap {
+      padding: 24px 14px 60px;
+      max-width: 100%;
+      width: 100%;
+    }
+    h1 { font-size: 26px; word-break: break-word; }
     .summary-row { grid-template-columns: repeat(2, 1fr); }
     .grid, .grid-3 { grid-template-columns: 1fr; }
     .funnel-row { grid-template-columns: 110px 1fr 60px; }
+    /* Belt-and-braces: anything that could overflow horizontally
+       (long status text, wide tables, large numeric values). */
+    section, .launch-brief, .summary-row > *, .field, .funnel-row,
+    .summary-card, .summary-value, .launch-brief-headline,
+    .launch-brief-detail, .launch-brief-meta {
+      max-width: 100%;
+      min-width: 0;
+      word-break: break-word;
+    }
+  }
+  @media (max-width: 420px) {
+    .wrap { padding: 20px 12px 50px; }
+    h1 { font-size: 22px; }
+    .summary-row { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -3324,6 +3370,35 @@
   recalc();
   hydrate().then(() => recalc());
   startBackgroundRefresh();
+})();
+
+// ===== Theme sync with admin parent =====
+// When embedded in admin.html as an iframe, the parent passes its
+// current theme via URL param on initial load (?theme=dark|light) AND
+// sends a postMessage when the admin's theme toggle is clicked. Both
+// paths set data-theme on the documentElement which flips every CSS
+// variable defined in [data-theme="dark"] above. Works standalone too
+// — direct visits to /launch-tracker.html just see the default light.
+(function setupThemeSync() {
+  function applyTheme(theme) {
+    if (theme === "dark") {
+      document.documentElement.setAttribute("data-theme", "dark");
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+  }
+  // Initial: read from URL param.
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const theme = params.get("theme");
+    if (theme === "dark" || theme === "light") applyTheme(theme);
+  } catch {}
+  // Live updates from parent admin window.
+  window.addEventListener("message", (e) => {
+    if (e && e.data && e.data.type === "set-theme") {
+      applyTheme(e.data.theme === "dark" ? "dark" : "light");
+    }
+  });
 })();
 </script>
 
