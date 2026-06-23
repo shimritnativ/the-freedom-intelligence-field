@@ -1895,6 +1895,28 @@
   .pricing-business-title em.pricing-business-title-bold {
     font-weight: 700;
   }
+  /* Theme pills under the headline — quick scan of what The Field
+     for Business actually develops in a team. Small, gold-bordered
+     chips, wrap on smaller screens. */
+  .pricing-business-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .pricing-business-pills span {
+    display: inline-block;
+    padding: 6px 13px;
+    background: rgba(201, 168, 76, 0.1);
+    border: 1px solid rgba(201, 168, 76, 0.35);
+    border-radius: var(--radius-pill);
+    color: var(--gold);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
   .pricing-business-lead {
     font-size: 16px;
     line-height: 1.65;
@@ -3470,7 +3492,15 @@
         <div class="pricing-business-copy">
           <div class="eyebrow" style="color: var(--gold); margin-bottom: 14px;">For Teams &amp; Organizations</div>
           <h3 class="pricing-business-title"><em>The</em> <em class="pricing-business-title-bold">Field</em> for Business</h3>
-          <p class="pricing-business-lead">A private, branded version of The Field for your team, your community, or your client base. Deeper context for leaders, coaches, therapists, founders, and the people they care about.</p>
+          <div class="pricing-business-pills" aria-label="What it builds">
+            <span>Mindset</span>
+            <span>Stress Regulation</span>
+            <span>Team Building</span>
+            <span>Innovation</span>
+            <span>Leadership</span>
+            <span>Results Growth</span>
+          </div>
+          <p class="pricing-business-lead">A private intelligence customized for your team's work. The Field becomes your shared space for the inner shifts that move the outer numbers.</p>
           <button type="button" class="pricing-business-cta" id="businessTalkBtn">Talk to us →</button>
         </div>
         <div class="pricing-business-features">
@@ -3480,8 +3510,6 @@
             <li><span class="pricing-business-tick">✦</span> Private team workspace + shared insights</li>
             <li><span class="pricing-business-tick">✦</span> Custom guided processes built for your context</li>
             <li><span class="pricing-business-tick">✦</span> Direct onboarding &amp; methodology training with the MYP team</li>
-            <li><span class="pricing-business-tick">✦</span> Co-branded or white-label option</li>
-            <li><span class="pricing-business-tick">✦</span> Quarterly progress reporting</li>
             <li><span class="pricing-business-tick">✦</span> Priority support, direct line to Shimrit's team</li>
           </ul>
         </div>
