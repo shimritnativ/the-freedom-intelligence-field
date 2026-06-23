@@ -409,9 +409,23 @@
         overflow-wrap: anywhere;
       }
 
-      /* Topbar stacks vertically; viewer info left-aligns */
-      .topbar { flex-direction: column; align-items: stretch; gap: 12px; margin-bottom: 18px; }
-      .viewer { text-align: left; }
+      /* Topbar: hamburger sits inline with the title block; viewer info
+         drops to its own row below for breathing room. */
+      .topbar {
+        flex-direction: row;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+      .topbar > div:first-of-type {
+        flex: 1;
+        min-width: 0;
+      }
+      .topbar .viewer {
+        flex: 1 0 100%;
+        text-align: left;
+      }
 
       /* Date controls — compact layout: label, preset buttons, date inputs,
          and apply button all wrap cleanly. iOS 16px input prevents zoom. */
@@ -1104,48 +1118,121 @@
       0%, 100% { transform: translateY(0) scale(1); }
       50% { transform: translateY(-3px) scale(1.08); }
     }
-    @media (max-width: 760px) {
-      .dashboard-body { grid-template-columns: 1fr; gap: 0; }
+    /* ===== Hamburger button (mobile only) =====
+        Hidden by default on desktop. Visible only when the screen narrows
+        below the layout breakpoint where the sidebar tabs collapse. */
+    .mobile-menu-btn {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border: 1px solid var(--gold-line);
+      background: var(--panel);
+      border-radius: 10px;
+      cursor: pointer;
+      padding: 0;
+      flex-shrink: 0;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .mobile-menu-btn:hover {
+      background: var(--gold-soft);
+      border-color: var(--gold);
+    }
+    .mobile-menu-icon {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 4px;
+      width: 18px;
+    }
+    .mobile-menu-icon span {
+      display: block;
+      height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    /* Hamburger transforms into an X when the drawer is open */
+    body.mobile-menu-open .mobile-menu-icon span:nth-child(1) {
+      transform: translateY(6px) rotate(45deg);
+    }
+    body.mobile-menu-open .mobile-menu-icon span:nth-child(2) { opacity: 0; }
+    body.mobile-menu-open .mobile-menu-icon span:nth-child(3) {
+      transform: translateY(-6px) rotate(-45deg);
+    }
+    /* Backdrop overlay shown when drawer is open */
+    .mobile-menu-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(14, 11, 7, 0.5);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 998;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    body.mobile-menu-open .mobile-menu-backdrop {
+      opacity: 1;
+      pointer-events: auto;
+    }
 
-      /* Tab nav becomes a sticky horizontal scroller anchored at the top of
-         the viewport so the user can always reach any tab without scrolling
-         back. Background matches the page so the tabs feel like they're
-         floating on the same surface. */
+    @media (max-width: 760px) {
+      /* Show the hamburger button */
+      .mobile-menu-btn { display: inline-flex; }
+
+      /* CRITICAL: grid children need min-width: 0 so they can shrink
+         below their content's intrinsic width. Without this, anything
+         inside (a wide table, a long string, an iframe) makes the
+         dashboard-main column grow past the viewport — exactly the
+         "wonky" overflow Geo screenshotted. */
+      .dashboard-body { grid-template-columns: minmax(0, 1fr); gap: 0; }
+      .dashboard-main { min-width: 0; max-width: 100%; overflow-x: hidden; }
+
+      /* Mobile: tabs become a slide-down drawer triggered by the
+         hamburger. The drawer sits as a fixed panel anchored to the
+         top of the viewport, slides in from the top with a soft fade.
+         Tap a tab → drawer closes + tab switches. */
       .tabs {
-        flex-direction: row;
-        position: sticky;
+        position: fixed;
         top: 0;
-        z-index: 50;
-        overflow-x: auto;
-        padding: 8px 4px;
+        left: 0;
+        right: 0;
+        flex-direction: column;
         gap: 4px;
-        -webkit-overflow-scrolling: touch;
-        margin: 0 -14px 16px;
-        background: var(--bg);
-        border-bottom: 1px solid var(--gold-line);
-        scrollbar-width: none;
+        max-height: calc(100vh - 20px);
+        overflow-y: auto;
+        padding: 18px 16px 22px;
+        margin: 0;
+        background: var(--panel);
+        border: 1px solid var(--gold-line);
+        border-radius: 0 0 16px 16px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+        z-index: 999;
+        transform: translateY(-110%);
+        transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+        opacity: 1;
       }
-      .tabs::-webkit-scrollbar { display: none; }
-      /* Right-padding so the rightmost tab (Launch tracker) can actually
-         scroll to visual center on mobile. 50vw guarantees there's
-         enough room past the last tab for the manual scrollTo math
-         (tabCenter - viewportCenter) to land on the actual viewport
-         center without the browser clamping to maxScroll. We don't add
-         left-padding because the first tab already sits flush left at
-         scroll position 0, and adding it would create an awkward empty
-         gap on initial load. */
-      .tabs {
-        padding-right: 50vw;
+      body.mobile-menu-open .tabs {
+        transform: translateY(0);
       }
       .tab-btn {
-        white-space: nowrap;
-        padding: 10px 14px;
-        font-size: 12px;
-        min-height: 40px;
+        white-space: normal;
+        padding: 14px 16px;
+        font-size: 15px;
+        min-height: 48px;
+        justify-content: flex-start;
         flex-shrink: 0;
-        justify-content: center;
+        border-radius: 10px;
       }
-      .tab-btn-count { margin-left: 4px; }
+      .tab-btn-count { margin-left: auto; }
+      /* Section + cards: belt-and-braces overflow constraint */
+      .section, .highlights, .kpi-grid, .grid, .two-col {
+        max-width: 100%;
+        min-width: 0;
+      }
+      /* Iframes (launch tracker, kajabi embeds) never push beyond viewport */
+      iframe { max-width: 100%; }
 
       /* Intelligence tab — chips become 2-up grid, cards tighten up, the
          member row drops its title/email size by a notch so long emails
@@ -1311,6 +1398,58 @@
     }
     window.applyMobileTableLabels = applyMobileTableLabels;
 
+    // ===== Mobile hamburger menu =====
+    // The drawer is the existing .tabs element, repurposed via CSS as a
+    // slide-down panel on mobile. The hamburger toggles a body class
+    // that drives the open/close state. A click on the backdrop, on a
+    // tab, or pressing Escape all close it.
+    function openMobileMenu() {
+      document.body.classList.add("mobile-menu-open");
+      const btn = document.getElementById("mobileMenuBtn");
+      if (btn) btn.setAttribute("aria-expanded", "true");
+    }
+    function closeMobileMenu() {
+      document.body.classList.remove("mobile-menu-open");
+      const btn = document.getElementById("mobileMenuBtn");
+      if (btn) btn.setAttribute("aria-expanded", "false");
+    }
+    function toggleMobileMenu() {
+      if (document.body.classList.contains("mobile-menu-open")) {
+        closeMobileMenu();
+      } else {
+        openMobileMenu();
+      }
+    }
+    window.openMobileMenu = openMobileMenu;
+    window.closeMobileMenu = closeMobileMenu;
+
+    // Delegated event listeners attached once at boot. We rely on
+    // delegation because the topbar (and therefore the button) gets
+    // re-rendered when refreshDashboard runs — direct .addEventListener
+    // bindings would be wiped on each render.
+    document.body.addEventListener("click", (e) => {
+      const btn = e.target.closest("#mobileMenuBtn");
+      if (btn) {
+        toggleMobileMenu();
+        return;
+      }
+      const backdrop = e.target.closest(".mobile-menu-backdrop");
+      if (backdrop) {
+        closeMobileMenu();
+      }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && document.body.classList.contains("mobile-menu-open")) {
+        closeMobileMenu();
+      }
+    });
+    // Inject the backdrop element once.
+    if (!document.querySelector(".mobile-menu-backdrop")) {
+      const bd = document.createElement("div");
+      bd.className = "mobile-menu-backdrop";
+      document.body.appendChild(bd);
+    }
+
     // Switch the active tab. Hides all data-tab-content blocks except the
     // target, highlights the matching tab button, and saves the choice so
     // refresh restores the same tab. The is-revealing class triggers a
@@ -1365,6 +1504,9 @@
       centerActiveTab();
       requestAnimationFrame(() => requestAnimationFrame(centerActiveTab));
       try { localStorage.setItem(TAB_STORAGE_KEY, tab); } catch {}
+      // Mobile: close the hamburger drawer after picking a tab so the
+      // user lands on the new content immediately (no extra tap).
+      if (typeof closeMobileMenu === "function") closeMobileMenu();
       // Scroll to the top of the dashboard so each tab starts cleanly.
       window.scrollTo({ top: 0, behavior: "smooth" });
       // Refresh the push subscriber list when entering Notifications — keeps
@@ -2195,6 +2337,14 @@
       root.innerHTML = `
         <div class="wrap">
           <div class="topbar">
+            <!-- Hamburger button — mobile only. Tapping opens the tab
+                 drawer overlay. Hidden on desktop where the sidebar tabs
+                 are always visible. -->
+            <button type="button" class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open navigation menu" aria-controls="mobileMenuDrawer" aria-expanded="false">
+              <span class="mobile-menu-icon" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </span>
+            </button>
             <div>
               <div class="brand-eyebrow">The Field — Team</div>
               <h1>Live metrics</h1>
