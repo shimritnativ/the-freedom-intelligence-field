@@ -3596,6 +3596,64 @@
   </div>
 </footer>
 
+<!-- Business inquiry modal — opened from the "Talk to us" CTA in the
+     Business pricing tier. Must render BEFORE the <script> below so
+     the modal-setup IIFE can find #businessModal in the DOM. Submits
+     to /api/business-inquiry which emails support@shimritnativ.com
+     via Resend. -->
+<div class="business-modal" id="businessModal" role="dialog" aria-modal="true" aria-labelledby="businessModalTitle">
+  <div class="business-modal-card">
+    <div class="business-modal-header">
+      <button type="button" class="business-modal-close" aria-label="Close">✕</button>
+      <div class="business-modal-eyebrow">The Field for Business</div>
+      <h3 class="business-modal-title" id="businessModalTitle">Let's talk.</h3>
+      <p class="business-modal-lead">Tell us a little about your team and we'll be in touch within a couple of days to explore a fit.</p>
+    </div>
+    <form class="business-modal-form" novalidate>
+      <div class="business-field">
+        <label for="bizName">Your name</label>
+        <input type="text" id="bizName" name="name" required autocomplete="name" />
+      </div>
+      <div class="business-field">
+        <label for="bizEmail">Email</label>
+        <input type="email" id="bizEmail" name="email" required autocomplete="email" />
+      </div>
+      <div class="business-field">
+        <label for="bizPhone">Phone (with country code)</label>
+        <input type="tel" id="bizPhone" name="phone" required autocomplete="tel" placeholder="+44 7700 900123" />
+      </div>
+      <div class="business-field">
+        <label for="bizTeam">Size of team</label>
+        <select id="bizTeam" name="team_size" required>
+          <option value="">Select…</option>
+          <option value="1-5">1–5</option>
+          <option value="6-20">6–20</option>
+          <option value="21-50">21–50</option>
+          <option value="51-100">51–100</option>
+          <option value="100+">100+</option>
+        </select>
+      </div>
+      <div class="business-field">
+        <label for="bizIndustry">Industry of team</label>
+        <input type="text" id="bizIndustry" name="industry" required placeholder="e.g. Coaching, Healthcare, Tech, Education" />
+      </div>
+      <!-- Honeypot — visually hidden; real users won't fill it -->
+      <div class="business-field-hp" aria-hidden="true">
+        <label for="bizWebsite">Website (leave blank)</label>
+        <input type="text" id="bizWebsite" name="website" tabindex="-1" autocomplete="off" />
+      </div>
+      <p class="business-error" role="alert"></p>
+      <button type="submit" class="business-submit">Send →</button>
+    </form>
+    <div class="business-success">
+      <div class="business-success-icon">✦</div>
+      <h3 class="business-success-title">Got it. We'll be in touch.</h3>
+      <p class="business-success-body">Your message is on its way to Shimrit's team. Expect a reply within 1–2 business days.</p>
+      <button type="button" class="business-modal-close business-submit" style="background: var(--gold); color: var(--bg-dark); margin: 0 auto;">Close</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // ===== FAQ accordion =====
   document.querySelectorAll('.faq-q').forEach(btn => {
@@ -4039,62 +4097,6 @@
     });
   })();
 </script>
-
-<!-- Business inquiry modal — opened from the "Talk to us" CTA in the
-     Business pricing tier. Submits to /api/business-inquiry which
-     emails support@shimritnativ.com via Resend. -->
-<div class="business-modal" id="businessModal" role="dialog" aria-modal="true" aria-labelledby="businessModalTitle">
-  <div class="business-modal-card">
-    <div class="business-modal-header">
-      <button type="button" class="business-modal-close" aria-label="Close">✕</button>
-      <div class="business-modal-eyebrow">The Field for Business</div>
-      <h3 class="business-modal-title" id="businessModalTitle">Let's talk.</h3>
-      <p class="business-modal-lead">Tell us a little about your team and we'll be in touch within a couple of days to explore a fit.</p>
-    </div>
-    <form class="business-modal-form" novalidate>
-      <div class="business-field">
-        <label for="bizName">Your name</label>
-        <input type="text" id="bizName" name="name" required autocomplete="name" />
-      </div>
-      <div class="business-field">
-        <label for="bizEmail">Email</label>
-        <input type="email" id="bizEmail" name="email" required autocomplete="email" />
-      </div>
-      <div class="business-field">
-        <label for="bizPhone">Phone (with country code)</label>
-        <input type="tel" id="bizPhone" name="phone" required autocomplete="tel" placeholder="+44 7700 900123" />
-      </div>
-      <div class="business-field">
-        <label for="bizTeam">Size of team</label>
-        <select id="bizTeam" name="team_size" required>
-          <option value="">Select…</option>
-          <option value="1-5">1–5</option>
-          <option value="6-20">6–20</option>
-          <option value="21-50">21–50</option>
-          <option value="51-100">51–100</option>
-          <option value="100+">100+</option>
-        </select>
-      </div>
-      <div class="business-field">
-        <label for="bizIndustry">Industry of team</label>
-        <input type="text" id="bizIndustry" name="industry" required placeholder="e.g. Coaching, Healthcare, Tech, Education" />
-      </div>
-      <!-- Honeypot — visually hidden; real users won't fill it -->
-      <div class="business-field-hp" aria-hidden="true">
-        <label for="bizWebsite">Website (leave blank)</label>
-        <input type="text" id="bizWebsite" name="website" tabindex="-1" autocomplete="off" />
-      </div>
-      <p class="business-error" role="alert"></p>
-      <button type="submit" class="business-submit">Send →</button>
-    </form>
-    <div class="business-success">
-      <div class="business-success-icon">✦</div>
-      <h3 class="business-success-title">Got it. We'll be in touch.</h3>
-      <p class="business-success-body">Your message is on its way to Shimrit's team. Expect a reply within 1–2 business days.</p>
-      <button type="button" class="business-modal-close business-submit" style="background: var(--gold); color: var(--bg-dark); margin: 0 auto;">Close</button>
-    </div>
-  </div>
-</div>
 
 </body>
 </html>
