@@ -1742,13 +1742,18 @@
   }
   .pricing-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
     /* Cards align to the top of their column rather than stretching
        to match the tallest. Reset has only 5 features so its card
        stays compact; Annual is taller because of the bonus stack.
        Visually: a natural step-up of value as you read left-to-right. */
     align-items: start;
+  }
+  /* Pricing section gets a wider container override so 4 cards can
+     breathe rather than squeeze inside the standard 1180px frame. */
+  .pricing-section .container {
+    max-width: 1440px;
   }
   /* Was-price strikethrough — shown next to the new price for the
      "Founding" Monthly + Annual tiers so the value of the lifetime-
@@ -1838,10 +1843,79 @@
     display: block;
     margin-top: 2px;
   }
-  @media (max-width: 1000px) {
-    .pricing-grid { grid-template-columns: 1fr; max-width: 480px; margin: 0 auto; }
+  /* 4 cards above 1200px, 2x2 between 720–1200, single column under 720 */
+  @media (max-width: 1200px) {
+    .pricing-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+  }
+  @media (max-width: 720px) {
+    .pricing-grid {
+      grid-template-columns: 1fr;
+      max-width: 480px;
+    }
   }
 
+  /* ===== Business tier card (4th column in pricing grid) =====
+     Same skeleton as the other pricing cards so the grid stays aligned,
+     but with dark background + gold accents to signal "different
+     conversation — let's talk" rather than "click to buy". */
+  .pricing-card--business {
+    background: linear-gradient(135deg, #1A1612, #0E0B07);
+    border-color: rgba(201, 168, 76, 0.35);
+    color: var(--text-inverse);
+    position: relative;
+    overflow: hidden;
+  }
+  .pricing-card--business::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 50% at 15% 0%,
+      rgba(201, 168, 76, 0.12), transparent 60%);
+    pointer-events: none;
+  }
+  .pricing-card--business > * { position: relative; z-index: 1; }
+  .pricing-card--business .pricing-name,
+  .pricing-card--business .pricing-tagline,
+  .pricing-card--business .pricing-feature {
+    color: var(--text-inverse);
+  }
+  .pricing-card--business .pricing-tagline {
+    color: var(--text-inverse-dim);
+  }
+  .pricing-card--business .pricing-feature {
+    color: var(--text-inverse-dim);
+  }
+  .pricing-card--business .pricing-divider {
+    background: rgba(201, 168, 76, 0.2);
+  }
+  /* Serif italic title with bold "Field" — matches the comparison
+     column header treatment. */
+  .pricing-card--business .pricing-name {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+  }
+  .pricing-card--business .pricing-name em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--gold);
+  }
+  .pricing-card--business .pricing-name em.pricing-name-bold {
+    font-weight: 700;
+  }
+  /* "For Teams" badge — green-coded "Founding" doesn't fit here. */
+  .pricing-founding--business {
+    background: rgba(201, 168, 76, 0.15);
+    color: var(--gold);
+    border: 1px solid rgba(201, 168, 76, 0.4);
+  }
+
+  /* ===== Legacy banner styles (kept in case re-used elsewhere) ===== */
   /* ===== Business tier banner =====
      Sits BELOW the 3 consumer tiers as a wide, dark, distinct card.
      Two-column inside: pitch + CTA on the left, included items on the
@@ -3481,41 +3555,34 @@
         <a href="https://masteryourpath.thrivecart.com/the-field/" class="pricing-cta pricing-cta-gold" style="margin-top: 20px;">Join Annual Founding →</a>
       </article>
 
+      <!-- Card 4: Business — dark-themed card sits inside the grid as
+           the fourth tier. Same card structure as the others (so the
+           grid stays aligned) but with a distinct dark background +
+           gold theme pills + "Talk to us" button instead of checkout. -->
+      <article class="pricing-card pricing-card--business lift reveal reveal-up reveal-delay-4">
+        <span class="pricing-founding pricing-founding--business">For Teams</span>
+        <h3 class="pricing-name"><em>The</em> <em class="pricing-name-bold">Field</em> for Business</h3>
+        <p class="pricing-tagline">A private intelligence customized for your team's work. For the inner shifts that move the outer numbers.</p>
+        <div class="pricing-business-pills" aria-label="What it builds">
+          <span>Mindset</span>
+          <span>Stress Regulation</span>
+          <span>Team Building</span>
+          <span>Innovation</span>
+          <span>Leadership</span>
+          <span>Results Growth</span>
+        </div>
+        <div class="pricing-divider"></div>
+        <ul class="pricing-features">
+          <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> Full Unlimited Field for every team member</li>
+          <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> Private team workspace + shared insights</li>
+          <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> Custom guided processes built for your context</li>
+          <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> Direct onboarding &amp; methodology training</li>
+          <li class="pricing-feature"><span class="pricing-feature-icon">✓</span> Priority support, direct line to Shimrit's team</li>
+        </ul>
+        <button type="button" class="pricing-cta pricing-cta-gold" id="businessTalkBtn">Talk to us →</button>
+      </article>
+
     </div>
-
-    <!-- Business tier — full-width banner card. Distinct visual
-         treatment (dark background) signals "different conversation":
-         no fixed price, custom scope, talk-to-us flow. Sits below
-         the three consumer tiers so it doesn't compete with them. -->
-    <article class="pricing-business reveal reveal-up reveal-delay-4">
-      <div class="pricing-business-inner">
-        <div class="pricing-business-copy">
-          <div class="eyebrow" style="color: var(--gold); margin-bottom: 14px;">For Teams &amp; Organizations</div>
-          <h3 class="pricing-business-title"><em>The</em> <em class="pricing-business-title-bold">Field</em> for Business</h3>
-          <div class="pricing-business-pills" aria-label="What it builds">
-            <span>Mindset</span>
-            <span>Stress Regulation</span>
-            <span>Team Building</span>
-            <span>Innovation</span>
-            <span>Leadership</span>
-            <span>Results Growth</span>
-          </div>
-          <p class="pricing-business-lead">A private intelligence customized for your team's work. The Field becomes your shared space for the inner shifts that move the outer numbers.</p>
-          <button type="button" class="pricing-business-cta" id="businessTalkBtn">Talk to us →</button>
-        </div>
-        <div class="pricing-business-features">
-          <div class="pricing-business-features-label">What's included</div>
-          <ul class="pricing-business-features-list">
-            <li><span class="pricing-business-tick">✦</span> Full Unlimited Field access for every team member</li>
-            <li><span class="pricing-business-tick">✦</span> Private team workspace + shared insights</li>
-            <li><span class="pricing-business-tick">✦</span> Custom guided processes built for your context</li>
-            <li><span class="pricing-business-tick">✦</span> Direct onboarding &amp; methodology training with the MYP team</li>
-            <li><span class="pricing-business-tick">✦</span> Priority support, direct line to Shimrit's team</li>
-          </ul>
-        </div>
-      </div>
-    </article>
-
   </div>
 </section>
 
