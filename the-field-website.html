@@ -1429,7 +1429,9 @@
   .diff-th-field-name em {
     font-style: italic;
     font-weight: 400;
-    margin-right: 2px;
+  }
+  .diff-th-field-name em.diff-th-field-name-bold {
+    font-weight: 700;
   }
   .diff-table tbody tr:last-child td { border-bottom: none; }
   .diff-feature {
@@ -1838,6 +1840,133 @@
   }
   @media (max-width: 1000px) {
     .pricing-grid { grid-template-columns: 1fr; max-width: 480px; margin: 0 auto; }
+  }
+
+  /* ===== Business tier banner =====
+     Sits BELOW the 3 consumer tiers as a wide, dark, distinct card.
+     Two-column inside: pitch + CTA on the left, included items on the
+     right. The dark background and serif title signal "different
+     conversation — let's talk" rather than "click to buy". */
+  .pricing-business {
+    margin-top: 40px;
+    background: linear-gradient(135deg, #1A1612, #0E0B07);
+    border: 1px solid rgba(201, 168, 76, 0.35);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    position: relative;
+    color: var(--text-inverse);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.18);
+  }
+  /* Subtle gold radial glow at the top-left so it feels alive */
+  .pricing-business::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 50% at 15% 0%,
+      rgba(201, 168, 76, 0.12), transparent 60%);
+    pointer-events: none;
+  }
+  .pricing-business-inner {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+    gap: 48px;
+    padding: 50px 56px;
+    align-items: center;
+  }
+  .pricing-business-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .pricing-business-title {
+    font-family: var(--font-serif);
+    font-size: clamp(28px, 3.4vw, 40px);
+    line-height: 1.15;
+    margin: 0;
+    color: var(--text-inverse);
+    letter-spacing: 0.01em;
+  }
+  .pricing-business-title em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--gold);
+  }
+  .pricing-business-title em.pricing-business-title-bold {
+    font-weight: 700;
+  }
+  .pricing-business-lead {
+    font-size: 16px;
+    line-height: 1.65;
+    color: var(--text-inverse-dim);
+    margin: 0;
+  }
+  .pricing-business-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    background: var(--gold);
+    color: var(--bg-dark);
+    font-weight: 600;
+    font-size: 14px;
+    font-family: inherit;
+    border: none;
+    border-radius: var(--radius-pill);
+    text-decoration: none;
+    letter-spacing: 0.02em;
+    margin-top: 12px;
+    align-self: flex-start;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 8px 24px rgba(201, 168, 76, 0.25);
+  }
+  .pricing-business-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(201, 168, 76, 0.4);
+  }
+  .pricing-business-features {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(201, 168, 76, 0.2);
+    border-radius: var(--radius-md);
+    padding: 28px;
+  }
+  .pricing-business-features-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 16px;
+  }
+  .pricing-business-features-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+  }
+  .pricing-business-features-list li {
+    display: flex;
+    gap: 12px;
+    color: var(--text-inverse-dim);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .pricing-business-tick {
+    color: var(--gold);
+    font-size: 14px;
+    line-height: 1.5;
+    flex-shrink: 0;
+  }
+  @media (max-width: 900px) {
+    .pricing-business-inner {
+      grid-template-columns: 1fr;
+      gap: 28px;
+      padding: 36px 28px;
+    }
+    .pricing-business-features { padding: 22px; }
   }
   .pricing-card {
     padding: 40px 32px;
@@ -2361,6 +2490,193 @@
   }
   .reveal.is-revealed .gold-divider,
   .gold-divider.is-revealed { transform: scaleX(1); }
+
+  /* ===== Business inquiry modal =====
+     Opens when "Talk to us" is clicked in the Business tier. Centered
+     overlay with form fields, gold submit, friendly success state. */
+  .business-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(14, 11, 7, 0.78);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 24px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .business-modal.is-open {
+    display: flex;
+    opacity: 1;
+  }
+  .business-modal-card {
+    background: var(--bg-cream);
+    border-radius: var(--radius-lg);
+    max-width: 520px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+    position: relative;
+    transform: translateY(20px);
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .business-modal.is-open .business-modal-card { transform: translateY(0); }
+  .business-modal-header {
+    padding: 32px 36px 0;
+    position: relative;
+  }
+  .business-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(14, 11, 7, 0.06);
+    color: var(--text-dim);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s ease, color 0.3s ease;
+  }
+  .business-modal-close:hover {
+    background: rgba(14, 11, 7, 0.12);
+    color: var(--text);
+  }
+  .business-modal-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 8px;
+  }
+  .business-modal-title {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 26px;
+    line-height: 1.2;
+    color: var(--text);
+    margin: 0 0 8px;
+  }
+  .business-modal-lead {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.55;
+    margin: 0;
+  }
+  .business-modal-form {
+    padding: 24px 36px 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .business-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .business-field label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 0.02em;
+  }
+  .business-field input,
+  .business-field select {
+    padding: 11px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: white;
+    color: var(--text);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .business-field input:focus,
+  .business-field select:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.15);
+  }
+  /* Honeypot field — visually hidden but still in the DOM for bots. */
+  .business-field-hp {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+  .business-submit {
+    margin-top: 6px;
+    padding: 14px 28px;
+    background: var(--bg-dark);
+    color: var(--text-inverse);
+    font-weight: 600;
+    font-size: 14px;
+    font-family: inherit;
+    border: none;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.3s ease;
+    letter-spacing: 0.02em;
+  }
+  .business-submit:hover:not(:disabled) {
+    background: #000;
+    transform: translateY(-1px);
+  }
+  .business-submit:disabled {
+    opacity: 0.5;
+    cursor: wait;
+  }
+  .business-error {
+    font-size: 13px;
+    color: #c0392b;
+    margin: 0;
+    padding: 10px 14px;
+    background: rgba(192, 57, 43, 0.08);
+    border-radius: 6px;
+    display: none;
+  }
+  .business-error.is-shown { display: block; }
+  .business-success {
+    display: none;
+    text-align: center;
+    padding: 40px 36px;
+  }
+  .business-success.is-shown { display: block; }
+  .business-success-icon {
+    font-size: 40px;
+    color: var(--gold);
+    margin-bottom: 16px;
+  }
+  .business-success-title {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 24px;
+    color: var(--text);
+    margin: 0 0 10px;
+  }
+  .business-success-body {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin: 0 0 20px;
+  }
+  @media (max-width: 540px) {
+    .business-modal { padding: 12px; }
+    .business-modal-header { padding: 24px 24px 0; }
+    .business-modal-form { padding: 20px 24px 28px; }
+    .business-modal-title { font-size: 22px; }
+  }
 
   /* --- Respect prefers-reduced-motion: drop every animation. --- */
   @media (prefers-reduced-motion: reduce) {
@@ -2889,7 +3205,7 @@
             <th class="diff-th-field">
               <span class="diff-th-field-inner">
                 <img src="logomyp.png" alt="" class="diff-th-field-logo" aria-hidden="true" />
-                <span class="diff-th-field-name"><em>The</em> Field</span>
+                <span class="diff-th-field-name"><em>The</em> <em class="diff-th-field-name-bold">Field</em></span>
               </span>
             </th>
           </tr>
@@ -3144,6 +3460,34 @@
       </article>
 
     </div>
+
+    <!-- Business tier — full-width banner card. Distinct visual
+         treatment (dark background) signals "different conversation":
+         no fixed price, custom scope, talk-to-us flow. Sits below
+         the three consumer tiers so it doesn't compete with them. -->
+    <article class="pricing-business reveal reveal-up reveal-delay-4">
+      <div class="pricing-business-inner">
+        <div class="pricing-business-copy">
+          <div class="eyebrow" style="color: var(--gold); margin-bottom: 14px;">For Teams &amp; Organizations</div>
+          <h3 class="pricing-business-title"><em>The</em> <em class="pricing-business-title-bold">Field</em> for Business</h3>
+          <p class="pricing-business-lead">A private, branded version of The Field for your team, your community, or your client base. Deeper context for leaders, coaches, therapists, founders, and the people they care about.</p>
+          <button type="button" class="pricing-business-cta" id="businessTalkBtn">Talk to us →</button>
+        </div>
+        <div class="pricing-business-features">
+          <div class="pricing-business-features-label">What's included</div>
+          <ul class="pricing-business-features-list">
+            <li><span class="pricing-business-tick">✦</span> Full Unlimited Field access for every team member</li>
+            <li><span class="pricing-business-tick">✦</span> Private team workspace + shared insights</li>
+            <li><span class="pricing-business-tick">✦</span> Custom guided processes built for your context</li>
+            <li><span class="pricing-business-tick">✦</span> Direct onboarding &amp; methodology training with the MYP team</li>
+            <li><span class="pricing-business-tick">✦</span> Co-branded or white-label option</li>
+            <li><span class="pricing-business-tick">✦</span> Quarterly progress reporting</li>
+            <li><span class="pricing-business-tick">✦</span> Priority support, direct line to Shimrit's team</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
   </div>
 </section>
 
@@ -3602,7 +3946,155 @@
       }
     });
   })();
+
+  // ===== Business inquiry modal =====
+  // Opens when the "Talk to us" CTA in the Business pricing tier is
+  // clicked. POSTs the form to /api/business-inquiry which emails it
+  // to support@shimritnativ.com via Resend. Includes a honeypot field
+  // for spam protection and a simple success state.
+  (function setupBusinessModal() {
+    const openBtn = document.getElementById('businessTalkBtn');
+    const modal = document.getElementById('businessModal');
+    if (!openBtn || !modal) return;
+    const closeBtn = modal.querySelector('.business-modal-close');
+    const form = modal.querySelector('.business-modal-form');
+    const errorEl = modal.querySelector('.business-error');
+    const successEl = modal.querySelector('.business-success');
+    const submitBtn = modal.querySelector('.business-submit');
+    const headerEl = modal.querySelector('.business-modal-header');
+
+    function open() {
+      modal.classList.add('is-open');
+      document.body.style.overflow = 'hidden';
+      // Reset state on open
+      errorEl.classList.remove('is-shown');
+      successEl.classList.remove('is-shown');
+      headerEl.style.display = '';
+      form.style.display = '';
+      form.reset();
+      // Focus the first field after the open animation
+      setTimeout(() => {
+        const firstInput = form.querySelector('input, select');
+        if (firstInput) firstInput.focus();
+      }, 200);
+    }
+    function close() {
+      modal.classList.remove('is-open');
+      document.body.style.overflow = '';
+    }
+
+    openBtn.addEventListener('click', open);
+    closeBtn.addEventListener('click', close);
+    // Click outside the card to close
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) close();
+    });
+    // Esc to close
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.classList.contains('is-open')) close();
+    });
+
+    // The endpoint lives on the Vercel-deployed app, NOT necessarily on
+    // the same host the marketing site is served from. We hit the
+    // canonical app domain so it works whether this page is at
+    // hello.thefieldai.app or the-freedom-intelligence-field.vercel.app.
+    const ENDPOINT = 'https://thefieldai.app/api/business-inquiry';
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorEl.classList.remove('is-shown');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending…';
+
+      const data = {
+        name: form.elements['name'].value.trim(),
+        email: form.elements['email'].value.trim(),
+        phone: form.elements['phone'].value.trim(),
+        team_size: form.elements['team_size'].value,
+        industry: form.elements['industry'].value.trim(),
+        website: form.elements['website'].value.trim(), // honeypot
+        source: location.href.slice(0, 200),
+      };
+
+      try {
+        const res = await fetch(ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(payload.error || `request_failed_${res.status}`);
+        }
+        // Success — swap the form for the success state
+        headerEl.style.display = 'none';
+        form.style.display = 'none';
+        successEl.classList.add('is-shown');
+      } catch (err) {
+        errorEl.textContent = "We couldn't send your message just now. Please try again, or email support@shimritnativ.com directly.";
+        errorEl.classList.add('is-shown');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send →';
+      }
+    });
+  })();
 </script>
+
+<!-- Business inquiry modal — opened from the "Talk to us" CTA in the
+     Business pricing tier. Submits to /api/business-inquiry which
+     emails support@shimritnativ.com via Resend. -->
+<div class="business-modal" id="businessModal" role="dialog" aria-modal="true" aria-labelledby="businessModalTitle">
+  <div class="business-modal-card">
+    <div class="business-modal-header">
+      <button type="button" class="business-modal-close" aria-label="Close">✕</button>
+      <div class="business-modal-eyebrow">The Field for Business</div>
+      <h3 class="business-modal-title" id="businessModalTitle">Let's talk.</h3>
+      <p class="business-modal-lead">Tell us a little about your team and we'll be in touch within a couple of days to explore a fit.</p>
+    </div>
+    <form class="business-modal-form" novalidate>
+      <div class="business-field">
+        <label for="bizName">Your name</label>
+        <input type="text" id="bizName" name="name" required autocomplete="name" />
+      </div>
+      <div class="business-field">
+        <label for="bizEmail">Email</label>
+        <input type="email" id="bizEmail" name="email" required autocomplete="email" />
+      </div>
+      <div class="business-field">
+        <label for="bizPhone">Phone (with country code)</label>
+        <input type="tel" id="bizPhone" name="phone" required autocomplete="tel" placeholder="+44 7700 900123" />
+      </div>
+      <div class="business-field">
+        <label for="bizTeam">Size of team</label>
+        <select id="bizTeam" name="team_size" required>
+          <option value="">Select…</option>
+          <option value="1-5">1–5</option>
+          <option value="6-20">6–20</option>
+          <option value="21-50">21–50</option>
+          <option value="51-100">51–100</option>
+          <option value="100+">100+</option>
+        </select>
+      </div>
+      <div class="business-field">
+        <label for="bizIndustry">Industry of team</label>
+        <input type="text" id="bizIndustry" name="industry" required placeholder="e.g. Coaching, Healthcare, Tech, Education" />
+      </div>
+      <!-- Honeypot — visually hidden; real users won't fill it -->
+      <div class="business-field-hp" aria-hidden="true">
+        <label for="bizWebsite">Website (leave blank)</label>
+        <input type="text" id="bizWebsite" name="website" tabindex="-1" autocomplete="off" />
+      </div>
+      <p class="business-error" role="alert"></p>
+      <button type="submit" class="business-submit">Send →</button>
+    </form>
+    <div class="business-success">
+      <div class="business-success-icon">✦</div>
+      <h3 class="business-success-title">Got it. We'll be in touch.</h3>
+      <p class="business-success-body">Your message is on its way to Shimrit's team. Expect a reply within 1–2 business days.</p>
+      <button type="button" class="business-modal-close business-submit" style="background: var(--gold); color: var(--bg-dark); margin: 0 auto;">Close</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
