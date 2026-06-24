@@ -26,7 +26,7 @@
 
 import { sql } from "@vercel/postgres";
 import { getUserBySessionToken } from "../../lib/db.js";
-// sendPushToUser no longer imported — auto-reconcile is silent now.
+import { notifyAdmins } from "../../lib/adminNotify.js";
 
 const ALLOWED_DOMAIN = "@shimritnativ.com";
 
@@ -195,10 +195,32 @@ export default async function handler(req, res) {
           basis: defaults.basis,
         });
 
-        // No push notification for auto-reconciled placeholders. These
-        // are silent system recoveries — Geo doesn't want to be pinged
-        // for every webhook gap, only for actual sales (which fire from
-        // the ThriveCart webhook handler itself) and the 8pm summary.
+        // Notify admins on REAL placeholders (anything that's not a
+        // LAUNCHTEAM €0 comp). Why: ThriveCart webhooks have been
+        // dropping silently. When auto-reconcile catches the gap, the
+        // regular "new sale" push from the ThriveCart webhook handler
+        // never ran, so Geo gets no signal. Without a ping here, the
+        // sale only surfaces on the next dashboard refresh and the
+        // amount is a default placeholder she may not realize needs
+        // verifying. Keep LAUNCHTEAM silent: routine comps, not money.
+        const isComp = defaults.coupon_code === "LAUNCHTEAM"
+          || defaults.coupon_code === "LAUNCHTEAMUNLIMITED"
+          || defaults.amount_cents === 0;
+        if (!isComp) {
+          try {
+            const r = await notifyAdmins({
+              title: "Sale recovered (ThriveCart webhook dropped)",
+              body: `${g.email}: ${defaults.product_name}, default €${(defaults.amount_cents / 100).toFixed(2)}. Verify the real amount in the roster.`,
+              url: "/admin#members",
+              tag: `auto-recon-${syntheticId}`,
+              notificationKey: `auto-recon-${syntheticId}`,
+              requireInteraction: false,
+            });
+            if (r && r.sent_count > 0) summary.notifications_sent++;
+          } catch (e) {
+            console.warn("auto_reconcile_notify_failed", e?.message);
+          }
+        }
       } catch (err) {
         summary.errors++;
         console.warn("auto_reconcile_gap_error", {
@@ -281,6 +303,20 @@ function inferDefaults(tier, plan, activationEvent, email) {
   // current tier=full and created an Unlimited placeholder for both
   // activations, hiding the Reset purchase entirely.
   const ev = String(activationEvent || "").toLowerCase();
+  // Check Power Activation BEFORE Reset, because both contain shared
+  // word fragments and "activation" is the more specific match.
+  // Power Activation is a Kajabi-native upsell to Reset (€16.99 gross
+  // standard price). Without this, Activation buyers got either a Reset
+  // placeholder or fell through to "Unknown product" and lost €16.99
+  // of attributable revenue per sale.
+  if (ev.includes("power_activation") || ev.includes("power-activation") || ev.includes("activation")) {
+    return {
+      product_name: "The Power Activation",
+      amount_cents: 1699,
+      coupon_code: null,
+      basis: "activation event indicates Power Activation (€16.99 gross default)",
+    };
+  }
   if (ev.includes("power_reset") || ev.includes("power-reset") || ev.includes("reset")) {
     return {
       product_name: "The Power Reset",
