@@ -117,14 +117,19 @@ export default async function handler(req, res) {
         level: "campaign",
         fields: "campaign_id,campaign_name,spend,impressions,clicks,ctr,cpc,cpm",
       })),
+      // Daily series is queried at CAMPAIGN level (not account) so the
+      // same exclude/include filter we apply to the totals also applies
+      // here — otherwise the daily numbers include boosted "Post:"
+      // campaigns and other ad activity that the rest of the tab hides,
+      // making the daily sum disagree with the headline totals.
       safe("daily_insights", fetchInsights({
         accessToken,
         accountId,
         apiVersion,
         from,
         to,
-        level: "account",
-        fields: "spend,impressions,clicks",
+        level: "campaign",
+        fields: "campaign_name,spend,impressions,clicks",
         timeIncrement: 1,
       })),
       safe("campaign_list", fetchCampaignList({ accessToken, accountId, apiVersion })),
@@ -241,18 +246,26 @@ export default async function handler(req, res) {
       purchase_to_scroll_rate: totalCheckoutScrolls > 0 ? (totalSignups / totalCheckoutScrolls) * 100 : null,
     };
 
-    // Daily time series — merge Meta spend with our signups for the
-    // spend-vs-signups chart in the UI.
-    const daily = (dailyInsights || []).map((d) => {
+    // Daily time series. The Meta call is per-campaign-per-day, so we
+    // first drop rows for campaigns we're filtering out, then aggregate
+    // what's left by date. This makes daily numbers match the totals
+    // exactly (same campaigns counted both places).
+    const dailyAgg = {};
+    for (const d of (dailyInsights || [])) {
+      if (!passesFilter(d.campaign_name)) continue;
       const date = d.date_start;
-      return {
-        date,
-        spend: Number(d.spend || 0),
-        impressions: Number(d.impressions || 0),
-        clicks: Number(d.clicks || 0),
-        signups: Number(signupsByDay[date] || 0),
-      };
-    });
+      if (!dailyAgg[date]) dailyAgg[date] = { spend: 0, impressions: 0, clicks: 0 };
+      dailyAgg[date].spend       += Number(d.spend || 0);
+      dailyAgg[date].impressions += Number(d.impressions || 0);
+      dailyAgg[date].clicks      += Number(d.clicks || 0);
+    }
+    const daily = Object.keys(dailyAgg).sort().map((date) => ({
+      date,
+      spend: dailyAgg[date].spend,
+      impressions: dailyAgg[date].impressions,
+      clicks: dailyAgg[date].clicks,
+      signups: Number(signupsByDay[date] || 0),
+    }));
 
     return res.status(200).json({
       ok: true,
