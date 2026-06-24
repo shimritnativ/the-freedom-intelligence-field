@@ -1129,6 +1129,34 @@
       background: linear-gradient(135deg, var(--gold-soft) 0%, var(--panel) 100%) !important;
       border-color: var(--gold) !important;
     }
+    /* Campaign chip toggles — off = ghost pill, on = filled gold. */
+    .ads-campaign-chip {
+      display: inline-block;
+      padding: 6px 12px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--text-dim);
+      font-family: inherit;
+      font-size: 11.5px;
+      font-weight: 500;
+      cursor: pointer;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+    .ads-campaign-chip:hover {
+      border-color: var(--gold-line);
+      color: var(--text);
+    }
+    .ads-campaign-chip--on {
+      background: var(--gold-soft);
+      border-color: var(--gold);
+      color: var(--gold);
+      font-weight: 600;
+    }
 
     /* ===== Hamburger button (mobile only) =====
         Hidden by default on desktop. Visible only when the screen narrows
@@ -2603,20 +2631,32 @@
           <!-- /end Revenue tab -->
 
           <!-- ===== ADS TAB ===== -->
-          <!-- Meta Ads metrics + UTM-attributed signups/revenue. The
-               tab body is rendered by renderAdsTab() in JS so it can
-               own its own range selector and fetch lifecycle. Empty on
-               initial load; populated on first tab entry and refreshed
-               on range change. -->
+          <!-- Meta Ads metrics + UTM-attributed signups/revenue. Range
+               presets, a custom from/to calendar pair, and a campaign
+               multi-select. Filters re-fetch / re-render the body. -->
           <div data-tab-content="ads" style="display: none;">
             <div class="section" id="panel-ads">
               <h2><span class="h2-eyebrow">Meta Ads</span>Live performance</h2>
-              <div id="ads-controls" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 18px;">
+              <!-- Preset range + custom date pickers + refresh -->
+              <div id="ads-controls" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px;">
                 <span style="font-size: 11px; color: var(--text-dim); margin-right: 4px;">Range:</span>
                 <button class="preset-btn ads-range-btn" data-range="today">Today</button>
                 <button class="preset-btn ads-range-btn ads-range-btn--active" data-range="7d">Last 7 days</button>
                 <button class="preset-btn ads-range-btn" data-range="30d">Last 30 days</button>
+                <span style="font-size: 11px; color: var(--text-mute); margin: 0 4px;">or</span>
+                <input type="date" id="ads-date-from" class="date-input" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; background: white;" />
+                <span style="font-size: 11px; color: var(--text-dim);">to</span>
+                <input type="date" id="ads-date-to" class="date-input" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; background: white;" />
+                <button class="preset-btn" id="ads-apply-dates" style="background: var(--gold); color: var(--dark); border-color: var(--gold); font-weight: 600;">Apply</button>
                 <button class="preset-btn" id="ads-refresh-btn" style="margin-left: auto;">↻ Refresh</button>
+              </div>
+              <!-- Campaign multi-select chips. Populated on first load. -->
+              <div id="ads-campaign-filter" style="display: none; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 18px; padding: 10px 12px; background: var(--bg-warm); border-radius: 8px;">
+                <span style="font-size: 11px; color: var(--text-dim); margin-right: 4px;">Campaigns:</span>
+                <button type="button" class="preset-btn ads-campaign-all" id="ads-campaign-all" style="font-size: 11px; padding: 5px 11px;">All</button>
+                <button type="button" class="preset-btn ads-campaign-none" id="ads-campaign-none" style="font-size: 11px; padding: 5px 11px;">None</button>
+                <span style="width: 1px; height: 18px; background: var(--gold-line); margin: 0 4px;"></span>
+                <div id="ads-campaign-chips" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
               </div>
               <div id="ads-content"><div class="empty-state">Loading ad metrics…</div></div>
             </div>
@@ -3931,17 +3971,35 @@
     window.runMemoryBackfill = runMemoryBackfill;
 
     // ===== Ads tab — Meta Ads metrics + UTM attribution =====
-    // Fetches /api/admin/ads-metrics for the selected range and renders
-    // the KPI strip, per-campaign table, and (text-only) daily series.
-    // Empty/error states inline so the user always sees what's wrong.
+    // Fetches /api/admin/ads-metrics for the selected range. The raw
+    // response is cached so the campaign-filter UI can re-render the
+    // KPI cards and per-campaign table client-side without re-hitting
+    // Meta on every checkbox toggle.
     let _adsRange = "7d";
+    let _adsCustomFrom = null;
+    let _adsCustomTo = null;
+    let _adsLastData = null;          // last successful API response
+    let _adsSelectedCampaigns = null; // Set of campaign IDs to include; null = all
+
     async function loadAdsMetrics() {
       const content = document.getElementById("ads-content");
+      const filterRow = document.getElementById("ads-campaign-filter");
       if (!content) return;
       content.innerHTML = '<div class="empty-state">Loading ad metrics…</div>';
+      if (filterRow) filterRow.style.display = "none";
       const token = localStorage.getItem(STORAGE_KEY);
+
+      // Build the query string. Custom dates win over preset range.
+      const params = new URLSearchParams();
+      if (_adsCustomFrom && _adsCustomTo) {
+        params.set("from", _adsCustomFrom);
+        params.set("to", _adsCustomTo);
+      } else {
+        params.set("range", _adsRange);
+      }
+
       try {
-        const r = await fetch(`/api/admin/ads-metrics?range=${encodeURIComponent(_adsRange)}`, {
+        const r = await fetch(`/api/admin/ads-metrics?${params.toString()}`, {
           headers: { "x-session-token": token },
         });
         const data = await r.json();
@@ -3962,12 +4020,85 @@
           content.innerHTML = `<div class="empty-state" style="color: var(--red);">Couldn't load ads: ${escapeHtml(data.message || data.error || "unknown error")}</div>`;
           return;
         }
-        content.innerHTML = renderAdsContent(data);
+        _adsLastData = data;
+        // Reset filter to "all selected" whenever new data lands — the
+        // set of available campaigns may have changed with the date range.
+        _adsSelectedCampaigns = new Set((data.campaigns || []).map(c => c.id));
+        renderAdsCampaignFilter(data.campaigns || []);
+        rerenderAdsContent();
       } catch (err) {
         content.innerHTML = `<div class="empty-state" style="color: var(--red);">Network error: ${escapeHtml(err.message)}</div>`;
       }
     }
     window.loadAdsMetrics = loadAdsMetrics;
+
+    // Renders the campaign chip row. Each chip is a toggle; clicking
+    // it adds/removes the campaign from the selected set. Re-render
+    // the body so totals recalculate immediately.
+    function renderAdsCampaignFilter(campaigns) {
+      const filterRow = document.getElementById("ads-campaign-filter");
+      const chipsBox = document.getElementById("ads-campaign-chips");
+      if (!filterRow || !chipsBox) return;
+      if (!campaigns || campaigns.length === 0) {
+        filterRow.style.display = "none";
+        return;
+      }
+      filterRow.style.display = "flex";
+      chipsBox.innerHTML = campaigns.map(c => {
+        const isOn = _adsSelectedCampaigns && _adsSelectedCampaigns.has(c.id);
+        const cls = isOn ? "ads-campaign-chip ads-campaign-chip--on" : "ads-campaign-chip";
+        const safeName = escapeHtml(c.name || c.id);
+        return `<button type="button" class="${cls}" data-campaign-id="${escapeHtml(c.id)}" title="${safeName}">${safeName}</button>`;
+      }).join("");
+    }
+
+    // Rebuild the KPI / table / daily section based on the current
+    // _adsSelectedCampaigns filter. No re-fetch. Falls back to the full
+    // dataset if no filter is active.
+    function rerenderAdsContent() {
+      const content = document.getElementById("ads-content");
+      if (!content || !_adsLastData) return;
+      const data = _adsLastData;
+
+      // If no selection (or all selected), use the original payload.
+      // Otherwise, filter campaigns + recompute totals client-side.
+      const selected = _adsSelectedCampaigns;
+      const allIds = new Set((data.campaigns || []).map(c => c.id));
+      const isAll = !selected || (selected.size === allIds.size && Array.from(allIds).every(id => selected.has(id)));
+      const filteredCampaigns = isAll
+        ? data.campaigns
+        : (data.campaigns || []).filter(c => selected.has(c.id));
+
+      // Recompute totals from the filtered subset
+      const totalSpend = filteredCampaigns.reduce((s, c) => s + (c.spend || 0), 0);
+      const totalImpressions = filteredCampaigns.reduce((s, c) => s + (c.impressions || 0), 0);
+      const totalClicks = filteredCampaigns.reduce((s, c) => s + (c.clicks || 0), 0);
+      const totalSignups = filteredCampaigns.reduce((s, c) => s + (c.signups_attributed || 0), 0);
+      const totalRevenueCents = filteredCampaigns.reduce((s, c) => s + (c.revenue_attributed_cents || 0), 0);
+
+      const adjustedTotals = isAll ? data.totals : {
+        spend: totalSpend,
+        impressions: totalImpressions,
+        clicks: totalClicks,
+        ctr: totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0,
+        cpc: totalClicks > 0 ? totalSpend / totalClicks : 0,
+        cpm: totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0,
+        signups_attributed: totalSignups,
+        cost_per_signup: totalSignups > 0 ? totalSpend / totalSignups : null,
+        revenue_attributed_cents: totalRevenueCents,
+        roas: totalSpend > 0 ? (totalRevenueCents / 100) / totalSpend : null,
+      };
+
+      const adjustedData = {
+        ...data,
+        totals: adjustedTotals,
+        campaigns: filteredCampaigns,
+        _filtered: !isAll,
+        _filtered_count: filteredCampaigns.length,
+        _total_count: (data.campaigns || []).length,
+      };
+      content.innerHTML = renderAdsContent(adjustedData);
+    }
 
     function renderAdsContent(data) {
       const t = data.totals;
@@ -4080,7 +4211,10 @@
         ? `<h3 style="font-family: Georgia, serif; font-style: italic; font-weight: 500; font-size: 16px; margin: 24px 0 12px;">Daily breakdown</h3>${dailyRows}`
         : '';
 
-      const accountNote = `<div style="margin-top: 18px; font-size: 11px; color: var(--text-mute); font-style: italic;">Meta account ${escapeHtml(data.meta.account_id)} · fetched ${new Date(data.meta.fetched_at).toLocaleTimeString()}</div>`;
+      const filterNote = data._filtered
+        ? `<span style="color: var(--gold); font-weight: 600; font-style: normal;">Filtered: ${data._filtered_count} of ${data._total_count} campaigns</span> · `
+        : '';
+      const accountNote = `<div style="margin-top: 18px; font-size: 11px; color: var(--text-mute); font-style: italic;">${filterNote}${escapeHtml(data.range.label)} (${escapeHtml(data.range.from)} → ${escapeHtml(data.range.to)}) · Meta account ${escapeHtml(data.meta.account_id)} · fetched ${new Date(data.meta.fetched_at).toLocaleTimeString()}</div>`;
 
       // Soft warning if some Meta API calls failed but others worked.
       let warningBlock = '';
@@ -4098,17 +4232,75 @@
       return warningBlock + kpis + campaignTable + dailyBlock + accountNote;
     }
 
-    // Range selector + refresh — delegated so listeners survive admin re-renders.
+    // Range / refresh / dates / campaign chips — all delegated so the
+    // listeners survive admin re-renders (the topbar gets re-rendered
+    // every time refreshDashboard runs, which would wipe direct binds).
     document.body.addEventListener("click", (e) => {
+      // Preset range buttons → clear custom dates, reload
       const rangeBtn = e.target.closest(".ads-range-btn");
       if (rangeBtn) {
         _adsRange = rangeBtn.dataset.range || "7d";
+        _adsCustomFrom = null;
+        _adsCustomTo = null;
         document.querySelectorAll(".ads-range-btn").forEach((b) => b.classList.toggle("ads-range-btn--active", b === rangeBtn));
+        const fromInput = document.getElementById("ads-date-from");
+        const toInput = document.getElementById("ads-date-to");
+        if (fromInput) fromInput.value = "";
+        if (toInput) toInput.value = "";
+        loadAdsMetrics();
+        return;
+      }
+      // Custom date "Apply" button
+      if (e.target.closest("#ads-apply-dates")) {
+        const fromInput = document.getElementById("ads-date-from");
+        const toInput = document.getElementById("ads-date-to");
+        const from = fromInput && fromInput.value;
+        const to = toInput && toInput.value;
+        if (!from || !to) {
+          alert("Pick both a 'from' and a 'to' date.");
+          return;
+        }
+        if (from > to) {
+          alert("'From' date must be on or before 'to' date.");
+          return;
+        }
+        _adsCustomFrom = from;
+        _adsCustomTo = to;
+        // Clear preset highlight since custom is now active
+        document.querySelectorAll(".ads-range-btn").forEach((b) => b.classList.remove("ads-range-btn--active"));
         loadAdsMetrics();
         return;
       }
       if (e.target.closest("#ads-refresh-btn")) {
         loadAdsMetrics();
+        return;
+      }
+      // Campaign chip toggle
+      const chip = e.target.closest(".ads-campaign-chip");
+      if (chip) {
+        const id = chip.dataset.campaignId;
+        if (!_adsSelectedCampaigns) _adsSelectedCampaigns = new Set();
+        if (_adsSelectedCampaigns.has(id)) {
+          _adsSelectedCampaigns.delete(id);
+        } else {
+          _adsSelectedCampaigns.add(id);
+        }
+        chip.classList.toggle("ads-campaign-chip--on");
+        rerenderAdsContent();
+        return;
+      }
+      // "All" / "None" campaign quick-toggles
+      if (e.target.closest("#ads-campaign-all") && _adsLastData) {
+        _adsSelectedCampaigns = new Set((_adsLastData.campaigns || []).map(c => c.id));
+        renderAdsCampaignFilter(_adsLastData.campaigns || []);
+        rerenderAdsContent();
+        return;
+      }
+      if (e.target.closest("#ads-campaign-none") && _adsLastData) {
+        _adsSelectedCampaigns = new Set();
+        renderAdsCampaignFilter(_adsLastData.campaigns || []);
+        rerenderAdsContent();
+        return;
       }
     });
 
