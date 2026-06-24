@@ -146,7 +146,31 @@ export default async function handler(req, res) {
       statusMap[c.id] = c.status;
     }
 
-    const campaigns = (campaignInsights || []).map((c) => {
+    // Campaign name filter. Two layers:
+    //   1. EXCLUDE — names matching these patterns never show up.
+    //      Default kills "Post: ..." boosted-post campaigns since those
+    //      are usually engagement-only and pollute the The Field metrics.
+    //   2. INCLUDE — if META_ADS_CAMPAIGN_INCLUDE is set, only names
+    //      containing one of those substrings (case-insensitive) pass.
+    //      Useful when you only want to track Field-related campaigns
+    //      and ignore other product lines on the same ad account.
+    //   Both env vars are comma-separated. Either can be empty.
+    const excludePatterns = (process.env.META_ADS_CAMPAIGN_EXCLUDE || "Post:")
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    const includePatterns = (process.env.META_ADS_CAMPAIGN_INCLUDE || "")
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    const passesFilter = (name) => {
+      const lower = String(name || "").toLowerCase();
+      if (excludePatterns.some((p) => lower.includes(p))) return false;
+      if (includePatterns.length > 0 && !includePatterns.some((p) => lower.includes(p))) return false;
+      return true;
+    };
+
+    const campaigns = (campaignInsights || []).filter((c) => passesFilter(c.campaign_name)).map((c) => {
       const id = c.campaign_id;
       const name = c.campaign_name || "(unnamed campaign)";
       const spend = Number(c.spend || 0);
