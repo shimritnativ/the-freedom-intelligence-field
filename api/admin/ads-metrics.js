@@ -40,7 +40,11 @@ import { sql } from "@vercel/postgres";
 import { getUserBySessionToken } from "../../lib/db.js";
 
 const ALLOWED_DOMAIN = "@shimritnativ.com";
-const DEFAULT_API_VERSION = "v22.0";
+// v19.0 has been generally available since mid-2024 and supports every
+// field we use. Newer versions (v21/v22) occasionally introduce field
+// validation changes that produce confusing "nonexisting field" errors
+// even when the field name is correct — sticking to v19 for stability.
+const DEFAULT_API_VERSION = "v19.0";
 
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -76,22 +80,35 @@ export default async function handler(req, res) {
   const toOverride = String(req.query?.to || "").trim();
   const { from, to, label } = resolveRange(range, fromOverride, toOverride);
 
+  // Helper that wraps each Meta API call so one bad request can't take
+  // down the whole tab. Failures bubble up as errors[] in the response
+  // for transparency, but we still return whatever did work.
+  const errors = [];
+  const safe = async (label, p) => {
+    try {
+      return await p;
+    } catch (e) {
+      console.warn("ads_metrics_partial_failure", { label, message: e?.message });
+      errors.push({ label, message: e?.message || String(e) });
+      return null;
+    }
+  };
+
   try {
-    // Fire Meta Graph requests in parallel — campaign-level breakdown
-    // and daily time series — so a slow API call doesn't block the
-    // other. Both go through the same /insights endpoint with different
-    // groupings.
+    // Fire Meta Graph requests in parallel. Each wrapped in safe() so
+    // they fail independently — common case: campaign list fetch fails
+    // on a field permission, but insights succeed (or vice versa).
     const [campaignInsights, dailyInsights, campaignMeta] = await Promise.all([
-      fetchInsights({
+      safe("campaign_insights", fetchInsights({
         accessToken,
         accountId,
         apiVersion,
         from,
         to,
         level: "campaign",
-        fields: "campaign_id,campaign_name,spend,impressions,clicks,ctr,cpc,cpm,reach",
-      }),
-      fetchInsights({
+        fields: "campaign_id,campaign_name,spend,impressions,clicks,ctr,cpc,cpm",
+      })),
+      safe("daily_insights", fetchInsights({
         accessToken,
         accountId,
         apiVersion,
@@ -100,8 +117,8 @@ export default async function handler(req, res) {
         level: "account",
         fields: "spend,impressions,clicks",
         timeIncrement: 1,
-      }),
-      fetchCampaignList({ accessToken, accountId, apiVersion }),
+      })),
+      safe("campaign_list", fetchCampaignList({ accessToken, accountId, apiVersion })),
     ]);
 
     // Pull our own attribution data — signups and purchases tagged with
@@ -112,9 +129,11 @@ export default async function handler(req, res) {
       loadSignupsByDay(from, to),
     ]);
 
-    // Build a campaign-name → totals map
+    // Build a campaign-name → totals map. Both inputs can be null if
+    // their fetch failed — treat them as empty so we still render
+    // whatever data we did get.
     const statusMap = {};
-    for (const c of campaignMeta) {
+    for (const c of (campaignMeta || [])) {
       statusMap[c.id] = c.status;
     }
 
@@ -191,6 +210,10 @@ export default async function handler(req, res) {
         fetched_at: new Date().toISOString(),
         account_id: accountId,
       },
+      // Surface any partial failures (e.g., campaign list 403 while
+      // insights work) so the UI can show a soft warning rather than
+      // silently displaying half the data.
+      partial_errors: errors,
     });
   } catch (err) {
     console.error("ads_metrics_error", { message: err?.message });
@@ -227,23 +250,25 @@ async function fetchInsights({ accessToken, accountId, apiVersion, from, to, lev
 }
 
 async function fetchCampaignList({ accessToken, accountId, apiVersion }) {
+  // Just the basics. `effective_status` and budget fields sometimes
+  // trigger permission errors on tokens that only have ads_read —
+  // status is enough for the dashboard's ACTIVE/PAUSED badge.
   const params = new URLSearchParams({
     access_token: accessToken,
-    fields: "id,name,status,effective_status,daily_budget,lifetime_budget",
+    fields: "id,name,status",
     limit: "100",
   });
   const url = `https://graph.facebook.com/${apiVersion}/${accountId}/campaigns?${params.toString()}`;
   const res = await fetch(url);
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    console.warn("meta_campaign_list_failed", { status: res.status, body: body.slice(0, 200) });
-    return [];
+    throw new Error(`meta_campaigns_${res.status}: ${body.slice(0, 200)}`);
   }
   const json = await res.json();
   return (json.data || []).map((c) => ({
     id: c.id,
     name: c.name,
-    status: c.effective_status || c.status,
+    status: c.status,
   }));
 }
 
