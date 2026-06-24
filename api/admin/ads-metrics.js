@@ -40,11 +40,12 @@ import { sql } from "@vercel/postgres";
 import { getUserBySessionToken } from "../../lib/db.js";
 
 const ALLOWED_DOMAIN = "@shimritnativ.com";
-// v19.0 has been generally available since mid-2024 and supports every
-// field we use. Newer versions (v21/v22) occasionally introduce field
-// validation changes that produce confusing "nonexisting field" errors
-// even when the field name is correct — sticking to v19 for stability.
-const DEFAULT_API_VERSION = "v19.0";
+// v22.0 — confirmed working for this account via direct browser test.
+// Earlier attempts on v19.0 returned "(#100) nonexisting field"
+// errors across every endpoint, likely because the account's app is
+// pinned to a newer min-version. v22 is also the latest GA so it's
+// what new Meta apps default to today.
+const DEFAULT_API_VERSION = "v22.0";
 
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
