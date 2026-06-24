@@ -150,8 +150,43 @@ export default async function handler(req, res) {
     // their fetch failed — treat them as empty so we still render
     // whatever data we did get.
     const statusMap = {};
+    const campaignMetaById = {};
     for (const c of (campaignMeta || [])) {
       statusMap[c.id] = c.status;
+      campaignMetaById[c.id] = c;
+    }
+
+    // Merge insights with campaign metadata so campaigns that exist
+    // but have zero spend in the date range still appear in the table.
+    // Meta's /insights endpoint only returns campaigns with activity;
+    // /campaigns lists all of them. Without this merge, a freshly
+    // launched campaign with no spend yet would be invisible to Geo.
+    const insightsById = {};
+    for (const c of (campaignInsights || [])) {
+      insightsById[c.campaign_id] = c;
+    }
+    // Start with every campaign from the metadata list; overlay insights
+    // where they exist. Result: complete campaign list with stats where
+    // available, zeros where not.
+    const mergedInsights = (campaignMeta || []).map((meta) => {
+      const ins = insightsById[meta.id] || {};
+      return {
+        campaign_id: meta.id,
+        campaign_name: ins.campaign_name || meta.name,
+        spend: ins.spend || 0,
+        impressions: ins.impressions || 0,
+        clicks: ins.clicks || 0,
+        ctr: ins.ctr || 0,
+        cpc: ins.cpc || 0,
+        cpm: ins.cpm || 0,
+      };
+    });
+    // Plus any campaigns that DID have insights but somehow weren't in
+    // the metadata list (rare, but be defensive).
+    for (const c of (campaignInsights || [])) {
+      if (!campaignMetaById[c.campaign_id]) {
+        mergedInsights.push(c);
+      }
     }
 
     // Campaign name filter. Two layers:
