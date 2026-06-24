@@ -65,13 +65,21 @@ export default async function handler(req, res) {
   }
 
   const accessToken = process.env.META_ADS_ACCESS_TOKEN;
-  const accountId = process.env.META_ADS_ACCOUNT_ID;
-  if (!accessToken || !accountId) {
+  const rawAccountId = process.env.META_ADS_ACCOUNT_ID;
+  if (!accessToken || !rawAccountId) {
     return res.status(500).json({
       error: "ads_not_configured",
       hint: "Set META_ADS_ACCESS_TOKEN and META_ADS_ACCOUNT_ID in Vercel env vars.",
     });
   }
+  // Meta ad account IDs MUST be prefixed with `act_` when used in URLs.
+  // Without the prefix, Meta treats the bare number as a generic Graph
+  // object and then complains that `insights`/`campaigns` are "non-
+  // existing fields" on it. Auto-prepend if missing so a typo in the
+  // env var doesn't break the whole tab.
+  const accountId = String(rawAccountId).trim().startsWith("act_")
+    ? String(rawAccountId).trim()
+    : "act_" + String(rawAccountId).trim().replace(/^act_/i, "");
   const apiVersion = process.env.META_ADS_API_VERSION || DEFAULT_API_VERSION;
 
   // Resolve date range. "today" = just today UTC; "7d" / "30d" = last N
