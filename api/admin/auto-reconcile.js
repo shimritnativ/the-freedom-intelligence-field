@@ -155,7 +155,7 @@ export default async function handler(req, res) {
 
     for (const g of gaps) {
       try {
-        const defaults = inferDefaults(g.tier, g.subscription_plan, g.activation_event);
+        const defaults = inferDefaults(g.tier, g.subscription_plan, g.activation_event, g.email);
         const syntheticId = `AUTO-${g.user_id}-${Math.floor(new Date(g.activated_at).getTime() / 1000)}`;
 
         const raw = {
@@ -230,7 +230,46 @@ export default async function handler(req, res) {
 //
 // Stored as GROSS cents to match how ThriveCart webhooks store amounts.
 
-function inferDefaults(tier, plan, activationEvent) {
+// LAUNCHTEAM email allowlist. Anyone on this list gets a €0 LAUNCHTEAM
+// placeholder when auto-reconcile fires, instead of the POWER50 €4.50
+// default. Sourced from the LAUNCHTEAM_EMAILS env var (comma-separated)
+// so it can be updated without redeploying — set it in Vercel project
+// env vars: LAUNCHTEAM_EMAILS="alex@a.com,bob@b.com,..."
+//
+// Why an allowlist instead of detecting comp status from the webhook?
+// Kajabi activation events carry no coupon info (only grant=preview /
+// grant=full). We have no way to tell "this user came via LAUNCHTEAM"
+// from the activation alone. The allowlist is a small, low-maintenance
+// way to keep team comps from being miscounted as paying customers.
+function isLaunchteamEmail(email) {
+  if (!email) return false;
+  const list = String(process.env.LAUNCHTEAM_EMAILS || "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  return list.includes(String(email).trim().toLowerCase());
+}
+
+function inferDefaults(tier, plan, activationEvent, email) {
+  // ZERO-TH check: is this email on the LAUNCHTEAM comp allowlist?
+  // If yes, this is a team comp regardless of what tier or activation
+  // event we see. Create a €0 LAUNCHTEAM placeholder so the existing
+  // excludedCoupons filter automatically drops the row from revenue
+  // and member counts (matches how a real LAUNCHTEAM webhook would
+  // have landed if it hadn't missed).
+  if (isLaunchteamEmail(email)) {
+    const ev = String(activationEvent || "").toLowerCase();
+    const isUnlimited = ev.includes("unlimited") || tier === "full";
+    return {
+      product_name: isUnlimited
+        ? "The Freedom Intelligence Field - Unlimited (LAUNCHTEAM comp)"
+        : "The Power Reset (LAUNCHTEAM comp)",
+      amount_cents: 0,
+      coupon_code: isUnlimited ? "LAUNCHTEAMUNLIMITED" : "LAUNCHTEAM",
+      basis: "email on LAUNCHTEAM allowlist → €0 comp placeholder",
+    };
+  }
+
   // PRIMARY signal: the Kajabi activation event itself names the product.
   // Reading this BEFORE the user's current tier means a Reset buyer who
   // later upgrades to Unlimited still gets a Reset placeholder for the
