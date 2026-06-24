@@ -187,12 +187,36 @@ export default async function handler(req, res) {
       const ctr = Number(c.ctr || 0);
       const cpc = Number(c.cpc || 0);
       const cpm = Number(c.cpm || 0);
-      // Attribute signups/revenue to this campaign by name match on UTM
-      const signups = Number(signupsByCampaign[name] || 0);
-      const revenueCents = Number(revenueByCampaign[name] || 0);
-      const funnel = funnelByCampaign[name] || { visits: 0, checkout_scrolls: 0 };
-      const visits = Number(funnel.visits || 0);
-      const checkoutScrolls = Number(funnel.checkout_scrolls || 0);
+      // Lenient attribution match. The utm_campaign string a buyer
+      // carried in their URL rarely equals the Meta campaign name byte-
+      // for-byte (the Meta name is usually longer / more descriptive).
+      // So we sum signups from any utm_campaign value that appears as
+      // a substring of the Meta campaign name (case-insensitive).
+      // Example: utm_campaign="cold" matches Meta campaign
+      // "72-Hour Power Reset | Cold | Purchase Test | Jun 2026".
+      const nameLower = String(name || "").toLowerCase();
+      const matchUtm = (map) => {
+        let sum = 0;
+        for (const utmCampaign of Object.keys(map)) {
+          if (!utmCampaign) continue;
+          if (nameLower.includes(String(utmCampaign).toLowerCase())) {
+            sum += Number(map[utmCampaign] || 0);
+          }
+        }
+        return sum;
+      };
+      const signups = matchUtm(signupsByCampaign);
+      const revenueCents = matchUtm(revenueByCampaign);
+      // Funnel lookup uses same lenient matching against utm_campaign keys
+      let visits = 0, checkoutScrolls = 0;
+      for (const utmCampaign of Object.keys(funnelByCampaign)) {
+        if (!utmCampaign) continue;
+        if (nameLower.includes(String(utmCampaign).toLowerCase())) {
+          visits           += Number(funnelByCampaign[utmCampaign].visits || 0);
+          checkoutScrolls  += Number(funnelByCampaign[utmCampaign].checkout_scrolls || 0);
+        }
+      }
+      const funnel = { visits, checkout_scrolls: checkoutScrolls };
       return {
         id,
         name,
@@ -343,8 +367,11 @@ async function fetchCampaignList({ accessToken, accountId, apiVersion }) {
 // Attribution from our own database
 // =============================================================================
 
-// Signups attributed to ads via utm_source=meta|facebook. Grouped by
-// utm_campaign so we can match Meta's campaign names side-by-side.
+// Attribution is matched lenient — we accept ANY utm_source, not just
+// "meta"/"facebook", because Geo uses utm_source=power-reset (the
+// product) rather than the channel. Anyone tagging UTMs gets to pick
+// their own convention; we just trust that if a utm is set, the signup
+// came from an attributed campaign.
 async function loadSignupsByCampaign(from, to) {
   try {
     const { rows } = await sql`
@@ -352,7 +379,7 @@ async function loadSignupsByCampaign(from, to) {
       FROM users
       WHERE created_at >= ${from}::date
         AND created_at < (${to}::date + INTERVAL '1 day')
-        AND LOWER(COALESCE(utm_source, '')) IN ('meta', 'facebook', 'fb', 'instagram', 'ig')
+        AND utm_source IS NOT NULL
         AND utm_campaign IS NOT NULL
         AND email NOT LIKE '%@shimritnativ.com'
       GROUP BY utm_campaign
@@ -383,7 +410,7 @@ async function loadRevenueByCampaign(from, to) {
         AND p.created_at < (${to}::date + INTERVAL '1 day')
         AND p.event_type IN ('order.success', 'order.subscription_payment')
         AND p.amount_cents > 0
-        AND LOWER(COALESCE(u.utm_source, '')) IN ('meta', 'facebook', 'fb', 'instagram', 'ig')
+        AND u.utm_source IS NOT NULL
         AND u.utm_campaign IS NOT NULL
         AND u.email NOT LIKE '%@shimritnativ.com'
       GROUP BY u.utm_campaign
@@ -441,7 +468,7 @@ async function loadSignupsByDay(from, to) {
       FROM users
       WHERE created_at >= ${from}::date
         AND created_at < (${to}::date + INTERVAL '1 day')
-        AND LOWER(COALESCE(utm_source, '')) IN ('meta', 'facebook', 'fb', 'instagram', 'ig')
+        AND utm_source IS NOT NULL
         AND email NOT LIKE '%@shimritnativ.com'
       GROUP BY 1
     `;
