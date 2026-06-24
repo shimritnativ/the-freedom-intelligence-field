@@ -1429,6 +1429,67 @@
     position: relative;
   }
   .composer:focus-within { border-color: var(--gold-line); }
+
+  /* Complete Day bar — appears below the composer on Reset days. Lets
+     participants opt out of waiting 24h for the next day if they're
+     ready to move forward. Quiet gold-tinted card, button on the right. */
+  .complete-day-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 10px;
+    padding: 12px 16px;
+    background: rgba(201, 168, 76, 0.08);
+    border: 1px solid var(--gold-line, rgba(201, 168, 76, 0.3));
+    border-radius: 10px;
+    font-size: 13px;
+  }
+  .complete-day-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+  }
+  .complete-day-text strong {
+    color: var(--text, #1A1612);
+    font-weight: 600;
+  }
+  .complete-day-text span {
+    color: var(--text-dim, #6B6258);
+    font-size: 12px;
+  }
+  .complete-day-btn {
+    flex-shrink: 0;
+    background: var(--bg-dark, #0E0B07);
+    color: var(--text-inverse, #F7F1E1);
+    border: none;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+    letter-spacing: 0.02em;
+  }
+  .complete-day-btn:hover:not(:disabled) {
+    background: #000;
+    transform: translateY(-1px);
+  }
+  .complete-day-btn:disabled {
+    opacity: 0.55;
+    cursor: wait;
+  }
+  @media (max-width: 640px) {
+    .complete-day-bar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+    }
+    .complete-day-btn { width: 100%; }
+  }
   textarea {
     flex: 1; background: transparent; border: none;
     color: var(--text);
@@ -5051,6 +5112,69 @@ Begin.` },
     }
   }
 
+  // Renders the "Complete Day X" affordance below the composer on the
+  // Reset days. Shows only when:
+  //   - User is preview-tier (Reset member)
+  //   - Currently on Day 1/2/3
+  //   - That day is NOT already marked complete (last_completed_day < day)
+  //   - Not the demo / unlimited path
+  // Clicking it bumps last_completed_day server-side, fires the day_completed
+  // webhook to GHL, and instantly unlocks the next day (whichever-first logic).
+  function renderCompleteDayBar() {
+    if (state.tier !== "preview") return "";
+    const day = Number(state.currentDay || 0);
+    if (![1, 2, 3].includes(day)) return "";
+    const lastCompleted = Number(state.lastCompletedDay || 0);
+    if (lastCompleted >= day) return ""; // already done
+    const labels = { 1: "State Reset", 2: "Decision & Action", 3: "Frequency Calibration" };
+    const next = day < 3 ? `Day ${day + 1} will unlock immediately.` : "You've completed the full Reset.";
+    return `
+      <div class="complete-day-bar" id="complete-day-bar">
+        <div class="complete-day-text">
+          <strong>Finished Day ${day} — ${labels[day]}?</strong>
+          <span>${next}</span>
+        </div>
+        <button type="button" class="complete-day-btn" id="complete-day-btn-${day}" data-day="${day}">Complete Day ${day} →</button>
+      </div>
+    `;
+  }
+
+  // Wire up the Complete Day button(s) — delegated so the listener
+  // survives re-renders of the chat area.
+  document.body.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".complete-day-btn");
+    if (!btn) return;
+    const day = Number(btn.dataset.day || 0);
+    if (![1, 2, 3].includes(day)) return;
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.textContent = "Saving…";
+    try {
+      const token = localStorage.getItem(STORAGE_KEY);
+      const r = await fetch("/api/complete-day", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-session-token": token,
+        },
+        body: JSON.stringify({ day }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "request_failed");
+      // Update state with fresh values from server
+      state.lastCompletedDay = data.last_completed_day;
+      state.currentDay = data.current_day;
+      state.dayUnlocks = data.day_unlocks || state.dayUnlocks;
+      // Re-render so the button disappears + sidebar reflects the new unlock
+      if (typeof render === "function") render();
+    } catch (err) {
+      console.warn("complete_day_failed", err);
+      btn.disabled = false;
+      btn.textContent = `Complete Day ${day} →`;
+      alert("Couldn't save right now. Please try again in a moment.");
+    }
+  });
+
   function renderAccountModal() {
     if (!state.accountMenuOpen) return "";
     const isFull = state.tier === "full";
@@ -5525,6 +5649,7 @@ Begin.` },
                 <button class="send-btn" id="send-btn" type="button">↑</button>
               </div>
               <div class="composer-note">Your conversation is private. No one else has access to it.</div>
+              ${renderCompleteDayBar()}
             </div>
             `}
           </main>
@@ -5743,6 +5868,7 @@ Begin.` },
                 <button class="send-btn" id="send-btn" type="button">↑</button>
               </div>
               <div class="composer-note">Your conversation is private. No one else has access to it.</div>
+              ${renderCompleteDayBar()}
             </div>
           </main>
         </div>
