@@ -1118,6 +1118,18 @@
       0%, 100% { transform: translateY(0) scale(1); }
       50% { transform: translateY(-3px) scale(1.08); }
     }
+    /* ===== Ads tab range selector =====
+       Same .preset-btn base styling; active variant uses gold fill. */
+    .ads-range-btn--active {
+      background: var(--gold) !important;
+      color: var(--dark) !important;
+      border-color: var(--gold) !important;
+    }
+    .kpi--accent {
+      background: linear-gradient(135deg, var(--gold-soft) 0%, var(--panel) 100%) !important;
+      border-color: var(--gold) !important;
+    }
+
     /* ===== Hamburger button (mobile only) =====
         Hidden by default on desktop. Visible only when the screen narrows
         below the layout breakpoint where the sidebar tabs collapse. */
@@ -1540,6 +1552,11 @@
       if (tab === "notifications") {
         if (typeof loadPushSubscribers === "function") loadPushSubscribers();
         if (typeof loadInboxNotifications === "function") loadInboxNotifications();
+      }
+      // Ads tab: fetch on first entry, refresh on subsequent entries so
+      // overnight spend changes are visible without manual refresh.
+      if (tab === "ads") {
+        if (typeof loadAdsMetrics === "function") loadAdsMetrics();
       }
       // Lazy-load the Launch Tracker iframe the first time the tab opens
       // so its 1000-line page doesn't compete with the dashboard's initial
@@ -2585,6 +2602,27 @@
           </div>
           <!-- /end Revenue tab -->
 
+          <!-- ===== ADS TAB ===== -->
+          <!-- Meta Ads metrics + UTM-attributed signups/revenue. The
+               tab body is rendered by renderAdsTab() in JS so it can
+               own its own range selector and fetch lifecycle. Empty on
+               initial load; populated on first tab entry and refreshed
+               on range change. -->
+          <div data-tab-content="ads" style="display: none;">
+            <div class="section" id="panel-ads">
+              <h2><span class="h2-eyebrow">Meta Ads</span>Live performance</h2>
+              <div id="ads-controls" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 18px;">
+                <span style="font-size: 11px; color: var(--text-dim); margin-right: 4px;">Range:</span>
+                <button class="preset-btn ads-range-btn" data-range="today">Today</button>
+                <button class="preset-btn ads-range-btn ads-range-btn--active" data-range="7d">Last 7 days</button>
+                <button class="preset-btn ads-range-btn" data-range="30d">Last 30 days</button>
+                <button class="preset-btn" id="ads-refresh-btn" style="margin-left: auto;">↻ Refresh</button>
+              </div>
+              <div id="ads-content"><div class="empty-state">Loading ad metrics…</div></div>
+            </div>
+          </div>
+          <!-- /end Ads tab -->
+
           <!-- ===== ENGAGEMENT TAB ===== -->
           <div data-tab-content="engagement" style="display: none;">
             <!-- Top Unlimited users -->
@@ -2835,6 +2873,7 @@
               <button class="tab-btn" data-tab="intelligence" onclick="switchTab('intelligence')"><span class="tab-label">Intelligence <span class="tab-sparkle">✨</span></span>${intelligenceTotal ? '<span class="tab-btn-count">' + fmtNum(intelligenceTotal) + '</span>' : ''}</button>
               <button class="tab-btn" data-tab="members" onclick="switchTab('members')">Members${totalMembers ? '<span class="tab-btn-count">' + fmtNum(totalMembers) + '</span>' : ''}</button>
               <button class="tab-btn" data-tab="revenue" onclick="switchTab('revenue')">Revenue</button>
+              <button class="tab-btn" data-tab="ads" onclick="switchTab('ads')"><span class="tab-label">Ads <span class="tab-sparkle">📣</span></span></button>
               <button class="tab-btn" data-tab="engagement" onclick="switchTab('engagement')">Engagement</button>
               <button class="tab-btn" data-tab="notifications" onclick="switchTab('notifications')">Notifications</button>
               <button class="tab-btn" data-tab="launch" onclick="switchTab('launch')"><span class="tab-label">Launch tracker <span class="tab-sparkle tab-rocket">🚀</span></span></button>
@@ -3890,6 +3929,175 @@
       }
     }
     window.runMemoryBackfill = runMemoryBackfill;
+
+    // ===== Ads tab — Meta Ads metrics + UTM attribution =====
+    // Fetches /api/admin/ads-metrics for the selected range and renders
+    // the KPI strip, per-campaign table, and (text-only) daily series.
+    // Empty/error states inline so the user always sees what's wrong.
+    let _adsRange = "7d";
+    async function loadAdsMetrics() {
+      const content = document.getElementById("ads-content");
+      if (!content) return;
+      content.innerHTML = '<div class="empty-state">Loading ad metrics…</div>';
+      const token = localStorage.getItem(STORAGE_KEY);
+      try {
+        const r = await fetch(`/api/admin/ads-metrics?range=${encodeURIComponent(_adsRange)}`, {
+          headers: { "x-session-token": token },
+        });
+        const data = await r.json();
+        if (!r.ok) {
+          if (data.error === "ads_not_configured") {
+            content.innerHTML = `
+              <div class="empty-state" style="text-align: left; padding: 20px; line-height: 1.7;">
+                <strong>Meta Ads not configured yet.</strong><br>
+                Set these in Vercel → Project Settings → Environment Variables:
+                <ul style="margin: 10px 0; padding-left: 22px;">
+                  <li><code>META_ADS_ACCESS_TOKEN</code> — long-lived token with <code>ads_read</code> scope</li>
+                  <li><code>META_ADS_ACCOUNT_ID</code> — e.g. <code>act_1234567890</code> (include the <code>act_</code> prefix)</li>
+                </ul>
+                After saving, Vercel auto-redeploys (~30s), then click Refresh.
+              </div>`;
+            return;
+          }
+          content.innerHTML = `<div class="empty-state" style="color: var(--red);">Couldn't load ads: ${escapeHtml(data.message || data.error || "unknown error")}</div>`;
+          return;
+        }
+        content.innerHTML = renderAdsContent(data);
+      } catch (err) {
+        content.innerHTML = `<div class="empty-state" style="color: var(--red);">Network error: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+    window.loadAdsMetrics = loadAdsMetrics;
+
+    function renderAdsContent(data) {
+      const t = data.totals;
+      const cur = (n) => "€" + (Number(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const num = (n) => Number(n || 0).toLocaleString("en-US");
+      const pct = (n) => (Number(n) || 0).toFixed(2) + "%";
+      const orDash = (v, formatter) => (v === null || v === undefined || isNaN(v)) ? '<span style="color: var(--text-mute);">—</span>' : formatter(v);
+
+      // KPI strip — 6 cards, the two attribution ones flagged with a
+      // gold halo since they're the decision-making numbers.
+      const kpis = `
+        <div class="kpi-grid" style="margin-bottom: 22px;">
+          <div class="kpi kpi--accent">
+            <div class="kpi-label">Cost per signup</div>
+            <div class="kpi-value">${orDash(t.cost_per_signup, cur)}</div>
+            <div class="kpi-sub">${num(t.signups_attributed)} signup${t.signups_attributed === 1 ? '' : 's'} from ads</div>
+          </div>
+          <div class="kpi kpi--accent">
+            <div class="kpi-label">ROAS</div>
+            <div class="kpi-value">${orDash(t.roas, (v) => v.toFixed(2) + "×")}</div>
+            <div class="kpi-sub">${cur((t.revenue_attributed_cents || 0) / 100)} attributed revenue</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Total spend</div>
+            <div class="kpi-value">${cur(t.spend)}</div>
+            <div class="kpi-sub">${data.range.label}</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Clicks</div>
+            <div class="kpi-value">${num(t.clicks)}</div>
+            <div class="kpi-sub">CPC ${cur(t.cpc)}</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Impressions</div>
+            <div class="kpi-value">${num(t.impressions)}</div>
+            <div class="kpi-sub">CTR ${pct(t.ctr)}</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">CPM</div>
+            <div class="kpi-value">${cur(t.cpm)}</div>
+            <div class="kpi-sub">per 1k impressions</div>
+          </div>
+        </div>`;
+
+      // Per-campaign table
+      const campaignRows = (data.campaigns || []).map((c) => {
+        const statusBadge = c.status === "ACTIVE"
+          ? '<span class="tier-badge" style="background: rgba(122, 174, 94, 0.15); color: var(--success, #2D6B3A); border-color: rgba(122, 174, 94, 0.3);">ACTIVE</span>'
+          : `<span class="tier-badge" style="background: var(--bg-warm); color: var(--text-mute); border-color: var(--border);">${escapeHtml(c.status || "")}</span>`;
+        return `
+          <tr>
+            <td data-label="Campaign">${escapeHtml(c.name)}</td>
+            <td data-label="Status">${statusBadge}</td>
+            <td data-label="Spend" class="num">${cur(c.spend)}</td>
+            <td data-label="Clicks" class="num">${num(c.clicks)}</td>
+            <td data-label="CTR" class="num">${pct(c.ctr)}</td>
+            <td data-label="CPC" class="num">${cur(c.cpc)}</td>
+            <td data-label="Signups" class="num">${num(c.signups_attributed)}</td>
+            <td data-label="Cost/signup" class="num">${orDash(c.cost_per_signup, cur)}</td>
+            <td data-label="ROAS" class="num">${orDash(c.roas, (v) => v.toFixed(2) + "×")}</td>
+          </tr>`;
+      }).join("");
+
+      const campaignTable = data.campaigns && data.campaigns.length > 0
+        ? `<div style="overflow-x: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Campaign</th>
+                  <th>Status</th>
+                  <th class="num">Spend</th>
+                  <th class="num">Clicks</th>
+                  <th class="num">CTR</th>
+                  <th class="num">CPC</th>
+                  <th class="num">Signups</th>
+                  <th class="num">Cost/signup</th>
+                  <th class="num">ROAS</th>
+                </tr>
+              </thead>
+              <tbody>${campaignRows}</tbody>
+            </table>
+          </div>`
+        : '<div class="empty-state">No campaign data for this range.</div>';
+
+      // Daily series — text bars, since adding a chart lib is overkill
+      // for this MVP. Each day shows spend + signups side by side with
+      // proportional bar widths.
+      const dailyMaxSpend = Math.max(1, ...(data.daily || []).map((d) => d.spend));
+      const dailyMaxSignups = Math.max(1, ...(data.daily || []).map((d) => d.signups));
+      const dailyRows = (data.daily || []).slice().reverse().map((d) => {
+        const spendPct = (d.spend / dailyMaxSpend) * 100;
+        const signupPct = (d.signups / dailyMaxSignups) * 100;
+        return `
+          <div style="display: grid; grid-template-columns: 90px 1fr 80px 1fr 50px; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--border); font-size: 12.5px;">
+            <span style="color: var(--text-dim);">${escapeHtml(d.date)}</span>
+            <span style="position: relative; height: 16px; background: var(--bg-warm); border-radius: 4px; overflow: hidden;">
+              <span style="position: absolute; inset: 0; width: ${spendPct}%; background: var(--gold-soft);"></span>
+              <span style="position: relative; padding-left: 6px; font-size: 11px; line-height: 16px; color: var(--text);">${cur(d.spend)}</span>
+            </span>
+            <span style="color: var(--text-mute); font-size: 11px;">${num(d.clicks)} clicks</span>
+            <span style="position: relative; height: 16px; background: var(--bg-warm); border-radius: 4px; overflow: hidden;">
+              <span style="position: absolute; inset: 0; width: ${signupPct}%; background: rgba(122, 174, 94, 0.25);"></span>
+              <span style="position: relative; padding-left: 6px; font-size: 11px; line-height: 16px; color: var(--text);">${num(d.signups)}</span>
+            </span>
+            <span style="color: var(--text-mute); font-size: 11px;">signups</span>
+          </div>`;
+      }).join("");
+
+      const dailyBlock = data.daily && data.daily.length > 0
+        ? `<h3 style="font-family: Georgia, serif; font-style: italic; font-weight: 500; font-size: 16px; margin: 24px 0 12px;">Daily breakdown</h3>${dailyRows}`
+        : '';
+
+      const accountNote = `<div style="margin-top: 18px; font-size: 11px; color: var(--text-mute); font-style: italic;">Meta account ${escapeHtml(data.meta.account_id)} · fetched ${new Date(data.meta.fetched_at).toLocaleTimeString()}</div>`;
+
+      return kpis + campaignTable + dailyBlock + accountNote;
+    }
+
+    // Range selector + refresh — delegated so listeners survive admin re-renders.
+    document.body.addEventListener("click", (e) => {
+      const rangeBtn = e.target.closest(".ads-range-btn");
+      if (rangeBtn) {
+        _adsRange = rangeBtn.dataset.range || "7d";
+        document.querySelectorAll(".ads-range-btn").forEach((b) => b.classList.toggle("ads-range-btn--active", b === rangeBtn));
+        loadAdsMetrics();
+        return;
+      }
+      if (e.target.closest("#ads-refresh-btn")) {
+        loadAdsMetrics();
+      }
+    });
 
     // Submit the manual purchase form to /api/admin/manual-purchase.
     // Used to log a ThriveCart payment that never reached our webhook,
