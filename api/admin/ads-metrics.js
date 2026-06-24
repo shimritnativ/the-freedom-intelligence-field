@@ -207,12 +207,15 @@ export default async function handler(req, res) {
       };
       const signups = matchUtm(signupsByCampaign);
       const revenueCents = matchUtm(revenueByCampaign);
-      // Funnel lookup uses same lenient matching against utm_campaign keys
-      let visits = 0, checkoutScrolls = 0;
+      // Visits = Meta's link-click count. More reliable than our own
+      // page_view tracking (no script blockers, no race conditions, no
+      // missed loads). Checkout scrolls still come from our landing
+      // page snippet since Meta has no visibility past the click.
+      const visits = clicks;
+      let checkoutScrolls = 0;
       for (const utmCampaign of Object.keys(funnelByCampaign)) {
         if (!utmCampaign) continue;
         if (nameLower.includes(String(utmCampaign).toLowerCase())) {
-          visits           += Number(funnelByCampaign[utmCampaign].visits || 0);
           checkoutScrolls  += Number(funnelByCampaign[utmCampaign].checkout_scrolls || 0);
         }
       }
