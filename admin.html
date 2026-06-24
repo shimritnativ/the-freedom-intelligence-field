@@ -4107,8 +4107,8 @@
       const pct = (n) => (Number(n) || 0).toFixed(2) + "%";
       const orDash = (v, formatter) => (v === null || v === undefined || isNaN(v)) ? '<span style="color: var(--text-mute);">—</span>' : formatter(v);
 
-      // KPI strip — 6 cards, the two attribution ones flagged with a
-      // gold halo since they're the decision-making numbers.
+      // KPI strip — gold-accented cards on top are the decision-making
+      // numbers (cost per signup, ROAS, abandoned cart).
       const kpis = `
         <div class="kpi-grid" style="margin-bottom: 22px;">
           <div class="kpi kpi--accent">
@@ -4120,6 +4120,11 @@
             <div class="kpi-label">ROAS</div>
             <div class="kpi-value">${orDash(t.roas, (v) => v.toFixed(2) + "×")}</div>
             <div class="kpi-sub">${cur((t.revenue_attributed_cents || 0) / 100)} attributed revenue</div>
+          </div>
+          <div class="kpi kpi--accent">
+            <div class="kpi-label">Abandoned cart</div>
+            <div class="kpi-value">${num(t.abandoned_cart)}</div>
+            <div class="kpi-sub">reached checkout, didn't buy</div>
           </div>
           <div class="kpi">
             <div class="kpi-label">Total spend</div>
@@ -4136,18 +4141,43 @@
             <div class="kpi-value">${num(t.impressions)}</div>
             <div class="kpi-sub">CTR ${pct(t.ctr)}</div>
           </div>
-          <div class="kpi">
-            <div class="kpi-label">CPM</div>
-            <div class="kpi-value">${cur(t.cpm)}</div>
-            <div class="kpi-sub">per 1k impressions</div>
-          </div>
         </div>`;
 
-      // Per-campaign table
+      // Funnel strip — visual representation of Visits → Scrolled → Bought
+      const funnelBlock = (t.visits > 0 || t.checkout_scrolls > 0)
+        ? `
+          <div style="background: var(--bg-warm); border: 1px solid var(--gold-line); border-radius: 12px; padding: 18px 22px; margin-bottom: 22px;">
+            <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px;">Landing page funnel</div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; align-items: end;">
+              <div style="text-align: center; padding: 14px; background: var(--panel); border-radius: 10px;">
+                <div style="font-family: Georgia, serif; font-size: 28px; font-weight: 600; color: var(--text);">${num(t.visits)}</div>
+                <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 4px;">Page visits</div>
+              </div>
+              <div style="text-align: center; padding: 14px; background: var(--panel); border-radius: 10px;">
+                <div style="font-family: Georgia, serif; font-size: 28px; font-weight: 600; color: var(--text);">${num(t.checkout_scrolls)}</div>
+                <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 4px;">Scrolled to checkout</div>
+                <div style="font-size: 11px; color: var(--gold); margin-top: 2px;">${orDash(t.scroll_to_visit_rate, pct)} of visits</div>
+              </div>
+              <div style="text-align: center; padding: 14px; background: var(--gold-soft); border: 1px solid var(--gold); border-radius: 10px;">
+                <div style="font-family: Georgia, serif; font-size: 28px; font-weight: 600; color: var(--text);">${num(t.signups_attributed)}</div>
+                <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 4px;">Purchased</div>
+                <div style="font-size: 11px; color: var(--gold); margin-top: 2px;">${orDash(t.purchase_to_scroll_rate, pct)} of scrolls</div>
+              </div>
+            </div>
+          </div>`
+        : '';
+
+      // Per-campaign table — funnel columns added when we have any
+      // landing-event data, so the table stays compact pre-tracking.
+      const showFunnelCols = (data.campaigns || []).some(c => (c.visits || 0) > 0);
       const campaignRows = (data.campaigns || []).map((c) => {
         const statusBadge = c.status === "ACTIVE"
           ? '<span class="tier-badge" style="background: rgba(122, 174, 94, 0.15); color: var(--success, #2D6B3A); border-color: rgba(122, 174, 94, 0.3);">ACTIVE</span>'
           : `<span class="tier-badge" style="background: var(--bg-warm); color: var(--text-mute); border-color: var(--border);">${escapeHtml(c.status || "")}</span>`;
+        const funnelCells = showFunnelCols ? `
+            <td data-label="Visits" class="num">${num(c.visits)}</td>
+            <td data-label="Scrolled" class="num">${num(c.checkout_scrolls)}</td>
+            <td data-label="Abandoned" class="num">${num(c.abandoned_cart)}</td>` : '';
         return `
           <tr>
             <td data-label="Campaign">${escapeHtml(c.name)}</td>
@@ -4155,12 +4185,16 @@
             <td data-label="Spend" class="num">${cur(c.spend)}</td>
             <td data-label="Clicks" class="num">${num(c.clicks)}</td>
             <td data-label="CTR" class="num">${pct(c.ctr)}</td>
-            <td data-label="CPC" class="num">${cur(c.cpc)}</td>
+            <td data-label="CPC" class="num">${cur(c.cpc)}</td>${funnelCells}
             <td data-label="Signups" class="num">${num(c.signups_attributed)}</td>
             <td data-label="Cost/signup" class="num">${orDash(c.cost_per_signup, cur)}</td>
             <td data-label="ROAS" class="num">${orDash(c.roas, (v) => v.toFixed(2) + "×")}</td>
           </tr>`;
       }).join("");
+      const funnelHeaders = showFunnelCols ? `
+                  <th class="num">Visits</th>
+                  <th class="num">Scrolled</th>
+                  <th class="num">Abandoned</th>` : '';
 
       const campaignTable = data.campaigns && data.campaigns.length > 0
         ? `<div style="overflow-x: auto;">
@@ -4172,7 +4206,7 @@
                   <th class="num">Spend</th>
                   <th class="num">Clicks</th>
                   <th class="num">CTR</th>
-                  <th class="num">CPC</th>
+                  <th class="num">CPC</th>${funnelHeaders}
                   <th class="num">Signups</th>
                   <th class="num">Cost/signup</th>
                   <th class="num">ROAS</th>
@@ -4229,7 +4263,7 @@
           </div>`;
       }
 
-      return warningBlock + kpis + campaignTable + dailyBlock + accountNote;
+      return warningBlock + kpis + funnelBlock + campaignTable + dailyBlock + accountNote;
     }
 
     // Range / refresh / dates / campaign chips — all delegated so the
