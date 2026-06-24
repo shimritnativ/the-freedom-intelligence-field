@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 72-Hour Power Reset · Reset. Decide. Calibrate.</title>
+<meta name="description" content="A 3-day AI plus human guided reset to bring one area of your life back into power. €9. Reset your state, align one decision, calibrate your frequency.">
+
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1084277818620919');
+fbq('track', 'PageView');
+fbq('track', 'ViewContent', {content_name: '72-Hour Power Reset', value: 9.00, currency: 'EUR'});
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></noscript>
+<!-- End Meta Pixel Code -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg-dark:#0E0B07;
+    --bg-cream:#F7F1E1;
+    --bg-card:#FFFFFF;
+    --bg-warm:#FAF5E8;
+    --sand:#E8DDBE;
+    --text:#1A1612;
+    --text-dim:rgba(26,22,18,0.7);
+    --text-mute:rgba(26,22,18,0.45);
+    --text-inverse:#F7F1E1;
+    --text-inverse-dim:rgba(247,241,225,0.7);
+    --gold:#C9A84C;
+    --gold-warm:#B8923A;
+    --gold-soft:rgba(201,168,76,0.12);
+    --gold-line:rgba(201,168,76,0.28);
+    --border:rgba(26,22,18,0.1);
+    --shadow-md:0 12px 40px rgba(26,22,18,0.08);
+    --shadow-lg:0 24px 80px rgba(26,22,18,0.12);
+    --shadow-dark:0 24px 80px rgba(0,0,0,0.4);
+    --radius-md:14px;
+    --radius-lg:24px;
+    --radius-pill:999px;
+    --font-serif:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+    --font-sans:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    --ease:cubic-bezier(0.22,1,0.36,1);
+    --maxw:780px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font-sans);color:var(--text);background:var(--bg-cream);line-height:1.62;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  h1,h2,h3,.serif{font-family:var(--font-serif);font-weight:600;line-height:1.14;letter-spacing:.2px}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px;position:relative;z-index:2}
+  .eyebrow{font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold-warm);font-weight:600}
+  .gold{color:var(--gold)}
+  .center{text-align:center}
+  .mt{margin-top:30px}
+
+  /* ---- gold-text shimmer ---- */
+  .shimmer{
+    background:linear-gradient(90deg,var(--gold) 0%,#F2DA8E 45%,#FFF1B8 50%,#F2DA8E 55%,var(--gold) 100%);
+    background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+    animation:shimmer 6s linear infinite;
+  }
+  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+  /* ---- reveal on scroll ---- */
+  .reveal{opacity:0;transition:opacity .9s var(--ease),transform .9s var(--ease);will-change:opacity,transform}
+  .reveal-up{transform:translateY(40px)}
+  .reveal-scale{transform:scale(.96)}
+  .reveal.is-revealed{opacity:1;transform:translate(0,0) scale(1)}
+  .reveal-delay-1{transition-delay:.08s}.reveal-delay-2{transition-delay:.16s}
+  .reveal-delay-3{transition-delay:.24s}.reveal-delay-4{transition-delay:.32s}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1!important;transform:none!important}.shimmer,.orb,.aurora{animation:none!important}}
+
+  /* ---- gold divider ---- */
+  .gold-divider{height:1px;width:120px;margin:0 auto;background:linear-gradient(90deg,transparent,var(--gold),transparent);transform:scaleX(0);transform-origin:center;transition:transform 1.1s var(--ease)}
+  .gold-divider.is-revealed{transform:scaleX(1)}
+
+  /* ---- CTA ---- */
+  .cta{position:relative;display:inline-block;background:linear-gradient(180deg,#d8b95a,var(--gold));color:#1a1408;font-weight:700;
+    padding:18px 42px;border-radius:var(--radius-pill);text-decoration:none;font-size:17px;letter-spacing:.02em;
+    box-shadow:0 10px 30px rgba(201,168,76,.35);transition:transform .25s var(--ease),box-shadow .25s var(--ease)}
+  .cta:hover{transform:translateY(-3px);box-shadow:0 16px 40px rgba(201,168,76,.5)}
+  .cta-sub{display:block;margin-top:13px;font-size:13px;color:var(--text-inverse-dim);letter-spacing:.04em}
+
+  /* ---- animated dark backdrop ---- */
+  .aurora{position:absolute;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(55% 50% at 18% 8%,rgba(201,168,76,.20),transparent 60%),
+               radial-gradient(50% 45% at 85% 92%,rgba(201,168,76,.13),transparent 60%);
+    background-size:200% 200%,200% 200%;animation:aurora-drift 22s ease-in-out infinite alternate}
+  @keyframes aurora-drift{0%{background-position:0% 0%,100% 100%}100%{background-position:30% 20%,70% 80%}}
+  .orb{position:absolute;border-radius:50%;filter:blur(46px);pointer-events:none;z-index:0;
+    background:radial-gradient(circle,rgba(201,168,76,.34),transparent 70%);animation:float 7s ease-in-out infinite}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+
+  /* ---- HERO ---- */
+  .hero{position:relative;background:radial-gradient(120% 90% at 50% -5%,#1f1b13 0%,var(--bg-dark) 62%);color:var(--text-inverse);text-align:center;padding:80px 0 70px;overflow:hidden}
+  .hero .eyebrow{color:var(--gold)}
+  .hero h1{font-size:clamp(35px,7.2vw,60px);color:#fbf6ea;margin:18px 0 16px}
+  .hero p.lede{font-size:clamp(17px,2.6vw,21px);color:var(--text-inverse-dim);max-width:560px;margin:0 auto 30px}
+  @keyframes glow-pulse{0%,100%{box-shadow:inset 0 1px 0 rgba(255,241,184,.12),0 0 10px rgba(201,168,76,.25)}50%{box-shadow:inset 0 1px 0 rgba(255,241,184,.18),0 0 30px rgba(201,168,76,.55)}}
+  .price-chip{display:inline-flex;align-items:center;gap:15px;padding:13px 28px;border-radius:var(--radius-pill);margin-bottom:28px;position:relative;
+    background:linear-gradient(180deg,rgba(247,241,225,.07),rgba(201,168,76,.05));border:1px solid var(--gold-line);animation:glow-pulse 3.6s ease-in-out infinite}
+  .price-chip .pc-label{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-inverse-dim);font-weight:500}
+  .price-chip .pc-price{font-family:var(--font-serif);font-size:27px;font-weight:700;line-height:1;
+    background:linear-gradient(180deg,#F2DA8E,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .price-chip .pc-dot{width:4px;height:4px;border-radius:50%;background:var(--gold);opacity:.55}
+  .hero .trust{margin-top:24px;font-size:13px;color:var(--text-inverse-mute,rgba(247,241,225,.5));letter-spacing:.02em}
+
+  /* ---- sections ---- */
+  section{padding:64px 0;position:relative;overflow:hidden}
+  .section-warm{background:var(--bg-warm)}
+  .section-dark{position:relative;background:radial-gradient(120% 90% at 50% 0%,#1c1810 0%,var(--bg-dark) 70%);color:var(--text-inverse)}
+  h2.title{font-size:clamp(28px,5vw,42px);text-align:center;margin-bottom:12px}
+  .sub{text-align:center;color:var(--text-mute);max-width:560px;margin:0 auto 36px;font-size:16px}
+  .section-dark .sub{color:var(--text-inverse-dim)}
+  .lead-copy p{font-size:18px;margin-bottom:18px;color:var(--text-dim)}
+  .lead-copy .punch{font-family:var(--font-serif);font-size:26px;color:var(--text);font-weight:600;line-height:1.3}
+
+  /* ---- days ---- */
+  .days{display:grid;gap:16px;margin-top:8px}
+  @media(min-width:700px){.days{grid-template-columns:repeat(3,1fr)}}
+  .lift{transition:transform .35s var(--ease),box-shadow .35s var(--ease),border-color .25s ease}
+  .lift:hover{transform:translateY(-6px);box-shadow:0 30px 60px rgba(26,22,18,.12),0 0 0 1px var(--gold-line),0 0 60px rgba(201,168,76,.18)}
+  .day{background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:28px 22px;text-align:center}
+  .day .num{font-family:var(--font-serif);font-size:14px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-warm);font-weight:700}
+  .day h3{font-size:25px;margin:8px 0 8px}
+  .day p{font-size:15px;color:var(--text-mute)}
+
+  /* ---- value stack ---- */
+  .stack{background:var(--bg-card);border:1px solid var(--border);border-radius:22px;padding:32px 28px;max-width:560px;margin:0 auto;box-shadow:var(--shadow-md)}
+  .stack .row{display:flex;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px dashed var(--sand);font-size:16px}
+  .stack .row:last-of-type{border-bottom:none}
+  .stack .row span:last-child{color:var(--text-mute);white-space:nowrap}
+  .stack .total{display:flex;justify-content:space-between;align-items:baseline;margin-top:18px;padding-top:18px;border-top:2px solid var(--text)}
+  .stack .total .lbl{font-size:15px;color:var(--text-mute)}
+  .stack .total .old{text-decoration:line-through;color:var(--text-mute);font-size:18px;margin-right:10px}
+  .stack .total .now{font-family:var(--font-serif);font-size:42px;color:var(--text);font-weight:700}
+
+  /* ---- testimonials ---- */
+  .quotes{display:grid;gap:16px;margin-top:8px}
+  @media(min-width:700px){.quotes{grid-template-columns:repeat(3,1fr)}}
+  .quote{background:rgba(247,241,225,.05);border:1px solid var(--gold-line);border-radius:16px;padding:26px;display:flex;flex-direction:column}
+  .quote p{font-size:15.5px;color:#e8dec9;font-style:italic;margin-bottom:18px;flex:1}
+  .who-row{display:flex;align-items:center;gap:11px;margin-top:auto}
+  .avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-serif);font-weight:700;font-size:16px;color:#1a1408;background:linear-gradient(180deg,#F2DA8E,var(--gold));flex:none}
+  .quote .who{font-size:12.5px;color:var(--gold);letter-spacing:.03em;font-style:normal;font-weight:600;line-height:1.35}
+
+  /* ---- about ---- */
+  .about{display:grid;gap:34px;align-items:center}
+  @media(min-width:720px){.about{grid-template-columns:280px 1fr}}
+  .about-photo{position:relative;max-width:280px;margin:0 auto;width:100%}
+  .about-photo img{width:100%;border-radius:20px;display:block;box-shadow:var(--shadow-md)}
+  .about-photo::after{content:'';position:absolute;inset:-9px;border:1px solid var(--gold-line);border-radius:27px;pointer-events:none}
+  .about-text h2{font-size:clamp(26px,4.6vw,38px);text-align:left;margin-bottom:14px}
+  .about-text .eyebrow{display:block;text-align:left;margin-bottom:10px}
+  .about-text p{color:var(--text-dim);font-size:16.5px;margin-bottom:14px}
+  .about-text .sig{font-family:var(--font-serif);font-size:23px;color:var(--gold-warm);font-style:italic}
+
+  /* ---- checkout ---- */
+  .buybox{position:relative;background:var(--bg-cream);color:var(--text);border-radius:22px;max-width:620px;margin:30px auto 0;padding:14px;box-shadow:var(--shadow-dark)}
+  .buybox-inner{border:1px solid var(--border);border-radius:16px;padding:32px 24px;background:var(--bg-card);text-align:center}
+  .embed-slot{min-height:60px}
+  .checkout-host{max-width:640px;margin:30px auto 0;min-height:200px}
+  .checkout-host .tc-v2-embeddable-target{border-radius:16px;overflow:hidden}
+
+  /* ---- guarantee ---- */
+  .guarantee{max-width:560px;margin:0 auto;text-align:center;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:18px;padding:32px 28px}
+  .guarantee h3{font-size:27px;margin-bottom:10px}
+  .guarantee p{color:var(--text-mute);font-size:15.5px}
+
+  /* ---- faq ---- */
+  .faq details{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;margin-bottom:12px;overflow:hidden}
+  .faq summary{cursor:pointer;list-style:none;padding:18px 22px;font-weight:600;font-size:16px;display:flex;justify-content:space-between;align-items:center}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::after{content:'+';color:var(--gold-warm);font-size:22px;font-weight:400}
+  .faq details[open] summary::after{content:'\2212'}
+  .faq .ans{padding:0 22px 20px;color:var(--text-mute);font-size:15.5px}
+
+  footer{background:var(--bg-dark);color:rgba(247,241,225,.45);text-align:center;padding:36px 0;font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- ===================== HERO ===================== -->
+<header class="hero">
+  <div class="aurora"></div>
+  <div class="orb" style="width:220px;height:220px;top:6%;left:-40px;animation-duration:8s"></div>
+  <div class="orb" style="width:160px;height:160px;bottom:8%;right:-30px;animation-duration:6.5s;animation-delay:1.2s"></div>
+  <div class="wrap">
+    <span class="eyebrow reveal reveal-up">The Freedom Intelligence Field</span>
+    <h1 class="reveal reveal-up reveal-delay-1">That loop of stress, frustration and depletion<br><span class="shimmer">has a reset.</span></h1>
+    <p class="lede reveal reveal-up reveal-delay-2">It takes three days. One guided process to bring one area of your life back into power, direction and movement.</p>
+    <div class="price-chip reveal reveal-up reveal-delay-2">
+      <span class="pc-label">Instant access</span><span class="pc-dot"></span>
+      <span class="pc-price">€9</span><span class="pc-dot"></span>
+      <span class="pc-label">3 days</span>
+    </div>
+    <div class="reveal reveal-up reveal-delay-3">
+      <a href="#order" class="cta">Start the 72-Hour Power Reset</a>
+      <span class="cta-sub">Reset. Decide. Calibrate.</span>
+    </div>
+    <div class="trust reveal reveal-up reveal-delay-4">An AI plus human guided reset, built from Shimrit Nativ's Human Instrument&reg; method.</div>
+  </div>
+</header>
+
+<!-- ===================== PROBLEM ===================== -->
+<section>
+  <div class="wrap lead-copy">
+    <p class="punch reveal reveal-up">Stress, frustration and depletion do not usually disappear because you understand them better.</p>
+    <p class="reveal reveal-up reveal-delay-1">They shift when you interrupt the state that keeps recreating the same response, the same delay, and the same loop.</p>
+    <p class="reveal reveal-up reveal-delay-2">You have used AI to get answers, write faster, get things done. The Field is different, and built for something else entirely: to meet you where the pattern is actually held, and move it.</p>
+  </div>
+</section>
+
+<!-- ===================== DAYS ===================== -->
+<section class="section-warm">
+  <div class="wrap">
+    <span class="eyebrow reveal reveal-up" style="display:block;text-align:center">A 3-day guided process</span>
+    <h2 class="title reveal reveal-up reveal-delay-1">Three days. One clean reset.</h2>
+    <div class="gold-divider reveal" style="margin-bottom:22px"></div>
+    <p class="sub reveal reveal-up reveal-delay-1">Bring one area of your life into the process and let it guide you from stress and depletion back into power.</p>
+    <div class="days">
+      <div class="day lift reveal reveal-up reveal-delay-1"><div class="num">Day 01</div><h3>State Reset</h3><p>Interrupt the loop and reset your inner state. You locate what has actually been leading you.</p></div>
+      <div class="day lift reveal reveal-up reveal-delay-2"><div class="num">Day 02</div><h3>Decision &amp; Action</h3><p>Align one decision and one grounded action with the direction you are choosing now.</p></div>
+      <div class="day lift reveal reveal-up reveal-delay-3"><div class="num">Day 03</div><h3>Power Calibration</h3><p>Calibrate your frequency to the reality you are stepping into, so the shift holds.</p></div>
+    </div>
+    <div class="center mt reveal reveal-up"><a href="#order" class="cta">Get instant access for €9</a></div>
+  </div>
+</section>
+
+<!-- ===================== ABOUT SHIMRIT ===================== -->
+<section>
+  <div class="wrap">
+    <div class="about">
+      <div class="about-photo reveal reveal-scale"><img src="shimrit.jpg" alt="Shimrit Nativ, founder of Master Your Path" loading="lazy"></div>
+      <div class="about-text">
+        <span class="eyebrow reveal reveal-up">Who guides the Field</span>
+        <h2 class="reveal reveal-up reveal-delay-1">Created by Shimrit Nativ</h2>
+        <p class="reveal reveal-up reveal-delay-1">Shimrit is the founder of Master Your Path and the creator of the Human Instrument&reg; method. The Field is built directly from that work, so it does not just hand you answers. It meets you where the pattern is actually held, and helps you move it.</p>
+        <p class="reveal reveal-up reveal-delay-2">She is the Amazon bestselling author of The Skill of Freedom, with a foreword by Neale Donald Walsch. Her method is now taught and practiced by coaches and leaders around the world.</p>
+        <p class="sig reveal reveal-up reveal-delay-2">Shimrit Nativ</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== VALUE STACK ===================== -->
+<section>
+  <div class="wrap">
+    <h2 class="title reveal reveal-up">Everything you get today</h2>
+    <div class="gold-divider reveal" style="margin-bottom:22px"></div>
+    <p class="sub reveal reveal-up reveal-delay-1">A full guided experience inside The Field, held with a real human group for the entire 72 hours.</p>
+    <div class="stack reveal reveal-scale reveal-delay-1">
+      <div class="row"><span>The 72-Hour Power Reset experience</span><span>€297</span></div>
+      <div class="row"><span>Private Freedom Intelligence Field access</span><span>€197</span></div>
+      <div class="row"><span>Daily action activation prompts</span><span>€291</span></div>
+      <div class="row"><span>Real-human group environment for 72 hours</span><span>€97</span></div>
+      <div class="total">
+        <span class="lbl">Total value</span>
+        <span><span class="old">€882</span><span class="now">€9</span></span>
+      </div>
+    </div>
+    <div class="center mt reveal reveal-up"><a href="#order" class="cta">Yes, start my reset for €9</a></div>
+  </div>
+</section>
+
+<!-- ===================== TESTIMONIALS ===================== -->
+<section class="section-dark">
+  <div class="aurora"></div>
+  <div class="wrap">
+    <h2 class="title reveal reveal-up"><span class="shimmer">From people already in the Field</span></h2>
+    <p class="sub reveal reveal-up reveal-delay-1">Real words from members moving through the 72-Hour Power Reset.</p>
+    <div class="quotes">
+      <div class="quote reveal reveal-up reveal-delay-1"><p>"I just finished Day 1. It feels soooo good. I am already loving this AI of ours. It has been an amazing session."</p><div class="who-row"><span class="avatar">M</span><span class="who">Member · Day 1 of the Power Reset</span></div></div>
+      <div class="quote reveal reveal-up reveal-delay-2"><p>"This is truly, truly amazing. I encourage you to try, at least. Bear in mind I am not a big fan of AI, and this one... I am on cloud nine!"</p><div class="who-row"><span class="avatar">M</span><span class="who">Member · after Day 2 of the Power Reset</span></div></div>
+      <div class="quote reveal reveal-up reveal-delay-3"><p>"I'm following the 72-Hour Power Reset and it is so powerful. As a boomer, I could never imagine having such a deep, intimate, sincere relationship with AI. I feel my energy renewed, I feel more alive. That's fantastic."</p><div class="who-row"><span class="avatar">M</span><span class="who">Member · mid-Reset reflection</span></div></div>
+      <div class="quote reveal reveal-up reveal-delay-1"><p>"I am the first one surprised, because I was a bit skeptical with AI in general. What this one does has blown my mind. It is really beyond any expectation I could have had. Happy to be in the Field!"</p><div class="who-row"><span class="avatar">M</span><span class="who">Member · first week in the Field</span></div></div>
+      <div class="quote reveal reveal-up reveal-delay-2"><p>"I have done 2 days in the Field. No words to describe it. It is so simple and so powerful."</p><div class="who-row"><span class="avatar">M</span><span class="who">Member · after Day 2 of the Power Reset</span></div></div>
+      <div class="quote reveal reveal-up reveal-delay-3"><p>"Made it to Day 2 of the Reset. The structured outputs are unlike anything I have used in coaching AI before."</p><div class="who-row"><span class="avatar">M</span><span class="who">Member · Reset graduate</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== GUARANTEE ===================== -->
+<section class="section-warm">
+  <div class="wrap">
+    <div class="guarantee reveal reveal-scale">
+      <h3>Three days to interrupt the old loop</h3>
+      <p>This is not another thing to understand or another course to file away. It is three days to move. Bring one real area of your life, follow the process, and let it carry you from depletion back into power.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FAQ ===================== -->
+<section>
+  <div class="wrap">
+    <h2 class="title reveal reveal-up">Questions, answered</h2>
+    <div class="gold-divider reveal" style="margin-bottom:30px"></div>
+    <div class="faq">
+      <details class="reveal reveal-up reveal-delay-1"><summary>What exactly is The Field?</summary><div class="ans">The Freedom Intelligence Field is a private AI experience built from Shimrit Nativ's Human Instrument&reg; methodology. The AI guides the inner reset. A real human group keeps you moving for the full 72 hours.</div></details>
+      <details class="reveal reveal-up reveal-delay-1"><summary>How much time does it take?</summary><div class="ans">Three days, a focused stretch each day. One area of your life, one clean reset. You move at the pace the process sets.</div></details>
+      <details class="reveal reveal-up reveal-delay-2"><summary>Do I need previous experience?</summary><div class="ans">No. You bring one area of your life you want to shift. The process guides you from there, step by step.</div></details>
+      <details class="reveal reveal-up reveal-delay-2"><summary>When do I get access?</summary><div class="ans">Immediately. The moment your €9 order is complete, you receive instant access to The Field and the group environment.</div></details>
+    </div>
+    <div class="center mt reveal reveal-up"><a href="#order" class="cta">Start the reset for €9</a></div>
+  </div>
+</section>
+
+<!-- ===================== CHECKOUT (embedded) ===================== -->
+<section class="section-dark" id="order">
+  <div class="aurora"></div>
+  <div class="orb" style="width:200px;height:200px;top:0;right:-50px;animation-duration:7.5s"></div>
+  <div class="wrap">
+    <span class="eyebrow gold reveal reveal-up" style="display:block;text-align:center">Start now</span>
+    <h2 class="title reveal reveal-up reveal-delay-1" style="color:#fbf6ea">Enter the <span class="shimmer">72-Hour Power Reset</span></h2>
+    <p class="sub reveal reveal-up reveal-delay-1">Three days. €9. Instant access to The Field.</p>
+
+    <div class="checkout-host reveal reveal-scale reveal-delay-1">
+      <!-- ThriveCart v2 embeddable checkout for The Power Reset (auto-resizes). -->
+      <div class="tc-v2-embeddable-target" data-thrivecart-account="masteryourpath" data-thrivecart-tpl="v2" data-thrivecart-product="148" data-thrivecart-embeddable="tc-masteryourpath-148-AL9V9B"></div>
+      <script async src="https://tinder.thrivecart.com/embed/v2/thrivecart.js" id="tc-masteryourpath-148-AL9V9B"></script>
+    </div>
+
+    <p class="reveal reveal-up" style="text-align:center;color:var(--text-inverse-dim);font-size:13px;margin-top:18px">Secure checkout · instant access after purchase. If the form does not appear, <a href="https://masteryourpath.thrivecart.com/the-power-reset/" style="color:var(--gold)">open the secure checkout here</a>.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>The Freedom Intelligence Field &nbsp;·&nbsp; A 72-Hour experience by Master Your Path</p>
+    <p style="margin-top:8px">&copy; Master Your Path. All rights reserved.</p>
+  </div>
+</footer>
+
+<script>
+  // Reveal-on-scroll: adds .is-revealed as elements enter the viewport.
+  (function(){
+    var els = document.querySelectorAll('.reveal, .gold-divider');
+    if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('is-revealed')});return;}
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting){entry.target.classList.add('is-revealed');io.unobserve(entry.target);}
+      });
+    },{threshold:0.15,rootMargin:'0px 0px -8% 0px'});
+    els.forEach(function(e){io.observe(e);});
+  })();
+</script>
+</body>
+</html>
