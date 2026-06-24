@@ -150,6 +150,39 @@ export default async function handler(req, res) {
           AND created_at > NOW() - INTERVAL '7 days'
       `;
     }
+
+    // UTM capture. The marketing site appends utm_* params from the
+    // visitor's localStorage onto the ThriveCart checkout URL as
+    // passthrough_utm_source / passthrough_utm_campaign / etc. ThriveCart
+    // forwards anything starting with passthrough_ in the webhook
+    // payload, so we read them here and persist onto the user row.
+    // Done only on order.success (the first paid event) AND only if the
+    // user doesn't already have a captured UTM — first-touch attribution.
+    if (event === "order.success" && email) {
+      const utmSource = String(body.passthrough_utm_source || body.utm_source || "").slice(0, 200) || null;
+      const utmMedium = String(body.passthrough_utm_medium || body.utm_medium || "").slice(0, 200) || null;
+      const utmCampaign = String(body.passthrough_utm_campaign || body.utm_campaign || "").slice(0, 200) || null;
+      const utmContent = String(body.passthrough_utm_content || body.utm_content || "").slice(0, 200) || null;
+      const utmTerm = String(body.passthrough_utm_term || body.utm_term || "").slice(0, 200) || null;
+      if (utmSource || utmMedium || utmCampaign || utmContent || utmTerm) {
+        try {
+          await sql`
+            UPDATE users
+            SET utm_source     = COALESCE(utm_source, ${utmSource}),
+                utm_medium     = COALESCE(utm_medium, ${utmMedium}),
+                utm_campaign   = COALESCE(utm_campaign, ${utmCampaign}),
+                utm_content    = COALESCE(utm_content, ${utmContent}),
+                utm_term       = COALESCE(utm_term, ${utmTerm}),
+                updated_at     = NOW()
+            WHERE LOWER(email) = ${email}
+          `;
+        } catch (utmErr) {
+          // Migration 011 may not be run yet — log + continue so the
+          // webhook still succeeds.
+          console.warn("utm_capture_failed", { message: utmErr?.message });
+        }
+      }
+    }
     // Backfill display_name for users created via Kajabi (email only).
     // Updates when display_name is empty OR looks like a Kajabi-derived
     // email-prefix placeholder (no spaces, looks like the email prefix).
