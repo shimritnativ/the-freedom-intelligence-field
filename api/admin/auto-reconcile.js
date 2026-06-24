@@ -95,6 +95,16 @@ export default async function handler(req, res) {
         SELECT
           LOWER((we.payload::jsonb->>'member_email')) AS email,
           we.event_type,
+          -- _product is set by the Kajabi handler when the offer URL
+          -- includes ?product=reset|activation|unlimited. Falls back to
+          -- whatever's after the second colon in event_type (e.g.
+          -- activate:preview:reset -> reset), then to NULL for legacy
+          -- events with no product tag.
+          COALESCE(
+            NULLIF(LOWER(we.payload::jsonb->>'_product'), ''),
+            NULLIF(LOWER(SPLIT_PART(we.event_type, ':', 3)), ''),
+            NULL
+          ) AS product,
           we.processed_at
         FROM webhook_events we
         WHERE we.source = 'kajabi'
@@ -103,20 +113,23 @@ export default async function handler(req, res) {
           AND we.processed_at < NOW() - ${grace}::interval
       ),
       latest_per_user AS (
-        -- One row per (email, event_type) so a user who activated both
-        -- Reset AND Unlimited within the lookback window gets BOTH
-        -- considered as separate gaps. Previously this was DISTINCT ON
-        -- email which collapsed multi-product buyers into a single row
-        -- and hid the earlier activation (Antonella: Reset + Unlimited
-        -- both missed → only Unlimited placeholder was created).
-        SELECT DISTINCT ON (email, event_type)
-          email, event_type, processed_at
+        -- One row per (email, product) so a user who bought Reset AND
+        -- Activation in one checkout gets TWO placeholders. Previously
+        -- this keyed on (email, event_type), which collapsed identical
+        -- event_types like two "activate:preview" rows into one and lost
+        -- the second product entirely (Kaija: Reset + Activation both
+        -- missed → only Reset placeholder was created at €4.50, hiding
+        -- the €16.99 Activation purchase). When product is NULL (legacy
+        -- URLs without ?product=), falls back to event_type for dedup.
+        SELECT DISTINCT ON (email, COALESCE(product, event_type))
+          email, event_type, product, processed_at
         FROM activations
-        ORDER BY email, event_type, processed_at DESC
+        ORDER BY email, COALESCE(product, event_type), processed_at DESC
       )
       SELECT
         lpu.email,
         lpu.event_type AS activation_event,
+        lpu.product AS product_tag,
         lpu.processed_at AS activated_at,
         u.id AS user_id,
         u.tier::text AS tier,
@@ -124,23 +137,31 @@ export default async function handler(req, res) {
       FROM latest_per_user lpu
       JOIN users u ON LOWER(u.email) = lpu.email
       WHERE NOT EXISTS (
-        -- No ThriveCart purchase landed for this email near the
-        -- activation moment — webhook genuinely missed.
+        -- No real purchase exists for this email + product near the
+        -- activation moment. We match on the inferred product name so
+        -- buying Reset + Activation in one checkout doesn't suppress
+        -- the second placeholder just because the first product's
+        -- ThriveCart row landed. When product is NULL (legacy URLs),
+        -- fall back to "any purchase in the window" to preserve the
+        -- old behavior and avoid duplicates.
         SELECT 1 FROM purchases p
         WHERE LOWER(p.email) = lpu.email
           AND p.created_at BETWEEN lpu.processed_at - INTERVAL '2 hours'
                                AND lpu.processed_at + INTERVAL '2 hours'
+          AND (
+            lpu.product IS NULL
+            OR LOWER(p.product_name) LIKE '%' || lpu.product || '%'
+          )
       )
       AND NOT EXISTS (
         -- We haven't already auto-created a placeholder for THIS
-        -- specific activation event in the window. Scoped on
-        -- activation_event in raw_payload so a Reset placeholder
-        -- doesn't dedup the matching Unlimited placeholder for the
-        -- same user (and vice versa).
+        -- specific (email, product) in the window. Keyed on product
+        -- when present, falls back to activation_event for legacy.
         SELECT 1 FROM purchases p
         WHERE LOWER(p.email) = lpu.email
           AND (p.raw_payload->>'auto_created')::boolean = true
-          AND p.raw_payload->>'activation_event' = lpu.event_type
+          AND COALESCE(p.raw_payload->>'product_tag', p.raw_payload->>'activation_event')
+              = COALESCE(lpu.product, lpu.event_type)
           AND p.created_at > lpu.processed_at - INTERVAL '1 day'
       )
     `;
@@ -155,13 +176,18 @@ export default async function handler(req, res) {
 
     for (const g of gaps) {
       try {
-        const defaults = inferDefaults(g.tier, g.subscription_plan, g.activation_event, g.email);
-        const syntheticId = `AUTO-${g.user_id}-${Math.floor(new Date(g.activated_at).getTime() / 1000)}`;
+        const defaults = inferDefaults(g.tier, g.subscription_plan, g.activation_event, g.email, g.product_tag);
+        // Include product tag in the synthetic id so the same email
+        // activating Reset and Activation in the same second produces
+        // two distinct purchase rows (ON CONFLICT was collapsing them).
+        const productSuffix = g.product_tag ? `-${g.product_tag}` : "";
+        const syntheticId = `AUTO-${g.user_id}-${Math.floor(new Date(g.activated_at).getTime() / 1000)}${productSuffix}`;
 
         const raw = {
           auto_created: true,
           source: "auto_reconcile_cron",
           activation_event: g.activation_event,
+          product_tag: g.product_tag || null,
           activated_at: g.activated_at,
           needs_verification: true,
           default_basis: defaults.basis,
@@ -272,7 +298,15 @@ function isLaunchteamEmail(email) {
   return list.includes(String(email).trim().toLowerCase());
 }
 
-function inferDefaults(tier, plan, activationEvent, email) {
+function inferDefaults(tier, plan, activationEvent, email, productTag) {
+  // STRONGEST SIGNAL: the explicit product tag from the Kajabi webhook
+  // URL (?product=reset|activation|unlimited). Set by the admin in
+  // Kajabi offer settings. When present, this is authoritative and
+  // overrides every other heuristic. NULL for legacy URLs that don't
+  // include ?product= — those fall through to the event_type and tier
+  // inference below.
+  const tag = String(productTag || "").toLowerCase().trim();
+
   // ZERO-TH check: is this email on the LAUNCHTEAM comp allowlist?
   // If yes, this is a team comp regardless of what tier or activation
   // event we see. Create a €0 LAUNCHTEAM placeholder so the existing
@@ -281,7 +315,7 @@ function inferDefaults(tier, plan, activationEvent, email) {
   // have landed if it hadn't missed).
   if (isLaunchteamEmail(email)) {
     const ev = String(activationEvent || "").toLowerCase();
-    const isUnlimited = ev.includes("unlimited") || tier === "full";
+    const isUnlimited = tag === "unlimited" || ev.includes("unlimited") || tier === "full";
     return {
       product_name: isUnlimited
         ? "The Freedom Intelligence Field - Unlimited (LAUNCHTEAM comp)"
@@ -292,7 +326,42 @@ function inferDefaults(tier, plan, activationEvent, email) {
     };
   }
 
-  // PRIMARY signal: the Kajabi activation event itself names the product.
+  // If the product tag is set, trust it 100%. This is the path we want
+  // every new sale to take going forward (after Kajabi URLs updated).
+  if (tag === "reset" || tag === "power-reset" || tag === "power_reset") {
+    return {
+      product_name: "The Power Reset",
+      amount_cents: 900,
+      coupon_code: null,
+      basis: "Kajabi URL tagged product=reset → €9.00 gross (full price, no coupon)",
+    };
+  }
+  if (tag === "activation" || tag === "power-activation" || tag === "power_activation") {
+    return {
+      product_name: "The Power Activation",
+      amount_cents: 1699,
+      coupon_code: null,
+      basis: "Kajabi URL tagged product=activation → €16.99 gross",
+    };
+  }
+  if (tag === "unlimited" || tag === "field-unlimited") {
+    if (plan === "yearly") {
+      return {
+        product_name: "The Freedom Intelligence Field - Unlimited (Yearly)",
+        amount_cents: 77700,
+        coupon_code: null,
+        basis: "Kajabi URL tagged product=unlimited + plan=yearly → €777 gross",
+      };
+    }
+    return {
+      product_name: "The Freedom Intelligence Field - Unlimited (Monthly)",
+      amount_cents: 7700,
+      coupon_code: null,
+      basis: "Kajabi URL tagged product=unlimited + plan=monthly → €77 gross",
+    };
+  }
+
+  // LEGACY FALLBACK: the Kajabi activation event itself names the product.
   // Reading this BEFORE the user's current tier means a Reset buyer who
   // later upgrades to Unlimited still gets a Reset placeholder for the
   // Reset activation (and a separate Unlimited placeholder for the
