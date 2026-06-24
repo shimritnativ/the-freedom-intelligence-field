@@ -4082,7 +4082,20 @@
 
       const accountNote = `<div style="margin-top: 18px; font-size: 11px; color: var(--text-mute); font-style: italic;">Meta account ${escapeHtml(data.meta.account_id)} · fetched ${new Date(data.meta.fetched_at).toLocaleTimeString()}</div>`;
 
-      return kpis + campaignTable + dailyBlock + accountNote;
+      // Soft warning if some Meta API calls failed but others worked.
+      let warningBlock = '';
+      if (Array.isArray(data.partial_errors) && data.partial_errors.length > 0) {
+        const items = data.partial_errors.map(e =>
+          `<li><strong>${escapeHtml(e.label)}:</strong> ${escapeHtml(e.message || 'unknown')}</li>`
+        ).join('');
+        warningBlock = `
+          <div class="empty-state" style="text-align: left; padding: 14px 18px; background: rgba(217, 163, 90, 0.08); border-color: rgba(217, 163, 90, 0.3); color: var(--text); font-size: 12.5px; line-height: 1.6; margin-bottom: 18px;">
+            <strong style="color: var(--warning, #9A5A10);">Heads up:</strong> some Meta API calls didn't return.
+            <ul style="margin: 8px 0 0; padding-left: 22px;">${items}</ul>
+          </div>`;
+      }
+
+      return warningBlock + kpis + campaignTable + dailyBlock + accountNote;
     }
 
     // Range selector + refresh — delegated so listeners survive admin re-renders.
