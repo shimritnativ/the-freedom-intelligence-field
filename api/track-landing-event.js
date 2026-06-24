@@ -66,7 +66,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    const body = req.body || {};
+    // The tracking snippet sends the body as text/plain (a "simple"
+    // CORS content type that skips preflight). Vercel only auto-parses
+    // JSON when Content-Type is application/json, so we need to do it
+    // ourselves here. Accept either shape for resilience.
+    let body = req.body;
+    if (typeof body === "string") {
+      try { body = JSON.parse(body); } catch { body = {}; }
+    }
+    body = body || {};
 
     // Validate the bare minimum. Everything else is optional.
     const eventType = String(body.event_type || "").trim().slice(0, 60);
