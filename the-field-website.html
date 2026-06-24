@@ -2881,7 +2881,7 @@
       <a href="#how-it-works" class="nav-link">How It Works</a>
       <a href="#differentiators" class="nav-link">Compare</a>
       <a href="#pricing" class="nav-link">Pricing</a>
-      <a href="#start" class="nav-cta">Enter The Field →</a>
+      <a href="https://thefieldai.app/" class="nav-cta">Enter The Field →</a>
     </div>
   </div>
 </nav>
@@ -4142,6 +4142,92 @@
         ticking = true;
       }
     });
+  })();
+
+  // ===== UTM capture + forwarding =====
+  // On every landing, snapshot any utm_* params from the URL into
+  // localStorage. On every CTA click that leads to ThriveCart checkout,
+  // append the saved UTMs as passthrough params so ThriveCart forwards
+  // them in the webhook payload (we then write them onto the user row).
+  //
+  // localStorage persistence is critical: ads land users on the
+  // marketing page → they read, scroll, eventually click "Start the
+  // Reset" → that click happens minutes later and may navigate away
+  // from the landing URL. Without storage, the UTMs would be gone by
+  // the time we hand off to checkout.
+  (function setupUtmTracking() {
+    const UTM_KEY = 'tfif_utm_v1';
+    const UTM_FIELDS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+
+    // 1. Read UTMs from current URL.
+    function readUtmsFromUrl() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const out = {};
+        let hasAny = false;
+        UTM_FIELDS.forEach((k) => {
+          const v = params.get(k);
+          if (v) { out[k] = v.slice(0, 200); hasAny = true; }
+        });
+        return hasAny ? out : null;
+      } catch { return null; }
+    }
+
+    // 2. Save / load from localStorage. First-touch attribution: we only
+    //    overwrite if the new URL ALSO has utm params (otherwise direct
+    //    visits would wipe the original ad referrer).
+    function saveUtms(utms) {
+      try {
+        const payload = {
+          ...utms,
+          referrer: document.referrer || '',
+          captured_at: new Date().toISOString(),
+        };
+        localStorage.setItem(UTM_KEY, JSON.stringify(payload));
+      } catch {}
+    }
+    function loadUtms() {
+      try {
+        const raw = localStorage.getItem(UTM_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch { return null; }
+    }
+
+    // Initial capture
+    const fresh = readUtmsFromUrl();
+    if (fresh) saveUtms(fresh);
+
+    // 3. Append UTMs to every ThriveCart CTA link as ThriveCart
+    //    passthrough params (passthrough_utm_source, etc.). ThriveCart
+    //    auto-forwards anything starting with passthrough_ in the
+    //    webhook payload.
+    function decorateCheckoutLinks() {
+      const stored = loadUtms();
+      if (!stored) return;
+      const links = document.querySelectorAll('a[href*="thrivecart.com"]');
+      links.forEach((a) => {
+        try {
+          const url = new URL(a.href);
+          UTM_FIELDS.forEach((k) => {
+            if (stored[k] && !url.searchParams.has('passthrough_' + k)) {
+              url.searchParams.set('passthrough_' + k, stored[k]);
+            }
+          });
+          // Also pass the raw utm_* so they show in the buyer's URL bar
+          // (some teams use this for their own internal reporting).
+          UTM_FIELDS.forEach((k) => {
+            if (stored[k] && !url.searchParams.has(k)) {
+              url.searchParams.set(k, stored[k]);
+            }
+          });
+          a.href = url.toString();
+        } catch {}
+      });
+    }
+    decorateCheckoutLinks();
+    // Re-decorate after any DOM mutation (e.g., dynamic CTAs added by
+    // animations). Cheap to re-run since it's idempotent.
+    setTimeout(decorateCheckoutLinks, 1500);
   })();
 
   // ===== Business inquiry modal (Kajabi embed) =====
