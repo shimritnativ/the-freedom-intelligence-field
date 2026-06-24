@@ -132,10 +132,13 @@ export default async function handler(req, res) {
 
     // Pull our own attribution data — signups and purchases tagged with
     // utm_source=meta (or facebook), with optional per-campaign matching.
-    const [signupsByCampaign, revenueByCampaign, signupsByDay] = await Promise.all([
+    // Plus landing-page funnel events (visits + checkout scrolls) for
+    // the abandoned-cart picture.
+    const [signupsByCampaign, revenueByCampaign, signupsByDay, funnelByCampaign] = await Promise.all([
       loadSignupsByCampaign(from, to),
       loadRevenueByCampaign(from, to),
       loadSignupsByDay(from, to),
+      loadFunnelByCampaign(from, to),
     ]);
 
     // Build a campaign-name → totals map. Both inputs can be null if
@@ -182,6 +185,9 @@ export default async function handler(req, res) {
       // Attribute signups/revenue to this campaign by name match on UTM
       const signups = Number(signupsByCampaign[name] || 0);
       const revenueCents = Number(revenueByCampaign[name] || 0);
+      const funnel = funnelByCampaign[name] || { visits: 0, checkout_scrolls: 0 };
+      const visits = Number(funnel.visits || 0);
+      const checkoutScrolls = Number(funnel.checkout_scrolls || 0);
       return {
         id,
         name,
@@ -196,6 +202,12 @@ export default async function handler(req, res) {
         cost_per_signup: signups > 0 ? spend / signups : null,
         revenue_attributed_cents: revenueCents,
         roas: spend > 0 ? (revenueCents / 100) / spend : null,
+        // Landing funnel — visits → checkout_scroll → bought
+        visits,
+        checkout_scrolls: checkoutScrolls,
+        scroll_to_visit_rate: visits > 0 ? (checkoutScrolls / visits) * 100 : null,
+        purchase_to_scroll_rate: checkoutScrolls > 0 ? (signups / checkoutScrolls) * 100 : null,
+        abandoned_cart: Math.max(0, checkoutScrolls - signups),
       };
     });
 
@@ -206,6 +218,9 @@ export default async function handler(req, res) {
     const totalClicks = campaigns.reduce((s, c) => s + c.clicks, 0);
     const totalSignups = campaigns.reduce((s, c) => s + c.signups_attributed, 0);
     const totalRevenueCents = campaigns.reduce((s, c) => s + c.revenue_attributed_cents, 0);
+
+    const totalVisits = campaigns.reduce((s, c) => s + (c.visits || 0), 0);
+    const totalCheckoutScrolls = campaigns.reduce((s, c) => s + (c.checkout_scrolls || 0), 0);
 
     const totals = {
       spend: totalSpend,
@@ -218,6 +233,12 @@ export default async function handler(req, res) {
       cost_per_signup: totalSignups > 0 ? totalSpend / totalSignups : null,
       revenue_attributed_cents: totalRevenueCents,
       roas: totalSpend > 0 ? (totalRevenueCents / 100) / totalSpend : null,
+      // Funnel totals
+      visits: totalVisits,
+      checkout_scrolls: totalCheckoutScrolls,
+      abandoned_cart: Math.max(0, totalCheckoutScrolls - totalSignups),
+      scroll_to_visit_rate: totalVisits > 0 ? (totalCheckoutScrolls / totalVisits) * 100 : null,
+      purchase_to_scroll_rate: totalCheckoutScrolls > 0 ? (totalSignups / totalCheckoutScrolls) * 100 : null,
     };
 
     // Daily time series — merge Meta spend with our signups for the
@@ -361,6 +382,40 @@ async function loadRevenueByCampaign(from, to) {
     return map;
   } catch (e) {
     console.warn("revenue_by_campaign_failed", e?.message);
+    return {};
+  }
+}
+
+// Landing-page funnel events grouped by utm_campaign. Returns a map
+// { campaignName: { visits, checkout_scrolls } } for joining with
+// Meta campaign data. Events come from the public tracking endpoint
+// /api/track-landing-event (called by the GHL landing page snippet).
+async function loadFunnelByCampaign(from, to) {
+  try {
+    const { rows } = await sql`
+      SELECT utm_campaign,
+             COUNT(*) FILTER (WHERE event_type = 'page_view')::int        AS visits,
+             COUNT(*) FILTER (WHERE event_type = 'checkout_scroll')::int  AS checkout_scrolls
+      FROM landing_events
+      WHERE created_at >= ${from}::date
+        AND created_at < (${to}::date + INTERVAL '1 day')
+        AND utm_campaign IS NOT NULL
+      GROUP BY utm_campaign
+    `;
+    const map = {};
+    for (const r of rows) {
+      if (r.utm_campaign) {
+        map[r.utm_campaign] = {
+          visits: Number(r.visits),
+          checkout_scrolls: Number(r.checkout_scrolls),
+        };
+      }
+    }
+    return map;
+  } catch (e) {
+    // landing_events table may not exist yet (migration 012 not run).
+    // Return empty map so the rest of the dashboard still loads.
+    console.warn("funnel_by_campaign_failed", e?.message);
     return {};
   }
 }
