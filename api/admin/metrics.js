@@ -425,10 +425,21 @@ export default async function handler(req, res) {
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
       `),
-      // 11. Revenue by product (Field products only)
+      // 11. Revenue by product (Field products only, canonicalized).
+      // Collapses "The Power Reset - Ads", "(One-Time Payment)" etc into
+      // a single "The Power Reset" row. Same for Activation variants.
+      // Keeps Monthly and Yearly Unlimited as separate lines because
+      // they're meaningfully different prices.
       safeQuery(sql`
         SELECT
-          COALESCE(product_name, product_id, 'unknown') AS product,
+          CASE
+            WHEN product_name ILIKE '%Yearly%' THEN 'The Freedom Intelligence Field - Unlimited (Yearly)'
+            WHEN product_name ILIKE '%Monthly%' THEN 'The Freedom Intelligence Field - Unlimited (Monthly)'
+            WHEN product_name ILIKE '%Freedom Intelligence Field%' THEN 'The Freedom Intelligence Field - Unlimited'
+            WHEN product_name ILIKE '%Power Activation%' THEN 'The Power Activation'
+            WHEN product_name ILIKE '%Power Reset%' THEN 'The Power Reset'
+            ELSE COALESCE(product_name, 'unknown')
+          END AS product,
           COUNT(*)::int AS orders,
           COALESCE(SUM(amount_cents), 0)::bigint AS revenue_cents
         FROM purchases
@@ -493,10 +504,19 @@ export default async function handler(req, res) {
         GROUP BY day
         ORDER BY day DESC
       `),
-      // 15. Product × coupon cross-tab (Field products only)
+      // 15. Product × coupon cross-tab (Field products only, canonicalized
+      // same way as query 11 so the breakdown is consistent across the
+      // dashboard).
       safeQuery(sql`
         SELECT
-          COALESCE(product_name, product_id, 'unknown') AS product,
+          CASE
+            WHEN product_name ILIKE '%Yearly%' THEN 'The Freedom Intelligence Field - Unlimited (Yearly)'
+            WHEN product_name ILIKE '%Monthly%' THEN 'The Freedom Intelligence Field - Unlimited (Monthly)'
+            WHEN product_name ILIKE '%Freedom Intelligence Field%' THEN 'The Freedom Intelligence Field - Unlimited'
+            WHEN product_name ILIKE '%Power Activation%' THEN 'The Power Activation'
+            WHEN product_name ILIKE '%Power Reset%' THEN 'The Power Reset'
+            ELSE COALESCE(product_name, 'unknown')
+          END AS product,
           COALESCE(coupon_code, '(full price)') AS coupon,
           COUNT(*)::int AS orders,
           COALESCE(SUM(amount_cents), 0)::bigint AS revenue_cents,
