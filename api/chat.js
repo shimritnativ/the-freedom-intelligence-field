@@ -28,6 +28,8 @@ import {
 } from "../lib/db.js";
 import { maybeRecordDayCompletion } from "../lib/dayExtraction.js";
 import { loadUserMemory, maybeRecordDurableFacts } from "../lib/memory.js";
+import { sendGhlEventInBackground } from "../lib/ghlWebhook.js";
+import { sql } from "@vercel/postgres";
 
 // ============================================================================
 // Constants
@@ -239,6 +241,33 @@ This override applies only to the upgrade invitation and button at the end of th
       systemPromptHash: systemHash,
     });
 
+    // Fire day_started GHL event the FIRST time this participant sends
+    // a user message on this Reset day. Detected by counting prior user
+    // messages on this day — if this one is the only one (count = 1),
+    // it's their first. Background-fired so chat reply isn't blocked.
+    if (user.tier === "preview" && day && day >= 1 && day <= 3) {
+      try {
+        const { rows: priorCountRows } = await sql`
+          SELECT COUNT(*)::int AS n
+          FROM messages
+          WHERE user_id = ${user.id}
+            AND day_at_send = ${day}
+            AND role = 'user'
+        `;
+        if (Number(priorCountRows[0]?.n || 0) === 1) {
+          sendGhlEventInBackground({
+            event: "day_started",
+            email: user.email,
+            data: { day },
+          });
+        }
+      } catch (e) {
+        // Don't block on detection failure — the worst case is we
+        // miss a single reminder trigger, not a broken chat reply.
+        console.warn("day_started_detect_failed", { message: e?.message });
+      }
+    }
+
     // ----- Build Anthropic request -----
     // Sanitize the history so the request is always valid for Anthropic:
     //   1. Drop any message with empty/whitespace content — a single empty
@@ -294,13 +323,39 @@ This override applies only to the upgrade invitation and button at the end of th
     // a day_completions row. Never throws — chat reply always reaches the
     // user. Adds ~1-2s latency ONLY on the final message of a day's session;
     // the heuristic skips every other message for free.
-    await maybeRecordDayCompletion({
+    const completionRow = await maybeRecordDayCompletion({
       assistantMessage: replyText,
       day,
       userId: user.id,
       sessionId: session.id,
       messageId: assistantRow ? assistantRow.id : null,
     });
+
+    // If the auto-detector just recorded a fresh completion, fire the
+    // day_completed GHL event so workflows can react. The Complete Day
+    // button fires the same event from its own endpoint — either path
+    // triggers exactly one event per (user, day) because completionRow
+    // is null when the row already existed (ON CONFLICT DO NOTHING).
+    if (completionRow && user.tier === "preview") {
+      // Also bump last_completed_day so the next-day unlock takes
+      // effect immediately. The Complete Day endpoint does the same;
+      // here we mirror it for auto-detected completions.
+      try {
+        await sql`
+          UPDATE users
+          SET last_completed_day = GREATEST(COALESCE(last_completed_day, 0), ${day}),
+              updated_at = NOW()
+          WHERE id = ${user.id}
+        `;
+      } catch (e) {
+        console.warn("auto_complete_bump_failed", { message: e?.message });
+      }
+      sendGhlEventInBackground({
+        event: "day_completed",
+        email: user.email,
+        data: { day, completed_via: "auto_detected" },
+      });
+    }
 
     // ----- Durable-fact extraction (cross-process memory) -----
     // Background pass against the user's message to pull out anything
@@ -352,6 +407,15 @@ async function callAnthropicWithRetry({ systemPrompt, messages }) {
           // while reducing token-level "language bleed" (stray foreign-script
           // characters appearing mid-sentence).
           temperature: 0.7,
+          // Automatic prompt caching. The system prompt (Shimrit voice +
+          // day instructions + memory) is large and stable across every
+          // message in a session; the growing message history is also
+          // reused turn-to-turn. Caching cuts repeated input cost by
+          // ~90% on cache hits ($0.30/MTok vs $3/MTok base for Sonnet
+          // 4.6) and is refreshed for free every 5 minutes as long as
+          // the user is actively chatting. One-line addition; Anthropic
+          // applies the cache breakpoint to the last cacheable block.
+          cache_control: { type: "ephemeral" },
           system: systemPrompt,
           messages,
         }),
