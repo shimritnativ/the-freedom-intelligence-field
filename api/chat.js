@@ -29,7 +29,6 @@ import {
 import { maybeRecordDayCompletion } from "../lib/dayExtraction.js";
 import { loadUserMemory, maybeRecordDurableFacts } from "../lib/memory.js";
 import { sendGhlEventInBackground } from "../lib/ghlWebhook.js";
-import { sql } from "@vercel/postgres";
 
 // ============================================================================
 // Constants
