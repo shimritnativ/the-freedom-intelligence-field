@@ -140,6 +140,11 @@ async function runSupport(req, res, user) {
     // explicitly suggests reaching the team. Frontend can also offer
     // the button at any time.
     suggestEscalation: /WhatsApp|reach out to (us|the team|Shimrit)|message (us|Shimrit)/i.test(reply),
+    // Echo the user's email back so the widget can pre-fill it in
+    // the WhatsApp escalation deep link. The main app keeps the email
+    // in JS state (not localStorage) so the widget can't read it
+    // directly. Anonymous (no session) responses return null.
+    userEmail: user ? user.email : null,
   });
 }
 
