@@ -107,10 +107,11 @@ async function runSupport(req, res, user) {
       model: MODEL,
       max_tokens: MAX_TOKENS,
       temperature: 0.4, // lower than chat — we want consistent, factual answers
-      // Automatic caching: the system prompt is static across every
-      // support turn within a session. Caching makes follow-up turns
-      // ~90% cheaper on input tokens.
-      cache_control: { type: "ephemeral" },
+      // NOTE: removed top-level cache_control 2026-06-26. Same reason
+      // as chat.js — Sonnet 4.6 may not accept the top-level form yet
+      // and we'd rather have a working bot than save pennies. Re-add
+      // later using the explicit `system: [{type, text, cache_control}]`
+      // array form once it's been tested in isolation.
       system: systemPrompt,
       messages: transformedMessages,
     }),
