@@ -1609,8 +1609,13 @@
   #support-fab svg { width: 22px; height: 22px; }
   #support-fab.open { background: var(--bg-dark, #0E0B07); color: var(--text-inverse, #F7F1E1); }
   @media (max-width: 640px) {
-    #support-fab { bottom: 16px; right: 16px; width: 48px; height: 48px; }
-    #support-fab svg { width: 20px; height: 20px; }
+    /* On mobile, the main app's chat composer (input + send + mic) sits
+       along the bottom edge. The default 16px bottom would put the
+       floating help icon directly on top of the composer's send button.
+       Bump it well above so it sits clear of the composer while still
+       feeling thumb-reachable. */
+    #support-fab { bottom: 96px; right: 14px; width: 44px; height: 44px; }
+    #support-fab svg { width: 18px; height: 18px; }
   }
   #support-panel {
     position: fixed;
@@ -1632,12 +1637,15 @@
   #support-panel.open { display: flex; }
   @media (max-width: 640px) {
     #support-panel {
-      bottom: 76px;
+      /* The panel sits above the FAB (now positioned higher to avoid
+         the chat composer). Sized to leave room above for the app's
+         top bar and below for the composer + FAB. */
+      bottom: 150px;
       right: 12px;
       left: 12px;
       width: auto;
       max-width: none;
-      height: min(560px, calc(100vh - 100px));
+      height: min(500px, calc(100vh - 200px));
     }
   }
   .support-header {
