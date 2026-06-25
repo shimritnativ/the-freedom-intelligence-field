@@ -28,7 +28,9 @@ import {
 } from "../lib/db.js";
 import { maybeRecordDayCompletion } from "../lib/dayExtraction.js";
 import { loadUserMemory, maybeRecordDurableFacts } from "../lib/memory.js";
-import { sendGhlEventInBackground } from "../lib/ghlWebhook.js";
+// GHL event firing intentionally removed — Geo chose not to wire the
+// GHL webhook (lib/ghlWebhook.js is not deployed). Re-add the import
+// and the call sites below if/when the GHL automation is needed.
 
 // ============================================================================
 // Constants
@@ -254,11 +256,8 @@ This override applies only to the upgrade invitation and button at the end of th
             AND role = 'user'
         `;
         if (Number(priorCountRows[0]?.n || 0) === 1) {
-          sendGhlEventInBackground({
-            event: "day_started",
-            email: user.email,
-            data: { day },
-          });
+          // day_started GHL event used to fire here. Removed because
+          // ghlWebhook.js is not deployed. No-op for now.
         }
       } catch (e) {
         // Don't block on detection failure — the worst case is we
@@ -349,11 +348,8 @@ This override applies only to the upgrade invitation and button at the end of th
       } catch (e) {
         console.warn("auto_complete_bump_failed", { message: e?.message });
       }
-      sendGhlEventInBackground({
-        event: "day_completed",
-        email: user.email,
-        data: { day, completed_via: "auto_detected" },
-      });
+      // day_completed GHL event used to fire here. Removed because
+      // ghlWebhook.js is not deployed. No-op for now.
     }
 
     // ----- Durable-fact extraction (cross-process memory) -----
