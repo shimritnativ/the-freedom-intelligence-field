@@ -647,15 +647,15 @@
     stroke-linecap: round;
     stroke-linejoin: round;
   }
-  /* Support / Help icon button — sits between Your Account and Log out.
-     Visually echoes the gold accent of "Your Account" but at lower
-     intensity (gold-soft fill, gold border, gold-tinted icon) so it
-     reads as a peer action, not a primary CTA. Circular like the
+  /* Support / Help icon button — sits at the END of the row, after
+     Log out. Darker than the previous gold-soft version so the icon
+     is clearly visible: medium gold fill + dark text/icon, like a
+     muted version of the "Your Account" pill. Circular like the
      notification bell so the row has a consistent shape language. */
   .sidebar-aux button#support-btn {
-    background: var(--gold-soft);
-    color: var(--gold);
-    border: 1px solid var(--gold-line);
+    background: rgba(217, 167, 78, 0.55);
+    color: var(--dark, #1A1612);
+    border: 1px solid var(--gold);
     width: 32px;
     height: 32px;
     padding: 0;
@@ -665,19 +665,17 @@
     justify-content: center;
     flex: 0 0 auto;
     cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    transition: background 0.15s ease, border-color 0.15s ease;
   }
   .sidebar-aux button#support-btn:hover {
-    background: rgba(217, 167, 78, 0.18);
-    border-color: var(--gold);
-    color: var(--gold);
+    background: var(--gold, #D9A74E);
   }
   .sidebar-aux button#support-btn svg {
     width: 16px;
     height: 16px;
     stroke: currentColor;
     fill: none;
-    stroke-width: 2;
+    stroke-width: 2.2;
     stroke-linecap: round;
     stroke-linejoin: round;
   }
@@ -4949,10 +4947,10 @@ Begin.` },
             <span class="notif-btn-badge" id="notif-btn-badge" hidden>0</span>
           </button>
           <button id="account-btn" type="button" title="Your account">Your Account</button>
+          <button id="logout-btn" type="button" title="Sign out of The Field">Log out</button>
           <button id="support-btn" type="button" title="Need help? Talk to the Field support helper" aria-label="Help" data-open-support="1">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
           </button>
-          <button id="logout-btn" type="button" title="Sign out of The Field">Log out</button>
         </div>
         <div class="notif-panel" id="notif-panel" role="dialog" aria-labelledby="notif-panel-title" aria-hidden="true">
           <div class="notif-panel-head">
