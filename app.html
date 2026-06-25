@@ -4557,44 +4557,7 @@ Begin.` },
         </div>
 
         <div class="unl-chat-list">
-          ${(function () {
-            const filtered = state.searchQuery
-              ? state.unlimitedSessions.filter(s => (s.title || "").toLowerCase().includes(state.searchQuery.toLowerCase()))
-              : state.unlimitedSessions;
-            if (filtered.length === 0) {
-              return '<div class="unl-chat-empty">' + (state.searchQuery ? "No matches." : "No conversations yet.") + '</div>';
-            }
-            // Split into pinned (rendered first under a PINNED label) and
-            // unpinned (under RECENT). Backend already sorts pinned first so
-            // this just slices the array at the boundary.
-            const pinned = filtered.filter(s => !!s.pinnedAt);
-            const recent = filtered.filter(s => !s.pinnedAt);
-            const renderItem = (s) => {
-              const isActive = s.id === state.activeUnlimitedId;
-              return `
-                <div class="unl-chat-item ${isActive ? "active" : ""} ${s.pinnedAt ? "pinned" : ""}" data-unl-id="${s.id}">
-                  ${s.pinnedAt ? '<span class="unl-chat-pin" aria-hidden="true">' + pinIconSvg() + '</span>' : ""}
-                  <div class="unl-chat-body">
-                    <div class="unl-chat-title">${escapeHtml(s.title || "New chat")}</div>
-                    <div class="unl-chat-time">${escapeHtml(formatRelativeTime(s.lastMessageAt || s.startedAt))}</div>
-                  </div>
-                  <button class="unl-chat-menu-btn" data-chat-menu-id="${s.id}" data-chat-menu-origin="sidebar" type="button" aria-label="Chat options">
-                    ${dotsIconSvg()}
-                  </button>
-                </div>
-              `;
-            };
-            let html = "";
-            if (pinned.length > 0) {
-              html += '<div class="unl-chat-section-label">PINNED</div>';
-              html += pinned.map(renderItem).join("");
-            }
-            if (recent.length > 0) {
-              if (pinned.length > 0) html += '<div class="unl-chat-section-label">RECENT</div>';
-              html += recent.map(renderItem).join("");
-            }
-            return html;
-          })()}
+          ${buildUnlimitedChatListHtml()}
         </div>
         ${state.pinLimitError ? `<div class="unl-pin-limit-error">${escapeHtml(state.pinLimitError)}</div>` : ""}
         ` : `
@@ -6100,17 +6063,78 @@ Begin.` },
     wireOutsideMenuClose();
   }
 
+  // Generate the inner HTML of the .unl-chat-list container. Single
+  // source of truth for the conversation list rendering — used by both
+  // the initial sidebar template render and the partial-render path
+  // (renderUnlimitedChatList) that fires on every search keystroke
+  // without destroying the input field.
+  function buildUnlimitedChatListHtml() {
+    const filtered = state.searchQuery
+      ? state.unlimitedSessions.filter(s => (s.title || "").toLowerCase().includes(state.searchQuery.toLowerCase()))
+      : state.unlimitedSessions;
+    if (filtered.length === 0) {
+      return '<div class="unl-chat-empty">' + (state.searchQuery ? "No matches." : "No conversations yet.") + '</div>';
+    }
+    const pinned = filtered.filter(s => !!s.pinnedAt);
+    const recent = filtered.filter(s => !s.pinnedAt);
+    const renderItem = (s) => {
+      const isActive = s.id === state.activeUnlimitedId;
+      return `
+        <div class="unl-chat-item ${isActive ? "active" : ""} ${s.pinnedAt ? "pinned" : ""}" data-unl-id="${s.id}">
+          ${s.pinnedAt ? '<span class="unl-chat-pin" aria-hidden="true">' + pinIconSvg() + '</span>' : ""}
+          <div class="unl-chat-body">
+            <div class="unl-chat-title">${escapeHtml(s.title || "New chat")}</div>
+            <div class="unl-chat-time">${escapeHtml(formatRelativeTime(s.lastMessageAt || s.startedAt))}</div>
+          </div>
+          <button class="unl-chat-menu-btn" data-chat-menu-id="${s.id}" data-chat-menu-origin="sidebar" type="button" aria-label="Chat options">
+            ${dotsIconSvg()}
+          </button>
+        </div>
+      `;
+    };
+    let html = "";
+    if (pinned.length > 0) {
+      html += '<div class="unl-chat-section-label">PINNED</div>';
+      html += pinned.map(renderItem).join("");
+    }
+    if (recent.length > 0) {
+      if (pinned.length > 0) html += '<div class="unl-chat-section-label">RECENT</div>';
+      html += recent.map(renderItem).join("");
+    }
+    return html;
+  }
+
   // Re-render just the .unl-chat-list section. Used by search input changes
-  // so the search input keeps focus while the list filters live. Falls back
-  // to a full render() if the structure is too complex to patch (rename in
-  // progress, menu open, etc).
+  // so the search input keeps focus while the list filters live.
+  //
+  // Bug history: previously this called full render() on every keystroke,
+  // which destroyed and re-created the search input element. On desktop
+  // that lost the cursor position; on mobile it dismissed the keyboard
+  // and the input "jumped" away from the user mid-type. The user gave
+  // up trying to search because they couldn't keep typing.
+  //
+  // Now we do a true partial render — innerHTML swap on just the chat
+  // list container, then re-wire the click handlers on the new items.
+  // Falls back to full render() only when interactive UI is mounted
+  // inside the list (rename in progress, menu open) and the partial
+  // swap would unmount it mid-interaction.
   function renderUnlimitedChatList() {
     if (state.openChatMenuId || state.renamingChatId) {
-      // Don't partial-render when interactive UI is mounted — would unmount it.
       render();
       return;
     }
-    render();
+    const listEl = document.querySelector(".unl-chat-list");
+    if (!listEl) {
+      // List container missing for whatever reason — fall back to full
+      // render to recover. Should be rare.
+      render();
+      return;
+    }
+    listEl.innerHTML = buildUnlimitedChatListHtml();
+    // Click handlers on the new <div class="unl-chat-item"> nodes need
+    // to be re-bound since innerHTML replaced them.
+    wireUnlimitedChatItems();
+    wireChatMenus();
   }
 
   function wireUnlimitedChatItems() {
@@ -7184,11 +7208,17 @@ Begin.` },
   }
 
   async function onMicClick() {
-    if (state.loading) return;
+    // ALWAYS allow stopping a recording. Previously this checked
+    // state.loading FIRST, which meant: if the AI was still streaming
+    // a response while the user was recording, tapping the red mic
+    // button to stop did nothing and the recording got stuck. That
+    // was the "red button doesn't work, everything is frozen" bug.
+    // Now stop is unconditional; only START is blocked when busy.
     if (voiceState.mediaRecorder && voiceState.mediaRecorder.state === "recording") {
       stopRecording();
       return;
     }
+    if (state.loading) return;
     await startRecording();
   }
 
