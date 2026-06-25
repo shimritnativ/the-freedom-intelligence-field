@@ -1582,22 +1582,36 @@
 
   /* Transcribing indicator — shown while Whisper is processing.
      Replaces the silent waiting period that made users think the
-     page had frozen. */
+     page had frozen. Positioned the same way as .recording-indicator
+     (absolute, floating above the composer card on the right) so it
+     doesn't flow inline next to the send button, which broke layout
+     and pushed it off the side of the card. */
   .transcribing-indicator {
-    margin-top: 6px;
-    font-size: 12px;
+    position: absolute;
+    top: -30px;
+    right: 14px;
+    background: var(--panel);
+    border: 1px solid var(--gold-line);
+    border-radius: 12px;
+    padding: 4px 10px;
+    font-size: 11px;
     color: var(--text-dim, #6B6258);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 5;
     display: flex;
     align-items: center;
     gap: 6px;
   }
   .transcribing-indicator .transcribing-spinner {
-    width: 11px;
-    height: 11px;
+    width: 9px;
+    height: 9px;
     border: 2px solid rgba(217, 167, 78, 0.25);
     border-top-color: var(--gold, #D9A74E);
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
   }
 
   /* Voice recovery card — shown when transcription fails. Lets the
