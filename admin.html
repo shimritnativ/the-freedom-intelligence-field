@@ -4080,6 +4080,13 @@
       const totalClicks = filteredCampaigns.reduce((s, c) => s + (c.clicks || 0), 0);
       const totalSignups = filteredCampaigns.reduce((s, c) => s + (c.signups_attributed || 0), 0);
       const totalRevenueCents = filteredCampaigns.reduce((s, c) => s + (c.revenue_attributed_cents || 0), 0);
+      // Funnel totals were missing from the recomputation, so when a
+      // single campaign was selected the top "Abandoned cart" KPI
+      // always rendered as 0 even when the per-campaign table clearly
+      // showed real abandoned numbers. Include them now.
+      const totalVisits = filteredCampaigns.reduce((s, c) => s + (c.visits || 0), 0);
+      const totalCheckoutScrolls = filteredCampaigns.reduce((s, c) => s + (c.checkout_scrolls || 0), 0);
+      const totalAbandoned = Math.max(0, totalCheckoutScrolls - totalSignups);
 
       const adjustedTotals = isAll ? data.totals : {
         spend: totalSpend,
@@ -4092,6 +4099,11 @@
         cost_per_signup: totalSignups > 0 ? totalSpend / totalSignups : null,
         revenue_attributed_cents: totalRevenueCents,
         roas: totalSpend > 0 ? (totalRevenueCents / 100) / totalSpend : null,
+        visits: totalVisits,
+        checkout_scrolls: totalCheckoutScrolls,
+        abandoned_cart: totalAbandoned,
+        scroll_to_visit_rate: totalVisits > 0 ? (totalCheckoutScrolls / totalVisits) * 100 : null,
+        purchase_to_scroll_rate: totalCheckoutScrolls > 0 ? (totalSignups / totalCheckoutScrolls) * 100 : null,
       };
 
       const adjustedData = {
