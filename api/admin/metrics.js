@@ -26,6 +26,18 @@ const EXCLUDED_COUPONS = [
   "LAUNCHTEAM",   // Reset team comp
   "LAUNCHTEAMUNLIMITED", // Unlimited team comp
 ];
+// Subset of EXCLUDED_COUPONS that should ALSO drop the buyer from
+// member counts entirely. Use this for codes where the buyer isn't a
+// real customer at all — e.g., Geo's personal test comps. LAUNCHTEAM
+// and LAUNCHTEAMUNLIMITED stay OUT of this list because team members
+// are real people using the product, just unpaid. They count as
+// members, their €0 stays out of revenue stats. Without this split,
+// adding LAUNCHTEAM to EXCLUDED_COUPONS dropped 6 real team users
+// from the roster (32 → 26), which Geo flagged as wrong.
+const EXCLUDED_COUPONS_FROM_MEMBERS = [
+  "GEO100",
+  "GEOALL",
+];
 // Product name patterns that count as "The Field" revenue. The dashboard
 // is for the Field business specifically, so MYP Business Club, Coaching
 // Certification, NOW Shift, RISE, etc. shouldn't appear in the Field's
@@ -98,6 +110,10 @@ export default async function handler(req, res) {
   // Excluded coupons as a Postgres-friendly array for ANY() comparisons.
   // Coupon_code can be NULL, so we use COALESCE to make the comparison safe.
   const excludedCoupons = EXCLUDED_COUPONS;
+  // Smaller subset used for member-counting / roster queries — only
+  // drops Geo's personal test comps. Team comps (LAUNCHTEAM) still
+  // count as real members.
+  const excludedCouponsFromMembers = EXCLUDED_COUPONS_FROM_MEMBERS;
   // Product name patterns for the Field-only filter on revenue queries.
   // Used with `product_name ILIKE ANY(...)` to keep non-Field sales
   // (Business Club, RISE, Certification, etc.) out of the dashboard.
@@ -161,11 +177,13 @@ export default async function handler(req, res) {
           AND (
             -- No purchases at all → Kajabi-only grant (legit free signup)
             NOT EXISTS (SELECT 1 FROM purchases p WHERE LOWER(p.email) = LOWER(u.email))
-            -- OR at least one non-comp purchase exists
+            -- OR at least one non-test-comp purchase exists. Uses the
+            -- smaller exclude list so LAUNCHTEAM team members still
+            -- count as members (only Geo's personal test comps drop).
             OR EXISTS (
               SELECT 1 FROM purchases p
               WHERE LOWER(p.email) = LOWER(u.email)
-                AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+                AND COALESCE(p.coupon_code, '') <> ALL(${excludedCouponsFromMembers})
             )
           )
           AND (
@@ -182,8 +200,9 @@ export default async function handler(req, res) {
         ORDER BY tier, plan
       `,
       // 2. Completion funnel — every member who did the Reset, regardless
-      // of where they are now. Comp-only users (GEO100) are excluded so
-      // the funnel reflects real launch performance, not seeded test data.
+      // of where they are now. Test comps (GEO100, GEOALL) are excluded
+      // so the funnel reflects real launch performance. Team comps
+      // (LAUNCHTEAM) stay in because team members really did the Reset.
       sql`
         SELECT
           COUNT(*)::int AS total_members,
@@ -202,11 +221,11 @@ export default async function handler(req, res) {
             OR EXISTS (
               SELECT 1 FROM purchases p
               WHERE LOWER(p.email) = LOWER(u.email)
-                AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+                AND COALESCE(p.coupon_code, '') <> ALL(${excludedCouponsFromMembers})
             )
           )
       `,
-      // 3. Signups per day — comp-only users excluded.
+      // 3. Signups per day — test comps excluded, team comps included.
       sql`
         SELECT
           date_trunc('day', u.created_at)::date AS day,
@@ -222,7 +241,7 @@ export default async function handler(req, res) {
             OR EXISTS (
               SELECT 1 FROM purchases p
               WHERE LOWER(p.email) = LOWER(u.email)
-                AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+                AND COALESCE(p.coupon_code, '') <> ALL(${excludedCouponsFromMembers})
             )
           )
         GROUP BY day, u.tier
@@ -336,14 +355,16 @@ export default async function handler(req, res) {
           AND u.created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR u.created_at <= ${toIso})
           AND (
-            -- Comp-only filter: hide users whose only purchases used an
-            -- excluded coupon (Tomer / GEO100). No-purchase Kajabi grants
-            -- still count.
+            -- Comp-only filter: hide users whose only purchases used a
+            -- TEST comp coupon (Geo's personal GEO100 / GEOALL). Real
+            -- team comps (LAUNCHTEAM, LAUNCHTEAMUNLIMITED) still count
+            -- as members because team members are real users. No-purchase
+            -- Kajabi grants also still count.
             NOT EXISTS (SELECT 1 FROM purchases p WHERE LOWER(p.email) = LOWER(u.email))
             OR EXISTS (
               SELECT 1 FROM purchases p
               WHERE LOWER(p.email) = LOWER(u.email)
-                AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+                AND COALESCE(p.coupon_code, '') <> ALL(${excludedCouponsFromMembers})
             )
           )
           AND (
