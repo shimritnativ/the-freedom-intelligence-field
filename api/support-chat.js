@@ -14,6 +14,7 @@
 // support — most issues are one-off.
 
 import { getUserBySessionToken, resolveActiveDay, timeRemainingMs } from "../lib/db.js";
+import { sql } from "@vercel/postgres";
 
 const MODEL = "claude-haiku-4-5";
 const MAX_TOKENS = 600;
@@ -84,7 +85,11 @@ async function runSupport(req, res, user) {
     return { role: m.role, content: m.content || "" };
   });
 
-  const systemPrompt = buildSystemPrompt(user);
+  // Pull billing context alongside the user record so Haiku can answer
+  // billing/plan questions accurately. Best-effort only — if the query
+  // fails, support still works without it.
+  const billing = user ? await fetchBillingContext(user.email).catch(() => null) : null;
+  const systemPrompt = buildSystemPrompt(user, billing);
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -146,7 +151,46 @@ async function runSupport(req, res, user) {
 // and worse at long-context synthesis. Anything not covered here should
 // route to WhatsApp.
 
-function buildSystemPrompt(user) {
+// Fetch the user's purchase history so the support bot can answer
+// billing questions accurately. Returns a compact summary object:
+//   { totalSpentEur, purchaseCount, lastPurchase: {product, amount, date, coupon}, products: [...], hasActiveSubscription }
+// Best-effort — anything that fails returns null and support continues
+// without billing context.
+async function fetchBillingContext(email) {
+  const { rows } = await sql`
+    SELECT product_name, amount_cents, coupon_code, currency, event_type, created_at
+    FROM purchases
+    WHERE LOWER(email) = LOWER(${email})
+      AND event_type IN ('order.success', 'order.subscription_payment')
+    ORDER BY created_at DESC
+    LIMIT 20
+  `;
+  if (!rows || rows.length === 0) return null;
+  const totalCents = rows.reduce((s, r) => s + Number(r.amount_cents || 0), 0);
+  const products = Array.from(new Set(rows.map(r => r.product_name).filter(Boolean)));
+  // Subscription = at least one row tagged order.subscription_payment in
+  // last 60 days (a paying Unlimited member would have monthly events).
+  const hasActiveSubscription = rows.some(r => {
+    if (r.event_type !== "order.subscription_payment") return false;
+    const ageMs = Date.now() - new Date(r.created_at).getTime();
+    return ageMs < 60 * 24 * 60 * 60 * 1000;
+  });
+  const last = rows[0];
+  return {
+    totalSpentEur: Math.round(totalCents / 100 * 100) / 100,
+    purchaseCount: rows.length,
+    lastPurchase: {
+      product: last.product_name,
+      amountEur: Math.round(Number(last.amount_cents || 0) / 100 * 100) / 100,
+      coupon: last.coupon_code || null,
+      date: new Date(last.created_at).toISOString().slice(0, 10),
+    },
+    products,
+    hasActiveSubscription,
+  };
+}
+
+function buildSystemPrompt(user, billing) {
   // Inject user context at the top so Haiku can reference it without
   // tool calls. NULL-safe for anonymous users.
   const ctxLines = [];
@@ -172,6 +216,23 @@ function buildSystemPrompt(user) {
       } else {
         ctxLines.push(`Has NOT yet logged in for the first time`);
       }
+    }
+    // Billing context — only present if at least one purchase exists.
+    // Haiku can use this to answer "have I paid?", "when did I buy?",
+    // "what plan am I on?", "how much did I pay?" without escalating.
+    if (billing) {
+      ctxLines.push(``);
+      ctxLines.push(`# Billing snapshot`);
+      ctxLines.push(`Total spent: €${billing.totalSpentEur}`);
+      ctxLines.push(`Purchase count: ${billing.purchaseCount}`);
+      ctxLines.push(`Products bought: ${billing.products.join(", ")}`);
+      ctxLines.push(`Last purchase: ${billing.lastPurchase.product} (€${billing.lastPurchase.amountEur}) on ${billing.lastPurchase.date}${billing.lastPurchase.coupon ? ` with coupon ${billing.lastPurchase.coupon}` : ""}`);
+      if (billing.hasActiveSubscription) {
+        ctxLines.push(`Active subscription: YES (recent recurring payment detected)`);
+      }
+    } else if (user) {
+      ctxLines.push(``);
+      ctxLines.push(`Billing snapshot: no purchase records on file (may be a free Kajabi grant, or purchase still syncing).`);
     }
   } else {
     ctxLines.push("User is NOT logged in (anonymous support request).");
