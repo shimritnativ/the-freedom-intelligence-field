@@ -1580,6 +1580,201 @@
   }
   @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
+  /* =========================================================================
+     Support widget (Field Help) — floating bottom-right button + chat panel.
+     Independent of the main app's render() cycle. Built and managed by the
+     supportWidget IIFE at the bottom of the script tag. Use position:fixed
+     so it floats above all other UI on every view.
+     ========================================================================= */
+  #support-fab {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--gold, #D9A74E);
+    color: var(--dark, #1A1612);
+    border: 0;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+    cursor: pointer;
+    z-index: 9000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    padding: 0;
+  }
+  #support-fab:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22); }
+  #support-fab svg { width: 22px; height: 22px; }
+  #support-fab.open { background: var(--bg-dark, #0E0B07); color: var(--text-inverse, #F7F1E1); }
+  @media (max-width: 640px) {
+    #support-fab { bottom: 16px; right: 16px; width: 48px; height: 48px; }
+    #support-fab svg { width: 20px; height: 20px; }
+  }
+  #support-panel {
+    position: fixed;
+    bottom: 84px;
+    right: 20px;
+    width: 360px;
+    max-width: calc(100vw - 32px);
+    height: min(520px, calc(100vh - 120px));
+    background: var(--panel, #FAF5E6);
+    border: 1px solid var(--gold-line, #d4c8a8);
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+    z-index: 9001;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  #support-panel.open { display: flex; }
+  @media (max-width: 640px) {
+    #support-panel {
+      bottom: 76px;
+      right: 12px;
+      left: 12px;
+      width: auto;
+      max-width: none;
+      height: min(560px, calc(100vh - 100px));
+    }
+  }
+  .support-header {
+    padding: 12px 14px;
+    background: var(--bg-dark, #0E0B07);
+    color: var(--text-inverse, #F7F1E1);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .support-header-title { display: flex; align-items: center; gap: 8px; }
+  .support-header-title svg { width: 14px; height: 14px; }
+  .support-header-sub {
+    font-size: 10.5px;
+    opacity: 0.7;
+    font-weight: 400;
+    margin-top: 1px;
+    letter-spacing: 0;
+  }
+  .support-header-close {
+    background: transparent;
+    border: 0;
+    color: var(--text-inverse, #F7F1E1);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    font-size: 16px;
+    line-height: 1;
+    opacity: 0.7;
+  }
+  .support-header-close:hover { opacity: 1; }
+  .support-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: rgba(217, 167, 78, 0.04);
+  }
+  .support-msg {
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .support-msg.bot {
+    align-self: flex-start;
+    background: #fff;
+    color: var(--text, #1A1612);
+    border: 1px solid var(--gold-line, #d4c8a8);
+  }
+  .support-msg.user {
+    align-self: flex-end;
+    background: var(--gold, #D9A74E);
+    color: var(--dark, #1A1612);
+  }
+  .support-typing {
+    align-self: flex-start;
+    font-size: 11px;
+    color: var(--text-dim, #6B6258);
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 8px;
+  }
+  .support-typing .support-spinner {
+    width: 9px; height: 9px;
+    border: 2px solid rgba(217, 167, 78, 0.25);
+    border-top-color: var(--gold, #D9A74E);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  .support-input-row {
+    border-top: 1px solid var(--gold-line, #d4c8a8);
+    padding: 10px;
+    display: flex;
+    gap: 8px;
+    background: var(--panel, #FAF5E6);
+    flex-shrink: 0;
+  }
+  .support-input-row textarea {
+    flex: 1;
+    resize: none;
+    min-height: 36px;
+    max-height: 100px;
+    padding: 8px 10px;
+    border: 1px solid var(--gold-line, #d4c8a8);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    background: #fff;
+    color: var(--text, #1A1612);
+  }
+  .support-input-row textarea:focus { outline: 1px solid var(--gold, #D9A74E); border-color: var(--gold, #D9A74E); }
+  .support-send-btn {
+    background: var(--gold, #D9A74E);
+    color: var(--dark, #1A1612);
+    border: 0;
+    border-radius: 8px;
+    padding: 0 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 13px;
+    align-self: stretch;
+  }
+  .support-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .support-escalate-row {
+    border-top: 1px solid var(--gold-line, #d4c8a8);
+    padding: 8px 10px;
+    background: var(--panel, #FAF5E6);
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .support-escalate-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: #25D366;
+    color: #fff;
+    border: 0;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .support-escalate-btn:hover { background: #20bd5a; }
+  .support-escalate-btn svg { width: 13px; height: 13px; }
+
   /* Transcribing indicator — shown while Whisper is processing.
      Replaces the silent waiting period that made users think the
      page had frozen. Positioned the same way as .recording-indicator
@@ -8675,6 +8870,210 @@ Begin.` },
   }
 
   init();
+})();
+
+// ===========================================================================
+// Support widget — runs independently of the main app's render lifecycle.
+// Mounts a floating bottom-right help button + chat panel that triages
+// common questions via /api/support-chat (Haiku) and offers WhatsApp
+// escalation to Shimrit's team when the bot can't help. Built as an IIFE
+// outside the main app() closure so it survives all render() rebuilds.
+// ===========================================================================
+(function supportWidget() {
+  // The bot's opening message — shown when the panel is first opened.
+  const OPENING_MSG = "Hi! I'm the Field's support helper. I can answer quick questions about the app (login, days, recording, billing, etc.). What can I help with?";
+
+  // WhatsApp escalation number. Fetched once on page load from
+  // /api/support-config which exposes the WHATSAPP_SUPPORT_NUMBER env
+  // var set in Vercel. The number is stored digits-only per the wa.me
+  // URL convention. If the env var is empty or the fetch fails, the
+  // widget falls back to an alert when the user tries to escalate.
+  let WHATSAPP_NUMBER = "";
+  fetch("/api/support-config")
+    .then(r => r.json())
+    .then(data => { WHATSAPP_NUMBER = data.whatsapp || ""; })
+    .catch(() => { /* silent — escalation will alert if unconfigured */ });
+
+  // Local widget state — not shared with the main app's state object.
+  const widgetState = {
+    open: false,
+    messages: [{ role: "assistant", content: OPENING_MSG }],
+    loading: false,
+    suggestEscalation: false,
+  };
+
+  // ----- DOM construction -----
+  const fab = document.createElement("button");
+  fab.id = "support-fab";
+  fab.type = "button";
+  fab.setAttribute("aria-label", "Open help");
+  fab.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>`;
+
+  const panel = document.createElement("div");
+  panel.id = "support-panel";
+  panel.innerHTML = `
+    <div class="support-header">
+      <div class="support-header-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+        <div>
+          Field Support
+          <div class="support-header-sub">Typically answers in seconds</div>
+        </div>
+      </div>
+      <button class="support-header-close" type="button" aria-label="Close">×</button>
+    </div>
+    <div class="support-messages" id="support-messages"></div>
+    <div class="support-input-row">
+      <textarea id="support-input" placeholder="Type your question…" rows="1"></textarea>
+      <button class="support-send-btn" id="support-send" type="button">Send</button>
+    </div>
+    <div class="support-escalate-row">
+      <a class="support-escalate-btn" id="support-escalate" href="#" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 3.5A11.5 11.5 0 0 0 12 0 11.5 11.5 0 0 0 .5 11.5c0 2 .5 4 1.5 5.7L0 24l7-1.8a11.5 11.5 0 0 0 5 1.2A11.5 11.5 0 0 0 23.5 12c0-3.1-1.2-6-3-8.5zM12 21.6a9.5 9.5 0 0 1-4.8-1.3l-.4-.2-3.5 1 1-3.4-.2-.4a9.5 9.5 0 0 1-1.5-5.2A9.5 9.5 0 1 1 12 21.6z"/></svg>
+        Talk to Shimrit's team
+      </a>
+    </div>
+  `;
+
+  document.body.appendChild(fab);
+  document.body.appendChild(panel);
+
+  const msgsEl = panel.querySelector("#support-messages");
+  const inputEl = panel.querySelector("#support-input");
+  const sendBtn = panel.querySelector("#support-send");
+  const closeBtn = panel.querySelector(".support-header-close");
+  const escalateBtn = panel.querySelector("#support-escalate");
+
+  // ----- Render messages list -----
+  function renderMessages() {
+    msgsEl.innerHTML = "";
+    for (const m of widgetState.messages) {
+      const div = document.createElement("div");
+      div.className = "support-msg " + (m.role === "user" ? "user" : "bot");
+      div.textContent = m.content;
+      msgsEl.appendChild(div);
+    }
+    if (widgetState.loading) {
+      const t = document.createElement("div");
+      t.className = "support-typing";
+      t.innerHTML = '<span class="support-spinner"></span> Thinking…';
+      msgsEl.appendChild(t);
+    }
+    // Scroll to bottom on every update
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  }
+  renderMessages();
+
+  // ----- Build the WhatsApp escalation URL with user context -----
+  // Pre-fills a message with the user's email + the conversation so far
+  // so Shimrit's team has the context the moment they get the chat.
+  function buildEscalationUrl() {
+    if (!WHATSAPP_NUMBER) {
+      return "#"; // not configured; click handler will alert instead
+    }
+    // Pull user's email from localStorage session if available. Mirrors
+    // how app.js loads it elsewhere. Fallback to "unknown" for anonymous.
+    let email = "unknown";
+    try {
+      const stored = localStorage.getItem("tfif_user_email_v1");
+      if (stored) email = stored;
+    } catch (e) {}
+    // Compact convo summary — last 3 turns, capped at 400 chars each
+    const recap = widgetState.messages.slice(-6).map(m => {
+      const who = m.role === "user" ? "Me" : "Bot";
+      const txt = String(m.content).slice(0, 400);
+      return `${who}: ${txt}`;
+    }).join("\n\n");
+    const body =
+      `Hi Shimrit, I need help with The Field.\n\n` +
+      `My email: ${email}\n\n` +
+      `Here's what I asked the support bot:\n${recap}`;
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(body)}`;
+  }
+
+  // ----- Event handlers -----
+  function openPanel() {
+    widgetState.open = true;
+    panel.classList.add("open");
+    fab.classList.add("open");
+    fab.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+    fab.setAttribute("aria-label", "Close help");
+    setTimeout(() => inputEl.focus(), 50);
+    refreshEscalateUrl();
+  }
+  function closePanel() {
+    widgetState.open = false;
+    panel.classList.remove("open");
+    fab.classList.remove("open");
+    fab.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>`;
+    fab.setAttribute("aria-label", "Open help");
+  }
+  function toggle() {
+    if (widgetState.open) closePanel(); else openPanel();
+  }
+  function refreshEscalateUrl() {
+    escalateBtn.href = buildEscalationUrl();
+  }
+  async function sendMessage() {
+    const text = (inputEl.value || "").trim();
+    if (!text || widgetState.loading) return;
+    widgetState.messages.push({ role: "user", content: text });
+    inputEl.value = "";
+    inputEl.style.height = "auto";
+    widgetState.loading = true;
+    renderMessages();
+    try {
+      // Send the FULL conversation each turn so Haiku has context.
+      const token = (function () {
+        try { return localStorage.getItem("tfif_session_v1") || ""; } catch (e) { return ""; }
+      })();
+      const res = await fetch("/api/support-chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "x-session-token": token } : {}),
+        },
+        body: JSON.stringify({
+          messages: widgetState.messages.filter(m => m.role === "user" || m.role === "assistant"),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const reply = data.reply || "Sorry, I'm having trouble right now. Tap 'Talk to Shimrit's team' below to message us on WhatsApp.";
+      widgetState.messages.push({ role: "assistant", content: reply });
+      if (data.suggestEscalation) widgetState.suggestEscalation = true;
+    } catch (err) {
+      widgetState.messages.push({
+        role: "assistant",
+        content: "I couldn't reach the support service. Tap 'Talk to Shimrit's team' below to message us on WhatsApp.",
+      });
+    } finally {
+      widgetState.loading = false;
+      renderMessages();
+      refreshEscalateUrl();
+    }
+  }
+
+  fab.addEventListener("click", toggle);
+  closeBtn.addEventListener("click", closePanel);
+  sendBtn.addEventListener("click", sendMessage);
+  inputEl.addEventListener("keydown", (e) => {
+    // Enter sends, Shift+Enter inserts newline
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+  inputEl.addEventListener("input", (e) => {
+    // Auto-grow up to max-height
+    e.target.style.height = "auto";
+    e.target.style.height = Math.min(e.target.scrollHeight, 100) + "px";
+  });
+  escalateBtn.addEventListener("click", (e) => {
+    if (!WHATSAPP_NUMBER) {
+      e.preventDefault();
+      alert("WhatsApp support is not configured yet. Please email support@shimritnativ.com.");
+    }
+  });
 })();
 </script>
 </body>
