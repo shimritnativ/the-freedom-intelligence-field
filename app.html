@@ -1699,8 +1699,20 @@
   }
   .support-msg.user {
     align-self: flex-end;
-    background: var(--gold, #D9A74E);
-    color: var(--dark, #1A1612);
+    background: rgba(217, 167, 78, 0.22);
+    color: var(--text, #1A1612);
+    border: 1px solid rgba(217, 167, 78, 0.35);
+  }
+  /* Inline markdown formatting that renderMessages() converts on bot
+     replies. Keeps bold + italic + line breaks readable. */
+  .support-msg strong { font-weight: 600; }
+  .support-msg em { font-style: italic; }
+  .support-msg code {
+    background: rgba(0, 0, 0, 0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
   }
   .support-typing {
     align-self: flex-start;
@@ -8939,12 +8951,45 @@ Begin.` },
   const escalateBtn = panel.querySelector("#support-escalate");
 
   // ----- Render messages list -----
+  // Bot messages get minimal markdown rendering (bold, italic, inline
+  // code) so Haiku's natural ** ** and * * formatting actually looks
+  // formatted instead of showing literal asterisks. We escape HTML
+  // first to keep the rendering safe from injection. User messages
+  // stay as plain textContent — no formatting needed from the user.
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+  function renderBotMarkdown(text) {
+    // Escape first, then apply tiny markdown subset on the escaped text.
+    let html = escapeHtml(text);
+    // Bold: **word** → <strong>word</strong>. Non-greedy so multiple
+    // bold runs in the same paragraph work. Disallow whitespace
+    // immediately inside the markers so a stray "** " doesn't match.
+    html = html.replace(/\*\*(\S.*?\S|\S)\*\*/g, "<strong>$1</strong>");
+    // Italic: *word* → <em>word</em>. Same care, and don't match
+    // anything that started as ** (handled above).
+    html = html.replace(/(^|[^*])\*(\S.*?\S|\S)\*(?!\*)/g, "$1<em>$2</em>");
+    // Inline code: `word` → <code>word</code>
+    html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+    // Preserve paragraph line breaks
+    html = html.replace(/\n/g, "<br>");
+    return html;
+  }
   function renderMessages() {
     msgsEl.innerHTML = "";
     for (const m of widgetState.messages) {
       const div = document.createElement("div");
       div.className = "support-msg " + (m.role === "user" ? "user" : "bot");
-      div.textContent = m.content;
+      if (m.role === "user") {
+        div.textContent = m.content;
+      } else {
+        div.innerHTML = renderBotMarkdown(m.content);
+      }
       msgsEl.appendChild(div);
     }
     if (widgetState.loading) {
