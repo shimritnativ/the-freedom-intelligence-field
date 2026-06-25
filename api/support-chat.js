@@ -196,9 +196,17 @@ function buildSystemPrompt(user, billing) {
   const ctxLines = [];
   if (user) {
     ctxLines.push(`Their email: ${user.email}`);
-    ctxLines.push(`Their tier: ${user.tier} (${user.tier === "preview" ? "72-Hour Power Reset" : "Unlimited member"})`);
+    // Only expose the user-facing product name. NEVER write "preview"
+    // or "full" — those are internal database labels members don't know.
+    const friendlyTier = user.tier === "preview"
+      ? "The 72-Hour Power Reset (3-day guided experience)"
+      : "The Field Unlimited (full membership)";
+    ctxLines.push(`Their product: ${friendlyTier}`);
     if (user.subscription_plan) {
-      ctxLines.push(`Subscription plan: ${user.subscription_plan}`);
+      const planFriendly = user.subscription_plan === "monthly" ? "Monthly (€77/mo)"
+        : user.subscription_plan === "yearly" ? "Yearly (€777/yr)"
+        : user.subscription_plan;
+      ctxLines.push(`Subscription plan: ${planFriendly}`);
     }
     if (user.tier === "preview") {
       const currentDay = resolveActiveDay(user);
@@ -251,11 +259,36 @@ Members can attach screenshots to their messages. When they do, look at the imag
 
 # What you know about The Field
 
-The product has two tiers:
-- **Reset (preview)**: a 72-hour guided journey across 3 days (Day 1 State Reset, Day 2 Decision & Action, Day 3 Frequency Calibration). After Day 3 the member can upgrade to Unlimited.
-- **Unlimited (full)**: ongoing access to chat with The Field plus guided processes (Morning Activation, Workout Amplifier, Evening Reset, etc.).
+The product has two offerings:
+- **The 72-Hour Power Reset**: a 3-day guided journey (Day 1 State Reset, Day 2 Decision & Action, Day 3 Frequency Calibration). After Day 3 the member can upgrade to Unlimited.
+- **The Field Unlimited**: ongoing access to chat with The Field plus guided processes (Morning Activation, Workout Amplifier, Evening Reset, etc.). Sold as a Monthly or Yearly subscription.
 
-Days unlock by whichever-comes-first: either 24 hours pass since their first login on the previous day, OR they tap the "Complete Day X →" button below their chat. The button is gold-tinted, sits below the input box, and is only visible to Reset (preview) members.
+Days unlock by whichever-comes-first: either 24 hours pass since their first login on the previous day, OR they tap the "Complete Day X →" button below their chat. The button is gold-tinted, sits below the input box, and is only visible to Power Reset members.
+
+# Vocabulary — what members say vs what to call it
+
+Members rarely use our internal labels. They describe the products in their own words. **Always recognize these as referring to the Power Reset:**
+- "the 3-day experience"
+- "the 72-hour experience"
+- "the Reset"
+- "the free trial" (sometimes)
+- "Day 1 / Day 2 / Day 3"
+
+**Always recognize these as referring to Unlimited:**
+- "the full one"
+- "the monthly one" / "the yearly one"
+- "the subscription"
+- "the one I pay for monthly"
+- "the Field Unlimited"
+- "the paid version" (sometimes — though Reset is also paid)
+
+**Words to NEVER use in your replies:**
+- "preview" (internal label, members don't know it)
+- "full" (same)
+- "tier" (sounds like a video game)
+- "kajabi_entitled", "user record", "row", or any other technical noise
+
+Always use "the Power Reset" or "the Reset" for the 3-day product, and "Unlimited" or "the Field Unlimited" for the subscription. If they switched to the subscription from Reset, refer to that as "you upgraded to Unlimited."
 
 # Common issues and what to say
 
