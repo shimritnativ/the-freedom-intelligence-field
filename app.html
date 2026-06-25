@@ -8883,16 +8883,10 @@ Begin.` },
   // The bot's opening message — shown when the panel is first opened.
   const OPENING_MSG = "Hi! I'm the Field's support helper. I can answer quick questions about the app (login, days, recording, billing, etc.). What can I help with?";
 
-  // WhatsApp escalation number. Fetched once on page load from
-  // /api/support-config which exposes the WHATSAPP_SUPPORT_NUMBER env
-  // var set in Vercel. The number is stored digits-only per the wa.me
-  // URL convention. If the env var is empty or the fetch fails, the
-  // widget falls back to an alert when the user tries to escalate.
-  let WHATSAPP_NUMBER = "";
-  fetch("/api/support-config")
-    .then(r => r.json())
-    .then(data => { WHATSAPP_NUMBER = data.whatsapp || ""; })
-    .catch(() => { /* silent — escalation will alert if unconfigured */ });
+  // WhatsApp escalation number. Hardcoded for simplicity since it
+  // almost never changes. International format, digits only, per the
+  // wa.me URL convention. If this needs to change, edit here directly.
+  const WHATSAPP_NUMBER = "14256007890";
 
   // Local widget state — not shared with the main app's state object.
   const widgetState = {
