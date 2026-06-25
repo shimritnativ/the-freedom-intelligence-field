@@ -406,15 +406,14 @@ async function callAnthropicWithRetry({ systemPrompt, messages }) {
           // while reducing token-level "language bleed" (stray foreign-script
           // characters appearing mid-sentence).
           temperature: 0.7,
-          // Automatic prompt caching. The system prompt (Shimrit voice +
-          // day instructions + memory) is large and stable across every
-          // message in a session; the growing message history is also
-          // reused turn-to-turn. Caching cuts repeated input cost by
-          // ~90% on cache hits ($0.30/MTok vs $3/MTok base for Sonnet
-          // 4.6) and is refreshed for free every 5 minutes as long as
-          // the user is actively chatting. One-line addition; Anthropic
-          // applies the cache breakpoint to the last cacheable block.
-          cache_control: { type: "ephemeral" },
+          // NOTE: removed top-level `cache_control` 2026-06-26. Production
+          // started 500-erroring after we added automatic caching, which
+          // points to Sonnet 4.6 not accepting the top-level form yet (it's
+          // a newer Anthropic convenience parameter). When we re-add
+          // caching, do it the explicit way: convert `system` into an array
+          // of text blocks and put cache_control on the last system block.
+          // That form is older and battle-tested on every model. For now,
+          // user experience > the 70% cost savings.
           system: systemPrompt,
           messages,
         }),
