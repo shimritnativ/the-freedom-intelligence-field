@@ -19,6 +19,18 @@ const LAUNCH_DATE = "2026-06-15"; // hard floor — no signups before this count
 // Coupons we never want polluting revenue stats. GEO100 was a free comp for
 // Tomer, used once for testing. Add others here as needed.
 const EXCLUDED_COUPONS = ["GEO100"];
+// Product name patterns that count as "The Field" revenue. The dashboard
+// is for the Field business specifically, so MYP Business Club, Coaching
+// Certification, NOW Shift, RISE, etc. shouldn't appear in the Field's
+// revenue breakdown — they're separate businesses sold via the same
+// ThriveCart account. Reset, Activation, and Unlimited are the only
+// Field products. Patterns use ILIKE so casing and variant suffixes
+// like "(Yearly)" or "- Ads" still match.
+const FIELD_PRODUCT_PATTERNS = [
+  "%Power Reset%",
+  "%Power Activation%",
+  "%Freedom Intelligence Field%",
+];
 // Personal team gmail addresses that don't end in @shimritnativ.com but still
 // shouldn't show up in member-facing segments. Add new ones as the team grows.
 const EXTRA_EXCLUDED_EMAILS = ["ge.amaral3@gmail.com"];
@@ -79,6 +91,10 @@ export default async function handler(req, res) {
   // Excluded coupons as a Postgres-friendly array for ANY() comparisons.
   // Coupon_code can be NULL, so we use COALESCE to make the comparison safe.
   const excludedCoupons = EXCLUDED_COUPONS;
+  // Product name patterns for the Field-only filter on revenue queries.
+  // Used with `product_name ILIKE ANY(...)` to keep non-Field sales
+  // (Business Club, RISE, Certification, etc.) out of the dashboard.
+  const fieldProductPatterns = FIELD_PRODUCT_PATTERNS;
   // Extra emails (non-@shimritnativ.com team accounts) to exclude from
   // Intelligence segments. Used as `u.email <> ALL(${extraExcluded})`.
   const extraExcluded = EXTRA_EXCLUDED_EMAILS;
@@ -387,7 +403,8 @@ export default async function handler(req, res) {
         GROUP BY process_key
         ORDER BY sessions_started DESC
       `,
-      // 10. ThriveCart total revenue (excludes team + excluded coupons)
+      // 10. ThriveCart total revenue (excludes team + excluded coupons,
+      // restricted to Field products only — no Business Club, RISE, etc.)
       safeQuery(sql`
         SELECT
           COUNT(*) FILTER (WHERE event_type IN ('order.success', 'order.subscription_payment'))::int AS orders,
@@ -397,10 +414,11 @@ export default async function handler(req, res) {
         FROM purchases
         WHERE email NOT LIKE ${excludePattern}
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
+          AND product_name ILIKE ANY(${fieldProductPatterns})
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
       `),
-      // 11. Revenue by product
+      // 11. Revenue by product (Field products only)
       safeQuery(sql`
         SELECT
           COALESCE(product_name, product_id, 'unknown') AS product,
@@ -410,13 +428,14 @@ export default async function handler(req, res) {
         WHERE event_type IN ('order.success', 'order.subscription_payment')
           AND email NOT LIKE ${excludePattern}
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
+          AND product_name ILIKE ANY(${fieldProductPatterns})
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
         GROUP BY product
         ORDER BY revenue_cents DESC
         LIMIT 15
       `),
-      // 12. Revenue by coupon
+      // 12. Revenue by coupon (Field products only)
       safeQuery(sql`
         SELECT
           COALESCE(coupon_code, '(no coupon)') AS coupon,
@@ -427,12 +446,13 @@ export default async function handler(req, res) {
         WHERE event_type IN ('order.success', 'order.subscription_payment')
           AND email NOT LIKE ${excludePattern}
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
+          AND product_name ILIKE ANY(${fieldProductPatterns})
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
         GROUP BY coupon
         ORDER BY revenue_cents DESC
       `),
-      // 13. Top buyers by total spend
+      // 13. Top buyers by total spend (Field products only)
       safeQuery(sql`
         SELECT
           email,
@@ -443,13 +463,14 @@ export default async function handler(req, res) {
         WHERE event_type IN ('order.success', 'order.subscription_payment')
           AND email NOT LIKE ${excludePattern}
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
+          AND product_name ILIKE ANY(${fieldProductPatterns})
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
         GROUP BY email
         ORDER BY revenue_cents DESC
         LIMIT 15
       `),
-      // 14. Revenue by day
+      // 14. Revenue by day (Field products only)
       safeQuery(sql`
         SELECT
           date_trunc('day', created_at)::date AS day,
@@ -459,12 +480,13 @@ export default async function handler(req, res) {
         WHERE event_type IN ('order.success', 'order.subscription_payment')
           AND email NOT LIKE ${excludePattern}
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
+          AND product_name ILIKE ANY(${fieldProductPatterns})
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
         GROUP BY day
         ORDER BY day DESC
       `),
-      // 15. Product × coupon cross-tab
+      // 15. Product × coupon cross-tab (Field products only)
       safeQuery(sql`
         SELECT
           COALESCE(product_name, product_id, 'unknown') AS product,
@@ -476,6 +498,7 @@ export default async function handler(req, res) {
         WHERE event_type IN ('order.success', 'order.subscription_payment')
           AND email NOT LIKE ${excludePattern}
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
+          AND product_name ILIKE ANY(${fieldProductPatterns})
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
         GROUP BY product, coupon
