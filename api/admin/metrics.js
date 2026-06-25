@@ -16,9 +16,16 @@ import { getUserBySessionToken } from "../../lib/db.js";
 
 const ALLOWED_DOMAIN = "@shimritnativ.com";
 const LAUNCH_DATE = "2026-06-15"; // hard floor — no signups before this count
-// Coupons we never want polluting revenue stats. GEO100 was a free comp for
-// Tomer, used once for testing. Add others here as needed.
-const EXCLUDED_COUPONS = ["GEO100"];
+// Coupons we never want polluting revenue stats. These are comp / free
+// codes — using any of them = 100% off, so the order is €0 and shouldn't
+// inflate average-order-value or appear in the per-product breakdowns.
+// Add new comp codes here as you create them in ThriveCart.
+const EXCLUDED_COUPONS = [
+  "GEO100",       // Geo's personal 100% off comp
+  "GEOALL",       // Geo's all-products 100% off comp
+  "LAUNCHTEAM",   // Reset team comp
+  "LAUNCHTEAMUNLIMITED", // Unlimited team comp
+];
 // Product name patterns that count as "The Field" revenue. The dashboard
 // is for the Field business specifically, so MYP Business Club, Coaching
 // Certification, NOW Shift, RISE, etc. shouldn't appear in the Field's
