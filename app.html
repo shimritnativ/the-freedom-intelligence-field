@@ -8984,6 +8984,10 @@ Begin.` },
     // Pending screenshot the user has attached but not yet sent.
     // Cleared after send or when user removes it.
     pendingImage: null,
+    // Cached email returned by the support-chat API. The main app
+    // keeps the user's email in JS state (not localStorage) so the
+    // widget has to fetch it. Filled on the first send.
+    userEmail: null,
   };
 
   // ----- DOM construction -----
@@ -9174,29 +9178,31 @@ Begin.` },
   }
 
   // ----- Build the WhatsApp escalation URL with user context -----
-  // Pre-fills a message with the user's email + the conversation so far
-  // so Shimrit's team has the context the moment they get the chat.
+  // Keeps it short: just identifies the member and surfaces their
+  // latest question. Geo doesn't want the full bot transcript pasted
+  // into WhatsApp — too noisy. The user can elaborate in WhatsApp
+  // directly if needed.
   function buildEscalationUrl() {
     if (!WHATSAPP_NUMBER) {
       return "#"; // not configured; click handler will alert instead
     }
-    // Pull user's email from localStorage session if available. Mirrors
-    // how app.js loads it elsewhere. Fallback to "unknown" for anonymous.
-    let email = "unknown";
-    try {
-      const stored = localStorage.getItem("tfif_user_email_v1");
-      if (stored) email = stored;
-    } catch (e) {}
-    // Compact convo summary — last 3 turns, capped at 400 chars each
-    const recap = widgetState.messages.slice(-6).map(m => {
-      const who = m.role === "user" ? "Me" : "Bot";
-      const txt = String(m.content).slice(0, 400);
-      return `${who}: ${txt}`;
-    }).join("\n\n");
-    const body =
-      `Hi Shimrit, I need help with The Field.\n\n` +
-      `My email: ${email}\n\n` +
-      `Here's what I asked the support bot:\n${recap}`;
+    const email = widgetState.userEmail || "(not logged in)";
+    // Find the LAST thing the user actually typed in the bot. That's
+    // their main question — way more useful for Shimrit than the
+    // full back-and-forth with the bot.
+    const lastUserMessage = (() => {
+      for (let i = widgetState.messages.length - 1; i >= 0; i--) {
+        const m = widgetState.messages[i];
+        if (m.role === "user" && m.content) {
+          return String(m.content).slice(0, 500);
+        }
+      }
+      return null;
+    })();
+    let body = `Hi Shimrit, I need help with The Field.\n\nMy email: ${email}`;
+    if (lastUserMessage) {
+      body += `\n\nMy question: ${lastUserMessage}`;
+    }
     return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(body)}`;
   }
 
@@ -9208,6 +9214,26 @@ Begin.` },
     fab.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
     fab.setAttribute("aria-label", "Close help");
     setTimeout(() => inputEl.focus(), 50);
+    // Pre-fetch the user's email from /api/state if we don't already
+    // have it, so the WhatsApp escalation URL is populated even if
+    // they tap "Talk to Shimrit's team" without chatting with the bot
+    // first. Best-effort — silent failure if not logged in.
+    if (!widgetState.userEmail) {
+      const token = (function () {
+        try { return localStorage.getItem("tfif_session_v1") || ""; } catch (e) { return ""; }
+      })();
+      if (token) {
+        fetch("/api/state", { headers: { "x-session-token": token } })
+          .then(r => r.json())
+          .then(d => {
+            if (d && d.email) {
+              widgetState.userEmail = d.email;
+              refreshEscalateUrl();
+            }
+          })
+          .catch(() => { /* silent */ });
+      }
+    }
     refreshEscalateUrl();
   }
   function closePanel() {
@@ -9281,6 +9307,9 @@ Begin.` },
       const reply = data.reply || "Sorry, I'm having trouble right now. Tap 'Talk to Shimrit's team' below to message us on WhatsApp.";
       widgetState.messages.push({ role: "assistant", content: reply });
       if (data.suggestEscalation) widgetState.suggestEscalation = true;
+      // Cache the user's email so the WhatsApp escalation URL can
+      // pre-fill it. Returned by the API once we have a session.
+      if (data.userEmail) widgetState.userEmail = data.userEmail;
     } catch (err) {
       widgetState.messages.push({
         role: "assistant",
