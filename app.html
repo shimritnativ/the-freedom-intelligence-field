@@ -1734,17 +1734,27 @@
     white-space: pre-wrap;
     word-wrap: break-word;
   }
+  /* Bot bubble — uses the app's panel color so it picks up the theme.
+     In light mode this is a soft cream; in dark mode the dark sidebar
+     color. Text always uses --text which is already theme-aware. */
   .support-msg.bot {
     align-self: flex-start;
-    background: #fff;
+    background: var(--panel, #FAF5E6);
     color: var(--text, #1A1612);
     border: 1px solid var(--gold-line, #d4c8a8);
   }
+  /* User bubble — gold tint that works in both themes since gold is the
+     accent color across both. Slightly stronger in dark mode for the
+     same perceived contrast. */
   .support-msg.user {
     align-self: flex-end;
     background: rgba(217, 167, 78, 0.22);
     color: var(--text, #1A1612);
     border: 1px solid rgba(217, 167, 78, 0.35);
+  }
+  :root[data-theme="dark"] .support-msg.user {
+    background: rgba(217, 167, 78, 0.30);
+    color: var(--text, #F0EAD6);
   }
   /* Inline markdown formatting that renderMessages() converts on bot
      replies. Keeps bold + italic + line breaks readable. */
@@ -1790,12 +1800,18 @@
     border-radius: 8px;
     font-family: inherit;
     font-size: 13px;
-    background: #fff;
+    background: var(--bg, #fff);
     color: var(--text, #1A1612);
   }
   .support-input-row textarea:focus { outline: 1px solid var(--gold, #D9A74E); border-color: var(--gold, #D9A74E); }
+  /* Dark-mode override: textarea/attach use a slightly lighter shade
+     than the panel so they don't disappear into it. */
+  :root[data-theme="dark"] .support-input-row textarea {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text, #F0EAD6);
+  }
   .support-attach-btn {
-    background: #fff;
+    background: var(--bg, #fff);
     border: 1px solid var(--gold-line, #d4c8a8);
     color: var(--text-dim, #6B6258);
     border-radius: 8px;
@@ -1809,6 +1825,10 @@
     justify-content: center;
   }
   .support-attach-btn:hover { background: rgba(217, 167, 78, 0.08); }
+  :root[data-theme="dark"] .support-attach-btn {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-dim, #c9bca4);
+  }
   .support-attach-btn svg { width: 16px; height: 16px; }
   .support-attach-input { display: none; }
   /* Pending image preview row — sits above the input row when the user
