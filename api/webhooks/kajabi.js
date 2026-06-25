@@ -89,23 +89,20 @@ export default async function handler(req, res) {
   // Account modal render the right copy and CTAs without a separate API call
   // back to ThriveCart. Ignored for revoke events.
   const plan = (req.query && req.query.plan) || "";
-  // Optional &product=reset|activation|unlimited on activation URLs. Kajabi's
-  // payload only contains member_email, so when a customer buys multiple
-  // products in one checkout, every webhook arrives identical and we cannot
-  // tell Reset from Activation. The product tag in the URL is the only
-  // reliable per-offer signal. Falls back to "unknown" so legacy URLs still
-  // work, just without per-product attribution.
-  const product = String((req.query && req.query.product) || "").toLowerCase().trim();
+  // Optional UTM params from Zapier (which gets them from ThriveCart, which
+  // gets them from the GHL landing page's link rewriter). Captured here as
+  // first-touch attribution for the Ads dashboard. Empty strings get
+  // coerced to null in grantEntitlement so blank Zapier substitutions
+  // don't wipe data on subsequent activation events.
+  const utm = {
+    source:   (req.query && req.query.utm_source)   || null,
+    medium:   (req.query && req.query.utm_medium)   || null,
+    campaign: (req.query && req.query.utm_campaign) || null,
+    content:  (req.query && req.query.utm_content)  || null,
+    term:     (req.query && req.query.utm_term)     || null,
+  };
   const email = extractEmail(body);
   const externalId = (body && (body.id || body.event_id)) || null;
-  // Event type now includes the product so auto-reconcile can dedup per
-  // (email, product) instead of collapsing multi-product purchases.
-  // Examples: activate:preview:reset, activate:preview:activation,
-  // activate:full:unlimited. Backwards compatible: if product is missing,
-  // event type stays as activate:preview / activate:full.
-  const eventTypeTag = revoke
-    ? "deactivate"
-    : (product ? `activate:${grant}:${product}` : `activate:${grant}`);
 
   try {
     if (!email) {
@@ -113,9 +110,9 @@ export default async function handler(req, res) {
       // return 200 so Kajabi does not retry a payload we cannot use.
       await recordWebhookEvent({
         source: "kajabi",
-        eventType: eventTypeTag,
+        eventType: revoke ? "deactivate" : "activate:" + grant,
         externalId: externalId,
-        payload: { ...body, _product: product || null, _plan: plan || null },
+        payload: body,
         signatureVerified: true,
         processingError: "no_email_in_payload",
       });
@@ -131,17 +128,15 @@ export default async function handler(req, res) {
         tier: grant,
         kajabiMemberId: extractMemberId(body),
         subscriptionPlan: plan,
+        utm: utm,
       });
     }
 
     await recordWebhookEvent({
       source: "kajabi",
-      eventType: eventTypeTag,
+      eventType: revoke ? "deactivate" : "activate:" + grant,
       externalId: externalId,
-      // Inject _product and _plan into the stored payload so auto-reconcile
-      // and any future tool can read them without parsing the event_type
-      // string. Original Kajabi fields are preserved unchanged.
-      payload: { ...body, _product: product || null, _plan: plan || null },
+      payload: body,
       signatureVerified: true,
       userId: user ? user.id : null,
       processingError: user ? null : "no_action_taken",
