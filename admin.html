@@ -1761,13 +1761,12 @@
       const tc = d.thrivecart || {};
       const rows = (tc.byProductCoupon || []);
       const isNet = getRevenueVatMode() === "net";
-      // Cents-to-euros first, then VAT division when in "ex VAT" mode.
-      // The launch tracker treats every value it receives as euros, so
-      // every money number that leaves this function needs to be in
-      // euro units, not cents.
+      // Stored amount_cents is already NET (what ThriveCart sends).
+      // Net mode returns it as-is. Gross mode multiplies by 1.19 to
+      // approximate what the customer paid including VAT.
       const toMoney = c => {
         const euros = Number(c) / 100;
-        return isNet ? (euros / VAT_DIVISOR) : euros;
+        return isNet ? euros : (euros * VAT_DIVISOR);
       };
 
       // Filter helper: a row matches if its product name contains the
@@ -2468,8 +2467,8 @@
               ${tc.connected ? `
                 <div class="kpi kpi-revenue clickable" onclick="goToPanel('revenue', 'panel-revenue')">
                   <div class="kpi-label">Net Revenue (ex VAT)</div>
-                  <div class="kpi-value">${fmtEur(Math.round(netCents / VAT_DIVISOR))}</div>
-                  <div class="kpi-sub">${fmtNum(tcSummary.orders || 0)} orders · ${fmtNum(tcSummary.unique_buyers || 0)} paying buyers <span style="opacity:0.7;">· ${fmtEur(netCents)} gross</span></div>
+                  <div class="kpi-value">${fmtEur(netCents)}</div>
+                  <div class="kpi-sub">${fmtNum(tcSummary.orders || 0)} orders · ${fmtNum(tcSummary.unique_buyers || 0)} paying buyers <span style="opacity:0.7;">· ${fmtEur(Math.round(netCents * VAT_DIVISOR))} gross</span></div>
                 </div>
               ` : ''}
             </div>
@@ -3649,11 +3648,17 @@
     }
     window.setRevenueVatMode = setRevenueVatMode;
 
-    // Apply the active VAT mode to a cents amount. In "net" mode, divides
-    // by 1.19. In "gross" mode, returns the raw value.
+    // Apply the active VAT mode to a cents amount.
+    //
+    // Convention: every amount_cents in the DB is the NET amount the
+    // merchant receives (what ThriveCart sends in its webhooks). The
+    // old code divided by 1.19 here, assuming stored values were gross,
+    // which broke for everything ThriveCart-driven (Malin showing €6.35
+    // instead of €7.56 etc). Now: "net" returns as-is, "gross" multiplies
+    // by 1.19 to estimate what the customer paid including VAT.
     function applyVat(cents) {
       const c = Number(cents || 0);
-      if (getRevenueVatMode() === "net") return Math.round(c / VAT_DIVISOR);
+      if (getRevenueVatMode() === "gross") return Math.round(c * VAT_DIVISOR);
       return c;
     }
     // Convenience wrapper so the rendering code reads cleanly.
