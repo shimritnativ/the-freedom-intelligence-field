@@ -1580,6 +1580,70 @@
   }
   @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
+  /* Transcribing indicator — shown while Whisper is processing.
+     Replaces the silent waiting period that made users think the
+     page had frozen. */
+  .transcribing-indicator {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--text-dim, #6B6258);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .transcribing-indicator .transcribing-spinner {
+    width: 11px;
+    height: 11px;
+    border: 2px solid rgba(217, 167, 78, 0.25);
+    border-top-color: var(--gold, #D9A74E);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  /* Voice recovery card — shown when transcription fails. Lets the
+     user retry with the same audio, download it, or discard it.
+     Previously a failed transcription silently lost the recording. */
+  .voice-recovery {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(217, 167, 78, 0.10);
+    border: 1px solid var(--gold-line, #d4c8a8);
+    border-radius: 10px;
+    font-size: 13px;
+  }
+  .voice-recovery-msg {
+    color: var(--text, #1A1612);
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+  .voice-recovery-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .voice-recovery-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 12px;
+    background: var(--gold, #D9A74E);
+    color: var(--dark, #1A1612);
+    border: 0;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    letter-spacing: 0.02em;
+  }
+  .voice-recovery-btn:hover { filter: brightness(1.05); }
+  .voice-recovery-btn-secondary {
+    background: transparent;
+    color: var(--text-dim, #6B6258);
+    border: 1px solid var(--gold-line, #d4c8a8);
+  }
+  .voice-recovery-btn-secondary:hover { background: rgba(0, 0, 0, 0.04); }
+
   /* Speaker (Shimrit voice playback) */
   .msg-row.assistant { flex-direction: column; align-items: flex-start; }
   .speak-btn {
@@ -7098,9 +7162,20 @@ Begin.` },
   // The transcribe endpoint's bodyParser is 10mb; a 5-minute Opus clip
   // base64-encoded is roughly 1.5mb, well within the cap.
   const MAX_RECORDING_MS = 5 * 60 * 1000;
+  // Whisper rarely takes more than ~30s for a 5-min clip, but slow
+  // mobile networks can stretch this. 90s cap stops a hung request
+  // from making the UI feel permanently frozen.
+  const TRANSCRIBE_TIMEOUT_MS = 90 * 1000;
   const voiceState = {
     mediaRecorder: null, audioChunks: [], stream: null, mimeType: "",
-    startedAt: 0, timerInterval: null, autoStopTimer: null, indicatorEl: null
+    startedAt: 0, timerInterval: null, autoStopTimer: null, indicatorEl: null,
+    // Preserved audio when transcription fails so the user can retry
+    // or download it instead of losing the whole recording. Cleared
+    // on successful transcription or user dismiss.
+    lastFailedAudio: null,
+    // AbortController for the in-flight fetch so the timeout can cancel
+    // it cleanly without leaking sockets / blocking the UI.
+    transcribeController: null
   };
 
   function micSupported() {
@@ -7143,7 +7218,14 @@ Begin.` },
         micBtn.classList.remove("recording");
         const blob = new Blob(voiceState.audioChunks, { type: voiceState.mimeType });
         voiceState.audioChunks = [];
-        if (blob.size < 1000) return;
+        if (blob.size < 1000) {
+          // Recording too short — typical when the user taps the mic
+          // by accident or releases immediately. Tell them so it
+          // doesn't feel like the mic silently swallowed the press.
+          showTranscribingMessage("Recording too short. Hold the mic to record, then tap again to stop.", "warning");
+          setTimeout(removeTranscribingIndicator, 3500);
+          return;
+        }
         await transcribeBlob(blob, voiceState.mimeType);
       };
       voiceState.mediaRecorder.start();
@@ -7216,32 +7298,170 @@ Begin.` },
   async function transcribeBlob(blob, mimeType) {
     const micBtn = document.getElementById("mic-btn");
     if (micBtn) micBtn.classList.add("transcribing");
+    // Clear any previous failure UI before starting a fresh attempt
+    // (the user may be retrying the same audio).
+    removeFailedAudioUI();
+    showTranscribingMessage("Transcribing your recording…");
+
+    // Abort the fetch if Whisper takes too long. Without this, a hung
+    // request would leave the mic button stuck in "transcribing" state
+    // forever, which is what users were describing as "frozen".
+    voiceState.transcribeController = new AbortController();
+    const timeoutId = setTimeout(() => {
+      try { voiceState.transcribeController.abort(); } catch (e) {}
+    }, TRANSCRIBE_TIMEOUT_MS);
+
     try {
       const audioBase64 = await blobToBase64(blob);
       const res = await fetch(API_BASE + "/transcribe", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken },
-        body: JSON.stringify({ audioBase64, mimeType })
+        body: JSON.stringify({ audioBase64, mimeType }),
+        signal: voiceState.transcribeController.signal
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "transcription_failed");
-      const text = (data.text || "").trim();
-      if (text) {
-        const inputEl = document.getElementById("input");
-        if (inputEl) {
-          const existing = inputEl.value.trim();
-          inputEl.value = existing ? `${existing} ${text}` : text;
-          inputEl.style.height = "auto";
-          inputEl.style.height = Math.min(inputEl.scrollHeight, 200) + "px";
-          inputEl.focus();
-          inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-        }
+      if (!res.ok) {
+        // Preserve the server-provided error so the user sees something
+        // actionable instead of a generic "failed".
+        const e = new Error(data.error || ("HTTP " + res.status));
+        e.statusCode = res.status;
+        throw e;
       }
+      const text = (data.text || "").trim();
+      if (!text) {
+        throw new Error("transcription_empty");
+      }
+      const inputEl = document.getElementById("input");
+      if (inputEl) {
+        const existing = inputEl.value.trim();
+        inputEl.value = existing ? `${existing} ${text}` : text;
+        inputEl.style.height = "auto";
+        inputEl.style.height = Math.min(inputEl.scrollHeight, 200) + "px";
+        inputEl.focus();
+        inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      // Success — drop any previously preserved failed audio.
+      voiceState.lastFailedAudio = null;
+      removeTranscribingIndicator();
     } catch (err) {
       console.error("transcribe_failed", err);
-      alert("Could not transcribe your message. Please try again or type instead.");
+      // Critical: preserve the audio blob so the user can retry or
+      // download it. Previously the blob was lost the moment transcription
+      // failed, which was the single worst part of the bug.
+      voiceState.lastFailedAudio = { blob: blob, mimeType: mimeType };
+      const friendlyMessage = describeTranscribeError(err);
+      removeTranscribingIndicator();
+      showFailedAudioUI(blob, mimeType, friendlyMessage);
     } finally {
+      clearTimeout(timeoutId);
+      voiceState.transcribeController = null;
       if (micBtn) micBtn.classList.remove("transcribing");
+    }
+  }
+
+  // Turn an error into a one-line message that explains what happened
+  // without exposing internal details. Helps the user decide whether
+  // retry will work or they should download and try later.
+  function describeTranscribeError(err) {
+    if (!err) return "Something went wrong.";
+    if (err.name === "AbortError") return "Took too long. Your network may be slow — your recording is saved.";
+    if (err.message === "transcription_empty") return "We didn't pick up any speech. Try again, or check the recording.";
+    if (err.statusCode === 401) return "Your session expired. Refresh the page and try again — your recording is saved.";
+    if (err.statusCode === 413) return "Recording is too large. Try a shorter clip.";
+    if (err.statusCode >= 500) return "Our transcription service hiccupped. Your recording is saved — try again in a moment.";
+    if (err.message && err.message.includes("Failed to fetch")) return "Couldn't reach the server. Check your connection — your recording is saved.";
+    return "Couldn't transcribe. Your recording is saved — try again, or download it.";
+  }
+
+  // Inline progress message shown in the composer area while
+  // transcription is in flight. Replaces the silent waiting period.
+  function showTranscribingMessage(text, variant) {
+    removeTranscribingIndicator();
+    const composer = document.querySelector(".composer");
+    if (!composer) return;
+    const el = document.createElement("div");
+    el.className = "transcribing-indicator";
+    el.id = "transcribing-indicator";
+    const showSpinner = variant !== "warning";
+    el.innerHTML = (showSpinner ? '<span class="transcribing-spinner"></span>' : '') +
+      '<span class="transcribing-text"></span>';
+    const textEl = el.querySelector(".transcribing-text");
+    if (textEl) textEl.textContent = text;
+    composer.appendChild(el);
+  }
+
+  function removeTranscribingIndicator() {
+    const el = document.getElementById("transcribing-indicator");
+    if (el) el.remove();
+  }
+
+  // Show recovery UI: keep the failed recording accessible, offer
+  // Retry / Download / Discard. The blob is held in memory (and via
+  // an object URL for the download link) until the user dismisses.
+  function showFailedAudioUI(blob, mimeType, errorMessage) {
+    removeFailedAudioUI();
+    const composer = document.querySelector(".composer");
+    if (!composer) return;
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "voice-recovery";
+    wrapper.id = "voice-recovery";
+
+    const msg = document.createElement("div");
+    msg.className = "voice-recovery-msg";
+    msg.textContent = errorMessage || "Couldn't transcribe — your recording is saved.";
+
+    const actions = document.createElement("div");
+    actions.className = "voice-recovery-actions";
+
+    const retryBtn = document.createElement("button");
+    retryBtn.type = "button";
+    retryBtn.className = "voice-recovery-btn";
+    retryBtn.textContent = "Try again";
+    retryBtn.onclick = () => {
+      removeFailedAudioUI();
+      transcribeBlob(blob, mimeType);
+    };
+
+    // Download link uses an object URL so the user can save the audio
+    // file to their device if transcription keeps failing. Extension
+    // picked from the mime type so common players can open it.
+    const downloadBtn = document.createElement("a");
+    downloadBtn.className = "voice-recovery-btn voice-recovery-btn-secondary";
+    downloadBtn.href = URL.createObjectURL(blob);
+    let ext = "webm";
+    if (mimeType.includes("mp4")) ext = "m4a";
+    else if (mimeType.includes("ogg")) ext = "ogg";
+    downloadBtn.download = `field-recording-${Date.now()}.${ext}`;
+    downloadBtn.textContent = "Download audio";
+
+    const dismissBtn = document.createElement("button");
+    dismissBtn.type = "button";
+    dismissBtn.className = "voice-recovery-btn voice-recovery-btn-secondary";
+    dismissBtn.textContent = "Discard";
+    dismissBtn.onclick = () => {
+      removeFailedAudioUI();
+      voiceState.lastFailedAudio = null;
+    };
+
+    actions.appendChild(retryBtn);
+    actions.appendChild(downloadBtn);
+    actions.appendChild(dismissBtn);
+    wrapper.appendChild(msg);
+    wrapper.appendChild(actions);
+    composer.appendChild(wrapper);
+  }
+
+  function removeFailedAudioUI() {
+    const existing = document.getElementById("voice-recovery");
+    if (existing) {
+      // Revoke any object URLs we created so the browser can release
+      // the audio bytes once the user is done with the recovery card.
+      const link = existing.querySelector("a.voice-recovery-btn");
+      if (link && link.href && link.href.startsWith("blob:")) {
+        try { URL.revokeObjectURL(link.href); } catch (e) {}
+      }
+      existing.remove();
     }
   }
 
