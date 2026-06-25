@@ -298,6 +298,13 @@ export default async function handler(req, res) {
         // reducing token-level "language bleed" (stray foreign-script
         // characters appearing mid-sentence).
         temperature: 0.7,
+        // Automatic prompt caching. Unlimited system prompts include the
+        // process context + Shimrit voice + injected memory; combined
+        // they easily clear the 1024-token minimum. Cuts repeat input
+        // cost by ~90% on cache hits and refreshes for free every 5
+        // minutes during an active conversation. See api/chat.js for
+        // the full rationale.
+        cache_control: { type: "ephemeral" },
         system: systemPrompt,
         messages,
       }),
