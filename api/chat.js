@@ -123,6 +123,26 @@ export default async function handler(req, res) {
       });
     }
 
+    // ----- Wrong-day activation guardrail -----
+    // If the user pasted an activation prompt for a DIFFERENT day than
+    // the one they're currently on, intercept it. Without this guard,
+    // Claude tries to be helpful and runs Day 3 content inside a Day 2
+    // session (Geo hit this — pasted Day 3 prompt while on Day 2, the
+    // Field ran Day 3 anyway). Synthetic reply, no Anthropic call —
+    // cheaper and more reliable than asking the AI to refuse.
+    const activatedDay = detectActivatedDay(message);
+    if (activatedDay && activatedDay > day) {
+      const replyText =
+        `It looks like you pasted the Day ${activatedDay} prompt, but you're still on Day ${day} of your 72 Hour Power Reset. Let's finish Day ${day} first — Day ${activatedDay} unlocks as soon as you complete this one.\n\n` +
+        `If you're ready to move on, you can either wait for the natural 24h unlock OR tap the "Complete Day ${day} →" button below this chat to advance now. Then paste your Day ${activatedDay} prompt and we'll begin.`;
+      return res.status(200).json({
+        reply: replyText,
+        currentDay: day,
+        timeRemainingMs: timeRemainingMs(user),
+        tier: user.tier,
+      });
+    }
+
     // ----- Rate limit -----
     const overLimit = await checkRateLimit(user.id);
     if (overLimit) {
@@ -383,6 +403,26 @@ This override applies only to the upgrade invitation and button at the end of th
 // ============================================================================
 // Anthropic call with retry
 // ============================================================================
+
+// Detect if the user's first message looks like an activation prompt
+// for a specific Reset day. Returns the day number (1/2/3) if found,
+// or null if the message isn't an activation prompt. Used by the
+// wrong-day guardrail to prevent users from running Day 3 content
+// inside a Day 2 session by accidentally pasting the wrong prompt.
+//
+// Only triggers when there's BOTH a "Day N" reference AND an
+// activation-y verb nearby (entering / guide me through). Plain
+// mentions like "I think Day 3 will be interesting" don't trigger.
+function detectActivatedDay(message) {
+  if (!message) return null;
+  // Limit scan to first 500 chars — activation prompts always lead.
+  const sample = String(message).slice(0, 500).toLowerCase();
+  const hasActivationVerb =
+    /entering day\s*[123]|guide me through day\s*[123]|day\s*[123] of (?:the |my |your )?72/i.test(sample);
+  if (!hasActivationVerb) return null;
+  const match = sample.match(/day\s*([123])/i);
+  return match ? Number(match[1]) : null;
+}
 
 async function callAnthropicWithRetry({ systemPrompt, messages }) {
   let lastErr;
