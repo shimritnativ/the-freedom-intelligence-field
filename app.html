@@ -1733,6 +1733,7 @@
     padding: 10px;
     display: flex;
     gap: 8px;
+    align-items: flex-end;
     background: var(--panel, #FAF5E6);
     flex-shrink: 0;
   }
@@ -1750,6 +1751,70 @@
     color: var(--text, #1A1612);
   }
   .support-input-row textarea:focus { outline: 1px solid var(--gold, #D9A74E); border-color: var(--gold, #D9A74E); }
+  .support-attach-btn {
+    background: #fff;
+    border: 1px solid var(--gold-line, #d4c8a8);
+    color: var(--text-dim, #6B6258);
+    border-radius: 8px;
+    padding: 0 10px;
+    cursor: pointer;
+    font-size: 13px;
+    flex-shrink: 0;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .support-attach-btn:hover { background: rgba(217, 167, 78, 0.08); }
+  .support-attach-btn svg { width: 16px; height: 16px; }
+  .support-attach-input { display: none; }
+  /* Pending image preview row — sits above the input row when the user
+     has attached but not yet sent an image. */
+  .support-pending-image {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-top: 1px solid var(--gold-line, #d4c8a8);
+    background: rgba(217, 167, 78, 0.08);
+    font-size: 11px;
+    color: var(--text-dim, #6B6258);
+    flex-shrink: 0;
+  }
+  .support-pending-image img {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--gold-line, #d4c8a8);
+    flex-shrink: 0;
+  }
+  .support-pending-image-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .support-pending-image-remove {
+    background: transparent;
+    border: 0;
+    color: var(--text-dim, #6B6258);
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1;
+  }
+  .support-pending-image-remove:hover { background: rgba(0, 0, 0, 0.06); color: var(--text, #1A1612); }
+  /* Image inside a sent message bubble */
+  .support-msg img {
+    display: block;
+    max-width: 100%;
+    max-height: 200px;
+    object-fit: contain;
+    border-radius: 6px;
+    margin-bottom: 6px;
+  }
   .support-send-btn {
     background: var(--gold, #D9A74E);
     color: var(--dark, #1A1612);
@@ -8906,6 +8971,9 @@ Begin.` },
     messages: [{ role: "assistant", content: OPENING_MSG }],
     loading: false,
     suggestEscalation: false,
+    // Pending screenshot the user has attached but not yet sent.
+    // Cleared after send or when user removes it.
+    pendingImage: null,
   };
 
   // ----- DOM construction -----
@@ -8929,7 +8997,16 @@ Begin.` },
       <button class="support-header-close" type="button" aria-label="Close">×</button>
     </div>
     <div class="support-messages" id="support-messages"></div>
+    <div class="support-pending-image" id="support-pending-image" style="display:none;">
+      <img id="support-pending-thumb" alt="" />
+      <div class="support-pending-image-name" id="support-pending-name"></div>
+      <button class="support-pending-image-remove" id="support-pending-remove" type="button" aria-label="Remove image">×</button>
+    </div>
     <div class="support-input-row">
+      <input type="file" class="support-attach-input" id="support-attach-input" accept="image/png,image/jpeg,image/webp,image/gif" />
+      <button class="support-attach-btn" id="support-attach-btn" type="button" aria-label="Attach screenshot" title="Attach screenshot">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+      </button>
       <textarea id="support-input" placeholder="Type your question…" rows="1"></textarea>
       <button class="support-send-btn" id="support-send" type="button">Send</button>
     </div>
@@ -8949,6 +9026,18 @@ Begin.` },
   const sendBtn = panel.querySelector("#support-send");
   const closeBtn = panel.querySelector(".support-header-close");
   const escalateBtn = panel.querySelector("#support-escalate");
+  const attachBtn = panel.querySelector("#support-attach-btn");
+  const attachInput = panel.querySelector("#support-attach-input");
+  const pendingImageEl = panel.querySelector("#support-pending-image");
+  const pendingThumbEl = panel.querySelector("#support-pending-thumb");
+  const pendingNameEl = panel.querySelector("#support-pending-name");
+  const pendingRemoveBtn = panel.querySelector("#support-pending-remove");
+
+  // Limits for screenshot attachments. Anthropic accepts up to 5MB
+  // base64-encoded; staying under 3MB raw keeps us safely below that
+  // and bounds the cost of vision tokens (Haiku charges per image).
+  const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
+  const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 
   // ----- Render messages list -----
   // Bot messages get minimal markdown rendering (bold, italic, inline
@@ -8986,7 +9075,19 @@ Begin.` },
       const div = document.createElement("div");
       div.className = "support-msg " + (m.role === "user" ? "user" : "bot");
       if (m.role === "user") {
-        div.textContent = m.content;
+        // User messages may carry an attached image (data URL). Render
+        // the image above the text in the bubble.
+        if (m.image && m.image.dataUrl) {
+          const img = document.createElement("img");
+          img.src = m.image.dataUrl;
+          img.alt = m.image.name || "Screenshot";
+          div.appendChild(img);
+        }
+        if (m.content) {
+          const txt = document.createElement("div");
+          txt.textContent = m.content;
+          div.appendChild(txt);
+        }
       } else {
         div.innerHTML = renderBotMarkdown(m.content);
       }
@@ -9002,6 +9103,65 @@ Begin.` },
     msgsEl.scrollTop = msgsEl.scrollHeight;
   }
   renderMessages();
+
+  // ----- Image attachment handling -----
+  // widgetState.pendingImage holds the not-yet-sent attachment:
+  //   { name, type, dataUrl, base64 }
+  // dataUrl is used for previews + bubble rendering, base64 is what
+  // the backend forwards to Anthropic's vision API.
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+  function showPendingImage() {
+    if (!widgetState.pendingImage) {
+      pendingImageEl.style.display = "none";
+      return;
+    }
+    pendingImageEl.style.display = "flex";
+    pendingThumbEl.src = widgetState.pendingImage.dataUrl;
+    pendingNameEl.textContent = widgetState.pendingImage.name;
+  }
+  function clearPendingImage() {
+    widgetState.pendingImage = null;
+    showPendingImage();
+    // Reset the file input so the user can re-select the same file later
+    attachInput.value = "";
+  }
+  async function handleFileSelect(file) {
+    if (!file) return;
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      alert("Please attach a PNG, JPG, WEBP, or GIF image.");
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      alert("That image is too large (max 3MB). Try cropping or compressing it first.");
+      return;
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      // Split "data:image/png;base64,iVBORw..." into mime + base64
+      const match = /^data:([^;]+);base64,(.+)$/.exec(dataUrl);
+      if (!match) {
+        alert("Couldn't read that file. Try a different one.");
+        return;
+      }
+      widgetState.pendingImage = {
+        name: file.name,
+        type: match[1],
+        dataUrl: dataUrl,
+        base64: match[2],
+      };
+      showPendingImage();
+      inputEl.focus();
+    } catch (e) {
+      alert("Couldn't read that file. Try a different one.");
+    }
+  }
 
   // ----- Build the WhatsApp escalation URL with user context -----
   // Pre-fills a message with the user's email + the conversation so far
@@ -9055,10 +9215,25 @@ Begin.` },
   }
   async function sendMessage() {
     const text = (inputEl.value || "").trim();
-    if (!text || widgetState.loading) return;
-    widgetState.messages.push({ role: "user", content: text });
+    const hasImage = !!widgetState.pendingImage;
+    // Allow sending if there's text OR an image (image alone is a
+    // valid "look at this" prompt that Haiku can describe).
+    if ((!text && !hasImage) || widgetState.loading) return;
+    // Push the new user message into history, attaching the image
+    // metadata so the bubble renders it AND the backend gets it.
+    const userMsg = { role: "user", content: text || "What is happening here?" };
+    if (hasImage) {
+      userMsg.image = {
+        name: widgetState.pendingImage.name,
+        type: widgetState.pendingImage.type,
+        dataUrl: widgetState.pendingImage.dataUrl,
+        base64: widgetState.pendingImage.base64,
+      };
+    }
+    widgetState.messages.push(userMsg);
     inputEl.value = "";
     inputEl.style.height = "auto";
+    clearPendingImage();
     widgetState.loading = true;
     renderMessages();
     try {
@@ -9073,7 +9248,23 @@ Begin.` },
           ...(token ? { "x-session-token": token } : {}),
         },
         body: JSON.stringify({
-          messages: widgetState.messages.filter(m => m.role === "user" || m.role === "assistant"),
+          messages: widgetState.messages
+            .filter(m => m.role === "user" || m.role === "assistant")
+            .map(m => {
+              // The backend expects a normalized shape per message:
+              //   { role, content, image?: { type, base64 } }
+              // We strip dataUrl from the wire payload to save bytes
+              // (only base64 is needed for the API call). We keep
+              // dataUrl in the local state for rendering.
+              if (m.image) {
+                return {
+                  role: m.role,
+                  content: m.content,
+                  image: { type: m.image.type, base64: m.image.base64 },
+                };
+              }
+              return { role: m.role, content: m.content };
+            }),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -9106,6 +9297,28 @@ Begin.` },
     // Auto-grow up to max-height
     e.target.style.height = "auto";
     e.target.style.height = Math.min(e.target.scrollHeight, 100) + "px";
+  });
+  attachBtn.addEventListener("click", () => attachInput.click());
+  attachInput.addEventListener("change", (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) handleFileSelect(file);
+  });
+  pendingRemoveBtn.addEventListener("click", clearPendingImage);
+  // Allow paste-to-attach: if the user copies a screenshot (Cmd+Shift+4
+  // on macOS, Print Screen on Windows) then pastes in the textarea,
+  // pick up the clipboard image automatically. Big quality-of-life win.
+  inputEl.addEventListener("paste", (e) => {
+    if (!e.clipboardData) return;
+    for (const item of e.clipboardData.items) {
+      if (item.kind === "file" && item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) {
+          e.preventDefault();
+          handleFileSelect(file);
+          return;
+        }
+      }
+    }
   });
   escalateBtn.addEventListener("click", (e) => {
     if (!WHATSAPP_NUMBER) {
