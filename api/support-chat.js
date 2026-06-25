@@ -19,6 +19,15 @@ const MODEL = "claude-haiku-4-5";
 const MAX_TOKENS = 600;
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
+// Raise the body size cap to 8mb so screenshots up to ~3MB raw
+// (which base64-encode to ~4MB) plus JSON overhead fit comfortably.
+// Vercel default is 4.5mb which would reject larger attachments.
+export const config = {
+  api: {
+    bodyParser: { sizeLimit: "8mb" },
+  },
+};
+
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") {
@@ -50,6 +59,31 @@ async function runSupport(req, res, user) {
   // chats rarely benefit from longer memory than that.
   const recentMessages = messages.slice(-10);
 
+  // Transform messages for Anthropic vision support. Frontend sends:
+  //   { role, content, image?: { type, base64 } }
+  // Anthropic expects multi-modal content as an array when an image is
+  // attached:
+  //   { role, content: [{type:"image", source:{...}}, {type:"text", text:"..."}] }
+  // Messages without images stay as plain strings — cheaper to parse.
+  // Allow PNG/JPEG/WEBP/GIF only; reject anything else defensively.
+  const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+  const transformedMessages = recentMessages.map((m) => {
+    if (m && m.image && m.image.base64 && ALLOWED_IMAGE_TYPES.has(m.image.type)) {
+      const contentBlocks = [
+        {
+          type: "image",
+          source: { type: "base64", media_type: m.image.type, data: m.image.base64 },
+        },
+      ];
+      // Always include some text so Anthropic has a prompt to answer
+      // even when the user attached an image with no caption.
+      const textBlock = { type: "text", text: m.content || "Please look at this screenshot." };
+      contentBlocks.push(textBlock);
+      return { role: m.role, content: contentBlocks };
+    }
+    return { role: m.role, content: m.content || "" };
+  });
+
   const systemPrompt = buildSystemPrompt(user);
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -73,7 +107,7 @@ async function runSupport(req, res, user) {
       // ~90% cheaper on input tokens.
       cache_control: { type: "ephemeral" },
       system: systemPrompt,
-      messages: recentMessages,
+      messages: transformedMessages,
     }),
   });
 
@@ -151,6 +185,8 @@ ${userContext}
 
 # Your job
 Answer member questions about how The Field works, common technical issues, and account questions. Keep replies SHORT (2-4 sentences usually). Be warm but efficient. Use their tier and current state to personalize when relevant.
+
+Members can attach screenshots to their messages. When they do, look at the image carefully and describe what you see in the context of their question. Read any visible text (error messages, button labels, account state, etc.) to give a precise answer. If the screenshot shows an error you don't recognize, escalate to WhatsApp.
 
 # What you know about The Field
 
