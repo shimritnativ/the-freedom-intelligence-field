@@ -126,15 +126,29 @@ export default async function handler(req, res) {
     // ----- Wrong-day activation guardrail -----
     // If the user pasted an activation prompt for a DIFFERENT day than
     // the one they're currently on, intercept it. Without this guard,
-    // Claude tries to be helpful and runs Day 3 content inside a Day 2
-    // session (Geo hit this — pasted Day 3 prompt while on Day 2, the
-    // Field ran Day 3 anyway). Synthetic reply, no Anthropic call —
-    // cheaper and more reliable than asking the AI to refuse.
+    // Claude tries to be helpful and runs the wrong day's content
+    // inside the current session (Geo hit two flavors: pasted Day 3
+    // prompt while on Day 2 → ran Day 3 content; pasted Day 1 prompt
+    // while server thought she was on Day 3 → stuck in a "Welcome to
+    // Day 3" loop). Synthetic reply, no Anthropic call — cheaper and
+    // more reliable than asking the AI to refuse.
     const activatedDay = detectActivatedDay(message);
-    if (activatedDay && activatedDay > day) {
-      const replyText =
-        `It looks like you pasted the Day ${activatedDay} prompt, but you're still on Day ${day} of your 72 Hour Power Reset. Let's finish Day ${day} first — Day ${activatedDay} unlocks as soon as you complete this one.\n\n` +
-        `If you're ready to move on, you can either wait for the natural 24h unlock OR tap the "Complete Day ${day} →" button below this chat to advance now. Then paste your Day ${activatedDay} prompt and we'll begin.`;
+    if (activatedDay && activatedDay !== day) {
+      let replyText;
+      if (activatedDay > day) {
+        // Forward skip: tell them to finish where they are first.
+        replyText =
+          `It looks like you pasted the Day ${activatedDay} prompt, but you're still on Day ${day} of your 72 Hour Power Reset. Let's finish Day ${day} first — Day ${activatedDay} unlocks as soon as you complete this one.\n\n` +
+          `If you're ready to move on, you can either wait for the natural 24h unlock OR tap the "Complete Day ${day} →" button below this chat to advance now. Then paste your Day ${activatedDay} prompt and we'll begin.`;
+      } else {
+        // Backward paste: they're trying to revisit an earlier day, but
+        // their session is already on a later one. Tell them clearly
+        // where they actually are so they can re-orient and paste the
+        // right prompt instead of getting stuck in a loop.
+        replyText =
+          `It looks like you pasted the Day ${activatedDay} prompt, but you're already on Day ${day} of your 72 Hour Power Reset — Day ${activatedDay} is behind you.\n\n` +
+          `To continue from where you are, paste your Day ${day} prompt instead. You'll find it in your library at the same place you got your Day ${activatedDay} prompt. If something feels off about your day count and you think you shouldn't be on Day ${day} yet, message support and we'll take a look.`;
+      }
       return res.status(200).json({
         reply: replyText,
         currentDay: day,
