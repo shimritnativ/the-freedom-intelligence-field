@@ -115,7 +115,14 @@ export default async function handler(req, res) {
         from,
         to,
         level: "campaign",
-        fields: "campaign_id,campaign_name,spend,impressions,clicks,ctr,cpc,cpm",
+        // Use `inline_link_clicks` (Meta's "Link clicks" = clicks that
+        // navigate to the destination URL) instead of `clicks` (which
+        // is "Clicks (all)" — includes reactions, profile clicks, post
+        // engagement, etc.). Meta's own primary CPC, CTR, and ROAS
+        // calculations use link clicks too, so this makes our numbers
+        // line up with Ads Manager. Geo flagged the mismatch: our tab
+        // showed 259 clicks while Meta showed 173 link clicks.
+        fields: "campaign_id,campaign_name,spend,impressions,inline_link_clicks,clicks,ctr,cpc,cpm",
       })),
       // Daily series is queried at CAMPAIGN level (not account) so the
       // same exclude/include filter we apply to the totals also applies
@@ -129,7 +136,7 @@ export default async function handler(req, res) {
         from,
         to,
         level: "campaign",
-        fields: "campaign_name,spend,impressions,clicks",
+        fields: "campaign_name,spend,impressions,inline_link_clicks,clicks",
         timeIncrement: 1,
       })),
       safe("campaign_list", fetchCampaignList({ accessToken, accountId, apiVersion })),
@@ -218,7 +225,11 @@ export default async function handler(req, res) {
       const name = c.campaign_name || "(unnamed campaign)";
       const spend = Number(c.spend || 0);
       const impressions = Number(c.impressions || 0);
-      const clicks = Number(c.clicks || 0);
+      // Prefer Meta's `inline_link_clicks` (Link clicks) which matches
+      // Meta's Ads Manager headline number. Fall back to `clicks` only
+      // if the link-clicks field is missing for some reason (e.g., the
+      // campaign has zero qualifying clicks and Meta omits the field).
+      const clicks = Number(c.inline_link_clicks != null ? c.inline_link_clicks : (c.clicks || 0));
       const ctr = Number(c.ctr || 0);
       const cpc = Number(c.cpc || 0);
       const cpm = Number(c.cpm || 0);
@@ -319,7 +330,8 @@ export default async function handler(req, res) {
       if (!dailyAgg[date]) dailyAgg[date] = { spend: 0, impressions: 0, clicks: 0 };
       dailyAgg[date].spend       += Number(d.spend || 0);
       dailyAgg[date].impressions += Number(d.impressions || 0);
-      dailyAgg[date].clicks      += Number(d.clicks || 0);
+      // Same convention as the per-campaign totals: prefer link clicks.
+      dailyAgg[date].clicks      += Number(d.inline_link_clicks != null ? d.inline_link_clicks : (d.clicks || 0));
     }
     const daily = Object.keys(dailyAgg).sort().map((date) => ({
       date,
