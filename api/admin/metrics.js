@@ -154,6 +154,7 @@ export default async function handler(req, res) {
       todaySignups,
       todayRevenue,
       todayActivity,
+      memberSourceBreakdown,
     ] = await Promise.all([
       // 1. Members by tier × plan (filtered)
       //
@@ -327,6 +328,15 @@ export default async function handler(req, res) {
           u.first_login_at,
           u.last_completed_day,
           u.preview_ends_at,
+          -- UTM attribution so the admin can see at a glance whether each
+          -- member came from a Meta ad (utm_campaign matches a known ad
+          -- name like "cold" or "warm"), from a Shimrit email, organic
+          -- search, etc. NULL across all three columns = the buyer did
+          -- not pass through a tracked URL, so we can only label them
+          -- "organic / direct / unknown."
+          u.utm_source,
+          u.utm_campaign,
+          u.utm_content,
           -- Total amount each member has paid on the Field (main products +
           -- OTOs + bumps + recurring), excluding refunds and free comps.
           -- The frontend respects the VAT toggle and divides by 1.19 for
@@ -847,6 +857,47 @@ export default async function handler(req, res) {
                    AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
                )) AS unlimited_messages_today
       `),
+      // Member source breakdown — bucket every Kajabi-entitled member
+      // in the current range by where they came from. Drives the
+      // "Where members come from" overview tile so Geo can see at a
+      // glance how many are from Meta ads vs organic vs email etc.
+      // Bucket order matters — first matching CASE branch wins.
+      sql`
+        SELECT
+          CASE
+            WHEN LOWER(COALESCE(u.utm_campaign, '')) IN ('cold', 'warm')
+              OR LOWER(COALESCE(u.utm_source, '')) IN ('meta', 'facebook', 'instagram', 'fb', 'ig')
+              THEN 'Meta ads'
+            WHEN LOWER(COALESCE(u.utm_source, '')) = 'power-reset'
+              THEN 'Meta ads'
+            WHEN LOWER(COALESCE(u.utm_medium, '')) = 'email'
+              OR LOWER(COALESCE(u.utm_source, '')) LIKE '%email%'
+              OR LOWER(COALESCE(u.utm_source, '')) LIKE '%newsletter%'
+              OR LOWER(COALESCE(u.utm_source, '')) LIKE '%klaviyo%'
+              OR LOWER(COALESCE(u.utm_source, '')) LIKE '%mailchimp%'
+              OR LOWER(COALESCE(u.utm_source, '')) LIKE '%kajabi%'
+              THEN 'Email'
+            WHEN u.utm_source IS NOT NULL OR u.utm_campaign IS NOT NULL
+              THEN 'Other tracked'
+            ELSE 'Organic / Direct'
+          END AS source_bucket,
+          COUNT(*)::int AS members
+        FROM users u
+        WHERE u.kajabi_entitled = true
+          AND u.email NOT LIKE ${excludePattern}
+          AND u.created_at >= ${fromIso}
+          AND (${toIso}::timestamptz IS NULL OR u.created_at <= ${toIso})
+          AND (
+            NOT EXISTS (SELECT 1 FROM purchases p WHERE LOWER(p.email) = LOWER(u.email))
+            OR EXISTS (
+              SELECT 1 FROM purchases p
+              WHERE LOWER(p.email) = LOWER(u.email)
+                AND COALESCE(p.coupon_code, '') <> ALL(${excludedCouponsFromMembers})
+            )
+          )
+        GROUP BY source_bucket
+        ORDER BY members DESC
+      `,
     ]);
 
     return res.status(200).json({
@@ -878,6 +929,7 @@ export default async function handler(req, res) {
       unlimitedEngagement: unlimitedEngagement.rows[0],
       perUserUnlimited: perUserUnlimited.rows,
       recentSignups: recentSignups.rows,
+      memberSourceBreakdown: memberSourceBreakdown ? memberSourceBreakdown.rows : [],
       windowState: windowState.rows[0],
       webhookActivity: webhookActivity.rows,
       processUsage: processUsage.rows,
