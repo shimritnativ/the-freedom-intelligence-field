@@ -2598,6 +2598,7 @@
                   <tr>
                     <th>Email</th><th>Name</th><th>Tier</th><th>Plan</th>
                     <th class="num">Spent</th>
+                    <th>Source</th>
                     <th>Joined</th><th>1st login</th><th class="num">Day</th>
                   </tr>
                 </thead>
@@ -4488,10 +4489,35 @@
       }
 
       if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No members match these filters.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No members match these filters.</td></tr>';
         pager.innerHTML = "";
         return;
       }
+
+      // Format a member's traffic source from their utm fields. Output is
+      // short and human-readable (e.g., "Meta · cold · reel3", "Email",
+      // "Organic / Direct"). Hover tooltip carries the full breakdown.
+      const formatSource = (u) => {
+        const src = (u.utm_source || "").toLowerCase();
+        const camp = (u.utm_campaign || "").toLowerCase();
+        const content = u.utm_content || "";
+        // Meta ad detection: known campaign tags from the live ad URLs.
+        if (camp === "cold" || camp === "warm" || src === "power-reset" || src === "meta" || src === "facebook" || src === "instagram") {
+          let label = "Meta · " + (camp || src);
+          if (content) label += " · " + content;
+          return `<span title="${escapeHtml('utm_source=' + (u.utm_source || '') + ', utm_campaign=' + (u.utm_campaign || '') + ', utm_content=' + (u.utm_content || ''))}" style="color: var(--gold); font-weight: 600;">${escapeHtml(label)}</span>`;
+        }
+        // Email
+        if (src.includes("email") || src.includes("newsletter") || src.includes("klaviyo") || src.includes("mailchimp") || src.includes("kajabi")) {
+          return `<span title="${escapeHtml('utm_source=' + (u.utm_source || '') + ', utm_campaign=' + (u.utm_campaign || ''))}" style="color: var(--text);">Email${camp ? ' · ' + escapeHtml(camp) : ''}</span>`;
+        }
+        // Other tracked
+        if (src || camp) {
+          return `<span title="${escapeHtml('utm_source=' + (u.utm_source || '') + ', utm_campaign=' + (u.utm_campaign || ''))}" style="color: var(--text);">${escapeHtml(src || camp)}</span>`;
+        }
+        // Organic / Direct
+        return `<span style="color: var(--text-mute);">Organic</span>`;
+      };
 
       tbody.innerHTML = slice.map(u => {
         const spent = Number(u.total_spent_cents || 0);
@@ -4512,6 +4538,7 @@
             <td data-label="Tier"><span class="tier-badge ${u.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(tierLabel(u.tier))}</span></td>
             <td data-label="Plan">${escapeHtml(u.subscription_plan || "—")}</td>
             <td class="num" data-label="Spent">${spentCell}</td>
+            <td data-label="Source">${formatSource(u)}</td>
             <td class="date-cell" data-label="Joined">${fmtDate(u.created_at)}</td>
             <td class="date-cell" data-label="1st login">${u.first_login_at ? fmtDate(u.first_login_at) : "—"}</td>
             <td class="num" data-label="Day">${u.last_completed_day || 0}</td>
