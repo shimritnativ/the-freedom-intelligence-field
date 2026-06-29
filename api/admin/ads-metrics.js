@@ -259,13 +259,18 @@ export default async function handler(req, res) {
       // page snippet since Meta has no visibility past the click.
       const visits = clicks;
       let checkoutScrolls = 0;
+      let ctaClicks = 0;
       for (const utmCampaign of Object.keys(funnelByCampaign)) {
         if (!utmCampaign) continue;
         if (nameLower.includes(String(utmCampaign).toLowerCase())) {
-          checkoutScrolls  += Number(funnelByCampaign[utmCampaign].checkout_scrolls || 0);
+          checkoutScrolls += Number(funnelByCampaign[utmCampaign].checkout_scrolls || 0);
+          ctaClicks       += Number(funnelByCampaign[utmCampaign].cta_clicks || 0);
         }
       }
-      const funnel = { visits, checkout_scrolls: checkoutScrolls };
+      // CTA clicks is the new headline funnel step (since CTAs now link
+      // out to ThriveCart instead of scrolling to an embedded checkout).
+      // Abandoned cart = people who clicked the CTA but didn't buy.
+      const abandonedCart = Math.max(0, ctaClicks - signups);
       return {
         id,
         name,
@@ -280,12 +285,18 @@ export default async function handler(req, res) {
         cost_per_signup: signups > 0 ? spend / signups : null,
         revenue_attributed_cents: revenueCents,
         roas: spend > 0 ? (revenueCents / 100) / spend : null,
-        // Landing funnel — visits → checkout_scroll → bought
+        // Landing funnel — visits → CTA click → bought.
+        // checkout_scrolls kept for backward-compat with old landing pages.
         visits,
+        cta_clicks: ctaClicks,
         checkout_scrolls: checkoutScrolls,
+        cta_to_visit_rate: visits > 0 ? (ctaClicks / visits) * 100 : null,
+        purchase_to_cta_rate: ctaClicks > 0 ? (signups / ctaClicks) * 100 : null,
+        // Keep the old scroll-based rates so legacy data still shows in the
+        // table for any rows from before the CTA redesign.
         scroll_to_visit_rate: visits > 0 ? (checkoutScrolls / visits) * 100 : null,
         purchase_to_scroll_rate: checkoutScrolls > 0 ? (signups / checkoutScrolls) * 100 : null,
-        abandoned_cart: Math.max(0, checkoutScrolls - signups),
+        abandoned_cart: abandonedCart,
       };
     });
 
@@ -299,6 +310,7 @@ export default async function handler(req, res) {
 
     const totalVisits = campaigns.reduce((s, c) => s + (c.visits || 0), 0);
     const totalCheckoutScrolls = campaigns.reduce((s, c) => s + (c.checkout_scrolls || 0), 0);
+    const totalCtaClicks = campaigns.reduce((s, c) => s + (c.cta_clicks || 0), 0);
 
     const totals = {
       spend: totalSpend,
@@ -311,10 +323,15 @@ export default async function handler(req, res) {
       cost_per_signup: totalSignups > 0 ? totalSpend / totalSignups : null,
       revenue_attributed_cents: totalRevenueCents,
       roas: totalSpend > 0 ? (totalRevenueCents / 100) / totalSpend : null,
-      // Funnel totals
+      // Funnel totals — CTA click is the new headline step
       visits: totalVisits,
+      cta_clicks: totalCtaClicks,
       checkout_scrolls: totalCheckoutScrolls,
-      abandoned_cart: Math.max(0, totalCheckoutScrolls - totalSignups),
+      // Abandoned cart = visitors who clicked the CTA but didn't buy
+      abandoned_cart: Math.max(0, totalCtaClicks - totalSignups),
+      cta_to_visit_rate: totalVisits > 0 ? (totalCtaClicks / totalVisits) * 100 : null,
+      purchase_to_cta_rate: totalCtaClicks > 0 ? (totalSignups / totalCtaClicks) * 100 : null,
+      // Legacy scroll-based rates kept for old landing pages
       scroll_to_visit_rate: totalVisits > 0 ? (totalCheckoutScrolls / totalVisits) * 100 : null,
       purchase_to_scroll_rate: totalCheckoutScrolls > 0 ? (totalSignups / totalCheckoutScrolls) * 100 : null,
     };
@@ -482,10 +499,17 @@ async function loadRevenueByCampaign(from, to) {
 // /api/track-landing-event (called by the GHL landing page snippet).
 async function loadFunnelByCampaign(from, to) {
   try {
+    // CTA clicks are recorded with event_type prefixed `power_reset_cta_click`
+    // (optionally followed by `:label` like `:start` or `:instant_access`).
+    // We count UNIQUE SESSIONS that fired any CTA event so a visitor who
+    // tapped two buttons doesn't double-count. checkout_scrolls is kept for
+    // legacy rows but the CTA event is the relevant signal now that CTAs
+    // link out to ThriveCart instead of opening an embedded checkout.
     const { rows } = await sql`
       SELECT utm_campaign,
-             COUNT(*) FILTER (WHERE event_type = 'page_view')::int        AS visits,
-             COUNT(*) FILTER (WHERE event_type = 'checkout_scroll')::int  AS checkout_scrolls
+             COUNT(*) FILTER (WHERE event_type = 'page_view')::int                                   AS visits,
+             COUNT(*) FILTER (WHERE event_type = 'checkout_scroll')::int                             AS checkout_scrolls,
+             COUNT(DISTINCT session_id) FILTER (WHERE event_type LIKE 'power_reset_cta_click%')::int AS cta_clicks
       FROM landing_events
       WHERE created_at >= ${from}::date
         AND created_at < (${to}::date + INTERVAL '1 day')
@@ -498,6 +522,7 @@ async function loadFunnelByCampaign(from, to) {
         map[r.utm_campaign] = {
           visits: Number(r.visits),
           checkout_scrolls: Number(r.checkout_scrolls),
+          cta_clicks: Number(r.cta_clicks),
         };
       }
     }
