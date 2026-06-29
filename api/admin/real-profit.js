@@ -87,6 +87,7 @@ export default async function handler(req, res) {
   let anthropicUsd = 0;
   let anthropicEur = 0;
   let anthropicSource = null;
+  let anthropicDiagnostic = null;
   try {
     const result = await fetchAnthropicSpendUsd({
       startingAt: LIFETIME_FROM + "T00:00:00Z",
@@ -94,6 +95,13 @@ export default async function handler(req, res) {
     });
     anthropicUsd = result.totalUsd || 0;
     anthropicSource = result.ok ? "anthropic_admin_api" : "unavailable";
+    anthropicDiagnostic = {
+      ok: result.ok,
+      bucketsScanned: result.bucketsScanned ?? 0,
+      resultsScanned: result.resultsScanned ?? 0,
+      pageCount: result.pageCount ?? 0,
+      reason: result.reason ?? null,
+    };
     if (!result.ok) {
       errors.push({ source: "anthropic_admin", message: result.reason });
     }
@@ -220,6 +228,7 @@ export default async function handler(req, res) {
         totalUsd: anthropicUsd,
         totalEur: anthropicEur,
         source: anthropicSource,
+        diagnostic: anthropicDiagnostic,
         notes: anthropicSource === "anthropic_admin_api"
           ? "Pulled live via Anthropic Admin API. Folded into opsCosts in place of the manual launch tracker field."
           : "Not pulled; falling back to whatever the launch tracker has manually entered.",
@@ -278,11 +287,16 @@ function computeOpsCosts(state, opts = {}) {
     return n(stateKey);
   };
 
-  // Anthropic: prefer the live Admin API number (already in EUR) over the
-  // saved value in monthly_costs. Fall back to monthly_costs anthropic if
-  // the API call failed.
-  const useAnthropicOverride = Number.isFinite(opts.anthropicEurOverride) && opts.anthropicEurOverride > 0;
+  // Anthropic: take MAX of the live Admin API value vs the manually-entered
+  // baseline in monthly_costs. This handles the transition period where the
+  // Admin API was just created and has no historical data yet — the manual
+  // baseline (typed in via the admin Monthly Costs panel) covers pre-key
+  // spend, the API picks up new spend. Once API exceeds the baseline (after
+  // a full month of token usage post key creation), the API takes over
+  // automatically and the manual value becomes irrelevant.
+  const liveAnthropicEur = Number.isFinite(opts.anthropicEurOverride) ? Number(opts.anthropicEurOverride) : 0;
   const manualAnthropicEur = costFor("anthropic", "op-anthropic"); // already in EUR per admin convention
+  const useAnthropicOverride = liveAnthropicEur > manualAnthropicEur;
   // Other ops costs — all already in EUR per "billed USD — enter EUR".
   const opGhl = costFor("ghl", "op-ghl");
   const opVercel = costFor("vercel", "op-vercel");
