@@ -101,20 +101,45 @@ export default async function handler(req, res) {
     errors.push({ source: "anthropic_admin", message: e?.message || String(e) });
   }
 
-  // ---- 2b. Ops costs from launch tracker state ----
+  // ---- 2b. Ops costs from launch tracker state + monthly_costs table ----
+  // Important: the launch tracker shows op-ghl, op-anthropic, op-vercel, etc.
+  // but these values actually live in the `monthly_costs` table — the admin
+  // saves them there via the "Monthly costs" snapshot panel, then the launch
+  // tracker iframe receives them via postMessage from the parent. So they're
+  // NOT in launch_tracker_state.state — we have to pull both sources and
+  // merge them.
   let opsCosts = 0;
   let opsBreakdown = null;
   try {
-    const { rows } = await sql`
+    const { rows: stateRows } = await sql`
       SELECT state FROM launch_tracker_state WHERE id = 'singleton' LIMIT 1
     `;
-    const state = (rows[0]?.state) || {};
+    const state = (stateRows[0]?.state) || {};
+
+    // Pull the monthly_costs table — same source the admin's Monthly Costs
+    // panel reads/writes. service_key → amount.
+    let monthlyCostsByKey = {};
+    try {
+      const { rows: costRows } = await sql`
+        SELECT service_key, amount FROM monthly_costs
+      `;
+      for (const r of costRows) {
+        monthlyCostsByKey[r.service_key] = Number(r.amount || 0);
+      }
+    } catch (e) {
+      // Table may not be migrated — silent fall-through; values stay 0.
+    }
+
     // Convert Anthropic USD → EUR using the same fx rate the launch tracker
     // uses for the other USD-billed services. Default to 1 if not set so the
-    // number is at least visible.
-    const fx = Number(state?.["op-fx"]) || 1;
+    // number is at least visible. (Most cost rows are already in EUR per the
+    // admin's "billed USD — enter EUR" convention.)
+    const fx = Number(String(state?.["op-fx"] ?? "1").replace(",", ".")) || 1;
     anthropicEur = anthropicUsd * fx;
-    opsBreakdown = computeOpsCosts(state, { anthropicEurOverride: anthropicEur });
+    opsBreakdown = computeOpsCosts(state, {
+      anthropicEurOverride: anthropicEur,
+      monthlyCostsByKey,
+    });
     opsCosts = opsBreakdown.total;
   } catch (e) {
     errors.push({ source: "launch_tracker_state", message: e?.message || String(e) });
@@ -241,20 +266,37 @@ function computeOpsCosts(state, opts = {}) {
   const launchWhatsAppCost = launchMsgTotal * launchMsgCost;
 
   const fx = n("op-fx") || 1;
-  // Anthropic: prefer the live Admin API number (already in EUR via fx
-  // conversion in the caller) over whatever the user typed manually. The
-  // launch tracker's other ops fields are still summed in USD and converted
-  // here. We subtract the manual anthropic from the USD sum so the EUR
-  // override doesn't get added on top.
-  const useAnthropicOverride = Number.isFinite(opts.anthropicEurOverride);
-  const manualAnthropicUsd = n("op-anthropic");
-  const opMonthlyUsdMinusAnthropic =
-    n("op-vercel") + n("op-resend") + n("op-neon") +
-    n("op-elevenlabs") + n("op-whisper") +
-    n("op-ghl") + n("op-other");
-  const opMonthlyEur = (opMonthlyUsdMinusAnthropic * fx)
-    + (useAnthropicOverride ? opts.anthropicEurOverride : (manualAnthropicUsd * fx))
-    + n("op-domain");
+
+  // Per-service monthly cost lookup. The launch tracker iframe gets these
+  // from the admin's monthly_costs table (via postMessage from parent), so
+  // they're NOT in launch_tracker_state.state. Caller passes them in.
+  // Falls back to whatever's in state if monthlyCostsByKey isn't provided.
+  const mc = opts.monthlyCostsByKey || {};
+  const costFor = (snapshotKey, stateKey) => {
+    const fromTable = mc[snapshotKey];
+    if (Number.isFinite(fromTable) && fromTable > 0) return Number(fromTable);
+    return n(stateKey);
+  };
+
+  // Anthropic: prefer the live Admin API number (already in EUR) over the
+  // saved value in monthly_costs. Fall back to monthly_costs anthropic if
+  // the API call failed.
+  const useAnthropicOverride = Number.isFinite(opts.anthropicEurOverride) && opts.anthropicEurOverride > 0;
+  const manualAnthropicEur = costFor("anthropic", "op-anthropic"); // already in EUR per admin convention
+  // Other ops costs — all already in EUR per "billed USD — enter EUR".
+  const opGhl = costFor("ghl", "op-ghl");
+  const opVercel = costFor("vercel", "op-vercel");
+  const opResend = costFor("resend", "op-resend");
+  const opNeon = costFor("neon", "op-neon");
+  const opElevenLabs = costFor("elevenlabs", "op-elevenlabs");
+  const opWhisper = costFor("whisper", "op-whisper");
+  const opOther = costFor("other", "op-other");
+  const opDomain = costFor("domain", "op-domain");
+
+  const opMonthlyEur =
+    opGhl + opVercel + opResend + opNeon +
+    opElevenLabs + opWhisper + opOther + opDomain +
+    (useAnthropicOverride ? opts.anthropicEurOverride : manualAnthropicEur);
   const opLaunchPortion = opMonthlyEur * 2;
 
   const total = preWhatsAppCost + preGhl + launchWhatsAppCost + opLaunchPortion;
@@ -265,8 +307,8 @@ function computeOpsCosts(state, opts = {}) {
     launchWhatsApp: launchWhatsAppCost,
     opsMonthly: opMonthlyEur,
     opsLaunchPortion: opLaunchPortion,
-    anthropicSource: useAnthropicOverride ? "admin_api" : "manual_input",
-    anthropicEur: useAnthropicOverride ? opts.anthropicEurOverride : (manualAnthropicUsd * fx),
+    anthropicSource: useAnthropicOverride ? "admin_api" : "monthly_costs_table",
+    anthropicEur: useAnthropicOverride ? opts.anthropicEurOverride : manualAnthropicEur,
     total,
   };
 }
