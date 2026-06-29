@@ -2856,6 +2856,14 @@
     // can show "profitable" on paper while bleeding cash today. The
     // projected P&L is still visible in its own tile for context.
     setStatus(actualPnl);
+
+    // After local recalc updates the summary tiles, reapply the Real Profit
+    // override from /api/admin/real-profit if it's loaded. This ensures
+    // Actual Spend + Actual P&L on the Launch Tracker match the Overview's
+    // Real Profit card exactly, even after every user edit triggers recalc.
+    if (typeof applyRealProfitOverride === "function") {
+      applyRealProfitOverride();
+    }
   }
 
   // Capture every field value into a plain object the API can store.
@@ -3035,8 +3043,63 @@
           hint.style.fontWeight = "500";
         }
       }
+
+      // Override the Actual Spend + Actual P&L summary tiles with the
+      // values from /api/admin/real-profit so the launch tracker matches
+      // the Overview's Real Profit card exactly. Without this, the launch
+      // tracker computes its own client-side totalSpend that can diverge
+      // (e.g., Anthropic API value vs the manual op-anthropic field).
+      const opsCosts = Number(data?.opsCosts);
+      const realProfit = Number(data?.realProfit);
+      const netRevenue = Number(data?.netRevenue);
+      const totalSpend = (Number.isFinite(opsCosts) ? opsCosts : 0) + (Number.isFinite(adsEur) ? adsEur : 0);
+      // Store on window so recalc() can read it and apply on every recompute,
+      // not just after this pull. Otherwise a user edit to any field would
+      // trigger recalc() which would overwrite our values with the local
+      // formula's output.
+      window.__realProfitOverride = {
+        netRevenue,
+        totalSpend,
+        realProfit,
+        anthropicSource: data?.breakdown?.anthropic?.source,
+      };
+      // Apply right now too so the user sees the update without waiting
+      // for the next recalc trigger.
+      applyRealProfitOverride();
     } catch (e) {
       // Silent — admin doesn't need to see a network blip in this surface.
+    }
+  }
+
+  // Apply the /api/admin/real-profit values to the summary tiles. Called
+  // both at the end of pullAutoCosts AND from inside recalc() so the
+  // values survive every recompute cycle.
+  function applyRealProfitOverride() {
+    const o = window.__realProfitOverride;
+    if (!o) return;
+    if (Number.isFinite(o.totalSpend)) {
+      const spentEl = document.getElementById("sum-spent");
+      if (spentEl) spentEl.textContent = "€" + Math.round(o.totalSpend);
+      const spentSub = document.getElementById("sum-spent-sub");
+      if (spentSub) spentSub.textContent = "Live: ops + ads from API";
+    }
+    if (Number.isFinite(o.realProfit)) {
+      const pnlEl = document.getElementById("sum-actual-pnl");
+      if (pnlEl) {
+        pnlEl.textContent = (o.realProfit >= 0 ? "+" : "") + "€" + Math.round(o.realProfit);
+        pnlEl.style.color = o.realProfit > 50 ? "var(--success)"
+                          : o.realProfit < -50 ? "var(--danger)"
+                          : "var(--text)";
+      }
+      const pnlSub = document.getElementById("sum-actual-pnl-sub");
+      if (pnlSub) {
+        const anthropicNote = o.anthropicSource === "anthropic_admin_api"
+          ? " · Anthropic API live"
+          : "";
+        pnlSub.textContent = (o.realProfit >= 0
+          ? "Synced with Real Profit on Overview"
+          : "Operating at a loss") + anthropicNote;
+      }
     }
   }
 
