@@ -2561,7 +2561,50 @@
           <div data-tab-content="overview">
             ${renderHighlights(d.today)}
 
-            <!-- KPI strip — every card switches tabs + scrolls to detail -->
+            <!-- KPI layout v2 — "money first" hierarchy.
+                 Top row: 3 large financial cards (Revenue · Total Costs · Real Profit).
+                 Bottom row: 4 smaller operational cards (Members · Reset · Unlimited · Day 3).
+                 The top row tells the business-health story in 3 numbers;
+                 the bottom row breaks down who's actually in the system. -->
+            ${tc.connected && d.realProfit ? (() => {
+              const rp = d.realProfit;
+              const profitCents = Math.round((rp.realProfit || 0) * 100);
+              const opsCents = Math.round((rp.opsCosts || 0) * 100);
+              const adsCents = Math.round((rp.adsSpend || 0) * 100);
+              const totalCostsCents = opsCents + adsCents;
+              const isProfit = (rp.realProfit || 0) > 0;
+              const profitColor = isProfit ? 'var(--success, #2e7d32)'
+                                : (rp.realProfit || 0) < 0 ? 'var(--danger, #c62828)'
+                                : 'var(--text)';
+              const marginPct = (netCents > 0) ? ((profitCents / netCents) * 100) : 0;
+              const anthropicEur = rp.breakdown?.anthropic?.totalEur || 0;
+              const anthropicSource = rp.breakdown?.anthropic?.source;
+              const anthropicLabel = anthropicSource === 'anthropic_admin_api'
+                ? `Anthropic (live API): €${anthropicEur.toFixed(2)} included in Ops`
+                : `Anthropic: manual input only (admin API returned no usage)`;
+              return `
+                <div class="kpi-grid kpi-grid-financial" style="grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 18px;">
+                  <div class="kpi kpi-revenue clickable" onclick="goToPanel('revenue', 'panel-revenue')" style="padding: 22px;">
+                    <div class="kpi-label">Net Revenue (ex VAT)</div>
+                    <div class="kpi-value" style="font-size: 32px;">${fmtEur(netCents)}</div>
+                    <div class="kpi-sub">${fmtNum(tcSummary.orders || 0)} orders · ${fmtNum(tcSummary.unique_buyers || 0)} buyers <span style="opacity:0.7;">· ${fmtEur(Math.round(netCents * VAT_DIVISOR))} gross</span></div>
+                  </div>
+                  <div class="kpi clickable" onclick="goToPanel('launch', 'panel-cost-snapshot')" style="padding: 22px;" title="Ops (recurring monthly costs × 2 months launch portion + WhatsApp + GHL) + Ads (lifetime Meta on Field campaigns). ${anthropicLabel}.">
+                    <div class="kpi-label">Total Costs (ex VAT)</div>
+                    <div class="kpi-value" style="font-size: 32px;">${fmtEur(totalCostsCents)}</div>
+                    <div class="kpi-sub">Ops ${fmtEur(opsCents)} · Ads ${fmtEur(adsCents)}</div>
+                  </div>
+                  <div class="kpi clickable" style="border-left: 4px solid ${profitColor}; padding: 22px;" title="Net Revenue ${fmtEur(netCents)} − Total Costs ${fmtEur(totalCostsCents)} = Real Profit ${fmtEur(profitCents)}. ${anthropicLabel}.">
+                    <div class="kpi-label">Real Profit (ex VAT)</div>
+                    <div class="kpi-value" style="color: ${profitColor}; font-size: 32px;">${(rp.realProfit || 0) >= 0 ? '' : '−'}${fmtEur(Math.abs(profitCents))}</div>
+                    <div class="kpi-sub" style="color: ${profitColor};">${isProfit ? '✓' : ''} ${marginPct.toFixed(1)}% margin</div>
+                  </div>
+                </div>
+              `;
+            })() : ''}
+
+            <!-- Operational KPI strip — who's in the system. Smaller cards
+                 so the financial row above stays the visual anchor. -->
             <div class="kpi-grid">
               <div class="kpi clickable" onclick="goToPanel('overview', 'panel-tier-mix')">
                 <div class="kpi-label">Total Members</div>
@@ -2583,43 +2626,13 @@
                 <div class="kpi-value">${fmtNum(c.d3 || 0)}</div>
                 <div class="kpi-sub">${fmtPct(c.d3 || 0, c.total_logged_in || 0)} of logged-in</div>
               </div>
-              ${tc.connected ? `
+              ${!tc.connected ? `
                 <div class="kpi kpi-revenue clickable" onclick="goToPanel('revenue', 'panel-revenue')">
                   <div class="kpi-label">Net Revenue (ex VAT)</div>
                   <div class="kpi-value">${fmtEur(netCents)}</div>
-                  <div class="kpi-sub">${fmtNum(tcSummary.orders || 0)} orders · ${fmtNum(tcSummary.unique_buyers || 0)} paying buyers <span style="opacity:0.7;">· ${fmtEur(Math.round(netCents * VAT_DIVISOR))} gross</span></div>
+                  <div class="kpi-sub">${fmtNum(tcSummary.orders || 0)} orders · ${fmtNum(tcSummary.unique_buyers || 0)} paying buyers</div>
                 </div>
               ` : ''}
-              ${d.realProfit ? (() => {
-                // Real Profit KPI. Pulled from /api/admin/real-profit which
-                // combines: net Field revenue, launch tracker ops costs
-                // (with Anthropic spend swapped in from the Admin API), and
-                // lifetime Meta ads spend on Field campaigns. We store
-                // amounts as full euros (server already divided by 100) so
-                // fmtEur expects cents — multiply by 100 before passing.
-                const rp = d.realProfit;
-                const profitCents = Math.round((rp.realProfit || 0) * 100);
-                const revCents = Math.round((rp.netRevenue || 0) * 100);
-                const opsCents = Math.round((rp.opsCosts || 0) * 100);
-                const adsCents = Math.round((rp.adsSpend || 0) * 100);
-                const anthropicEur = rp.breakdown?.anthropic?.totalEur || 0;
-                const anthropicCents = Math.round(anthropicEur * 100);
-                const anthropicSource = rp.breakdown?.ops?.anthropicSource || 'manual_input';
-                const isProfit = (rp.realProfit || 0) > 0;
-                const profitColor = isProfit ? 'var(--success, #2e7d32)'
-                                  : (rp.realProfit || 0) < 0 ? 'var(--danger, #c62828)'
-                                  : 'var(--text)';
-                const anthropicLabel = anthropicSource === 'admin_api'
-                  ? `Anthropic (live API): ${fmtEur(anthropicCents)} — included in Ops above`
-                  : `Anthropic (manual input only — admin API not configured or call failed)`;
-                return `
-                  <div class="kpi clickable" style="border-left: 3px solid ${profitColor};" title="Net Revenue ${fmtEur(revCents)} − Launch ops ${fmtEur(opsCents)} − Ads (lifetime, Field campaigns) ${fmtEur(adsCents)} = Real Profit ${fmtEur(profitCents)}. ${anthropicLabel}.">
-                    <div class="kpi-label">Real Profit (ex VAT)</div>
-                    <div class="kpi-value" style="color: ${profitColor};">${(rp.realProfit || 0) >= 0 ? '' : '−'}${fmtEur(Math.abs(profitCents))}</div>
-                    <div class="kpi-sub">Rev ${fmtEur(revCents)} − Ops ${fmtEur(opsCents)} − Ads ${fmtEur(adsCents)}</div>
-                  </div>
-                `;
-              })() : ''}
             </div>
 
             <!-- Completion funnel + Tier breakdown -->
