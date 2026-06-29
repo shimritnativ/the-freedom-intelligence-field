@@ -2559,21 +2559,28 @@
               ` : ''}
               ${d.realProfit ? (() => {
                 // Real Profit KPI. Pulled from /api/admin/real-profit which
-                // combines: net Field revenue, launch tracker ops costs (no
-                // VAT), and lifetime Meta ads spend on Field campaigns. We
-                // store amounts as full euros (server already divided by 100)
-                // so fmtEur expects cents — multiply by 100 before passing.
+                // combines: net Field revenue, launch tracker ops costs
+                // (with Anthropic spend swapped in from the Admin API), and
+                // lifetime Meta ads spend on Field campaigns. We store
+                // amounts as full euros (server already divided by 100) so
+                // fmtEur expects cents — multiply by 100 before passing.
                 const rp = d.realProfit;
                 const profitCents = Math.round((rp.realProfit || 0) * 100);
                 const revCents = Math.round((rp.netRevenue || 0) * 100);
                 const opsCents = Math.round((rp.opsCosts || 0) * 100);
                 const adsCents = Math.round((rp.adsSpend || 0) * 100);
+                const anthropicEur = rp.breakdown?.anthropic?.totalEur || 0;
+                const anthropicCents = Math.round(anthropicEur * 100);
+                const anthropicSource = rp.breakdown?.ops?.anthropicSource || 'manual_input';
                 const isProfit = (rp.realProfit || 0) > 0;
                 const profitColor = isProfit ? 'var(--success, #2e7d32)'
                                   : (rp.realProfit || 0) < 0 ? 'var(--danger, #c62828)'
                                   : 'var(--text)';
+                const anthropicLabel = anthropicSource === 'admin_api'
+                  ? `Anthropic (live API): ${fmtEur(anthropicCents)} — included in Ops above`
+                  : `Anthropic (manual input only — admin API not configured or call failed)`;
                 return `
-                  <div class="kpi clickable" style="border-left: 3px solid ${profitColor};" title="Net Revenue ${fmtEur(revCents)} − Launch ops ${fmtEur(opsCents)} − Ads (lifetime, Field campaigns) ${fmtEur(adsCents)} = Real Profit ${fmtEur(profitCents)}">
+                  <div class="kpi clickable" style="border-left: 3px solid ${profitColor};" title="Net Revenue ${fmtEur(revCents)} − Launch ops ${fmtEur(opsCents)} − Ads (lifetime, Field campaigns) ${fmtEur(adsCents)} = Real Profit ${fmtEur(profitCents)}. ${anthropicLabel}.">
                     <div class="kpi-label">Real Profit (ex VAT)</div>
                     <div class="kpi-value" style="color: ${profitColor};">${(rp.realProfit || 0) >= 0 ? '' : '−'}${fmtEur(Math.abs(profitCents))}</div>
                     <div class="kpi-sub">Rev ${fmtEur(revCents)} − Ops ${fmtEur(opsCents)} − Ads ${fmtEur(adsCents)}</div>
