@@ -4323,12 +4323,21 @@
           </div>
         </div>`;
 
-      // Funnel strip — three equally-sized cards showing Visits → Scrolled → Bought.
-      // Each card has identical padding + 1px border so dimensions match exactly.
-      // The "purchased" card uses gold tint to draw the eye but keeps the same
-      // box-sizing so it doesn't overflow the grid column.
+      // Funnel strip — three equally-sized cards showing Visits → CTA clicks → Bought.
+      // The CTA clicks step replaces the legacy "scrolled to checkout" step, since
+      // the GHL landing CTAs now link out to a ThriveCart page instead of opening
+      // an embedded checkout section. CTA clicks counts unique visitors who tapped
+      // any "Buy now / I'm in / Start the 72-hour reset" button.
       const funnelCardBase = "text-align: center; padding: 14px; border-radius: 10px; box-sizing: border-box; min-height: 110px; display: flex; flex-direction: column; justify-content: center;";
-      const funnelBlock = (t.visits > 0 || t.checkout_scrolls > 0)
+      // Prefer CTA-clicks for the middle card; fall back to scrolls only if the
+      // campaign has zero CTA data yet (old landing pages without the click tracker).
+      const useCtaStep = (t.cta_clicks || 0) > 0 || (t.checkout_scrolls || 0) === 0;
+      const middleCount = useCtaStep ? (t.cta_clicks || 0) : (t.checkout_scrolls || 0);
+      const middleLabel = useCtaStep ? "CTA clicks" : "Scrolled to checkout";
+      const middleRateOfVisits = useCtaStep ? t.cta_to_visit_rate : t.scroll_to_visit_rate;
+      const purchaseRateLabel = useCtaStep ? "of CTA clicks" : "of scrolls";
+      const purchaseRate = useCtaStep ? t.purchase_to_cta_rate : t.purchase_to_scroll_rate;
+      const funnelBlock = (t.visits > 0 || t.cta_clicks > 0 || t.checkout_scrolls > 0)
         ? `
           <div style="background: var(--bg-warm); border: 1px solid var(--gold-line); border-radius: 12px; padding: 18px 22px; margin-bottom: 22px;">
             <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px;">Landing page funnel</div>
@@ -4339,14 +4348,14 @@
                 <div style="font-size: 11px; color: transparent; margin-top: 2px;">&nbsp;</div>
               </div>
               <div style="${funnelCardBase} background: var(--panel); border: 1px solid var(--border);">
-                <div style="font-family: Georgia, serif; font-size: 28px; font-weight: 600; color: var(--text); line-height: 1.1;">${num(t.checkout_scrolls)}</div>
-                <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 6px;">Scrolled to checkout</div>
-                <div style="font-size: 11px; color: var(--gold); margin-top: 2px;">${orDash(t.scroll_to_visit_rate, pct)} of visits</div>
+                <div style="font-family: Georgia, serif; font-size: 28px; font-weight: 600; color: var(--text); line-height: 1.1;">${num(middleCount)}</div>
+                <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 6px;">${middleLabel}</div>
+                <div style="font-size: 11px; color: var(--gold); margin-top: 2px;">${orDash(middleRateOfVisits, pct)} of visits</div>
               </div>
               <div style="${funnelCardBase} background: var(--gold-soft); border: 1px solid var(--gold);">
                 <div style="font-family: Georgia, serif; font-size: 28px; font-weight: 600; color: var(--text); line-height: 1.1;">${num(t.signups_attributed)}</div>
                 <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 6px;">Purchased</div>
-                <div style="font-size: 11px; color: var(--gold); margin-top: 2px;">${orDash(t.purchase_to_scroll_rate, pct)} of scrolls</div>
+                <div style="font-size: 11px; color: var(--gold); margin-top: 2px;">${orDash(purchaseRate, pct)} ${purchaseRateLabel}</div>
               </div>
             </div>
           </div>`
@@ -4359,9 +4368,13 @@
         const statusBadge = c.status === "ACTIVE"
           ? '<span class="tier-badge" style="background: rgba(122, 174, 94, 0.15); color: var(--success, #2D6B3A); border-color: rgba(122, 174, 94, 0.3);">ACTIVE</span>'
           : `<span class="tier-badge" style="background: var(--bg-warm); color: var(--text-mute); border-color: var(--border);">${escapeHtml(c.status || "")}</span>`;
+        // Prefer CTA clicks column when we have CTA data; fall back to
+        // scrolled-to-checkout for old data from before the click tracker.
+        const useCtaCol = (c.cta_clicks || 0) > 0 || (c.checkout_scrolls || 0) === 0;
+        const middleColValue = useCtaCol ? (c.cta_clicks || 0) : (c.checkout_scrolls || 0);
         const funnelCells = showFunnelCols ? `
             <td data-label="Visits" class="num">${num(c.visits)}</td>
-            <td data-label="Scrolled" class="num">${num(c.checkout_scrolls)}</td>
+            <td data-label="${useCtaCol ? 'CTA clicks' : 'Scrolled'}" class="num">${num(middleColValue)}</td>
             <td data-label="Abandoned" class="num">${num(c.abandoned_cart)}</td>` : '';
         return `
           <tr>
@@ -4376,9 +4389,12 @@
             <td data-label="ROAS" class="num">${orDash(c.roas, (v) => v.toFixed(2) + "×")}</td>
           </tr>`;
       }).join("");
+      // Pick the header label based on whether any campaign has CTA data.
+      const anyCtaData = (data.campaigns || []).some(c => (c.cta_clicks || 0) > 0);
+      const middleColHeader = anyCtaData ? "CTA clicks" : "Scrolled";
       const funnelHeaders = showFunnelCols ? `
                   <th class="num">Visits</th>
-                  <th class="num">Scrolled</th>
+                  <th class="num">${middleColHeader}</th>
                   <th class="num">Abandoned</th>` : '';
 
       const campaignTable = data.campaigns && data.campaigns.length > 0
