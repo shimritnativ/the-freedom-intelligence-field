@@ -52,7 +52,26 @@ const FIELD_PRODUCT_PATTERNS = [
 ];
 // Personal team gmail addresses that don't end in @shimritnativ.com but still
 // shouldn't show up in member-facing segments. Add new ones as the team grows.
-const EXTRA_EXCLUDED_EMAILS = ["ge.amaral3@gmail.com"];
+const EXTRA_EXCLUDED_EMAILS = [
+  // Geo's personal Gmail accounts used for testing The Field.
+  "ge.amaral3@gmail.com",
+  "geoamaral333@gmail.com",
+];
+// Wildcard LIKE patterns for emails to ALWAYS hide from member counts,
+// roster, segments, and funnels. Combines:
+//   - %@shimritnativ.com (the team domain — was previously its own var)
+//   - Gmail "+" aliases for Geo's accounts (ge.amaral3+anything@gmail.com,
+//     ge.amaral+anything@gmail.com, geoamaral333+anything@gmail.com).
+//     These all forward to the same inboxes so they're test rows.
+// Used with `email LIKE ANY(${EMAIL_EXCLUDE_PATTERNS})` in SQL.
+const EMAIL_EXCLUDE_PATTERNS = [
+  "%@shimritnativ.com",
+  "ge.amaral3@gmail.com",
+  "ge.amaral3+%@gmail.com",
+  "ge.amaral+%@gmail.com",
+  "geoamaral333@gmail.com",
+  "geoamaral333+%@gmail.com",
+];
 
 // Parse a YYYY-MM-DD query param into an ISO timestamp string we can safely
 // pass to Postgres. Returns null for empty/invalid input so the caller can
@@ -105,8 +124,12 @@ export default async function handler(req, res) {
   const fromIso = parseDate(fromRaw) || parseDate(LAUNCH_DATE);
   const toIso = endOfDay(toRaw); // null if not provided — means "up to now"
 
-  // Domain exclusion pattern for the WHERE clauses.
+  // Email exclusion patterns for the WHERE clauses. Pulled from the
+  // top-level constant so adding a new test account is a one-line edit
+  // up there. Single-pattern callers can still use `excludePattern` for
+  // the team domain alone; full callers should use `excludePatterns`.
   const excludePattern = `%${ALLOWED_DOMAIN}`;
+  const excludePatterns = EMAIL_EXCLUDE_PATTERNS;
   // Excluded coupons as a Postgres-friendly array for ANY() comparisons.
   // Coupon_code can be NULL, so we use COALESCE to make the comparison safe.
   const excludedCoupons = EXCLUDED_COUPONS;
@@ -172,7 +195,7 @@ export default async function handler(req, res) {
           COUNT(*)::int AS n
         FROM users u
         WHERE u.kajabi_entitled = true
-          AND u.email NOT LIKE ${excludePattern}
+          AND NOT (u.email LIKE ANY(${excludePatterns}))
           AND u.created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR u.created_at <= ${toIso})
           AND (
@@ -214,7 +237,7 @@ export default async function handler(req, res) {
           COUNT(*) FILTER (WHERE last_completed_day >= 3)::int AS d3
         FROM users u
         WHERE u.kajabi_entitled = true
-          AND u.email NOT LIKE ${excludePattern}
+          AND NOT (u.email LIKE ANY(${excludePatterns}))
           AND u.created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR u.created_at <= ${toIso})
           AND (
@@ -234,7 +257,7 @@ export default async function handler(req, res) {
           COUNT(*)::int AS n
         FROM users u
         WHERE u.kajabi_entitled = true
-          AND u.email NOT LIKE ${excludePattern}
+          AND NOT (u.email LIKE ANY(${excludePatterns}))
           AND u.created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR u.created_at <= ${toIso})
           AND (
@@ -274,7 +297,7 @@ export default async function handler(req, res) {
         JOIN users u ON u.id = m.user_id
         WHERE s.session_type = 'unlimited'
           AND u.email IS NOT NULL AND u.email <> ''
-          AND u.email NOT LIKE ${excludePattern}
+          AND NOT (u.email LIKE ANY(${excludePatterns}))
           AND u.email <> ALL(${extraExcluded})
           AND EXISTS (
             SELECT 1 FROM purchases p
@@ -311,7 +334,7 @@ export default async function handler(req, res) {
           AND m.created_at > NOW() - INTERVAL '30 days'
           AND u.kajabi_entitled = true
           AND u.email IS NOT NULL AND u.email <> ''
-          AND u.email NOT LIKE ${excludePattern}
+          AND NOT (u.email LIKE ANY(${excludePatterns}))
           AND u.email <> ALL(${extraExcluded})
         GROUP BY u.id, u.email, u.display_name, u.tier, u.subscription_plan
         ORDER BY messages_30d DESC
@@ -360,7 +383,7 @@ export default async function handler(req, res) {
           ), 0)::int AS purchase_count
         FROM users u
         WHERE u.kajabi_entitled = true
-          AND u.email NOT LIKE ${excludePattern}
+          AND NOT (u.email LIKE ANY(${excludePatterns}))
           AND u.email <> ALL(${extraExcluded})
           AND u.created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR u.created_at <= ${toIso})
@@ -410,7 +433,7 @@ export default async function handler(req, res) {
           )::int AS never_logged_in_reset
         FROM users
         WHERE kajabi_entitled = true
-          AND email NOT LIKE ${excludePattern}
+          AND NOT (email LIKE ANY(${excludePatterns}))
           AND created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR created_at <= ${toIso})
       `,
@@ -436,7 +459,7 @@ export default async function handler(req, res) {
         WHERE s.session_type = 'unlimited'
           AND s.started_at > NOW() - INTERVAL '30 days'
           AND u.email IS NOT NULL AND u.email <> ''
-          AND u.email NOT LIKE ${excludePattern}
+          AND NOT (u.email LIKE ANY(${excludePatterns}))
           AND u.email <> ALL(${extraExcluded})
         GROUP BY process_key
         ORDER BY sessions_started DESC
@@ -450,7 +473,7 @@ export default async function handler(req, res) {
           COALESCE(SUM(amount_cents) FILTER (WHERE event_type = 'order.refund'), 0)::bigint AS refund_cents,
           COUNT(DISTINCT email) FILTER (WHERE event_type IN ('order.success', 'order.subscription_payment'))::int AS unique_buyers
         FROM purchases
-        WHERE email NOT LIKE ${excludePattern}
+        WHERE NOT (email LIKE ANY(${excludePatterns}))
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND product_name ILIKE ANY(${fieldProductPatterns})
           AND created_at >= ${fromIso}
@@ -475,7 +498,7 @@ export default async function handler(req, res) {
           COALESCE(SUM(amount_cents), 0)::bigint AS revenue_cents
         FROM purchases
         WHERE event_type IN ('order.success', 'order.subscription_payment')
-          AND email NOT LIKE ${excludePattern}
+          AND NOT (email LIKE ANY(${excludePatterns}))
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND product_name ILIKE ANY(${fieldProductPatterns})
           AND created_at >= ${fromIso}
@@ -493,7 +516,7 @@ export default async function handler(req, res) {
           COALESCE(AVG(amount_cents), 0)::int AS avg_cents
         FROM purchases
         WHERE event_type IN ('order.success', 'order.subscription_payment')
-          AND email NOT LIKE ${excludePattern}
+          AND NOT (email LIKE ANY(${excludePatterns}))
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND product_name ILIKE ANY(${fieldProductPatterns})
           AND created_at >= ${fromIso}
@@ -510,7 +533,7 @@ export default async function handler(req, res) {
           MAX(created_at) AS last_purchase
         FROM purchases
         WHERE event_type IN ('order.success', 'order.subscription_payment')
-          AND email NOT LIKE ${excludePattern}
+          AND NOT (email LIKE ANY(${excludePatterns}))
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND product_name ILIKE ANY(${fieldProductPatterns})
           AND created_at >= ${fromIso}
@@ -527,7 +550,7 @@ export default async function handler(req, res) {
           COUNT(*)::int AS orders
         FROM purchases
         WHERE event_type IN ('order.success', 'order.subscription_payment')
-          AND email NOT LIKE ${excludePattern}
+          AND NOT (email LIKE ANY(${excludePatterns}))
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND product_name ILIKE ANY(${fieldProductPatterns})
           AND created_at >= ${fromIso}
@@ -554,7 +577,7 @@ export default async function handler(req, res) {
           COALESCE(AVG(amount_cents), 0)::int AS avg_cents
         FROM purchases
         WHERE event_type IN ('order.success', 'order.subscription_payment')
-          AND email NOT LIKE ${excludePattern}
+          AND NOT (email LIKE ANY(${excludePatterns}))
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND product_name ILIKE ANY(${fieldProductPatterns})
           AND created_at >= ${fromIso}
@@ -584,7 +607,7 @@ export default async function handler(req, res) {
           u.preview_ends_at
         FROM users u
         WHERE u.kajabi_entitled = true
-          AND u.email NOT LIKE ${excludePattern}
+          AND NOT (u.email LIKE ANY(${excludePatterns}))
           AND u.created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR u.created_at <= ${toIso})
           AND (
@@ -616,7 +639,7 @@ export default async function handler(req, res) {
           AND s.session_type = 'unlimited'
           AND m.created_at > NOW() - INTERVAL '30 days'
           AND u.email IS NOT NULL AND u.email <> ''
-          AND u.email NOT LIKE ${excludePattern}
+          AND NOT (u.email LIKE ANY(${excludePatterns}))
           AND u.email <> ALL(${extraExcluded})
           AND EXISTS (
             SELECT 1 FROM purchases p
@@ -640,7 +663,7 @@ export default async function handler(req, res) {
         WHERE u.tier = 'preview'
           AND dc.day = 3
           AND u.email IS NOT NULL AND u.email <> ''
-          AND u.email NOT LIKE ${excludePattern}
+          AND NOT (u.email LIKE ANY(${excludePatterns}))
           AND u.email <> ALL(${extraExcluded})
           AND EXISTS (
             SELECT 1 FROM purchases p2
@@ -664,7 +687,7 @@ export default async function handler(req, res) {
         WHERE p.event_type IN ('order.success', 'order.subscription_payment')
           AND p.coupon_code IN ('LAUNCHTEAM', 'LAUNCHTEAMUNLIMITED')
           AND u.email IS NOT NULL AND u.email <> ''
-          AND u.email NOT LIKE ${excludePattern}
+          AND NOT (u.email LIKE ANY(${excludePatterns}))
           AND u.email <> ALL(${extraExcluded})
         GROUP BY u.id, u.email, u.display_name, u.last_completed_day, u.tier
         ORDER BY purchased_at DESC
@@ -711,7 +734,7 @@ export default async function handler(req, res) {
         LEFT JOIN last_unlimited_msg lm ON lm.user_id = u.id
         WHERE u.tier = 'full'
           AND u.email IS NOT NULL AND u.email <> ''
-          AND u.email NOT LIKE ${excludePattern}
+          AND NOT (u.email LIKE ANY(${excludePatterns}))
           AND u.email <> ALL(${extraExcluded})
           -- Grace period: only flag subscribers who've been Unlimited
           -- for at least 14 days.
@@ -734,7 +757,7 @@ export default async function handler(req, res) {
           AND COALESCE(u.last_completed_day, 0) < 3
           AND u.preview_ends_at > NOW()
           AND u.email IS NOT NULL AND u.email <> ''
-          AND u.email NOT LIKE ${excludePattern}
+          AND NOT (u.email LIKE ANY(${excludePatterns}))
           AND u.email <> ALL(${extraExcluded})
           AND EXISTS (
             SELECT 1 FROM purchases p
@@ -757,7 +780,7 @@ export default async function handler(req, res) {
         WHERE p.event_type IN ('order.success', 'order.subscription_payment')
           AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
           AND u.email IS NOT NULL AND u.email <> ''
-          AND u.email NOT LIKE ${excludePattern}
+          AND NOT (u.email LIKE ANY(${excludePatterns}))
           AND u.email <> ALL(${extraExcluded})
         GROUP BY u.id, u.email, u.display_name, u.tier
         HAVING COUNT(DISTINCT p.thrivecart_id) >= 2
@@ -779,7 +802,7 @@ export default async function handler(req, res) {
           COUNT(*) FILTER (WHERE tier = 'full')::int AS signups_today_unlimited
         FROM users
         WHERE kajabi_entitled = true
-          AND email NOT LIKE ${excludePattern}
+          AND NOT (email LIKE ANY(${excludePatterns}))
           AND created_at >= date_trunc('day', NOW())
       `),
       safeQuery(sql`
@@ -799,7 +822,7 @@ export default async function handler(req, res) {
           )::int AS unlimited_monthly_today
         FROM purchases
         WHERE event_type IN ('order.success', 'order.subscription_payment')
-          AND email NOT LIKE ${excludePattern}
+          AND NOT (email LIKE ANY(${excludePatterns}))
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND amount_cents > 0
           AND created_at >= date_trunc('day', NOW())
@@ -808,7 +831,7 @@ export default async function handler(req, res) {
         SELECT
           (SELECT COUNT(*)::int FROM day_completions dc
              JOIN users u ON u.id = dc.user_id
-             WHERE u.email NOT LIKE ${excludePattern}
+             WHERE NOT (u.email LIKE ANY(${excludePatterns}))
                AND dc.completed_at >= date_trunc('day', NOW())) AS completions_today,
           -- Per-day breakdowns so Today's Highlights can show specific,
           -- meaningful tiles instead of a vague combined count. Day 3 is
@@ -816,23 +839,23 @@ export default async function handler(req, res) {
           -- treatment in the UI.
           (SELECT COUNT(DISTINCT dc.user_id)::int FROM day_completions dc
              JOIN users u ON u.id = dc.user_id
-             WHERE u.email NOT LIKE ${excludePattern}
+             WHERE NOT (u.email LIKE ANY(${excludePatterns}))
                AND dc.day = 1
                AND dc.completed_at >= date_trunc('day', NOW())) AS day1_today,
           (SELECT COUNT(DISTINCT dc.user_id)::int FROM day_completions dc
              JOIN users u ON u.id = dc.user_id
-             WHERE u.email NOT LIKE ${excludePattern}
+             WHERE NOT (u.email LIKE ANY(${excludePatterns}))
                AND dc.day = 2
                AND dc.completed_at >= date_trunc('day', NOW())) AS day2_today,
           (SELECT COUNT(DISTINCT dc.user_id)::int FROM day_completions dc
              JOIN users u ON u.id = dc.user_id
-             WHERE u.email NOT LIKE ${excludePattern}
+             WHERE NOT (u.email LIKE ANY(${excludePatterns}))
                AND dc.day = 3
                AND dc.completed_at >= date_trunc('day', NOW())) AS day3_today,
           (SELECT COUNT(DISTINCT m.user_id)::int FROM messages m
              JOIN sessions s ON s.id = m.session_id
              JOIN users u ON u.id = m.user_id
-             WHERE u.email NOT LIKE ${excludePattern}
+             WHERE NOT (u.email LIKE ANY(${excludePatterns}))
                AND s.session_type = 'unlimited'
                AND m.created_at >= date_trunc('day', NOW())
                AND EXISTS (
@@ -845,7 +868,7 @@ export default async function handler(req, res) {
           (SELECT COUNT(*)::int FROM messages m
              JOIN sessions s ON s.id = m.session_id
              JOIN users u ON u.id = m.user_id
-             WHERE u.email NOT LIKE ${excludePattern}
+             WHERE NOT (u.email LIKE ANY(${excludePatterns}))
                AND s.session_type = 'unlimited'
                AND m.role = 'user'
                AND m.created_at >= date_trunc('day', NOW())
@@ -884,7 +907,7 @@ export default async function handler(req, res) {
           COUNT(*)::int AS members
         FROM users u
         WHERE u.kajabi_entitled = true
-          AND u.email NOT LIKE ${excludePattern}
+          AND NOT (u.email LIKE ANY(${excludePatterns}))
           AND u.created_at >= ${fromIso}
           AND (${toIso}::timestamptz IS NULL OR u.created_at <= ${toIso})
           AND (
