@@ -71,6 +71,7 @@ const EMAIL_EXCLUDE_PATTERNS = [
   "ge.amaral+%@gmail.com",
   "geoamaral333@gmail.com",
   "geoamaral333+%@gmail.com",
+  "shimrit.nativ@gmail.com",
 ];
 
 // Parse a YYYY-MM-DD query param into an ISO timestamp string we can safely
