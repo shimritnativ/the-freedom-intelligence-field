@@ -18,6 +18,7 @@
 
 import { sql } from "@vercel/postgres";
 import { getUserBySessionToken } from "../../lib/db.js";
+import { fetchAnthropicSpendUsd } from "../../lib/anthropicCosts.js";
 
 const ALLOWED_DOMAIN = "@shimritnativ.com";
 const DEFAULT_API_VERSION = "v22.0";
@@ -78,7 +79,29 @@ export default async function handler(req, res) {
     errors.push({ source: "net_revenue", message: e?.message || String(e) });
   }
 
-  // ---- 2. Ops costs from launch tracker state ----
+  // ---- 2a. Anthropic lifetime spend (live from Admin API) ----
+  // Pull this BEFORE computing ops costs so we can substitute the auto-pulled
+  // number into the launch tracker formula instead of the user's manual
+  // `op-anthropic` field. Avoids double-counting and keeps the number always
+  // current with what's actually been spent on tokens.
+  let anthropicUsd = 0;
+  let anthropicEur = 0;
+  let anthropicSource = null;
+  try {
+    const result = await fetchAnthropicSpendUsd({
+      startingAt: LIFETIME_FROM + "T00:00:00Z",
+      endingAt: todayUtcDate() + "T23:59:59Z",
+    });
+    anthropicUsd = result.totalUsd || 0;
+    anthropicSource = result.ok ? "anthropic_admin_api" : "unavailable";
+    if (!result.ok) {
+      errors.push({ source: "anthropic_admin", message: result.reason });
+    }
+  } catch (e) {
+    errors.push({ source: "anthropic_admin", message: e?.message || String(e) });
+  }
+
+  // ---- 2b. Ops costs from launch tracker state ----
   let opsCosts = 0;
   let opsBreakdown = null;
   try {
@@ -86,7 +109,12 @@ export default async function handler(req, res) {
       SELECT state FROM launch_tracker_state WHERE id = 'singleton' LIMIT 1
     `;
     const state = (rows[0]?.state) || {};
-    opsBreakdown = computeOpsCosts(state);
+    // Convert Anthropic USD → EUR using the same fx rate the launch tracker
+    // uses for the other USD-billed services. Default to 1 if not set so the
+    // number is at least visible.
+    const fx = Number(state?.["op-fx"]) || 1;
+    anthropicEur = anthropicUsd * fx;
+    opsBreakdown = computeOpsCosts(state, { anthropicEurOverride: anthropicEur });
     opsCosts = opsBreakdown.total;
   } catch (e) {
     errors.push({ source: "launch_tracker_state", message: e?.message || String(e) });
@@ -163,6 +191,14 @@ export default async function handler(req, res) {
         campaigns: adsCampaigns,
         totalSpend: adsSpend,
       },
+      anthropic: {
+        totalUsd: anthropicUsd,
+        totalEur: anthropicEur,
+        source: anthropicSource,
+        notes: anthropicSource === "anthropic_admin_api"
+          ? "Pulled live via Anthropic Admin API. Folded into opsCosts in place of the manual launch tracker field."
+          : "Not pulled; falling back to whatever the launch tracker has manually entered.",
+      },
     },
     errors,
   });
@@ -172,7 +208,13 @@ export default async function handler(req, res) {
 // public/launch-tracker.html recalc()). Excludes launch-ad-cost because
 // we pull the live ads number from Meta. If you change the launch
 // tracker formula, update this too.
-function computeOpsCosts(state) {
+//
+// Options:
+//   anthropicEurOverride — if provided (a number), it replaces the manual
+//   `op-anthropic` field in the calculation. Used to fold the live
+//   Anthropic Admin API value in without double-counting against the
+//   user's manual input. Pass undefined / null to fall back to manual.
+function computeOpsCosts(state, opts = {}) {
   const n = (key) => {
     const v = state?.[key];
     if (v === null || v === undefined || v === "") return 0;
@@ -194,11 +236,20 @@ function computeOpsCosts(state) {
   const launchWhatsAppCost = launchMsgTotal * launchMsgCost;
 
   const fx = n("op-fx") || 1;
-  const opMonthlyUsd =
+  // Anthropic: prefer the live Admin API number (already in EUR via fx
+  // conversion in the caller) over whatever the user typed manually. The
+  // launch tracker's other ops fields are still summed in USD and converted
+  // here. We subtract the manual anthropic from the USD sum so the EUR
+  // override doesn't get added on top.
+  const useAnthropicOverride = Number.isFinite(opts.anthropicEurOverride);
+  const manualAnthropicUsd = n("op-anthropic");
+  const opMonthlyUsdMinusAnthropic =
     n("op-vercel") + n("op-resend") + n("op-neon") +
-    n("op-anthropic") + n("op-elevenlabs") + n("op-whisper") +
+    n("op-elevenlabs") + n("op-whisper") +
     n("op-ghl") + n("op-other");
-  const opMonthlyEur = (opMonthlyUsd * fx) + n("op-domain");
+  const opMonthlyEur = (opMonthlyUsdMinusAnthropic * fx)
+    + (useAnthropicOverride ? opts.anthropicEurOverride : (manualAnthropicUsd * fx))
+    + n("op-domain");
   const opLaunchPortion = opMonthlyEur * 2;
 
   const total = preWhatsAppCost + preGhl + launchWhatsAppCost + opLaunchPortion;
@@ -209,6 +260,8 @@ function computeOpsCosts(state) {
     launchWhatsApp: launchWhatsAppCost,
     opsMonthly: opMonthlyEur,
     opsLaunchPortion: opLaunchPortion,
+    anthropicSource: useAnthropicOverride ? "admin_api" : "manual_input",
+    anthropicEur: useAnthropicOverride ? opts.anthropicEurOverride : (manualAnthropicUsd * fx),
     total,
   };
 }
