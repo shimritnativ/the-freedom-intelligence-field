@@ -71,7 +71,6 @@ const EMAIL_EXCLUDE_PATTERNS = [
   "ge.amaral+%@gmail.com",
   "geoamaral333@gmail.com",
   "geoamaral333+%@gmail.com",
-  "shimrit.nativ@gmail.com",
 ];
 
 // Parse a YYYY-MM-DD query param into an ISO timestamp string we can safely
@@ -381,7 +380,22 @@ export default async function handler(req, res) {
               AND p.event_type IN ('order.success', 'order.subscription_payment')
               AND p.amount_cents > 0
               AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
-          ), 0)::int AS purchase_count
+          ), 0)::int AS purchase_count,
+          -- Compact JSON list of every purchase, for the hover tooltip
+          -- on the "X orders" badge in the roster. One row per purchase,
+          -- with the product name + paid amount + coupon code if any.
+          -- Includes ALL purchases (even comp ones) so Geo can see
+          -- exactly what each member bought, even free LAUNCHTEAM ones.
+          COALESCE((
+            SELECT JSON_AGG(JSON_BUILD_OBJECT(
+              'product', p.product_name,
+              'amount_cents', p.amount_cents,
+              'coupon', p.coupon_code,
+              'created_at', p.created_at
+            ) ORDER BY p.created_at) FROM purchases p
+            WHERE LOWER(p.email) = LOWER(u.email)
+              AND p.event_type IN ('order.success', 'order.subscription_payment')
+          ), '[]'::json) AS purchases_json
         FROM users u
         WHERE u.kajabi_entitled = true
           AND NOT (u.email LIKE ANY(${excludePatterns}))
