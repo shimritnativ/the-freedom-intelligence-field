@@ -23,8 +23,12 @@ const LAUNCH_DATE = "2026-06-15"; // hard floor — no signups before this count
 const EXCLUDED_COUPONS = [
   "GEO100",       // Geo's personal 100% off comp
   "GEOALL",       // Geo's all-products 100% off comp
-  "LAUNCHTEAM",   // Reset team comp
-  "LAUNCHTEAMUNLIMITED", // Unlimited team comp
+  "LAUNCHTEAM",   // Reset team comp (FREE — confirm with Geo whether to keep excluded)
+  // NOTE: LAUNCHTEAMUNLIMITED is a 75% off discount, NOT a free comp.
+  // Team buyers using it pay €190.40 gross (€160 net) for Unlimited yearly.
+  // Real revenue, real members. Keeping it in this list would filter them
+  // out of the roster and AOV stats, which Geo flagged as wrong (Kathrine
+  // missing from the roster even though she paid).
 ];
 // Subset of EXCLUDED_COUPONS that should ALSO drop the buyer from
 // member counts entirely. Use this for codes where the buyer isn't a
@@ -71,7 +75,6 @@ const EMAIL_EXCLUDE_PATTERNS = [
   "ge.amaral+%@gmail.com",
   "geoamaral333@gmail.com",
   "geoamaral333+%@gmail.com",
-  "shimrit.nativ@gmail.com",
 ];
 
 // Parse a YYYY-MM-DD query param into an ISO timestamp string we can safely
