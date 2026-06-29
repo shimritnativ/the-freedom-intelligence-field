@@ -218,7 +218,12 @@ function computeOpsCosts(state, opts = {}) {
   const n = (key) => {
     const v = state?.[key];
     if (v === null || v === undefined || v === "") return 0;
-    const num = Number(v);
+    // Handle European decimal separator: "97,47" → 97.47. Without this
+    // every cost field parses as NaN → 0 and opsCosts comes out €0 even
+    // though the launch tracker shows real values. Geo's data is stored
+    // with commas because the launch tracker UI uses comma as decimal sep.
+    const normalized = String(v).replace(",", ".").replace(/[^\d.\-]/g, "");
+    const num = Number(normalized);
     return Number.isFinite(num) ? num : 0;
   };
 
