@@ -2327,10 +2327,21 @@
       if (to) params.set("to", to);
 
       try {
-        const r = await fetch("/api/admin/metrics?" + params.toString(), {
-          method: "GET",
-          headers: { "x-session-token": token },
-        });
+        // Fire metrics + real-profit in parallel so the Overview's Real
+        // Profit card lands at the same time as everything else. The
+        // real-profit endpoint does its own Meta API call + launch tracker
+        // parse — slow enough to be worth parallelizing, fast enough that
+        // it almost always finishes before metrics anyway.
+        const [r, rp] = await Promise.all([
+          fetch("/api/admin/metrics?" + params.toString(), {
+            method: "GET",
+            headers: { "x-session-token": token },
+          }),
+          fetch("/api/admin/real-profit", {
+            method: "GET",
+            headers: { "x-session-token": token },
+          }).catch(() => null),
+        ]);
         if (r.status === 401) {
           renderGate("Your session expired. Open The Field, log in again, then refresh this page.");
           return;
@@ -2344,6 +2355,19 @@
           return;
         }
         const data = await r.json();
+        // Attach the real-profit response onto the same data blob so
+        // renderDashboard has everything in one place. Falls back to null
+        // if the parallel fetch failed — the KPI card hides itself in
+        // that case rather than rendering "€NaN".
+        try {
+          if (rp && rp.ok) {
+            data.realProfit = await rp.json();
+          } else {
+            data.realProfit = null;
+          }
+        } catch (_) {
+          data.realProfit = null;
+        }
         state.data = data;
         if (data.dateRange && data.dateRange.launchDate) {
           state.launchDate = data.dateRange.launchDate.slice(0, 10);
@@ -2533,6 +2557,29 @@
                   <div class="kpi-sub">${fmtNum(tcSummary.orders || 0)} orders · ${fmtNum(tcSummary.unique_buyers || 0)} paying buyers <span style="opacity:0.7;">· ${fmtEur(Math.round(netCents * VAT_DIVISOR))} gross</span></div>
                 </div>
               ` : ''}
+              ${d.realProfit ? (() => {
+                // Real Profit KPI. Pulled from /api/admin/real-profit which
+                // combines: net Field revenue, launch tracker ops costs (no
+                // VAT), and lifetime Meta ads spend on Field campaigns. We
+                // store amounts as full euros (server already divided by 100)
+                // so fmtEur expects cents — multiply by 100 before passing.
+                const rp = d.realProfit;
+                const profitCents = Math.round((rp.realProfit || 0) * 100);
+                const revCents = Math.round((rp.netRevenue || 0) * 100);
+                const opsCents = Math.round((rp.opsCosts || 0) * 100);
+                const adsCents = Math.round((rp.adsSpend || 0) * 100);
+                const isProfit = (rp.realProfit || 0) > 0;
+                const profitColor = isProfit ? 'var(--success, #2e7d32)'
+                                  : (rp.realProfit || 0) < 0 ? 'var(--danger, #c62828)'
+                                  : 'var(--text)';
+                return `
+                  <div class="kpi clickable" style="border-left: 3px solid ${profitColor};" title="Net Revenue ${fmtEur(revCents)} − Launch ops ${fmtEur(opsCents)} − Ads (lifetime, Field campaigns) ${fmtEur(adsCents)} = Real Profit ${fmtEur(profitCents)}">
+                    <div class="kpi-label">Real Profit (ex VAT)</div>
+                    <div class="kpi-value" style="color: ${profitColor};">${(rp.realProfit || 0) >= 0 ? '' : '−'}${fmtEur(Math.abs(profitCents))}</div>
+                    <div class="kpi-sub">Rev ${fmtEur(revCents)} − Ops ${fmtEur(opsCents)} − Ads ${fmtEur(adsCents)}</div>
+                  </div>
+                `;
+              })() : ''}
             </div>
 
             <!-- Completion funnel + Tier breakdown -->
