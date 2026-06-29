@@ -2986,6 +2986,60 @@
     }
   }
 
+  // Pull live API costs after hydrate. Overrides two fields with their
+  // auto-synced values so the user doesn't have to maintain them manually:
+  //   - op-anthropic   ← lifetime Claude API spend (via Admin API)
+  //   - launch-ad-cost ← lifetime Meta ads spend on Field campaigns
+  // Both fields stay editable — anything typed wins until the next page
+  // load when the auto-pull re-fires. Silent fail (no UI noise) if the
+  // user isn't logged in, the env vars aren't set, or the API is down.
+  async function pullAutoCosts() {
+    const token = getSessionToken();
+    if (!token) return;
+    try {
+      const res = await fetch("/api/admin/real-profit", {
+        method: "GET",
+        headers: { "x-session-token": token },
+        credentials: "include",
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      // Anthropic. Only override when the Admin API actually returned a value
+      // (source === "anthropic_admin_api"). Otherwise we'd zero out the user's
+      // manual input every time the API was unreachable.
+      const anthropicEur = Number(data?.breakdown?.anthropic?.totalEur);
+      const anthropicSource = data?.breakdown?.anthropic?.source;
+      const anthropicEl = document.getElementById("op-anthropic");
+      if (anthropicEl && anthropicSource === "anthropic_admin_api" && Number.isFinite(anthropicEur) && anthropicEur > 0) {
+        anthropicEl.value = anthropicEur.toFixed(2);
+        const hint = anthropicEl.parentElement?.querySelector(".field-hint");
+        if (hint) {
+          hint.innerHTML = `Auto-synced from Anthropic Admin API · lifetime €${anthropicEur.toFixed(2)}`;
+          hint.style.color = "var(--success, #2e7d32)";
+          hint.style.fontWeight = "500";
+        }
+      }
+
+      // Ads. Same idea — only override if the Meta API returned a positive
+      // number. The field stays free-text so the admin can clobber it if
+      // Meta's number is wrong.
+      const adsEur = Number(data?.adsSpend);
+      const adsEl = document.getElementById("launch-ad-cost");
+      if (adsEl && Number.isFinite(adsEur) && adsEur > 0) {
+        adsEl.value = adsEur.toFixed(2);
+        const hint = adsEl.parentElement?.querySelector(".field-hint");
+        if (hint) {
+          hint.innerHTML = `Auto-synced from Meta Ads · lifetime Field campaigns €${adsEur.toFixed(2)}`;
+          hint.style.color = "var(--success, #2e7d32)";
+          hint.style.fontWeight = "500";
+        }
+      }
+    } catch (e) {
+      // Silent — admin doesn't need to see a network blip in this surface.
+    }
+  }
+
   // Background poll for other admins' edits. Quiet — no UI noise if the
   // server is unreachable, and skips when the tab is hidden so we don't
   // burn fetches on a backgrounded tab.
@@ -3373,7 +3427,10 @@
   enhanceCollapsibleSections();
   wire();
   recalc();
-  hydrate().then(() => recalc());
+  hydrate()
+    .then(() => recalc())
+    .then(() => pullAutoCosts())
+    .then(() => recalc());
   startBackgroundRefresh();
 })();
 
