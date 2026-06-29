@@ -1732,14 +1732,47 @@
         // but the value itself has been re-entered in EUR (or is about to
         // be), so the UI shouldn't lie about the unit.
         const currency = "EUR";
+        // For Anthropic, surface the live Admin API value (if available)
+        // as an extra hint below the input so the admin can compare what
+        // they typed vs. what the API actually reports. Doesn't override
+        // the input — that's still manual so the admin can use a custom
+        // figure if needed.
+        let extraHint = "";
+        if (svc.key === "anthropic") {
+          const rp = state?.data?.realProfit;
+          const apiEur = Number(rp?.breakdown?.anthropic?.totalEur);
+          const apiSource = rp?.breakdown?.anthropic?.source;
+          if (apiSource === "anthropic_admin_api" && Number.isFinite(apiEur)) {
+            extraHint = `<span style="display: block; font-size: 10.5px; color: var(--success, #2e7d32); font-weight: 600; margin-top: 2px;">Live API: €${apiEur.toFixed(2)} (lifetime)</span>`;
+          } else if (apiSource && apiSource !== "anthropic_admin_api") {
+            extraHint = `<span style="display: block; font-size: 10.5px; color: var(--text-mute); font-style: italic; margin-top: 2px;">Live API unavailable — using manual value</span>`;
+          }
+        }
         return `
           <label style="display: flex; flex-direction: column; gap: 4px;">
             <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: var(--text-dim); text-transform: uppercase;">${escapeHtml(svc.label)} <span style="font-weight: 400; color: var(--text-mute); letter-spacing: 0;">(${currency})</span></span>
             <input type="number" min="0" step="0.01" value="${amount}" data-cost-key="${escapeHtml(svc.key)}" data-cost-currency="${escapeHtml(currency)}" style="padding: 8px 10px; border: 1px solid var(--gold-line); border-radius: 6px; font-family: inherit; font-size: 14px; background: var(--bg-card); color: var(--text);" />
             <span style="font-size: 10.5px; color: var(--text-mute);">${escapeHtml(svc.hint)}</span>
+            ${extraHint}
           </label>
         `;
       }).join("");
+
+      // Auto-synced Ads spend card. Read-only, populated from /api/admin/real-profit
+      // which itself pulls lifetime Field-campaign spend from Meta. Sits at the
+      // end of the grid so it's clearly distinct from the manually-editable cards.
+      const rp = state?.data?.realProfit;
+      const adsEur = Number(rp?.adsSpend);
+      if (Number.isFinite(adsEur)) {
+        const adsHtml = `
+          <label style="display: flex; flex-direction: column; gap: 4px; border: 1px dashed var(--success, #2e7d32); border-radius: 8px; padding: 8px; background: rgba(46, 125, 50, 0.04);">
+            <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: var(--success, #2e7d32); text-transform: uppercase;">Meta Ads <span style="font-weight: 400; color: var(--text-mute); letter-spacing: 0;">(EUR · auto)</span></span>
+            <input type="number" value="${adsEur.toFixed(2)}" readonly style="padding: 8px 10px; border: 1px solid var(--success, #2e7d32); border-radius: 6px; font-family: inherit; font-size: 14px; background: var(--bg-card); color: var(--text); cursor: not-allowed;" />
+            <span style="font-size: 10.5px; color: var(--success, #2e7d32); font-weight: 500;">Auto-synced lifetime Field campaigns · refreshes on every dashboard load</span>
+          </label>
+        `;
+        rows.insertAdjacentHTML("beforeend", adsHtml);
+      }
 
       // Status line — show the most recent update across all services so
       // the admin knows how stale the snapshot is at a glance.
