@@ -2572,11 +2572,17 @@
               const opsCents = Math.round((rp.opsCosts || 0) * 100);
               const adsCents = Math.round((rp.adsSpend || 0) * 100);
               const totalCostsCents = opsCents + adsCents;
+              // Real Profit uses LIFETIME revenue/costs (since launch),
+              // while the Net Revenue KPI to its left tracks the date
+              // picker. Use Real Profit's OWN revenue figure for the
+              // margin calc so the three lifetime numbers reconcile
+              // internally (Rev − Costs = Profit, Profit / Rev = margin).
+              const rpRevCents = Math.round((rp.netRevenue || 0) * 100);
               const isProfit = (rp.realProfit || 0) > 0;
               const profitColor = isProfit ? 'var(--success, #2e7d32)'
                                 : (rp.realProfit || 0) < 0 ? 'var(--danger, #c62828)'
                                 : 'var(--text)';
-              const marginPct = (netCents > 0) ? ((profitCents / netCents) * 100) : 0;
+              const marginPct = (rpRevCents > 0) ? ((profitCents / rpRevCents) * 100) : 0;
               const anthropicEur = rp.breakdown?.anthropic?.totalEur || 0;
               const anthropicSource = rp.breakdown?.anthropic?.source;
               const anthropicLabel = anthropicSource === 'anthropic_admin_api'
@@ -2589,15 +2595,15 @@
                     <div class="kpi-value" style="font-size: 32px;">${fmtEur(netCents)}</div>
                     <div class="kpi-sub">${fmtNum(tcSummary.orders || 0)} orders · ${fmtNum(tcSummary.unique_buyers || 0)} buyers <span style="opacity:0.7;">· ${fmtEur(Math.round(netCents * VAT_DIVISOR))} gross</span></div>
                   </div>
-                  <div class="kpi clickable" onclick="goToPanel('launch', 'panel-cost-snapshot')" style="padding: 22px;" title="Ops (recurring monthly costs × 2 months launch portion + WhatsApp + GHL) + Ads (lifetime Meta on Field campaigns). ${anthropicLabel}.">
-                    <div class="kpi-label">Total Costs (ex VAT)</div>
+                  <div class="kpi clickable" onclick="goToPanel('launch', 'panel-cost-snapshot')" style="padding: 22px;" title="Lifetime ops (launch tracker × 2 months + WhatsApp + GHL) + lifetime Meta ads on Field campaigns. ${anthropicLabel}.">
+                    <div class="kpi-label">Total Costs · lifetime</div>
                     <div class="kpi-value" style="font-size: 32px;">${fmtEur(totalCostsCents)}</div>
                     <div class="kpi-sub">Ops ${fmtEur(opsCents)} · Ads ${fmtEur(adsCents)}</div>
                   </div>
-                  <div class="kpi clickable" style="border-left: 4px solid ${profitColor}; padding: 22px;" title="Net Revenue ${fmtEur(netCents)} − Total Costs ${fmtEur(totalCostsCents)} = Real Profit ${fmtEur(profitCents)}. ${anthropicLabel}.">
-                    <div class="kpi-label">Real Profit (ex VAT)</div>
+                  <div class="kpi clickable" style="border-left: 4px solid ${profitColor}; padding: 22px;" title="Lifetime since launch (independent of the date picker above). Revenue ${fmtEur(rpRevCents)} − Costs ${fmtEur(totalCostsCents)} = ${fmtEur(profitCents)}. ${anthropicLabel}.">
+                    <div class="kpi-label">Real Profit · lifetime</div>
                     <div class="kpi-value" style="color: ${profitColor}; font-size: 32px;">${(rp.realProfit || 0) >= 0 ? '' : '−'}${fmtEur(Math.abs(profitCents))}</div>
-                    <div class="kpi-sub" style="color: ${profitColor};">${isProfit ? '✓' : ''} ${marginPct.toFixed(1)}% margin</div>
+                    <div class="kpi-sub" style="color: ${profitColor};">${isProfit ? '✓' : ''} ${marginPct.toFixed(1)}% margin · Rev ${fmtEur(rpRevCents)}</div>
                   </div>
                 </div>
               `;
