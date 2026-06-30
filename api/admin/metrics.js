@@ -182,6 +182,7 @@ export default async function handler(req, res) {
       todayRevenue,
       todayActivity,
       memberSourceBreakdown,
+      resetToUnlimitedConversion,
     ] = await Promise.all([
       // 1. Members by tier × plan (filtered)
       //
@@ -945,6 +946,47 @@ export default async function handler(req, res) {
         GROUP BY source_bucket
         ORDER BY members DESC
       `,
+      // 25. Reset → Unlimited conversion. Of all Reset buyers, how many
+      // upgraded to Unlimited? Split by monthly vs yearly plan so Geo
+      // can see the LTV mix of upgraders. Excludes team comps and tests
+      // so the number reflects real customer behavior.
+      //
+      // Definition:
+      //   Reset buyer    = bought ANY Reset purchase (any coupon except
+      //                    GEO test comps) before/around the cutoff
+      //   Converted      = same buyer ALSO has an Unlimited purchase
+      //   Yearly/monthly = based on the Unlimited product_name suffix
+      sql`
+        WITH reset_buyers AS (
+          SELECT DISTINCT LOWER(p.email) AS email
+          FROM purchases p
+          JOIN users u ON LOWER(u.email) = LOWER(p.email)
+          WHERE p.event_type IN ('order.success', 'order.subscription_payment')
+            AND p.product_name ILIKE '%Power Reset%'
+            AND COALESCE(p.coupon_code, '') <> ALL(${excludedCouponsFromMembers})
+            AND NOT (u.email LIKE ANY(${excludePatterns}))
+            AND u.email <> ALL(${extraExcluded})
+        ),
+        unlimited_buyers AS (
+          SELECT DISTINCT LOWER(p.email) AS email,
+                 BOOL_OR(p.product_name ILIKE '%Yearly%') AS has_yearly,
+                 BOOL_OR(p.product_name ILIKE '%Monthly%') AS has_monthly
+          FROM purchases p
+          WHERE p.event_type IN ('order.success', 'order.subscription_payment')
+            AND p.amount_cents > 0
+            AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+            AND (
+              p.product_name ILIKE '%Unlimited%'
+              OR p.product_name ILIKE '%Freedom Intelligence Field%'
+            )
+          GROUP BY LOWER(p.email)
+        )
+        SELECT
+          (SELECT COUNT(*)::int FROM reset_buyers) AS total_reset_buyers,
+          (SELECT COUNT(*)::int FROM reset_buyers r JOIN unlimited_buyers u ON r.email = u.email) AS converted_total,
+          (SELECT COUNT(*)::int FROM reset_buyers r JOIN unlimited_buyers u ON r.email = u.email WHERE u.has_yearly) AS converted_yearly,
+          (SELECT COUNT(*)::int FROM reset_buyers r JOIN unlimited_buyers u ON r.email = u.email WHERE u.has_monthly AND NOT u.has_yearly) AS converted_monthly
+      `,
     ]);
 
     return res.status(200).json({
@@ -977,6 +1019,7 @@ export default async function handler(req, res) {
       perUserUnlimited: perUserUnlimited.rows,
       recentSignups: recentSignups.rows,
       memberSourceBreakdown: memberSourceBreakdown ? memberSourceBreakdown.rows : [],
+      resetToUnlimitedConversion: resetToUnlimitedConversion ? resetToUnlimitedConversion.rows[0] : null,
       windowState: windowState.rows[0],
       webhookActivity: webhookActivity.rows,
       processUsage: processUsage.rows,
