@@ -16,6 +16,9 @@
 //     currency: "EUR",                   // default "EUR"
 //     coupon_code: "POWER50",            // optional
 //     notes: "Manually backfilled..."    // optional, stored in raw_payload
+//     full_name: "Majbritt Gilbert Jespersen", // optional, backfills users.display_name
+//     first_name: "Majbritt",            // optional, used if full_name absent
+//     last_name: "Gilbert Jespersen",    // optional, used if full_name absent
 //   }
 //
 // Returns the inserted row OR a clear error on duplicate / missing fields.
@@ -79,6 +82,30 @@ export default async function handler(req, res) {
   const notes = body.notes ? String(body.notes).slice(0, 1000) : null;
   const productId = body.product_id ? String(body.product_id).trim() : null;
 
+  // Customer name: prefer full_name if given, otherwise build from first + last.
+  // Used downstream to backfill users.display_name for Kajabi-created accounts
+  // whose name is currently just the email prefix.
+  const firstName = String(body.first_name || "").trim();
+  const lastName = String(body.last_name || "").trim();
+  const fullName = String(
+    body.full_name ||
+    body.customer_name ||
+    [firstName, lastName].filter(Boolean).join(" ")
+  ).trim();
+
+  // UTM passthrough — accept the same field names ThriveCart exposes in
+  // Zapier (passthrough_utm_*) plus the bare utm_* aliases. Used to set
+  // users.utm_source / utm_medium / utm_campaign so the admin dashboard
+  // can attribute the buyer to Meta ads (vs Organic) and so the Ads tab's
+  // revenue-by-campaign metric works. Stored on user row only when the
+  // user doesn't already have UTMs (first-touch attribution rule).
+  const trunc200 = (s) => s ? String(s).slice(0, 200) : null;
+  const utmSource   = trunc200(body.utm_source   || body.passthrough_utm_source);
+  const utmMedium   = trunc200(body.utm_medium   || body.passthrough_utm_medium);
+  const utmCampaign = trunc200(body.utm_campaign || body.passthrough_utm_campaign);
+  const utmContent  = trunc200(body.utm_content  || body.passthrough_utm_content);
+  const utmTerm     = trunc200(body.utm_term     || body.passthrough_utm_term);
+
   // Build the raw_payload marker so a later reconciliation against
   // ThriveCart can spot manually-entered rows and treat them differently
   // if needed (e.g., "trust ThriveCart's number over ours when they diverge").
@@ -87,6 +114,14 @@ export default async function handler(req, res) {
     entered_by: actorEmail,
     entered_at: new Date().toISOString(),
     notes: notes || null,
+    full_name: fullName || null,
+    first_name: firstName || null,
+    last_name: lastName || null,
+    utm_source: utmSource,
+    utm_medium: utmMedium,
+    utm_campaign: utmCampaign,
+    utm_content: utmContent,
+    utm_term: utmTerm,
   };
 
   try {
@@ -105,6 +140,57 @@ export default async function handler(req, res) {
       ON CONFLICT (thrivecart_id, event_type) DO NOTHING
       RETURNING *
     `;
+
+    // UTM passthrough — write to users row using first-touch attribution
+    // (COALESCE keeps existing UTM if already set, only fills in nulls).
+    // This is what makes the Ads tab attribute a purchase to Meta vs
+    // Organic. Without this, every Zapier-created purchase defaulted to
+    // Organic regardless of where the buyer actually came from.
+    if (utmSource || utmMedium || utmCampaign || utmContent || utmTerm) {
+      try {
+        await sql`
+          UPDATE users
+          SET utm_source   = COALESCE(utm_source, ${utmSource}),
+              utm_medium   = COALESCE(utm_medium, ${utmMedium}),
+              utm_campaign = COALESCE(utm_campaign, ${utmCampaign}),
+              utm_content  = COALESCE(utm_content, ${utmContent}),
+              utm_term     = COALESCE(utm_term, ${utmTerm}),
+              updated_at   = NOW()
+          WHERE LOWER(email) = ${email}
+        `;
+      } catch (utmErr) {
+        // Non-fatal: a missing utm_source column shouldn't block a purchase.
+        // Worst case the buyer just shows as Organic until manually corrected.
+        console.warn("manual_purchase_utm_backfill_failed", { message: utmErr?.message });
+      }
+    }
+
+    // Backfill display_name on the user row using the same conservative
+    // rule the ThriveCart webhook uses: only overwrite when the existing
+    // name is empty OR looks like a Kajabi email-prefix placeholder
+    // (alphanumeric chars match the local-part). Real user-entered names
+    // are preserved.
+    if (fullName && fullName.includes(" ")) {
+      try {
+        const localPart = email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+        await sql`
+          UPDATE users
+          SET display_name = ${fullName}, updated_at = NOW()
+          WHERE email = ${email}
+            AND (
+              display_name IS NULL
+              OR display_name = ''
+              OR (
+                POSITION(' ' IN display_name) = 0
+                AND LOWER(REGEXP_REPLACE(display_name, '[^a-zA-Z0-9]', '', 'g')) = ${localPart}
+              )
+            )
+        `;
+      } catch (nameErr) {
+        // Non-fatal: a name mismatch shouldn't block a purchase.
+        console.warn("manual_purchase_name_backfill_failed", { message: nameErr?.message });
+      }
+    }
 
     if (rows.length === 0) {
       // Conflict — already exists. Return existing row so the UI can
