@@ -1043,6 +1043,11 @@
     </div>
     <div class="summary-card-sub" id="sum-status-sub">Updates with the numbers</div>
   </div>
+  <div class="summary-card">
+    <div class="summary-card-label">Reset → Unlimited</div>
+    <div class="summary-card-value" id="sum-reset-to-unlimited">—</div>
+    <div class="summary-card-sub" id="sum-reset-to-unlimited-sub">Conversion rate</div>
+  </div>
 </div>
 
 <div class="sync-banner" id="sync-banner">
@@ -3062,6 +3067,7 @@
         totalSpend,
         realProfit,
         anthropicSource: data?.breakdown?.anthropic?.source,
+        resetToUnlimited: data?.resetToUnlimitedConversion || null,
       };
       // Apply right now too so the user sees the update without waiting
       // for the next recalc trigger.
@@ -3099,6 +3105,29 @@
         pnlSub.textContent = (o.realProfit >= 0
           ? "Synced with Real Profit on Overview"
           : "Operating at a loss") + anthropicNote;
+      }
+    }
+    // Reset → Unlimited conversion. Comes from the same /api/admin/real-profit
+    // response so we don't make an extra request.
+    if (o.resetToUnlimited) {
+      const c = o.resetToUnlimited;
+      const total = Number(c.total_reset_buyers || 0);
+      const converted = Number(c.converted_total || 0);
+      const yearly = Number(c.converted_yearly || 0);
+      const monthly = Number(c.converted_monthly || 0);
+      const rate = total > 0 ? (converted / total) * 100 : 0;
+      const valEl = document.getElementById("sum-reset-to-unlimited");
+      if (valEl) {
+        valEl.textContent = total > 0 ? rate.toFixed(1) + "%" : "—";
+        valEl.style.color = rate >= 15 ? "var(--success)"
+                          : rate >= 5 ? "var(--gold)"
+                          : "var(--text)";
+      }
+      const subEl = document.getElementById("sum-reset-to-unlimited-sub");
+      if (subEl) {
+        subEl.textContent = total > 0
+          ? converted + " of " + total + " · " + yearly + " yr · " + monthly + " mo"
+          : "No Reset buyers yet";
       }
     }
   }
