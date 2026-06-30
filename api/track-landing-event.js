@@ -82,9 +82,20 @@ export default async function handler(req, res) {
     if (!eventType || !sessionId) {
       return res.status(400).json({ error: "missing_required_fields" });
     }
-    if (!["page_view", "checkout_scroll"].includes(eventType)) {
+    if (!["page_view", "checkout_scroll", "power_reset_cta_click"].includes(eventType)) {
       return res.status(400).json({ error: "invalid_event_type" });
     }
+    // Optional CTA label (e.g. "instant_access", "start_72hr"). The
+    // landing_events table doesn't have a `label` column yet, so we
+    // can't store it. Instead we encode it into event_type so per-
+    // button breakdowns are still possible: a session that clicks two
+    // different CTAs writes two rows (instead of one, since the unique
+    // index keys on session_id + event_type). Capped at 30 chars to
+    // keep the composite event_type readable.
+    const rawLabel = body.label ? String(body.label).trim().slice(0, 30).replace(/[^a-z0-9_]/gi, "") : "";
+    const storedEventType = (eventType === "power_reset_cta_click" && rawLabel)
+      ? eventType + ":" + rawLabel
+      : eventType;
 
     // Cap every string field so a hostile POST can't bloat the table
     const trunc = (s, n) => s ? String(s).slice(0, n) : null;
@@ -104,7 +115,7 @@ export default async function handler(req, res) {
         utm_source, utm_medium, utm_campaign, utm_content, utm_term,
         referrer, user_agent, ip_hash
       ) VALUES (
-        ${eventType}, ${sessionId}, ${pageUrl},
+        ${storedEventType}, ${sessionId}, ${pageUrl},
         ${utmSource}, ${utmMedium}, ${utmCampaign}, ${utmContent}, ${utmTerm},
         ${referrer}, ${userAgent}, ${ipHash}
       )
