@@ -235,12 +235,53 @@ export default async function handler(req, res) {
   // ---- Combine ----
   const realProfit = netRevenue - opsCosts - adsSpend;
 
+  // ---- 5. Reset → Unlimited conversion ----
+  // Same definition as metrics.js: of all paying Reset buyers (excludes
+  // GEO test comps + LAUNCHTEAM free comps + Geo's test emails), how
+  // many upgraded to Unlimited? Split by plan.
+  let resetToUnlimitedConversion = null;
+  try {
+    const { rows } = await sql`
+      WITH reset_buyers AS (
+        SELECT DISTINCT LOWER(p.email) AS email
+        FROM purchases p
+        WHERE p.event_type IN ('order.success', 'order.subscription_payment')
+          AND p.product_name ILIKE '%Power Reset%'
+          AND COALESCE(p.coupon_code, '') NOT IN ('GEO100', 'GEOALL')
+          AND NOT (p.email LIKE ANY(${EMAIL_EXCLUDE_PATTERNS}))
+      ),
+      unlimited_buyers AS (
+        SELECT DISTINCT LOWER(p.email) AS email,
+               BOOL_OR(p.product_name ILIKE '%Yearly%') AS has_yearly,
+               BOOL_OR(p.product_name ILIKE '%Monthly%') AS has_monthly
+        FROM purchases p
+        WHERE p.event_type IN ('order.success', 'order.subscription_payment')
+          AND p.amount_cents > 0
+          AND COALESCE(p.coupon_code, '') <> ALL(${EXCLUDED_COUPONS})
+          AND (
+            p.product_name ILIKE '%Unlimited%'
+            OR p.product_name ILIKE '%Freedom Intelligence Field%'
+          )
+        GROUP BY LOWER(p.email)
+      )
+      SELECT
+        (SELECT COUNT(*)::int FROM reset_buyers) AS total_reset_buyers,
+        (SELECT COUNT(*)::int FROM reset_buyers r JOIN unlimited_buyers u ON r.email = u.email) AS converted_total,
+        (SELECT COUNT(*)::int FROM reset_buyers r JOIN unlimited_buyers u ON r.email = u.email WHERE u.has_yearly) AS converted_yearly,
+        (SELECT COUNT(*)::int FROM reset_buyers r JOIN unlimited_buyers u ON r.email = u.email WHERE u.has_monthly AND NOT u.has_yearly) AS converted_monthly
+    `;
+    resetToUnlimitedConversion = rows[0] || null;
+  } catch (e) {
+    errors.push({ source: "reset_to_unlimited_conversion", message: e?.message || String(e) });
+  }
+
   return res.status(200).json({
     asOf: new Date().toISOString(),
     netRevenue,
     opsCosts,
     adsSpend,
     realProfit,
+    resetToUnlimitedConversion,
     breakdown: {
       ops: opsBreakdown,
       ads: {
