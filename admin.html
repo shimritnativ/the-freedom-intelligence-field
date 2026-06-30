@@ -339,6 +339,117 @@
       text-transform: uppercase;
       margin-bottom: 6px;
     }
+    /* Help tooltip system: a small "?" pill next to a label that reveals
+       a styled tooltip on hover. The tooltip explains in plain language
+       what the metric is, how it's calculated, and (optionally) what
+       action it enables. Used on the Overview tab's main KPIs.
+       Hover on EITHER the icon OR the card body triggers the tooltip. */
+    .kpi-help {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--bg-warm);
+      color: var(--text-mute);
+      font-size: 9px;
+      font-weight: 700;
+      line-height: 1;
+      margin-left: 5px;
+      cursor: help;
+      vertical-align: middle;
+      border: 1px solid var(--border);
+      transition: all 0.15s;
+      letter-spacing: 0;
+      text-transform: none;
+      user-select: none;
+    }
+    .kpi:hover .kpi-help,
+    .kpi-help:hover {
+      background: var(--gold);
+      color: var(--dark, #1a1a1a);
+      border-color: var(--gold);
+    }
+    .kpi, .has-help {
+      position: relative;
+    }
+    .kpi-tooltip {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      min-width: 240px;
+      max-width: 320px;
+      background: #1a1a1a;
+      color: white;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      line-height: 1.55;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s, transform 0.15s;
+      z-index: 100;
+      text-align: left;
+      font-weight: 400;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+    .kpi-tooltip::after {
+      /* Little arrow pointing down at the card */
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: #1a1a1a;
+    }
+    .kpi:hover .kpi-tooltip,
+    .has-help:hover .kpi-tooltip {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-2px);
+    }
+    /* For table headers, slightly smaller and tighter so they don't blow
+       out the table layout. */
+    th .kpi-help {
+      margin-left: 3px;
+      width: 12px;
+      height: 12px;
+      font-size: 8px;
+    }
+    .kpi-tooltip-title {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: var(--gold);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .kpi-tooltip-body {
+      display: block;
+      color: rgba(255,255,255,0.88);
+    }
+    .kpi-tooltip-action {
+      display: block;
+      margin-top: 7px;
+      padding-top: 7px;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      color: #e6c896;
+      font-style: italic;
+    }
+    /* Dark theme: tooltip needs a slight background tweak so it's still
+       distinguishable from the page bg. */
+    [data-theme="dark"] .kpi-tooltip {
+      background: #0a0a0a;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    [data-theme="dark"] .kpi-tooltip::after {
+      border-top-color: #0a0a0a;
+    }
     .kpi-value {
       font-family: Georgia, serif;
       font-size: 32px;
@@ -2088,6 +2199,20 @@
         .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     }
 
+    // Helper that returns the HTML for a "?" hover-tooltip on a KPI card.
+    // Usage: <div class="kpi-label">Net Revenue ${help('Net Revenue', 'plain description', 'optional action')}</div>
+    // The tooltip is positioned above the card and triggered on card hover.
+    // Globally available so renderDashboard, renderAdsContent, and any
+    // future renderers can use the same pattern.
+    function help(title, body, action) {
+      return `<span class="kpi-help" aria-label="${escapeHtml(title)} explanation">?</span>` +
+        `<span class="kpi-tooltip">` +
+          `<span class="kpi-tooltip-title">${escapeHtml(title)}</span>` +
+          `<span class="kpi-tooltip-body">${escapeHtml(body)}</span>` +
+          (action ? `<span class="kpi-tooltip-action">→ ${escapeHtml(action)}</span>` : '') +
+        `</span>`;
+    }
+
     // Best-effort display name from the email's local part. Used as a
     // fallback when display_name is empty in the DB — most CSV-backfilled
     // historical purchases have null raw_payload, so the ThriveCart name
@@ -2591,17 +2716,29 @@
               return `
                 <div class="kpi-grid kpi-grid-financial" style="grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 18px;">
                   <div class="kpi kpi-revenue clickable" onclick="goToPanel('revenue', 'panel-revenue')" style="padding: 22px;">
-                    <div class="kpi-label">Net Revenue (ex VAT)</div>
+                    <div class="kpi-label">Net Revenue (ex VAT)${help(
+                      'Net Revenue (ex VAT)',
+                      "Money The Field earned in the selected date range from real customers, with VAT (19% tax) already removed. Excludes refunds and team comp purchases.",
+                      "If lower than expected, check Revenue tab for product breakdown."
+                    )}</div>
                     <div class="kpi-value" style="font-size: 32px;">${fmtEur(netCents)}</div>
                     <div class="kpi-sub">${fmtNum(tcSummary.orders || 0)} orders · ${fmtNum(tcSummary.unique_buyers || 0)} buyers <span style="opacity:0.7;">· ${fmtEur(Math.round(netCents * VAT_DIVISOR))} gross</span></div>
                   </div>
-                  <div class="kpi clickable" onclick="goToPanel('launch', 'panel-cost-snapshot')" style="padding: 22px;" title="Lifetime ops (launch tracker × 2 months + WhatsApp + GHL) + lifetime Meta ads on Field campaigns. ${anthropicLabel}.">
-                    <div class="kpi-label">Total Costs · lifetime</div>
+                  <div class="kpi clickable" onclick="goToPanel('launch', 'panel-cost-snapshot')" style="padding: 22px;">
+                    <div class="kpi-label">Total Costs · lifetime${help(
+                      'Total Costs (lifetime)',
+                      "Every euro spent on running The Field since launch: tools (GHL, Vercel, Anthropic, etc.) × 2-month launch period, plus WhatsApp campaigns, plus Meta ad spend on Field campaigns.",
+                      "Click to manage monthly tool costs in the Launch Tracker."
+                    )}</div>
                     <div class="kpi-value" style="font-size: 32px;">${fmtEur(totalCostsCents)}</div>
                     <div class="kpi-sub">Ops ${fmtEur(opsCents)} · Ads ${fmtEur(adsCents)}</div>
                   </div>
-                  <div class="kpi clickable" style="border-left: 4px solid ${profitColor}; padding: 22px;" title="Lifetime since launch (independent of the date picker above). Revenue ${fmtEur(rpRevCents)} − Costs ${fmtEur(totalCostsCents)} = ${fmtEur(profitCents)}. ${anthropicLabel}.">
-                    <div class="kpi-label">Real Profit · lifetime</div>
+                  <div class="kpi clickable" style="border-left: 4px solid ${profitColor}; padding: 22px;">
+                    <div class="kpi-label">Real Profit · lifetime${help(
+                      'Real Profit (lifetime)',
+                      "The honest 'are we making money' number. Lifetime revenue minus all costs (operating + ads). Independent of the date picker above — always shows the business-since-launch total.",
+                      isProfit ? "Healthy. Watch the margin trend over time." : "Costs exceed revenue. Reduce ad spend or improve conversion."
+                    )}</div>
                     <div class="kpi-value" style="color: ${profitColor}; font-size: 32px;">${(rp.realProfit || 0) >= 0 ? '' : '−'}${fmtEur(Math.abs(profitCents))}</div>
                     <div class="kpi-sub" style="color: ${profitColor};">${isProfit ? '✓' : ''} ${marginPct.toFixed(1)}% margin · Rev ${fmtEur(rpRevCents)}</div>
                   </div>
@@ -2613,22 +2750,38 @@
                  so the financial row above stays the visual anchor. -->
             <div class="kpi-grid">
               <div class="kpi clickable" onclick="goToPanel('overview', 'panel-tier-mix')">
-                <div class="kpi-label">Total Members</div>
+                <div class="kpi-label">Total Members${help(
+                  'Total Members',
+                  "Everyone with paying access to The Field right now: Reset buyers + Unlimited subscribers. Excludes team comps, test accounts, and free Kajabi grants.",
+                  "Click to see the full member roster on the Members tab."
+                )}</div>
                 <div class="kpi-value">${fmtNum(totalMembers)}</div>
                 <div class="kpi-sub">${fmtNum(resetTotal)} Reset · ${fmtNum(unlimitedTotal)} Unlimited</div>
               </div>
               <div class="kpi clickable" onclick="goToPanel('overview', 'panel-tier-mix')">
-                <div class="kpi-label">72-Hour Reset</div>
+                <div class="kpi-label">72-Hour Reset${help(
+                  '72-Hour Reset members',
+                  "People who bought The Power Reset (€9 / €4.50 with POWER50). They get 72 hours to complete the 3-day program. 'Active' = still within their window. 'Expired' = window closed.",
+                  "Expired Reset members are the warmest audience for Unlimited upsell."
+                )}</div>
                 <div class="kpi-value">${fmtNum(resetTotal)}</div>
                 <div class="kpi-sub">${fmtNum(w.active_reset || 0)} active · ${fmtNum(w.expired_reset || 0)} expired</div>
               </div>
               <div class="kpi clickable" onclick="goToPanel('engagement', 'panel-unlimited-engagement')">
-                <div class="kpi-label">Unlimited Field</div>
+                <div class="kpi-label">Unlimited Field${help(
+                  'Unlimited subscribers',
+                  "Paying Unlimited members — your recurring-revenue base. Yearly buyers paid €653+ upfront. Monthly buyers pay €64.70/month. 'Other' = paid Unlimited but plan type unclear.",
+                  "Click to see engagement: who's chatting daily vs at risk of churn."
+                )}</div>
                 <div class="kpi-value">${fmtNum(unlimitedTotal)}</div>
                 <div class="kpi-sub">${fmtNum(unlimitedMonthly)} mo · ${fmtNum(unlimitedAnnual)} yr · ${fmtNum(unlimitedNone)} other</div>
               </div>
               <div class="kpi clickable" onclick="goToPanel('overview', 'panel-funnel')">
-                <div class="kpi-label">Day 3 Completed</div>
+                <div class="kpi-label">Day 3 Completed${help(
+                  'Day 3 Completed',
+                  "Reset members who finished the entire 72-hour program (all 3 days). This is the strongest engagement signal — they got real value from the experience.",
+                  "Day 3 completers are your top Unlimited upsell candidates. Personal outreach converts best."
+                )}</div>
                 <div class="kpi-value">${fmtNum(c.d3 || 0)}</div>
                 <div class="kpi-sub">${fmtPct(c.d3 || 0, c.total_logged_in || 0)} of logged-in</div>
               </div>
@@ -2647,8 +2800,12 @@
                               : rate >= 5 ? 'var(--gold)'
                               : 'var(--text)';
                 return `
-                  <div class="kpi clickable" onclick="goToPanel('intelligence', 'intel-seg-ready_for_upsell')" style="border-left: 3px solid ${accent};" title="Of all paying Reset buyers (excludes team comps + tests), what % upgraded to Unlimited? Click to see who's ready for upsell.">
-                    <div class="kpi-label">Reset → Unlimited</div>
+                  <div class="kpi clickable" onclick="goToPanel('intelligence', 'intel-seg-ready_for_upsell')" style="border-left: 3px solid ${accent};">
+                    <div class="kpi-label">Reset → Unlimited${help(
+                      'Reset → Unlimited conversion',
+                      "Of everyone who bought the Reset (real customers, not free comps), what % upgraded to a paying Unlimited subscription? This is your Trojan horse metric — does Reset lead to Unlimited?",
+                      rate >= 15 ? "Strong upsell. Reset is doing its job." : rate >= 5 ? "Working but room to grow. Try outreach to Day 3 completers." : "Upsell isn't happening. Review the Unlimited offer at end of Reset."
+                    )}</div>
                     <div class="kpi-value" style="color: ${accent};">${rate.toFixed(1)}%</div>
                     <div class="kpi-sub">${fmtNum(converted)} of ${fmtNum(total)} · ${fmtNum(yearly)} yr · ${fmtNum(monthly)} mo</div>
                   </div>
@@ -2786,10 +2943,51 @@
               <table>
                 <thead>
                   <tr>
-                    <th>Email</th><th>Name</th><th>Tier</th><th>Plan</th>
-                    <th class="num">Spent</th>
-                    <th>Source</th>
-                    <th>Joined</th><th>1st login</th><th class="num">Day</th>
+                    <th class="has-help">Email${help(
+                      'Email',
+                      "The member's account email. Click to copy to clipboard. Hover the orders badge in the Spent column to see what they bought.",
+                      ""
+                    )}</th>
+                    <th class="has-help">Name${help(
+                      'Name',
+                      "Display name from ThriveCart invoice (full name) when available. Falls back to the email prefix if we never captured a real name.",
+                      ""
+                    )}</th>
+                    <th class="has-help">Tier${help(
+                      'Tier',
+                      "POWER RESET = bought the €9 72-hour program (preview tier). UNLIMITED = paying recurring subscriber (full tier). Free Kajabi grants without a purchase show as Reset too.",
+                      "Filter by tier in the dropdown above to see only one type."
+                    )}</th>
+                    <th class="has-help">Plan${help(
+                      'Plan',
+                      "For Unlimited members only: 'monthly' (€64.70/mo) or 'yearly' (€653 upfront). Yearly = higher LTV, monthly = higher churn risk.",
+                      ""
+                    )}</th>
+                    <th class="num has-help">Spent${help(
+                      'Spent',
+                      "Total euros this member paid across ALL their orders, NET (without VAT). Hover the orders badge to see the per-product breakdown.",
+                      "Highest-spend members are your best upsell + retention candidates."
+                    )}</th>
+                    <th class="has-help">Source${help(
+                      'Source',
+                      "Where the member came from. Meta = clicked an ad. Email = came from a Kajabi/Mailchimp email. Organic = no tracking, came directly. Reads from the utm_source captured at signup.",
+                      "If Meta but ROAS is low, ad audience needs work. If organic dominates, lean into email/content."
+                    )}</th>
+                    <th class="has-help">Joined${help(
+                      'Joined',
+                      "Date the member account was created. For Reset buyers, this is the day they purchased.",
+                      ""
+                    )}</th>
+                    <th class="has-help">1st login${help(
+                      '1st login',
+                      "First time the member opened The Field after buying. The 72-hour window starts at first login, NOT at purchase. Members who 'never logged in' bought but never showed up.",
+                      "Send reminder emails to never-logged-in members — they paid but might forget."
+                    )}</th>
+                    <th class="num has-help">Day${help(
+                      'Day',
+                      "How far they got in the Reset: 0 = paid but never started Day 1; 1/2/3 = how many days they completed. Day 3 = finished the full program.",
+                      "Day 3 completers convert best to Unlimited. Day 1 stalls = nudge with a reminder email."
+                    )}</th>
                   </tr>
                 </thead>
                 <tbody id="roster-tbody"></tbody>
@@ -3774,13 +3972,28 @@
             <div class="highlights-date">${escapeHtml(todayLabel)}</div>
           </div>
           <div class="highlights-grid">
-            ${tiles.map(tile => `
-              <div class="highlight ${tile.accent ? 'highlight--accent' : ''}" onclick="scrollToSection('${tile.target}')">
-                <div class="highlight-eyebrow">${escapeHtml(tile.eyebrow || '')}</div>
+            ${tiles.map(tile => {
+              // Plain-language tooltip per tile type — explained once for
+              // the curious / new viewer.
+              const tooltips = {
+                "New signups": { body: "Brand new members who joined The Field today. Counts only first-time signups (not returning logins).", action: "Click to jump to the member roster." },
+                "Unlimited conversions": { body: "Existing Reset buyers who upgraded to Unlimited today. These are the highest-value events of the day — recurring revenue starts here.", action: "Click to see Revenue tab for the order details." },
+                "Revenue (ex VAT)": { body: "Money The Field actually earned today after VAT (19% tax) is removed. The number you can spend.", action: "Click to see the per-order breakdown." },
+                "Revenue": { body: "Money The Field earned today (with VAT included). Toggle the VAT switch to see ex-VAT.", action: "Click to see the per-order breakdown." },
+                "Free orders": { body: "Orders processed today at €0 (team comps using LAUNCHTEAM). Not real revenue but tracks team adoption.", action: "" },
+                "Day 3 completed": { body: "Members who finished the entire 72-Hour Reset today. The strongest engagement signal — they got real value.", action: "These are your best Unlimited upsell candidates." },
+                "Day 2 reached": { body: "Members who completed Day 2 of the Reset today. They pushed through the harder middle — high intent.", action: "" },
+                "Day 1 started": { body: "Members who began the Reset today. Top of the funnel — first engagement signal.", action: "" },
+              };
+              const t = tooltips[tile.eyebrow];
+              const tip = t ? help(tile.eyebrow, t.body, t.action) : '';
+              return `
+              <div class="highlight ${tile.accent ? 'highlight--accent' : ''} kpi" onclick="scrollToSection('${tile.target}')" style="position: relative;">
+                <div class="highlight-eyebrow">${escapeHtml(tile.eyebrow || '')}${tip}</div>
                 <div class="highlight-value">${tile.isCurrency ? tile.value : fmtNum(tile.value)}</div>
                 <div class="highlight-detail">${tile.detail || ''}</div>
               </div>
-            `).join("")}
+            `;}).join("")}
           </div>
         </div>
       `;
@@ -4334,37 +4547,65 @@
       const kpis = `
         <div class="kpi-grid" style="margin-bottom: 22px;">
           <div class="kpi kpi--accent">
-            <div class="kpi-label">Cost per signup</div>
+            <div class="kpi-label">Cost per signup${help(
+              'Cost per signup',
+              "How many euros of ad spend it took to get one new paying member. Total ad spend ÷ signups attributed to ads via UTM tracking.",
+              "Lower is better. Compare to LTV — if cost per signup > what the customer pays back over time, ads are unprofitable."
+            )}</div>
             <div class="kpi-value">${orDash(t.cost_per_signup, cur)}</div>
             <div class="kpi-sub">${num(t.signups_attributed)} signup${t.signups_attributed === 1 ? '' : 's'} from ads</div>
           </div>
           <div class="kpi kpi--accent">
-            <div class="kpi-label">ROAS</div>
+            <div class="kpi-label">ROAS${help(
+              'ROAS (Return on Ad Spend)',
+              "How many euros of revenue you earned per euro of ad spend. Attributed revenue ÷ total spend. Above 1× = ads paying for themselves; below 1× = losing money on ads.",
+              "Below 1× is normal for short windows because Unlimited LTV is recurring. Look at lifetime ROAS over time, not just last 7 days."
+            )}</div>
             <div class="kpi-value">${orDash(t.roas, (v) => v.toFixed(2) + "×")}</div>
             <div class="kpi-sub">${cur((t.revenue_attributed_cents || 0) / 100)} attributed revenue</div>
           </div>
           <div class="kpi kpi--accent">
-            <div class="kpi-label">CTA clicks</div>
+            <div class="kpi-label">CTA clicks${help(
+              'CTA clicks',
+              "Unique people who tapped a 'Buy now' button on the landing page. Captured by our tracking snippet, separate from Meta's ad-clicks. Tells you how many visitors took action toward checkout.",
+              "Watch the CTA-to-Purchase ratio in the funnel below. If many click but few buy, fix the checkout page."
+            )}</div>
             <div class="kpi-value">${num(ctaClicksCount)}</div>
             <div class="kpi-sub">${ctaClicksCount > 0 ? `${ctaConvRate} bought` : 'tapped "Buy now" on LP'}</div>
           </div>
           <div class="kpi kpi--accent">
-            <div class="kpi-label">Abandoned cart</div>
+            <div class="kpi-label">Abandoned cart${help(
+              'Abandoned cart',
+              "People who clicked a 'Buy now' CTA but never completed the purchase. CTA clicks − actual buyers. These are warm leads who lost interest at checkout.",
+              "Common reasons: checkout page friction, surprise fees, payment-method mismatch. Test the cart on mobile in incognito."
+            )}</div>
             <div class="kpi-value">${num(t.abandoned_cart)}</div>
             <div class="kpi-sub">clicked CTA, didn't buy</div>
           </div>
           <div class="kpi">
-            <div class="kpi-label">Total spend</div>
+            <div class="kpi-label">Total spend${help(
+              'Total ad spend',
+              "Total money paid to Meta for ads in this period. Filtered to Field campaigns only (cold + warm) — excludes any unrelated campaigns on the same ad account.",
+              "Watch this vs Net Revenue at the top. Spend should grow proportional to revenue."
+            )}</div>
             <div class="kpi-value">${cur(t.spend)}</div>
             <div class="kpi-sub">${data.range.label}</div>
           </div>
           <div class="kpi">
-            <div class="kpi-label">Ad clicks (LP)</div>
+            <div class="kpi-label">Ad clicks (LP)${help(
+              'Ad clicks (landing page)',
+              "How many people clicked the AD and reached the landing page. This is Meta's 'Link clicks' metric — not all-clicks like profile views or reactions. CPC = Cost per Link Click.",
+              "If this is high but CTA clicks are low, the LP needs work. If both are low, the ad creative needs work."
+            )}</div>
             <div class="kpi-value">${num(t.clicks)}</div>
             <div class="kpi-sub">CPC ${cur(t.cpc)} · ad → landing</div>
           </div>
           <div class="kpi">
-            <div class="kpi-label">Impressions</div>
+            <div class="kpi-label">Impressions${help(
+              'Impressions',
+              "How many times the ad was shown to anyone (same person counted multiple times). CTR = Click-through Rate = link clicks ÷ impressions. Industry healthy CTR is 1-3%.",
+              "Low CTR means the ad isn't compelling enough. Test new creative or copy. High CTR but low conversions = wrong audience."
+            )}</div>
             <div class="kpi-value">${num(t.impressions)}</div>
             <div class="kpi-sub">CTR ${pct(t.ctr)}</div>
           </div>
@@ -4389,19 +4630,31 @@
           <div style="background: var(--bg-warm); border: 1px solid var(--gold-line); border-radius: 12px; padding: 18px 22px; margin-bottom: 22px;">
             <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px;">Landing page funnel</div>
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; align-items: stretch;">
-              <div style="${funnelCardBase} background: var(--panel); border: 1px solid var(--border);">
+              <div class="kpi" style="${funnelCardBase} background: var(--panel); border: 1px solid var(--border);">
                 <div style="font-family: Georgia, serif; font-size: 28px; font-weight: 600; color: var(--text); line-height: 1.1;">${num(t.visits)}</div>
-                <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 6px;">Page visits</div>
+                <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 6px;">Page visits${help(
+                  'Page visits',
+                  "Top of the funnel. Counts unique people who reached the landing page after clicking your ad. Same as Meta's link-click count.",
+                  "If this is low, your ad isn't getting clicks — improve creative or audience."
+                )}</div>
                 <div style="font-size: 11px; color: transparent; margin-top: 2px;">&nbsp;</div>
               </div>
-              <div style="${funnelCardBase} background: var(--panel); border: 1px solid var(--border);">
+              <div class="kpi" style="${funnelCardBase} background: var(--panel); border: 1px solid var(--border);">
                 <div style="font-family: Georgia, serif; font-size: 28px; font-weight: 600; color: var(--text); line-height: 1.1;">${num(middleCount)}</div>
-                <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 6px;">${middleLabel}</div>
+                <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 6px;">${middleLabel}${help(
+                  'CTA clicks',
+                  "Middle of the funnel. Visitors who clicked a 'Buy now' button after landing on the page. Shows whether the LP message resonates enough to make them act.",
+                  "The % of visits is your LP conversion rate. Healthy is 20-50% for warm; 10-25% for cold."
+                )}</div>
                 <div style="font-size: 11px; color: var(--gold); margin-top: 2px;">${orDash(middleRateOfVisits, pct)} of visits</div>
               </div>
-              <div style="${funnelCardBase} background: var(--gold-soft); border: 1px solid var(--gold);">
+              <div class="kpi" style="${funnelCardBase} background: var(--gold-soft); border: 1px solid var(--gold);">
                 <div style="font-family: Georgia, serif; font-size: 28px; font-weight: 600; color: var(--text); line-height: 1.1;">${num(t.signups_attributed)}</div>
-                <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 6px;">Purchased</div>
+                <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 6px;">Purchased${help(
+                  'Purchased',
+                  "Bottom of the funnel. People who actually bought The Power Reset after coming from an ad. Tracked via the utm_source=meta parameter.",
+                  "% of CTA clicks is your checkout conversion. Low % = something on the cart page is blocking buyers."
+                )}</div>
                 <div style="font-size: 11px; color: var(--gold); margin-top: 2px;">${orDash(purchaseRate, pct)} ${purchaseRateLabel}</div>
               </div>
             </div>
@@ -4483,7 +4736,11 @@
         return `
           <div style="background: var(--bg-warm); border: 1px solid var(--gold-line); border-radius: 12px; padding: 18px 22px; margin-bottom: 22px;">
             <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px;">
-              <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold);">CTA breakdown</span>
+              <span class="kpi" style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); padding: 4px 8px; background: transparent; border: none; box-shadow: none;">CTA breakdown${help(
+                'CTA breakdown',
+                "Which button on the landing page drives the most CTA clicks. Each row is a button identified by its section (top/upper/lower/bottom/sticky) and its label. The ★ marks the top performer.",
+                "Use this to A/B which CTAs work best. If top hero dominates, move pricing higher. If sticky mobile wins, optimize mobile UX first."
+              )}</span>
               <span style="font-size: 11px; color: var(--text-mute);">${subtitle}</span>
             </div>
             <div style="display: grid; grid-template-columns: 220px 1fr 60px 50px; gap: 12px; padding: 6px 0; font-size: 10.5px; color: var(--text-mute); letter-spacing: 0.08em; text-transform: uppercase; border-bottom: 1px solid var(--gold-line);">
@@ -4631,32 +4888,56 @@
 
             <div class="kpi-grid" style="margin-bottom: 22px;">
               <div class="kpi">
-                <div class="kpi-label">Page visits</div>
+                <div class="kpi-label">Page visits${help(
+                  'Organic page visits',
+                  "Unique people who landed on the organic Power Reset page (no ad paid for them). Comes from email, word-of-mouth, social shares, or direct URL.",
+                  "This is your 'free' traffic. Growing it = building audience without paid spend."
+                )}</div>
                 <div class="kpi-value">${num(o.visits)}</div>
                 <div class="kpi-sub">organic traffic</div>
               </div>
               <div class="kpi kpi--accent">
-                <div class="kpi-label">CTA clicks</div>
+                <div class="kpi-label">CTA clicks${help(
+                  'Organic CTA clicks',
+                  "Visitors who clicked a 'Buy now' button on the organic landing page. Tracks how engaged your warm/organic audience is with the offer.",
+                  "Organic CTAs usually convert higher than ad CTAs because they're warmer leads."
+                )}</div>
                 <div class="kpi-value">${num(o.cta_clicks)}</div>
                 <div class="kpi-sub">${o.cta_to_visit_rate !== null ? pct(o.cta_to_visit_rate) + ' of visits' : '—'}</div>
               </div>
               <div class="kpi kpi--accent">
-                <div class="kpi-label">Purchases</div>
+                <div class="kpi-label">Purchases${help(
+                  'Organic purchases',
+                  "Actual Power Reset sales from the organic LP. Real money in. Each buyer is your most engaged audience — they came without ad influence.",
+                  "These buyers convert to Unlimited at higher rates than ad-driven buyers. Worth personal outreach."
+                )}</div>
                 <div class="kpi-value">${num(o.purchases)}</div>
                 <div class="kpi-sub">${o.purchase_to_visit_rate !== null ? pct(o.purchase_to_visit_rate) + ' of visits' : '—'}</div>
               </div>
               <div class="kpi kpi--accent">
-                <div class="kpi-label">Abandoned cart</div>
+                <div class="kpi-label">Abandoned cart${help(
+                  'Organic abandoned cart',
+                  "Organic visitors who clicked CTA but didn't buy. Often happens when there's payment friction or surprise pricing on the checkout page.",
+                  "Less common in organic than paid. If high, the cart page itself is the problem."
+                )}</div>
                 <div class="kpi-value">${num(o.abandoned_cart)}</div>
                 <div class="kpi-sub">clicked CTA, didn't buy</div>
               </div>
               <div class="kpi">
-                <div class="kpi-label">Revenue (ex VAT)</div>
+                <div class="kpi-label">Revenue (ex VAT)${help(
+                  'Organic revenue',
+                  "Total money The Field earned from organic Power Reset buyers (excluding VAT). This is recurring with no ongoing cost — your highest-margin channel.",
+                  "Grow this with email nurture, content marketing, and referral programs."
+                )}</div>
                 <div class="kpi-value">${cur(orgRevenue)}</div>
                 <div class="kpi-sub">net, organic only</div>
               </div>
               <div class="kpi">
-                <div class="kpi-label">CTA → purchase</div>
+                <div class="kpi-label">CTA → purchase${help(
+                  'Organic CTA → Purchase rate',
+                  "Of organic visitors who clicked a CTA, what % actually bought? This is the strongest signal of how good your offer is for warm audiences.",
+                  "Healthy organic CTA→Purchase is 30-50%+. Below 15% means the checkout flow is broken."
+                )}</div>
                 <div class="kpi-value">${o.purchase_to_cta_rate !== null ? pct(o.purchase_to_cta_rate) : '—'}</div>
                 <div class="kpi-sub">of CTA clicks bought</div>
               </div>
