@@ -4249,7 +4249,11 @@
       // showed real abandoned numbers. Include them now.
       const totalVisits = filteredCampaigns.reduce((s, c) => s + (c.visits || 0), 0);
       const totalCheckoutScrolls = filteredCampaigns.reduce((s, c) => s + (c.checkout_scrolls || 0), 0);
-      const totalAbandoned = Math.max(0, totalCheckoutScrolls - totalSignups);
+      const totalCtaClicks = filteredCampaigns.reduce((s, c) => s + (c.cta_clicks || 0), 0);
+      // Abandoned cart prefers CTA clicks (new) over checkout scrolls (legacy).
+      // Falls back to scrolls only when no CTA data exists for the selection.
+      const abandonedBase = totalCtaClicks > 0 ? totalCtaClicks : totalCheckoutScrolls;
+      const totalAbandoned = Math.max(0, abandonedBase - totalSignups);
 
       const adjustedTotals = isAll ? data.totals : {
         spend: totalSpend,
@@ -4263,8 +4267,11 @@
         revenue_attributed_cents: totalRevenueCents,
         roas: totalSpend > 0 ? (totalRevenueCents / 100) / totalSpend : null,
         visits: totalVisits,
+        cta_clicks: totalCtaClicks,
         checkout_scrolls: totalCheckoutScrolls,
         abandoned_cart: totalAbandoned,
+        cta_to_visit_rate: totalVisits > 0 ? (totalCtaClicks / totalVisits) * 100 : null,
+        purchase_to_cta_rate: totalCtaClicks > 0 ? (totalSignups / totalCtaClicks) * 100 : null,
         scroll_to_visit_rate: totalVisits > 0 ? (totalCheckoutScrolls / totalVisits) * 100 : null,
         purchase_to_scroll_rate: totalCheckoutScrolls > 0 ? (totalSignups / totalCheckoutScrolls) * 100 : null,
       };
@@ -4288,7 +4295,14 @@
       const orDash = (v, formatter) => (v === null || v === undefined || isNaN(v)) ? '<span style="color: var(--text-mute);">—</span>' : formatter(v);
 
       // KPI strip — gold-accented cards on top are the decision-making
-      // numbers (cost per signup, ROAS, abandoned cart).
+      // numbers (cost per signup, ROAS, abandoned cart, CTA-click rate).
+      // CTA clicks = unique sessions that tapped a "Buy now"-style button
+      // on the GHL landing page (tracked by our snippet, separate from
+      // Meta's "clicks" which is the ad-to-LP click count).
+      const ctaClicksCount = Number(t.cta_clicks || 0);
+      const ctaConvRate = ctaClicksCount > 0
+        ? ((Number(t.signups_attributed || 0) / ctaClicksCount) * 100).toFixed(1) + "%"
+        : "—";
       const kpis = `
         <div class="kpi-grid" style="margin-bottom: 22px;">
           <div class="kpi kpi--accent">
@@ -4302,9 +4316,14 @@
             <div class="kpi-sub">${cur((t.revenue_attributed_cents || 0) / 100)} attributed revenue</div>
           </div>
           <div class="kpi kpi--accent">
+            <div class="kpi-label">CTA clicks</div>
+            <div class="kpi-value">${num(ctaClicksCount)}</div>
+            <div class="kpi-sub">${ctaClicksCount > 0 ? `${ctaConvRate} bought` : 'tapped "Buy now" on LP'}</div>
+          </div>
+          <div class="kpi kpi--accent">
             <div class="kpi-label">Abandoned cart</div>
             <div class="kpi-value">${num(t.abandoned_cart)}</div>
-            <div class="kpi-sub">reached checkout, didn't buy</div>
+            <div class="kpi-sub">clicked CTA, didn't buy</div>
           </div>
           <div class="kpi">
             <div class="kpi-label">Total spend</div>
@@ -4312,9 +4331,9 @@
             <div class="kpi-sub">${data.range.label}</div>
           </div>
           <div class="kpi">
-            <div class="kpi-label">Clicks</div>
+            <div class="kpi-label">Ad clicks (LP)</div>
             <div class="kpi-value">${num(t.clicks)}</div>
-            <div class="kpi-sub">CPC ${cur(t.cpc)}</div>
+            <div class="kpi-sub">CPC ${cur(t.cpc)} · ad → landing</div>
           </div>
           <div class="kpi">
             <div class="kpi-label">Impressions</div>
