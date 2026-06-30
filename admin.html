@@ -4483,7 +4483,95 @@
           </div>`;
       }
 
-      return warningBlock + kpis + funnelBlock + campaignTable + dailyBlock + accountNote;
+      // Organic landing-page section. Same shape as the Meta funnel
+      // above but pulled from the organic LP only (no ad spend, no
+      // impressions/CPC/CTR — just visits → CTA clicks → purchases).
+      // Hidden when no organic data exists in the date range.
+      const organicBlock = (function() {
+        const o = data.organic;
+        if (!o) return '';
+        const hasData = (o.visits || 0) > 0 || (o.cta_clicks || 0) > 0 || (o.purchases || 0) > 0;
+        if (!hasData) return '';
+        const orgRevenue = (o.revenue_cents || 0) / 100;
+        const dailyOrgRows = (o.daily || [])
+          .filter(d => (d.visits || 0) > 0 || (d.cta_clicks || 0) > 0 || (d.purchases || 0) > 0)
+          .map(d => `
+            <div style="display: grid; grid-template-columns: 90px 1fr 90px 90px 90px; gap: 12px; padding: 6px 0; font-size: 12px; color: var(--text); align-items: center;">
+              <span style="color: var(--text-dim); font-family: monospace;">${escapeHtml(d.date)}</span>
+              <span style="color: var(--text-mute); font-size: 11px;">${num(d.visits)} visits</span>
+              <span style="color: var(--text); font-size: 11px;">${num(d.cta_clicks)} CTA</span>
+              <span style="color: var(--text); font-size: 11px;">${num(d.purchases)} sales</span>
+              <span style="color: var(--gold); font-size: 11px;">${cur((d.revenue_cents || 0) / 100)}</span>
+            </div>`).join('');
+
+        return `
+          <div style="margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--gold-line);">
+            <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px;">
+              <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold);">Organic Landing Page</span>
+            </div>
+            <h2 style="font-family: Georgia, serif; font-style: italic; font-weight: 500; margin: 0 0 18px;">Free traffic to /the-power-reset</h2>
+
+            <div class="kpi-grid" style="margin-bottom: 22px;">
+              <div class="kpi">
+                <div class="kpi-label">Page visits</div>
+                <div class="kpi-value">${num(o.visits)}</div>
+                <div class="kpi-sub">organic traffic</div>
+              </div>
+              <div class="kpi kpi--accent">
+                <div class="kpi-label">CTA clicks</div>
+                <div class="kpi-value">${num(o.cta_clicks)}</div>
+                <div class="kpi-sub">${o.cta_to_visit_rate !== null ? pct(o.cta_to_visit_rate) + ' of visits' : '—'}</div>
+              </div>
+              <div class="kpi kpi--accent">
+                <div class="kpi-label">Purchases</div>
+                <div class="kpi-value">${num(o.purchases)}</div>
+                <div class="kpi-sub">${o.purchase_to_visit_rate !== null ? pct(o.purchase_to_visit_rate) + ' of visits' : '—'}</div>
+              </div>
+              <div class="kpi kpi--accent">
+                <div class="kpi-label">Abandoned cart</div>
+                <div class="kpi-value">${num(o.abandoned_cart)}</div>
+                <div class="kpi-sub">clicked CTA, didn't buy</div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-label">Revenue (ex VAT)</div>
+                <div class="kpi-value">${cur(orgRevenue)}</div>
+                <div class="kpi-sub">net, organic only</div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-label">CTA → purchase</div>
+                <div class="kpi-value">${o.purchase_to_cta_rate !== null ? pct(o.purchase_to_cta_rate) : '—'}</div>
+                <div class="kpi-sub">of CTA clicks bought</div>
+              </div>
+            </div>
+
+            <div style="background: var(--bg-warm); border: 1px solid var(--gold-line); border-radius: 12px; padding: 18px 22px; margin-bottom: 22px;">
+              <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px;">Organic funnel</div>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; align-items: stretch;">
+                <div style="text-align: center; padding: 14px; border-radius: 10px; box-sizing: border-box; min-height: 110px; display: flex; flex-direction: column; justify-content: center; background: var(--panel); border: 1px solid var(--border);">
+                  <div style="font-family: Georgia, serif; font-size: 28px; font-weight: 600; color: var(--text); line-height: 1.1;">${num(o.visits)}</div>
+                  <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 6px;">Page visits</div>
+                  <div style="font-size: 11px; color: transparent; margin-top: 2px;">&nbsp;</div>
+                </div>
+                <div style="text-align: center; padding: 14px; border-radius: 10px; box-sizing: border-box; min-height: 110px; display: flex; flex-direction: column; justify-content: center; background: var(--panel); border: 1px solid var(--border);">
+                  <div style="font-family: Georgia, serif; font-size: 28px; font-weight: 600; color: var(--text); line-height: 1.1;">${num(o.cta_clicks)}</div>
+                  <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 6px;">CTA clicks</div>
+                  <div style="font-size: 11px; color: var(--gold); margin-top: 2px;">${o.cta_to_visit_rate !== null ? pct(o.cta_to_visit_rate) + ' of visits' : '—'}</div>
+                </div>
+                <div style="text-align: center; padding: 14px; border-radius: 10px; box-sizing: border-box; min-height: 110px; display: flex; flex-direction: column; justify-content: center; background: var(--gold-soft); border: 1px solid var(--gold);">
+                  <div style="font-family: Georgia, serif; font-size: 28px; font-weight: 600; color: var(--text); line-height: 1.1;">${num(o.purchases)}</div>
+                  <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 6px;">Purchased</div>
+                  <div style="font-size: 11px; color: var(--gold); margin-top: 2px;">${o.purchase_to_cta_rate !== null ? pct(o.purchase_to_cta_rate) + ' of CTA clicks' : '—'}</div>
+                </div>
+              </div>
+            </div>
+
+            ${dailyOrgRows ? `
+              <h3 style="font-family: Georgia, serif; font-style: italic; font-weight: 500; font-size: 16px; margin: 24px 0 12px;">Daily breakdown (organic)</h3>
+              ${dailyOrgRows}` : ''}
+          </div>`;
+      })();
+
+      return warningBlock + kpis + funnelBlock + campaignTable + dailyBlock + organicBlock + accountNote;
     }
 
     // Range / refresh / dates / campaign chips — all delegated so the
