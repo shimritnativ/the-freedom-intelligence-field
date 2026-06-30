@@ -370,6 +370,11 @@ export default async function handler(req, res) {
     // the organic block just returns nulls and the UI hides the section.
     const organic = await safe("organic_metrics", loadOrganicMetrics(from, to));
 
+    // CTA breakdown — which button drove the most clicks for ads traffic.
+    // Lets Geo see "top hero is your strongest CTA, sticky mobile is barely
+    // used" at a glance, useful for A/B testing button placement.
+    const ctaBreakdown = await safe("cta_breakdown", loadCtaBreakdown(from, to));
+
     return res.status(200).json({
       ok: true,
       range: { from, to, label },
@@ -377,6 +382,7 @@ export default async function handler(req, res) {
       campaigns: campaigns.sort((a, b) => b.spend - a.spend),
       daily,
       organic,
+      cta_breakdown: ctaBreakdown,
       meta: {
         fetched_at: new Date().toISOString(),
         account_id: accountId,
@@ -545,6 +551,40 @@ async function loadFunnelByCampaign(from, to) {
     // Return empty map so the rest of the dashboard still loads.
     console.warn("funnel_by_campaign_failed", e?.message);
     return {};
+  }
+}
+
+// CTA click breakdown by button label, for ads traffic (utm_source = meta).
+// Each CTA click event_type is stored as `power_reset_cta_click:<label>`
+// where label is region+text (e.g., 'top_ready_to_reset', 'bottom_join_for',
+// 'sticky_im_in'). This query strips the prefix and counts unique sessions
+// per label so the dashboard can show which button drives the most clicks.
+async function loadCtaBreakdown(from, to) {
+  try {
+    const { rows } = await sql`
+      SELECT
+        -- Strip the 'power_reset_cta_click:' prefix to get just the label.
+        -- If there's no colon (bare 'power_reset_cta_click' from old data),
+        -- label as 'untagged'.
+        CASE
+          WHEN event_type = 'power_reset_cta_click' THEN 'untagged'
+          ELSE SUBSTRING(event_type FROM POSITION(':' IN event_type) + 1)
+        END AS label,
+        COUNT(DISTINCT session_id)::int AS clicks
+      FROM landing_events
+      WHERE created_at >= ${from}::date
+        AND created_at < (${to}::date + INTERVAL '1 day')
+        AND event_type LIKE 'power_reset_cta_click%'
+        -- Ads traffic only — utm_campaign set means Meta-driven (cold/warm).
+        -- Organic CTA clicks belong in the Organic section's own breakdown.
+        AND utm_campaign IS NOT NULL
+      GROUP BY label
+      ORDER BY clicks DESC
+    `;
+    return rows.map(r => ({ label: r.label, clicks: Number(r.clicks) }));
+  } catch (e) {
+    console.warn("cta_breakdown_failed", e?.message);
+    return [];
   }
 }
 
