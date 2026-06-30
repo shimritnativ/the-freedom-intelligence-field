@@ -365,7 +365,6 @@
       text-transform: none;
       user-select: none;
     }
-    .kpi:hover .kpi-help,
     .kpi-help:hover {
       background: var(--gold);
       color: var(--dark, #1a1a1a);
@@ -407,8 +406,11 @@
       border: 6px solid transparent;
       border-top-color: #1a1a1a;
     }
-    .kpi:hover .kpi-tooltip,
-    .has-help:hover .kpi-tooltip {
+    /* Tooltip shows ONLY when the user actively hovers the "?" icon.
+       Hovering the card body does NOT trigger it — less intrusive.
+       The "?" icon and the tooltip are adjacent siblings, so the `+`
+       sibling combinator targets the tooltip from the icon hover. */
+    .kpi-help:hover + .kpi-tooltip {
       opacity: 1;
       transform: translateX(-50%) translateY(-2px);
     }
