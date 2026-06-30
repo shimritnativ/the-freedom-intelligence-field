@@ -4386,6 +4386,57 @@
           </div>`
         : '';
 
+      // CTA breakdown — which button drove the most clicks. Shows under
+      // the funnel cards so it's visible without scrolling. Skipped when
+      // we have no CTA-click data yet (pre-tracking or zero-traffic ranges).
+      const ctaBreakdownBlock = (function() {
+        const bd = data.cta_breakdown || [];
+        const totalClicks = bd.reduce((s, r) => s + (r.clicks || 0), 0);
+        if (totalClicks === 0) return '';
+        // Friendly labels — turn snake_case slug into Title Case for display.
+        const prettify = (label) => {
+          if (!label || label === 'untagged' || label === 'cta') return 'Untagged (pre-tracking)';
+          if (label === 'backfill') return 'Cold backfill (historical)';
+          if (label === 'warm_backfill') return 'Warm backfill (historical)';
+          return label
+            .split('_')
+            .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+            .join(' ');
+        };
+        const rows = bd.slice(0, 12).map((r, i) => {
+          const widthPct = totalClicks > 0 ? (r.clicks / bd[0].clicks) * 100 : 0;
+          const sharePct = totalClicks > 0 ? (r.clicks / totalClicks) * 100 : 0;
+          const isTop = i === 0;
+          const isBottom = i === bd.length - 1 && bd.length > 1;
+          const accent = isTop ? 'var(--gold)' : isBottom ? 'var(--text-mute)' : 'var(--border)';
+          return `
+            <div style="display: grid; grid-template-columns: 220px 1fr 60px 50px; gap: 12px; padding: 8px 0; font-size: 12.5px; color: var(--text); align-items: center; border-bottom: 1px solid var(--border);">
+              <span style="font-weight: ${isTop ? '600' : '500'}; color: ${isTop ? 'var(--gold)' : 'var(--text)'};">
+                ${isTop ? '★ ' : ''}${escapeHtml(prettify(r.label))}
+              </span>
+              <div style="height: 10px; background: var(--bg-warm); border-radius: 5px; overflow: hidden;">
+                <div style="height: 100%; width: ${widthPct}%; background: ${accent}; border-radius: 5px;"></div>
+              </div>
+              <span style="text-align: right; font-variant-numeric: tabular-nums; font-weight: 600;">${num(r.clicks)}</span>
+              <span style="text-align: right; font-size: 11px; color: var(--text-mute);">${sharePct.toFixed(1)}%</span>
+            </div>`;
+        }).join('');
+        return `
+          <div style="background: var(--bg-warm); border: 1px solid var(--gold-line); border-radius: 12px; padding: 18px 22px; margin-bottom: 22px;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px;">
+              <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold);">CTA breakdown</span>
+              <span style="font-size: 11px; color: var(--text-mute);">${num(totalClicks)} total CTA clicks · which button drives the most</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 220px 1fr 60px 50px; gap: 12px; padding: 6px 0; font-size: 10.5px; color: var(--text-mute); letter-spacing: 0.08em; text-transform: uppercase; border-bottom: 1px solid var(--gold-line);">
+              <span>Button</span>
+              <span>Share</span>
+              <span style="text-align: right;">Clicks</span>
+              <span style="text-align: right;">%</span>
+            </div>
+            ${rows}
+          </div>`;
+      })();
+
       // Per-campaign table — funnel columns added when we have any
       // landing-event data, so the table stays compact pre-tracking.
       const showFunnelCols = (data.campaigns || []).some(c => (c.visits || 0) > 0);
@@ -4577,7 +4628,7 @@
           </div>`;
       })();
 
-      return warningBlock + kpis + funnelBlock + campaignTable + dailyBlock + organicBlock + accountNote;
+      return warningBlock + kpis + funnelBlock + ctaBreakdownBlock + campaignTable + dailyBlock + organicBlock + accountNote;
     }
 
     // Range / refresh / dates / campaign chips — all delegated so the
