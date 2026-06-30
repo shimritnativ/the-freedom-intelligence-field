@@ -230,8 +230,14 @@ export default async function handler(req, res) {
       // if the link-clicks field is missing for some reason (e.g., the
       // campaign has zero qualifying clicks and Meta omits the field).
       const clicks = Number(c.inline_link_clicks != null ? c.inline_link_clicks : (c.clicks || 0));
-      const ctr = Number(c.ctr || 0);
-      const cpc = Number(c.cpc || 0);
+      // CTR + CPC: recompute from the displayed Spend ÷ Clicks instead of
+      // using Meta's headline cpc/ctr fields. Meta's `cpc` is computed
+      // from ALL clicks (including reactions/profile views/engagement),
+      // but our "Clicks" column shows LINK clicks only — so Meta's CPC
+      // would always be smaller than (Spend ÷ displayed Clicks), making
+      // it look inconsistent. Same logic for CTR. Geo flagged this.
+      const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+      const cpc = clicks > 0 ? spend / clicks : 0;
       const cpm = Number(c.cpm || 0);
       // Lenient attribution match. The utm_campaign string a buyer
       // carried in their URL rarely equals the Meta campaign name byte-
