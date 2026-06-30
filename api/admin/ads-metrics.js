@@ -708,6 +708,10 @@ function daysAgoIso(n) {
   return d.toISOString().slice(0, 10);
 }
 
+// Field launch date — the day Geo opened the ads + organic LP. Used as the
+// "since launch" preset since anything before this is zero data anyway.
+const LAUNCH_DATE = "2026-06-15";
+
 function resolveRange(range, fromOverride, toOverride) {
   // Custom range wins if both endpoints are valid YYYY-MM-DD.
   const isYmd = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -720,6 +724,9 @@ function resolveRange(range, fromOverride, toOverride) {
   }
   if (range === "30d" || range === "30") {
     return { from: daysAgoIso(29), to: today, label: "last 30 days" };
+  }
+  if (range === "since_launch" || range === "launch") {
+    return { from: LAUNCH_DATE, to: today, label: "since launch" };
   }
   if (range === "lifetime" || range === "all") {
     // Meta requires a finite range — use a wide default (2 years back).
