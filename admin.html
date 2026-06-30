@@ -2632,6 +2632,28 @@
                 <div class="kpi-value">${fmtNum(c.d3 || 0)}</div>
                 <div class="kpi-sub">${fmtPct(c.d3 || 0, c.total_logged_in || 0)} of logged-in</div>
               </div>
+              ${(() => {
+                // Reset → Unlimited conversion: of all real (non-test, non-comp)
+                // Reset buyers, what % upgraded to Unlimited? Split by plan so
+                // Geo can see how the upsell mix breaks down.
+                const conv = d.resetToUnlimitedConversion;
+                if (!conv || !Number.isFinite(Number(conv.total_reset_buyers))) return '';
+                const total = Number(conv.total_reset_buyers || 0);
+                const converted = Number(conv.converted_total || 0);
+                const yearly = Number(conv.converted_yearly || 0);
+                const monthly = Number(conv.converted_monthly || 0);
+                const rate = total > 0 ? (converted / total) * 100 : 0;
+                const accent = rate >= 15 ? 'var(--success, #2e7d32)'
+                              : rate >= 5 ? 'var(--gold)'
+                              : 'var(--text)';
+                return `
+                  <div class="kpi clickable" onclick="goToPanel('intelligence', 'intel-seg-ready_for_upsell')" style="border-left: 3px solid ${accent};" title="Of all paying Reset buyers (excludes team comps + tests), what % upgraded to Unlimited? Click to see who's ready for upsell.">
+                    <div class="kpi-label">Reset → Unlimited</div>
+                    <div class="kpi-value" style="color: ${accent};">${rate.toFixed(1)}%</div>
+                    <div class="kpi-sub">${fmtNum(converted)} of ${fmtNum(total)} · ${fmtNum(yearly)} yr · ${fmtNum(monthly)} mo</div>
+                  </div>
+                `;
+              })()}
               ${!tc.connected ? `
                 <div class="kpi kpi-revenue clickable" onclick="goToPanel('revenue', 'panel-revenue')">
                   <div class="kpi-label">Net Revenue (ex VAT)</div>
