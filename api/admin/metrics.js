@@ -845,6 +845,11 @@ export default async function handler(req, res) {
           AND COALESCE(coupon_code, '') <> ALL(${excludedCoupons})
           AND amount_cents > 0
           AND created_at >= date_trunc('day', NOW())
+          -- Field-only filter so today's revenue tile doesn't include
+          -- unrelated MYP Business Club / Coaching Cert / RISE purchases
+          -- (sold via the same ThriveCart account). Matches the same
+          -- product scope as the "Net Revenue (ex VAT)" KPI below.
+          AND product_name ILIKE ANY(${fieldProductPatterns})
       `),
       safeQuery(sql`
         SELECT
