@@ -668,6 +668,31 @@ async function loadOrganicMetrics(from, to) {
     console.warn("organic_revenue_failed", e?.message);
   }
 
+  // CTA breakdown for organic (which button drove the most clicks).
+  // Same shape as the ads-side breakdown but filtered to organic LP traffic.
+  let ctaBreakdown = [];
+  try {
+    const { rows: bdRows } = await sql`
+      SELECT
+        CASE
+          WHEN event_type = 'power_reset_cta_click' THEN 'untagged'
+          ELSE SUBSTRING(event_type FROM POSITION(':' IN event_type) + 1)
+        END AS label,
+        COUNT(DISTINCT session_id)::int AS clicks
+      FROM landing_events
+      WHERE created_at >= ${from}::date
+        AND created_at < (${to}::date + INTERVAL '1 day')
+        AND event_type LIKE 'power_reset_cta_click%'
+        AND page_url LIKE ${ORG_URL_PATTERN}
+        AND page_url NOT LIKE ${ADS_URL_PATTERN}
+      GROUP BY label
+      ORDER BY clicks DESC
+    `;
+    ctaBreakdown = bdRows.map(r => ({ label: r.label, clicks: Number(r.clicks) }));
+  } catch (e) {
+    console.warn("organic_cta_breakdown_failed", e?.message);
+  }
+
   try {
     // Daily breakdown for the chart: visits, CTA clicks, purchases per day.
     // Two joined CTEs since events live in one table and purchases in another.
@@ -730,6 +755,7 @@ async function loadOrganicMetrics(from, to) {
     purchase_to_visit_rate: visits > 0 ? (purchases / visits) * 100 : null,
     purchase_to_cta_rate: ctaClicks > 0 ? (purchases / ctaClicks) * 100 : null,
     daily,
+    cta_breakdown: ctaBreakdown,
   };
 }
 
