@@ -35,6 +35,18 @@ const FIELD_PRODUCT_PATTERNS = [
 // list as the rest of the admin uses.
 const EXCLUDED_COUPONS = ["GEO100", "GEOALL", "LAUNCHTEAM"];
 
+// Team emails to exclude from revenue (same patterns used by metrics.js).
+// Without this, Geo's test purchases inflate the Real Profit revenue side
+// while costs stay clean, making the dashboard show fake profitability.
+const EMAIL_EXCLUDE_PATTERNS = [
+  "%@shimritnativ.com",
+  "ge.amaral3@gmail.com",
+  "ge.amaral3+%@gmail.com",
+  "ge.amaral+%@gmail.com",
+  "geoamaral333@gmail.com",
+  "geoamaral333+%@gmail.com",
+];
+
 // Lifetime ads start date. Pulling from 2024-01-01 is wide enough to
 // catch every campaign ever run on this account.
 const LIFETIME_FROM = "2024-01-01";
@@ -62,19 +74,32 @@ export default async function handler(req, res) {
   const errors = [];
 
   // ---- 1. Net revenue from purchases ----
+  // Mirrors metrics.js's thrivecartRevenue query so the Real Profit card's
+  // revenue line reconciles with the "Net Revenue (ex VAT)" card on the
+  // same Overview tab. Filters:
+  //   - Field-product pattern (so Business Club / Coaching Cert don't count)
+  //   - Excluded coupons (GEO100 / GEOALL / LAUNCHTEAM = test/free comps)
+  //   - Team email exclusion (Geo's test buyers don't inflate revenue)
+  //   - Subtract refunds (order.refund rows reduce the net)
   let netRevenue = 0;
   try {
     const { rows } = await sql`
-      SELECT COALESCE(SUM(amount_cents), 0)::bigint AS cents
+      SELECT
+        COALESCE(SUM(amount_cents) FILTER (
+          WHERE event_type IN ('order.success', 'order.subscription_payment')
+        ), 0)::bigint AS gross_cents,
+        COALESCE(SUM(amount_cents) FILTER (
+          WHERE event_type = 'order.refund'
+        ), 0)::bigint AS refund_cents
       FROM purchases
-      WHERE event_type IN ('order.success', 'order.subscription_payment')
-        AND amount_cents > 0
+      WHERE amount_cents > 0
         AND COALESCE(coupon_code, '') <> ALL(${EXCLUDED_COUPONS})
-        AND (
-          product_name ILIKE ANY(${FIELD_PRODUCT_PATTERNS})
-        )
+        AND product_name ILIKE ANY(${FIELD_PRODUCT_PATTERNS})
+        AND NOT (email LIKE ANY(${EMAIL_EXCLUDE_PATTERNS}))
     `;
-    netRevenue = Number(rows[0]?.cents || 0) / 100;
+    const grossCents = Number(rows[0]?.gross_cents || 0);
+    const refundCents = Number(rows[0]?.refund_cents || 0);
+    netRevenue = (grossCents - refundCents) / 100;
   } catch (e) {
     errors.push({ source: "net_revenue", message: e?.message || String(e) });
   }
