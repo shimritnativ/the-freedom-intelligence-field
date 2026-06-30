@@ -358,12 +358,19 @@ export default async function handler(req, res) {
       signups: Number(signupsByDay[date] || 0),
     }));
 
+    // Organic landing-page metrics — same date range, separate funnel.
+    // Pulled here so the Ads tab can render both "Meta paid" and "Organic"
+    // sections under one shared range picker. Failure to load is non-fatal:
+    // the organic block just returns nulls and the UI hides the section.
+    const organic = await safe("organic_metrics", loadOrganicMetrics(from, to));
+
     return res.status(200).json({
       ok: true,
       range: { from, to, label },
       totals,
       campaigns: campaigns.sort((a, b) => b.spend - a.spend),
       daily,
+      organic,
       meta: {
         fetched_at: new Date().toISOString(),
         account_id: accountId,
@@ -554,6 +561,130 @@ async function loadSignupsByDay(from, to) {
     console.warn("signups_by_day_failed", e?.message);
     return {};
   }
+}
+
+// =============================================================================
+// Organic landing-page metrics
+// =============================================================================
+// Same shape as the Meta funnel but pulled entirely from our own data
+// (landing_events for visits/CTA clicks + purchases for orders/revenue).
+// "Organic" = traffic to /the-power-reset (without the -ads suffix).
+// Distinct from the ads funnel which uses /the-power-reset-ads.
+async function loadOrganicMetrics(from, to) {
+  // Match the organic LP URL specifically. The page_url column captures
+  // the full URL the snippet fired from, so we filter for the org LP
+  // path and explicitly exclude the -ads variant.
+  const ORG_URL_PATTERN = '%go.shimritnativ.com/the-power-reset%';
+  const ADS_URL_PATTERN = '%/the-power-reset-ads%';
+  // Match the organic ThriveCart product specifically. The admin
+  // distinguishes "The Power Reset" (organic) from "The Power Reset - Ads"
+  // (paid) — different products in ThriveCart for separate attribution.
+  const ORG_PRODUCT_EXACT = 'The Power Reset';
+
+  let visits = 0;
+  let ctaClicks = 0;
+  let purchases = 0;
+  let revenueCents = 0;
+  let daily = [];
+
+  try {
+    const { rows: funnelRows } = await sql`
+      SELECT
+        COUNT(*) FILTER (WHERE event_type = 'page_view')::int AS visits,
+        COUNT(DISTINCT session_id) FILTER (WHERE event_type LIKE 'power_reset_cta_click%')::int AS cta_clicks
+      FROM landing_events
+      WHERE created_at >= ${from}::date
+        AND created_at < (${to}::date + INTERVAL '1 day')
+        AND page_url LIKE ${ORG_URL_PATTERN}
+        AND page_url NOT LIKE ${ADS_URL_PATTERN}
+    `;
+    visits = Number(funnelRows[0]?.visits || 0);
+    ctaClicks = Number(funnelRows[0]?.cta_clicks || 0);
+  } catch (e) {
+    console.warn("organic_funnel_failed", e?.message);
+  }
+
+  try {
+    const { rows: revRows } = await sql`
+      SELECT
+        COUNT(*)::int AS orders,
+        COALESCE(SUM(amount_cents), 0)::bigint AS revenue_cents
+      FROM purchases
+      WHERE created_at >= ${from}::date
+        AND created_at < (${to}::date + INTERVAL '1 day')
+        AND event_type IN ('order.success', 'order.subscription_payment')
+        AND amount_cents > 0
+        AND product_name = ${ORG_PRODUCT_EXACT}
+    `;
+    purchases = Number(revRows[0]?.orders || 0);
+    revenueCents = Number(revRows[0]?.revenue_cents || 0);
+  } catch (e) {
+    console.warn("organic_revenue_failed", e?.message);
+  }
+
+  try {
+    // Daily breakdown for the chart: visits, CTA clicks, purchases per day.
+    // Two joined CTEs since events live in one table and purchases in another.
+    const { rows: dailyRows } = await sql`
+      WITH days AS (
+        SELECT generate_series(
+          ${from}::date,
+          ${to}::date,
+          INTERVAL '1 day'
+        )::date AS d
+      ),
+      ev AS (
+        SELECT
+          DATE(created_at) AS d,
+          COUNT(*) FILTER (WHERE event_type = 'page_view') AS visits,
+          COUNT(DISTINCT session_id) FILTER (WHERE event_type LIKE 'power_reset_cta_click%') AS cta_clicks
+        FROM landing_events
+        WHERE created_at >= ${from}::date
+          AND created_at < (${to}::date + INTERVAL '1 day')
+          AND page_url LIKE ${ORG_URL_PATTERN}
+          AND page_url NOT LIKE ${ADS_URL_PATTERN}
+        GROUP BY DATE(created_at)
+      ),
+      pu AS (
+        SELECT
+          DATE(created_at) AS d,
+          COUNT(*) AS purchases,
+          COALESCE(SUM(amount_cents), 0) AS revenue_cents
+        FROM purchases
+        WHERE created_at >= ${from}::date
+          AND created_at < (${to}::date + INTERVAL '1 day')
+          AND event_type IN ('order.success', 'order.subscription_payment')
+          AND amount_cents > 0
+          AND product_name = ${ORG_PRODUCT_EXACT}
+        GROUP BY DATE(created_at)
+      )
+      SELECT
+        TO_CHAR(days.d, 'YYYY-MM-DD') AS date,
+        COALESCE(ev.visits, 0)::int        AS visits,
+        COALESCE(ev.cta_clicks, 0)::int    AS cta_clicks,
+        COALESCE(pu.purchases, 0)::int     AS purchases,
+        COALESCE(pu.revenue_cents, 0)::int AS revenue_cents
+      FROM days
+      LEFT JOIN ev ON ev.d = days.d
+      LEFT JOIN pu ON pu.d = days.d
+      ORDER BY days.d
+    `;
+    daily = dailyRows;
+  } catch (e) {
+    console.warn("organic_daily_failed", e?.message);
+  }
+
+  return {
+    visits,
+    cta_clicks: ctaClicks,
+    purchases,
+    abandoned_cart: Math.max(0, ctaClicks - purchases),
+    revenue_cents: revenueCents,
+    cta_to_visit_rate: visits > 0 ? (ctaClicks / visits) * 100 : null,
+    purchase_to_visit_rate: visits > 0 ? (purchases / visits) * 100 : null,
+    purchase_to_cta_rate: ctaClicks > 0 ? (purchases / ctaClicks) * 100 : null,
+    daily,
+  };
 }
 
 // =============================================================================
