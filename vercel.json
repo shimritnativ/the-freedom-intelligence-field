@@ -8,6 +8,10 @@
     },
     "api/unlimited/chat.js": {
       "maxDuration": 60
+    },
+    "api/export-pdf.js": {
+      "maxDuration": 30,
+      "memory": 1024
     }
   },
   "rewrites": [
@@ -85,7 +89,7 @@
   ],
   "headers": [
     {
-      "source": "/(app|admin|demo|embed|launch-tracker)\\.html",
+      "source": "/(app|admin|demo|embed|launch-tracker|the-field-website)\\.html",
       "headers": [
         {
           "key": "Cache-Control",
