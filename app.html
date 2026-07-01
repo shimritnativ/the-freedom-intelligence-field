@@ -5074,69 +5074,66 @@ Begin.` },
   // load, then trigger the browser's print dialog from inside the iframe.
   // The document.title becomes the default filename the browser suggests
   // when the user picks "Save as PDF".
-  function openPrintDialog(htmlString, docTitle) {
+  // Wrap the export HTML in a full standalone document (DOCTYPE + head +
+  // body + styles) so it renders correctly when opened directly from the
+  // downloaded file. Returns the full HTML string ready to save as a file.
+  function wrapExportHtml(htmlString, docTitle) {
+    return (
+      "<!DOCTYPE html><html><head><meta charset=\"utf-8\">" +
+      "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" +
+      "<title>" + escapeHtml(docTitle) + "</title>" +
+      "<style>" +
+      "@page { size: A4; margin: 15mm 15mm 18mm 15mm; }" +
+      "body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }" +
+      "@media screen {" +
+        "body { padding: 24px 16px; background: #f6efe1; }" +
+        "body > * { max-width: 780px; margin-left: auto; margin-right: auto; background: #fff; }" +
+      "}" +
+      "</style></head><body>" +
+      htmlString +
+      "</body></html>"
+    );
+  }
+
+  // Download the export HTML as a real .html file the user can save, share,
+  // and open anytime. Replaces the old print-dialog approach that used to
+  // freeze the tab and confuse users (Malin's feedback July 2026: she was
+  // getting phone screenshots instead of the export). This gives a clean
+  // "click → file lands in Downloads folder" flow that works consistently
+  // on desktop and mobile. The user can still print to PDF from the
+  // downloaded HTML file if they want a PDF.
+  function downloadConversationHtml(htmlString, docTitle) {
     return new Promise((resolve) => {
-      const iframe = document.createElement("iframe");
-      iframe.style.position = "fixed";
-      iframe.style.right = "0";
-      iframe.style.bottom = "0";
-      iframe.style.width = "0";
-      iframe.style.height = "0";
-      iframe.style.border = "0";
-      document.body.appendChild(iframe);
-
-      const doc = iframe.contentDocument || iframe.contentWindow.document;
-      doc.open();
-      doc.write(
-        "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>" +
-        escapeHtml(docTitle) +
-        "</title><style>" +
-        "@page { size: A4; margin: 15mm 15mm 18mm 15mm; }" +
-        "body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }" +
-        "</style></head><body>" +
-        htmlString +
-        "</body></html>"
-      );
-      doc.close();
-
-      // Wait for the iframe content (and any fonts) to be fully ready
-      // before calling print(), otherwise the first call may render blank.
-      let cleaned = false;
-      const cleanup = () => {
-        if (cleaned) return;
-        cleaned = true;
-        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-        resolve();
-      };
-      const triggerPrint = () => {
-        try {
-          // Listen for afterprint so we keep the iframe alive for the entire
-          // duration of the print dialog. iOS Safari shows an "Allow auto-
-          // print?" warning on repeated exports; if we remove the iframe on
-          // a fixed timer, by the time the user taps Allow the iframe is
-          // already gone and the preview shows blank.
+      try {
+        const fullHtml = wrapExportHtml(htmlString, docTitle);
+        const blob = new Blob([fullHtml], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = docTitle + ".html";
+        a.style.display = "none";
+        a.rel = "noopener";
+        document.body.appendChild(a);
+        a.click();
+        // Give the browser a moment to register the click + start the download
+        // before we tear down. Some mobile Safaris need the anchor to remain
+        // in the DOM for a beat.
+        setTimeout(() => {
           try {
-            iframe.contentWindow.addEventListener("afterprint", cleanup, { once: true });
-          } catch (err) { /* iframe may not support events; rely on timeout */ }
-          iframe.contentWindow.focus();
-          iframe.contentWindow.print();
-        } catch (err) {
-          console.error("print_failed", err);
-        }
-        // Safety net: remove the iframe after 60s no matter what, so it
-        // doesn't leak if afterprint never fires (some browsers don't fire
-        // it when the user cancels the print dialog).
-        setTimeout(cleanup, 60000);
-      };
-      if (doc.readyState === "complete") {
-        setTimeout(triggerPrint, 200);
-      } else {
-        iframe.addEventListener("load", () => setTimeout(triggerPrint, 200), { once: true });
-        // Safety timeout in case load never fires.
-        setTimeout(triggerPrint, 1200);
+            if (a.parentNode) a.parentNode.removeChild(a);
+            URL.revokeObjectURL(url);
+          } catch (err) { /* ignore cleanup errors */ }
+          resolve();
+        }, 500);
+      } catch (err) {
+        console.error("download_conversation_failed", err);
+        resolve();
       }
     });
   }
+  // Legacy alias — callers that pre-date the rename can keep working.
+  // Delete once no callers reference openPrintDialog anymore.
+  const openPrintDialog = downloadConversationHtml;
 
   function buildResetExportHtml(messages, displayName, tier) {
     // Tier passed explicitly so the upsell decision uses the server-reported
@@ -5659,8 +5656,8 @@ Begin.` },
             </button>
             <div class="acct-name-help" style="margin-top: 8px; line-height: 1.5;">
               ${isFull
-                ? "Saves beautifully formatted PDFs of your work in the Field. Easy to read on your phone, save to Google Drive, or share with someone you trust."
-                : "Saves a beautifully formatted PDF of all your Reset conversations — easy to read on your phone, save to Google Drive, or share with someone you trust."}
+                ? "Downloads a beautifully formatted file with your complete work in the Field. Open it in any browser to read on your phone, save to Google Drive, or share with someone you trust. Want a PDF? Open the file and use your browser's Print → Save as PDF."
+                : "Downloads a beautifully formatted file with your complete Reset conversations. Open it in any browser to read on your phone, save to Google Drive, or share with someone you trust. Want a PDF? Open the file and use your browser's Print → Save as PDF."}
             </div>
           </div>
 
