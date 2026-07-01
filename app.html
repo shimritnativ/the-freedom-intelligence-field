@@ -3348,6 +3348,7 @@
     textarea, .entry-input { font-size: 16px; }
   }
 </style>
+
 </head>
 <body>
   <div id="app"></div>
@@ -5074,69 +5075,132 @@ Begin.` },
   // load, then trigger the browser's print dialog from inside the iframe.
   // The document.title becomes the default filename the browser suggests
   // when the user picks "Save as PDF".
-  function openPrintDialog(htmlString, docTitle) {
-    return new Promise((resolve) => {
-      const iframe = document.createElement("iframe");
-      iframe.style.position = "fixed";
-      iframe.style.right = "0";
-      iframe.style.bottom = "0";
-      iframe.style.width = "0";
-      iframe.style.height = "0";
-      iframe.style.border = "0";
-      document.body.appendChild(iframe);
+  // Wrap the export HTML in a full standalone document (DOCTYPE + head +
+  // body + styles) so it renders correctly when the PDF generator captures it.
+  // Also used for the HTML fallback when html2pdf can't be loaded (e.g.,
+  // offline on mobile). Returns the full HTML string.
+  function wrapExportHtml(htmlString, docTitle) {
+    return (
+      "<!DOCTYPE html><html><head><meta charset=\"utf-8\">" +
+      "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" +
+      "<title>" + escapeHtml(docTitle) + "</title>" +
+      "<style>" +
+      "@page { size: A4; margin: 15mm 15mm 18mm 15mm; }" +
+      "body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #ffffff; }" +
+      "@media screen {" +
+        "body { padding: 24px 16px; background: #f6efe1; }" +
+        "body > * { max-width: 780px; margin-left: auto; margin-right: auto; background: #fff; }" +
+      "}" +
+      "</style></head><body>" +
+      htmlString +
+      "</body></html>"
+    );
+  }
 
-      const doc = iframe.contentDocument || iframe.contentWindow.document;
-      doc.open();
-      doc.write(
-        "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>" +
-        escapeHtml(docTitle) +
-        "</title><style>" +
-        "@page { size: A4; margin: 15mm 15mm 18mm 15mm; }" +
-        "body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }" +
-        "</style></head><body>" +
-        htmlString +
-        "</body></html>"
-      );
-      doc.close();
+  // Download the export as a real .pdf file with SELECTABLE, COPYABLE text.
+  //
+  // How it works:
+  //   POSTs the HTML to /api/export-pdf, which runs headless Chromium
+  //   (Puppeteer + @sparticuz/chromium on Vercel) and returns a real vector
+  //   PDF. This means:
+  //     • Text is selectable — members can copy passages and paste them
+  //       into their own AI, share quotes with a therapist, keep favorite
+  //       lines in Notes.
+  //     • Fonts render correctly (Georgia serif in print, exactly as the
+  //       app shows it).
+  //     • Page breaks respect message bubbles (CSS page-break-inside: avoid).
+  //     • File is small — vector PDFs are ~10-20x smaller than the
+  //       rasterized html2pdf output we tried first.
+  //
+  //   The response is a Blob with Content-Disposition: attachment, so the
+  //   browser drops it straight into the Downloads folder. No print
+  //   dialog, no tab freeze, no confusing modal.
+  //
+  // Fallback:
+  //   If the server call fails (offline, endpoint down, network hiccup),
+  //   we drop the branded HTML file to Downloads instead — the member
+  //   still gets their conversation and can open it in a browser to
+  //   Print → Save as PDF the old way.
+  //
+  // Written after Malin's July 2026 feedback: the old print-dialog flow
+  // was so confusing she was taking phone screenshots of the app instead.
+  function downloadConversationPdf(htmlString, docTitle) {
+    return new Promise(async (resolve) => {
+      const safeTitle = (docTitle || "conversation").replace(/[\\/:*?"<>|]/g, "-");
 
-      // Wait for the iframe content (and any fonts) to be fully ready
-      // before calling print(), otherwise the first call may render blank.
-      let cleaned = false;
-      const cleanup = () => {
-        if (cleaned) return;
-        cleaned = true;
-        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-        resolve();
-      };
-      const triggerPrint = () => {
+      // Fallback: HTML download if the server route fails.
+      const fallbackHtmlDownload = () => {
         try {
-          // Listen for afterprint so we keep the iframe alive for the entire
-          // duration of the print dialog. iOS Safari shows an "Allow auto-
-          // print?" warning on repeated exports; if we remove the iframe on
-          // a fixed timer, by the time the user taps Allow the iframe is
-          // already gone and the preview shows blank.
-          try {
-            iframe.contentWindow.addEventListener("afterprint", cleanup, { once: true });
-          } catch (err) { /* iframe may not support events; rely on timeout */ }
-          iframe.contentWindow.focus();
-          iframe.contentWindow.print();
+          const fullHtml = wrapExportHtml(htmlString, safeTitle);
+          const blob = new Blob([fullHtml], { type: "text/html;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = safeTitle + ".html";
+          a.style.display = "none";
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            try { if (a.parentNode) a.parentNode.removeChild(a); } catch (err) { /* ignore */ }
+            URL.revokeObjectURL(url);
+            resolve();
+          }, 400);
         } catch (err) {
-          console.error("print_failed", err);
+          console.error("html_fallback_failed", err);
+          resolve();
         }
-        // Safety net: remove the iframe after 60s no matter what, so it
-        // doesn't leak if afterprint never fires (some browsers don't fire
-        // it when the user cancels the print dialog).
-        setTimeout(cleanup, 60000);
       };
-      if (doc.readyState === "complete") {
-        setTimeout(triggerPrint, 200);
-      } else {
-        iframe.addEventListener("load", () => setTimeout(triggerPrint, 200), { once: true });
-        // Safety timeout in case load never fires.
-        setTimeout(triggerPrint, 1200);
+
+      try {
+        // Same key the chat endpoints already use — see the two other
+        // localStorage.getItem("tfif_session_v1") reads further down this file.
+        let token = "";
+        try { token = localStorage.getItem("tfif_session_v1") || ""; }
+        catch (err) { /* private browsing / storage blocked — server will 401 and we'll fall back */ }
+
+        const resp = await fetch("/api/export-pdf", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-session-token": token,
+          },
+          body: JSON.stringify({
+            html: htmlString,
+            title: safeTitle,
+          }),
+        });
+
+        if (!resp.ok) {
+          console.error("export-pdf failed", resp.status, await resp.text().catch(() => ""));
+          fallbackHtmlDownload();
+          return;
+        }
+
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = safeTitle + ".pdf";
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          try { if (a.parentNode) a.parentNode.removeChild(a); } catch (err) { /* ignore */ }
+          URL.revokeObjectURL(url);
+          resolve();
+        }, 400);
+      } catch (err) {
+        console.error("download_conversation_pdf_failed", err);
+        fallbackHtmlDownload();
       }
     });
   }
+
+  // Legacy aliases — older callers may still use these names.
+  // Both delegate to the PDF flow now. Safe to leave for a release cycle
+  // and then delete.
+  const downloadConversationHtml = downloadConversationPdf;
+  const openPrintDialog = downloadConversationPdf;
 
   function buildResetExportHtml(messages, displayName, tier) {
     // Tier passed explicitly so the upsell decision uses the server-reported
@@ -5659,8 +5723,8 @@ Begin.` },
             </button>
             <div class="acct-name-help" style="margin-top: 8px; line-height: 1.5;">
               ${isFull
-                ? "Saves beautifully formatted PDFs of your work in the Field. Easy to read on your phone, save to Google Drive, or share with someone you trust."
-                : "Saves a beautifully formatted PDF of all your Reset conversations — easy to read on your phone, save to Google Drive, or share with someone you trust."}
+                ? "Downloads a beautifully formatted PDF of your work in the Field. Easy to read on your phone, save to Google Drive, or share with someone you trust."
+                : "Downloads a beautifully formatted PDF of all your Reset conversations. Easy to read on your phone, save to Google Drive, or share with someone you trust."}
             </div>
           </div>
 
