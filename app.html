@@ -2993,7 +2993,15 @@
     position: relative; min-width: 0;
   }
   .login-brand-content { position: relative; z-index: 2; max-width: 460px; }
-  .login-brand-bar { width: 44px; height: 2px; background: #C9A84C; margin-bottom: 24px; }
+  .login-brand-logo {
+    width: 44px; height: 44px; display: block; margin-bottom: 22px;
+    object-fit: contain;
+    opacity: 0; animation: loginFadeIn 0.9s ease-out forwards;
+  }
+  .login-brand-bar {
+    width: 44px; height: 2px; background: #C9A84C; margin-bottom: 24px;
+    opacity: 0; animation: loginFadeIn 0.9s ease-out 0.05s forwards;
+  }
   .login-brand-eyebrow {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: 11px; letter-spacing: 0.24em; color: #C9A84C; font-weight: 700;
@@ -6131,6 +6139,7 @@ Begin.` },
         <div class="login-split-left">
           ${loginParticlesHtml}
           <div class="login-brand-content">
+            <img class="login-brand-logo" src="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" alt="Master Your Path" />
             <div class="login-brand-bar"></div>
             <div class="login-brand-eyebrow">THE FREEDOM INTELLIGENCE FIELD</div>
             <div class="login-brand-title login-brand-title-1">Enter</div>
