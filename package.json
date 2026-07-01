@@ -11,9 +11,7 @@
     "migrate": "node scripts/migrate.js"
   },
   "dependencies": {
-    "@sparticuz/chromium": "^131.0.0",
     "@vercel/postgres": "^0.10.0",
-    "puppeteer-core": "^23.11.0",
     "web-push": "^3.6.7"
   }
 }
