@@ -1636,7 +1636,17 @@
     // matches what's already there.
     function applyMobileTableLabels() {
       document.querySelectorAll(".section table").forEach(table => {
-        const headers = Array.from(table.querySelectorAll("thead th")).map(th => th.textContent.trim());
+        // Extract JUST the header label text — NOT the tooltip content.
+        // Column headers now embed <span class="kpi-help"> and
+        // <span class="kpi-tooltip"> for hover help; if we grab .textContent
+        // naively, the mobile data-label ends up as "Email?EmailThe member's..."
+        // which explodes the mobile card layout. Clone the <th>, strip out
+        // the help spans, then take the text.
+        const headers = Array.from(table.querySelectorAll("thead th")).map(th => {
+          const clone = th.cloneNode(true);
+          clone.querySelectorAll(".kpi-help, .kpi-tooltip").forEach(el => el.remove());
+          return clone.textContent.trim();
+        });
         if (!headers.length) return;
         table.querySelectorAll("tbody tr").forEach(row => {
           row.querySelectorAll("td").forEach((cell, i) => {
