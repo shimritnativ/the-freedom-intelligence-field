@@ -3108,10 +3108,34 @@
   }
   .login-back-btn:hover { color: #1a1a1a; }
 
+  /* Mobile: stack the two panels vertically. Dark hero band on top,
+     cream form below. Compressed brand statement (no divider, no long
+     subtitle) so the form stays close to the top of the screen for
+     one-thumb typing. Particles + logo + title still present so the
+     brand moment doesn't disappear. */
   @media (max-width: 800px) {
     .login-split { flex-direction: column; min-height: auto; }
-    .login-split-left { display: none; }
-    .login-split-right { padding: 40px 24px; min-height: 100vh; }
+    .login-split-left {
+      padding: 40px 26px 34px;
+      justify-content: flex-start;
+      min-height: 0;
+    }
+    .login-brand-content { max-width: none; }
+    .login-brand-logo { width: 40px; height: 40px; margin-bottom: 18px; }
+    .login-brand-bar { margin-bottom: 16px; }
+    .login-brand-eyebrow { font-size: 10px; margin-bottom: 18px; }
+    .login-brand-title { font-size: 34px; line-height: 1.05; }
+    .login-brand-title-2 { margin-bottom: 4px; }
+    .login-brand-divider { display: none; }
+    .login-brand-subtitle { display: none; }
+    .login-split-right {
+      padding: 32px 24px 40px;
+      min-height: auto;
+      align-items: stretch;
+    }
+    .login-form-wrap { max-width: none; }
+    .login-form-title { font-size: 28px; }
+    .login-form-subtitle { font-size: 14px; margin-bottom: 24px; }
   }
 
   .composer-note {
