@@ -3023,16 +3023,26 @@
 
   /* Drifting gold particles. 4 animation profiles cycled across 25
      particles positioned by inline style. Deterministic seed so they
-     don't jitter between renders. */
-  .login-particle { position: absolute; background: #C9A84C; border-radius: 50%; pointer-events: none; z-index: 1; }
-  .login-particle.drift-1 { animation: loginDrift1 14s ease-in-out infinite; }
-  .login-particle.drift-2 { animation: loginDrift2 18s ease-in-out infinite; }
-  .login-particle.drift-3 { animation: loginDrift3 22s ease-in-out infinite; }
-  .login-particle.pulse    { animation: loginPulse 10s ease-in-out infinite; }
-  @keyframes loginDrift1 { 0%,100% { transform: translate(0,0); opacity: 0.15; } 50% { transform: translate(20px,-28px); opacity: 0.55; } }
-  @keyframes loginDrift2 { 0%,100% { transform: translate(0,0); opacity: 0.2; } 50% { transform: translate(-24px,18px); opacity: 0.6; } }
-  @keyframes loginDrift3 { 0%,100% { transform: translate(0,0); opacity: 0.1; } 50% { transform: translate(14px,-34px); opacity: 0.45; } }
-  @keyframes loginPulse    { 0%,100% { opacity: 0.25; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.2); } }
+     don't jitter between renders. Sizes + opacity bumped July 2026 for
+     stronger presence — was too subtle at 2-5px / 0.45 peak opacity;
+     new range is 4-10px / up to 0.85 peak. Also added glow shadow so
+     each particle reads as a soft point of light instead of a hard dot. */
+  .login-particle {
+    position: absolute;
+    background: #C9A84C;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1;
+    box-shadow: 0 0 12px rgba(201, 168, 76, 0.55);
+  }
+  .login-particle.drift-1 { animation: loginDrift1 12s ease-in-out infinite; }
+  .login-particle.drift-2 { animation: loginDrift2 15s ease-in-out infinite; }
+  .login-particle.drift-3 { animation: loginDrift3 18s ease-in-out infinite; }
+  .login-particle.pulse    { animation: loginPulse 7s ease-in-out infinite; }
+  @keyframes loginDrift1 { 0%,100% { transform: translate(0,0); opacity: 0.35; } 50% { transform: translate(40px,-52px); opacity: 0.85; } }
+  @keyframes loginDrift2 { 0%,100% { transform: translate(0,0); opacity: 0.4; } 50% { transform: translate(-48px,36px); opacity: 0.9; } }
+  @keyframes loginDrift3 { 0%,100% { transform: translate(0,0); opacity: 0.3; } 50% { transform: translate(28px,-60px); opacity: 0.8; } }
+  @keyframes loginPulse    { 0%,100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 0.95; transform: scale(1.5); } }
 
   /* Right side form */
   .login-form-wrap { max-width: 400px; width: 100%; }
@@ -3040,7 +3050,14 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: 11px; letter-spacing: 0.24em; color: #C9A84C; font-weight: 700; margin-bottom: 22px;
   }
-  .login-form-title { font-family: Georgia, serif; font-size: 28px; line-height: 1.25; color: #1a1a1a; margin: 0 0 12px; }
+  .login-form-title {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: clamp(32px, 3.6vw, 40px);
+    line-height: 1.12;
+    color: #1a1a1a;
+    margin: 0 0 14px;
+  }
   .login-form-subtitle { font-family: Georgia, serif; font-size: 15px; line-height: 1.65; color: rgba(0,0,0,0.58); margin-bottom: 30px; }
   .login-form-subtitle strong { color: #1a1a1a; font-weight: 600; }
   .login-form-label {
@@ -6093,7 +6110,9 @@ Begin.` },
         for (let i = 0; i < 25; i++) {
           const top = 4 + ((i * 137 + 11) % 92);
           const left = 4 + ((i * 251 + 40) % 92);
-          const size = 2 + (i % 4);
+          // Sizes 4-10px. Bigger than the original 2-5px so the drift is
+          // actually noticeable at the desk viewing distance.
+          const size = 4 + ((i * 3) % 7);
           const cls = anims[i % 4];
           const delay = -(i * 1.3).toFixed(1);
           parts.push(
