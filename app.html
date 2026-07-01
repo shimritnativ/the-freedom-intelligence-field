@@ -5062,7 +5062,7 @@ Begin.` },
       const htmlString = buildResetExportHtml(msgs, state.displayName, exportTier);
       const dateSuffix = new Date().toISOString().slice(0, 10);
       const docTitle = "freedom-intelligence-field-" + dateSuffix;
-      await openPrintDialog(htmlString, docTitle);
+      await downloadConversationPdf(htmlString, docTitle);
     } catch (err) {
       console.error("export_failed", err);
       alert("Could not save your work right now. Please try again in a moment.");
@@ -5075,132 +5075,135 @@ Begin.` },
   // load, then trigger the browser's print dialog from inside the iframe.
   // The document.title becomes the default filename the browser suggests
   // when the user picks "Save as PDF".
-  // Wrap the export HTML in a full standalone document (DOCTYPE + head +
-  // body + styles) so it renders correctly when the PDF generator captures it.
-  // Also used for the HTML fallback when html2pdf can't be loaded (e.g.,
-  // offline on mobile). Returns the full HTML string.
-  function wrapExportHtml(htmlString, docTitle) {
-    return (
-      "<!DOCTYPE html><html><head><meta charset=\"utf-8\">" +
-      "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" +
-      "<title>" + escapeHtml(docTitle) + "</title>" +
-      "<style>" +
-      "@page { size: A4; margin: 15mm 15mm 18mm 15mm; }" +
-      "body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #ffffff; }" +
-      "@media screen {" +
-        "body { padding: 24px 16px; background: #f6efe1; }" +
-        "body > * { max-width: 780px; margin-left: auto; margin-right: auto; background: #fff; }" +
-      "}" +
-      "</style></head><body>" +
-      htmlString +
-      "</body></html>"
-    );
-  }
+  // Open the browser's native print dialog with the conversation content
+  // pre-rendered in a hidden iframe. The user picks "Save as PDF" from the
+  // dialog and gets a real vector PDF with selectable text.
+  //
+  // Why this approach (and why we came back to it):
+  //   We tried two direct-download alternatives during the July 2026 launch
+  //   week and both failed:
+  //     1. html2pdf.js → PDFs had rasterized text, users couldn't copy.
+  //     2. Server-side Puppeteer + @sparticuz/chromium → hit Vercel's
+  //        libnss3.so runtime break, endpoint returned 500 on every call.
+  //   The browser's native print dialog is unfashionable but bulletproof:
+  //   real vector PDF, selectable text, works offline, no dependencies,
+  //   no infrastructure. The "Save as PDF" step is a minor UX cost but
+  //   the output quality is exactly what members need.
+  //
+  // Implementation notes:
+  //   • Iframe is offscreen (0×0 at bottom-right) so the print CSS applies
+  //     without disturbing the visible page.
+  //   • We wait for load/readyState before calling print() — some browsers
+  //     render blank on the first call if fonts haven't loaded yet.
+  //   • We hook afterprint to clean up as soon as the dialog closes, so
+  //     re-exporting doesn't accumulate leaked iframes.
+  //   • 60s safety timeout removes the iframe if afterprint never fires
+  //     (some browsers don't fire it when the user cancels).
+  function openPrintDialog(htmlString, docTitle) {
+    return new Promise((resolve) => {
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "fixed";
+      iframe.style.right = "0";
+      iframe.style.bottom = "0";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "0";
+      document.body.appendChild(iframe);
 
-  // Download the export as a real .pdf file with SELECTABLE, COPYABLE text.
-  //
-  // How it works:
-  //   POSTs the HTML to /api/export-pdf, which runs headless Chromium
-  //   (Puppeteer + @sparticuz/chromium on Vercel) and returns a real vector
-  //   PDF. This means:
-  //     • Text is selectable — members can copy passages and paste them
-  //       into their own AI, share quotes with a therapist, keep favorite
-  //       lines in Notes.
-  //     • Fonts render correctly (Georgia serif in print, exactly as the
-  //       app shows it).
-  //     • Page breaks respect message bubbles (CSS page-break-inside: avoid).
-  //     • File is small — vector PDFs are ~10-20x smaller than the
-  //       rasterized html2pdf output we tried first.
-  //
-  //   The response is a Blob with Content-Disposition: attachment, so the
-  //   browser drops it straight into the Downloads folder. No print
-  //   dialog, no tab freeze, no confusing modal.
-  //
-  // Fallback:
-  //   If the server call fails (offline, endpoint down, network hiccup),
-  //   we drop the branded HTML file to Downloads instead — the member
-  //   still gets their conversation and can open it in a browser to
-  //   Print → Save as PDF the old way.
-  //
-  // Written after Malin's July 2026 feedback: the old print-dialog flow
-  // was so confusing she was taking phone screenshots of the app instead.
-  function downloadConversationPdf(htmlString, docTitle) {
-    return new Promise(async (resolve) => {
-      const safeTitle = (docTitle || "conversation").replace(/[\\/:*?"<>|]/g, "-");
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      doc.open();
+      doc.write(
+        "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>" +
+        escapeHtml(docTitle) +
+        "</title><style>" +
+        "@page { size: A4; margin: 15mm 15mm 18mm 15mm; }" +
+        "body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }" +
+        "</style></head><body>" +
+        htmlString +
+        "</body></html>"
+      );
+      doc.close();
 
-      // Fallback: HTML download if the server route fails.
-      const fallbackHtmlDownload = () => {
-        try {
-          const fullHtml = wrapExportHtml(htmlString, safeTitle);
-          const blob = new Blob([fullHtml], { type: "text/html;charset=utf-8" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = safeTitle + ".html";
-          a.style.display = "none";
-          document.body.appendChild(a);
-          a.click();
-          setTimeout(() => {
-            try { if (a.parentNode) a.parentNode.removeChild(a); } catch (err) { /* ignore */ }
-            URL.revokeObjectURL(url);
-            resolve();
-          }, 400);
-        } catch (err) {
-          console.error("html_fallback_failed", err);
-          resolve();
-        }
+      let cleaned = false;
+      const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        resolve();
       };
-
-      try {
-        // Same key the chat endpoints already use — see the two other
-        // localStorage.getItem("tfif_session_v1") reads further down this file.
-        let token = "";
-        try { token = localStorage.getItem("tfif_session_v1") || ""; }
-        catch (err) { /* private browsing / storage blocked — server will 401 and we'll fall back */ }
-
-        const resp = await fetch("/api/export-pdf", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-session-token": token,
-          },
-          body: JSON.stringify({
-            html: htmlString,
-            title: safeTitle,
-          }),
-        });
-
-        if (!resp.ok) {
-          console.error("export-pdf failed", resp.status, await resp.text().catch(() => ""));
-          fallbackHtmlDownload();
-          return;
+      const triggerPrint = () => {
+        try {
+          try {
+            iframe.contentWindow.addEventListener("afterprint", cleanup, { once: true });
+          } catch (err) { /* iframe may not support events; rely on timeout */ }
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        } catch (err) {
+          console.error("print_failed", err);
         }
-
-        const blob = await resp.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = safeTitle + ".pdf";
-        a.style.display = "none";
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => {
-          try { if (a.parentNode) a.parentNode.removeChild(a); } catch (err) { /* ignore */ }
-          URL.revokeObjectURL(url);
-          resolve();
-        }, 400);
-      } catch (err) {
-        console.error("download_conversation_pdf_failed", err);
-        fallbackHtmlDownload();
+        setTimeout(cleanup, 60000);
+      };
+      if (doc.readyState === "complete") {
+        setTimeout(triggerPrint, 200);
+      } else {
+        iframe.addEventListener("load", () => setTimeout(triggerPrint, 200), { once: true });
+        setTimeout(triggerPrint, 1200);
       }
     });
   }
 
-  // Legacy aliases — older callers may still use these names.
-  // Both delegate to the PDF flow now. Safe to leave for a release cycle
-  // and then delete.
-  const downloadConversationHtml = downloadConversationPdf;
-  const openPrintDialog = downloadConversationPdf;
+  // Try direct PDF download via /api/export-pdf (which calls PDFShift server-
+  // side and returns a real vector PDF). If that fails for any reason
+  // (endpoint missing, PDFSHIFT_API_KEY not set, free tier exhausted,
+  // network hiccup), fall back to the browser's native print dialog so the
+  // member still gets their conversation as a PDF.
+  //
+  // This is the entry point the Export buttons call. It replaces the direct
+  // openPrintDialog call so we get a two-tier experience: cleanest UX first
+  // (direct download), reliable fallback second (Save as PDF dialog).
+  async function downloadConversationPdf(htmlString, docTitle) {
+    const safeTitle = (docTitle || "conversation").replace(/[\\/:*?"<>|]/g, "-");
+
+    try {
+      let token = "";
+      try { token = localStorage.getItem("tfif_session_v1") || ""; }
+      catch (err) { /* storage blocked — server will 401, we fall through */ }
+
+      const resp = await fetch("/api/export-pdf", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-session-token": token,
+        },
+        body: JSON.stringify({ html: htmlString, title: safeTitle }),
+      });
+
+      if (!resp.ok) {
+        // Any non-2xx (503 no API key, 502 PDFShift error, 401 auth) →
+        // fall back to print dialog. Log for debugging but don't surface
+        // the error to the user.
+        const errText = await resp.text().catch(() => "");
+        console.warn("export-pdf server failed, falling back to print dialog", resp.status, errText.slice(0, 200));
+        return openPrintDialog(htmlString, docTitle);
+      }
+
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = safeTitle + ".pdf";
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        try { if (a.parentNode) a.parentNode.removeChild(a); } catch (err) { /* ignore */ }
+        URL.revokeObjectURL(url);
+      }, 400);
+    } catch (err) {
+      console.warn("export-pdf request threw, falling back to print dialog", err);
+      return openPrintDialog(htmlString, docTitle);
+    }
+  }
 
   function buildResetExportHtml(messages, displayName, tier) {
     // Tier passed explicitly so the upsell decision uses the server-reported
@@ -5511,7 +5514,7 @@ Begin.` },
       const safeTitle = String(session.title || "conversation").replace(/[^a-z0-9-_]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase();
       const dateSuffix = new Date().toISOString().slice(0, 10);
       const docTitle = "field-" + (safeTitle || "conversation") + "-" + dateSuffix;
-      await openPrintDialog(htmlString, docTitle);
+      await downloadConversationPdf(htmlString, docTitle);
     } catch (err) {
       console.error("export_unlimited_chat_failed", err);
       alert("Could not export this conversation right now. Please try again in a moment.");
@@ -5550,7 +5553,7 @@ Begin.` },
       const htmlString = buildUnlimitedAllExportHtml(chats, state.displayName);
       const dateSuffix = new Date().toISOString().slice(0, 10);
       const docTitle = "field-unlimited-conversations-" + dateSuffix;
-      await openPrintDialog(htmlString, docTitle);
+      await downloadConversationPdf(htmlString, docTitle);
     } catch (err) {
       console.error("export_all_unlimited_failed", err);
       alert("Could not export your conversations right now. Please try again in a moment.");
@@ -5723,8 +5726,8 @@ Begin.` },
             </button>
             <div class="acct-name-help" style="margin-top: 8px; line-height: 1.5;">
               ${isFull
-                ? "Downloads a beautifully formatted PDF of your work in the Field. Easy to read on your phone, save to Google Drive, or share with someone you trust."
-                : "Downloads a beautifully formatted PDF of all your Reset conversations. Easy to read on your phone, save to Google Drive, or share with someone you trust."}
+                ? "Downloads a beautifully formatted PDF of your work in the Field. Text is fully selectable so you can copy passages into your own AI, share quotes with a therapist, or save meaningful lines."
+                : "Downloads a beautifully formatted PDF of all your Reset conversations. Text is fully selectable so you can copy passages into your own AI, share quotes with a therapist, or save meaningful lines."}
             </div>
           </div>
 
