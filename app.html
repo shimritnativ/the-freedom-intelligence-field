@@ -2082,8 +2082,45 @@
   @keyframes rename-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
   /* ===== Welcome view (Unlimited members' landing on every app open) ===== */
-  .welcome-main { display: flex; align-items: center; justify-content: center; padding: 40px 28px; overflow-y: auto; }
-  .welcome-wrap { max-width: 880px; width: 100%; text-align: center; padding: 20px 0 40px; animation: welcome-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+  .welcome-main {
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px 28px; overflow-y: auto;
+    position: relative; /* anchor for absolutely-positioned particles */
+  }
+  .welcome-wrap { max-width: 880px; width: 100%; text-align: center; padding: 20px 0 40px; animation: welcome-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1); position: relative; z-index: 2; }
+  /* Drifting gold particles behind the welcome content. Same visual
+     language as the login split-screen + marketing site hero, so members
+     feel the brand aesthetic follow them through the whole product.
+     Sizes 4-10px, glow via box-shadow, positions scattered by inline
+     style at render time. Opacity tuned lower on light theme so they
+     don't overpower the cream background. */
+  .welcome-particle {
+    position: absolute;
+    background: var(--gold);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1;
+    box-shadow: 0 0 12px rgba(201, 168, 76, 0.55);
+  }
+  .welcome-particle.drift-1 { animation: welcomeDrift1 14s ease-in-out infinite; }
+  .welcome-particle.drift-2 { animation: welcomeDrift2 18s ease-in-out infinite; }
+  .welcome-particle.drift-3 { animation: welcomeDrift3 22s ease-in-out infinite; }
+  .welcome-particle.pulse   { animation: welcomePulse 10s ease-in-out infinite; }
+  @keyframes welcomeDrift1 { 0%,100% { transform: translate(0,0); opacity: 0.25; } 50% { transform: translate(30px,-40px); opacity: 0.7; } }
+  @keyframes welcomeDrift2 { 0%,100% { transform: translate(0,0); opacity: 0.3; } 50% { transform: translate(-36px,28px); opacity: 0.75; } }
+  @keyframes welcomeDrift3 { 0%,100% { transform: translate(0,0); opacity: 0.2; } 50% { transform: translate(22px,-46px); opacity: 0.65; } }
+  @keyframes welcomePulse   { 0%,100% { opacity: 0.35; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.3); } }
+  /* Light theme dials particles WAY down so they sit as gold shimmer
+     rather than dominating the cream background. Keep the same motion,
+     just softer presence. */
+  html[data-theme="light"] .welcome-particle {
+    box-shadow: 0 0 10px rgba(201, 168, 76, 0.35);
+  }
+  html[data-theme="light"] @keyframes welcomeDrift1 { 0%,100% { transform: translate(0,0); opacity: 0.15; } 50% { transform: translate(30px,-40px); opacity: 0.4; } }
+  html[data-theme="light"] .welcome-particle.drift-1 { opacity: 0.4; }
+  html[data-theme="light"] .welcome-particle.drift-2 { opacity: 0.4; }
+  html[data-theme="light"] .welcome-particle.drift-3 { opacity: 0.4; }
+  html[data-theme="light"] .welcome-particle.pulse { opacity: 0.4; }
   .welcome-eyebrow { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.32em; color: var(--gold); margin-bottom: 28px; opacity: 0.85; }
   .welcome-greeting { font-family: Georgia, "Times New Roman", serif; font-style: italic; font-weight: 400; font-size: 44px; line-height: 1.15; color: var(--text); margin: 0 0 22px; }
   .welcome-divider { width: 80px; height: 1.5px; background: var(--gold); margin: 0 auto 56px; opacity: 0.7; }
@@ -6524,11 +6561,35 @@ Begin.` },
           <span class="welcome-card-arrow">→</span>
         </button>
       ` : "";
+      // Deterministic gold-particle scatter behind the welcome content.
+      // 25 particles positioned by a small hash of the index so they
+      // spread evenly across the pane without needing JS randomness
+      // (which would jitter between renders). Four animation profiles
+      // cycled by index modulo 4. Negative animation-delay staggers
+      // their loops so the group never syncs up into a marching pattern.
+      const welcomeParticlesHtml = (function () {
+        const anims = ['drift-1', 'drift-2', 'drift-3', 'pulse'];
+        const parts = [];
+        for (let i = 0; i < 25; i++) {
+          const top = 4 + ((i * 137 + 11) % 92);
+          const left = 4 + ((i * 251 + 40) % 92);
+          const size = 4 + ((i * 3) % 7);
+          const cls = anims[i % 4];
+          const delay = -(i * 1.3).toFixed(1);
+          parts.push(
+            '<span class="welcome-particle ' + cls +
+            '" style="top:' + top + '%;left:' + left + '%;width:' + size +
+            'px;height:' + size + 'px;animation-delay:' + delay + 's;"></span>'
+          );
+        }
+        return parts.join('');
+      })();
       app.innerHTML = `
         ${renderMobileTopBar()}
         <div class="main-row">
           ${renderSidebar()}
           <main class="main welcome-main">
+            ${welcomeParticlesHtml}
             <div class="welcome-wrap">
               <div class="welcome-eyebrow">YOUR FIELD · ${escapeHtml(today.toUpperCase())}</div>
               <h1 class="welcome-greeting">${greeting}</h1>
