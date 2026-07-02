@@ -27,11 +27,16 @@ function applyCors(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-session-token");
 }
 
-// Cap text length to prevent runaway costs. The Day 3 Living Power
-// Declaration runs ~60-90 seconds of spoken audio (~600-1200 chars) and we
-// leave headroom for participant message TTS and slightly longer Day 3
-// declarations. 2500 chars is roughly 3 minutes max at ~10 chars/sec.
-const MAX_TEXT_LENGTH = 2500;
+// Cap text length to prevent runaway costs. Bumped July 2026 from 2500 to
+// 5000 chars after members reported TTS silently failing on longer Field
+// responses (process closings, reflections, longer replies). ElevenLabs'
+// per-request limit is 5000 chars on the Creator plan; we now match that
+// so any message the model produces that fits their limit fits ours too.
+// 5000 chars ≈ 6-7 min of spoken audio; cost is still <20¢ per call at
+// the Creator rate. If a message exceeds 5000, we return 413 and the
+// client shows the user a visible "text too long" hint instead of failing
+// silently.
+const MAX_TEXT_LENGTH = 5000;
 
 // Prepare assistant text for natural spoken delivery in Shimrit's voice.
 // Without this preprocessing the TTS engine reads literal underscores and
