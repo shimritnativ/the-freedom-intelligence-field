@@ -4412,7 +4412,14 @@
     // response is cached so the campaign-filter UI can re-render the
     // KPI cards and per-campaign table client-side without re-hitting
     // Meta on every checkbox toggle.
-    let _adsRange = "7d";
+    // Default matches the visually-active preset button in the HTML
+    // ("Since launch" — see ads-range-btn--active class). If these two
+    // drift apart, the UI shows one range as selected while the data
+    // reflects a different range, which is exactly the mismatch that
+    // hid Krishma from the Purchased count (she signed up 2026-06-25,
+    // one day outside a 7-day window, so a stale "7d" default made
+    // her invisible even though the "Since launch" chip was highlighted).
+    let _adsRange = "since_launch";
     let _adsCustomFrom = null;
     let _adsCustomTo = null;
     let _adsLastData = null;          // last successful API response
