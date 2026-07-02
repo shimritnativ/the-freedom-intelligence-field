@@ -4713,10 +4713,10 @@
                 <div style="font-size: 11px; color: var(--gold); margin-top: 2px;">${orDash(middleRateOfVisits, pct)} of visits</div>
               </div>
               <div class="kpi" style="${funnelCardBase} background: var(--gold-soft); border: 1px solid var(--gold);">
-                <div style="font-family: Georgia, serif; font-size: 28px; font-weight: 600; color: var(--text); line-height: 1.1;">${num(t.signups_attributed)}</div>
+                <div style="font-family: Georgia, serif; font-size: 28px; font-weight: 600; color: var(--text); line-height: 1.1;">${num(t.total_ads_signups ?? t.signups_attributed)}</div>
                 <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 6px;">Purchased${help(
                   'Purchased',
-                  "Bottom of the funnel. People who actually bought The Power Reset after coming from an ad. Tracked via the utm_source=meta parameter.",
+                  "Bottom of the funnel. Every buyer whose UTM tags them as coming from Meta (utm_source in meta/facebook/instagram/power-reset, or utm_campaign in cold/warm).",
                   "% of CTA clicks is your checkout conversion. Low % = something on the cart page is blocking buyers."
                 )}</div>
                 <div style="font-size: 11px; color: var(--gold); margin-top: 2px;">${orDash(purchaseRate, pct)} ${purchaseRateLabel}</div>
