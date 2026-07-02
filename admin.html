@@ -4504,7 +4504,20 @@
       const totalSpend = filteredCampaigns.reduce((s, c) => s + (c.spend || 0), 0);
       const totalImpressions = filteredCampaigns.reduce((s, c) => s + (c.impressions || 0), 0);
       const totalClicks = filteredCampaigns.reduce((s, c) => s + (c.clicks || 0), 0);
-      const totalSignups = filteredCampaigns.reduce((s, c) => s + (c.signups_attributed || 0), 0);
+      // Per-campaign attribution sum (used in the by-campaign table). Each
+      // campaign's signups_attributed comes from utm_campaign-substring
+      // matching against the Meta campaign name, so this can under-count
+      // when Zaps hardcode generic utm_campaign values (like meta_ads)
+      // that don't appear in the actual Meta campaign names.
+      const totalSignupsAttributed = filteredCampaigns.reduce((s, c) => s + (c.signups_attributed || 0), 0);
+      // Broad ads-signup count from the Members-tab classifier. This is
+      // what the funnel widget's "Purchased" headline should show — every
+      // buyer who came from ads, regardless of campaign-name matching.
+      // Only reliable when the user is looking at all campaigns; when
+      // they've filtered to a specific campaign, fall back to per-campaign.
+      const totalSignups = isAll
+        ? (data.totals?.total_ads_signups ?? totalSignupsAttributed)
+        : totalSignupsAttributed;
       const totalRevenueCents = filteredCampaigns.reduce((s, c) => s + (c.revenue_attributed_cents || 0), 0);
       // Funnel totals were missing from the recomputation, so when a
       // single campaign was selected the top "Abandoned cart" KPI
