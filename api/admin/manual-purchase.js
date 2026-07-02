@@ -100,11 +100,19 @@ export default async function handler(req, res) {
   // revenue-by-campaign metric works. Stored on user row only when the
   // user doesn't already have UTMs (first-touch attribution rule).
   const trunc200 = (s) => s ? String(s).slice(0, 200) : null;
-  const utmSource   = trunc200(body.utm_source   || body.passthrough_utm_source);
-  const utmMedium   = trunc200(body.utm_medium   || body.passthrough_utm_medium);
-  const utmCampaign = trunc200(body.utm_campaign || body.passthrough_utm_campaign);
-  const utmContent  = trunc200(body.utm_content  || body.passthrough_utm_content);
-  const utmTerm     = trunc200(body.utm_term     || body.passthrough_utm_term);
+  // Prefer ThriveCart's passthrough values (which reflect the real
+  // campaign the buyer came from — cold, warm, etc.) over any Zap-
+  // hardcoded utm_* fields. Reversed July 2026 after Mikael's
+  // cold/warm ambiguity: the Zap was hardcoding utm_campaign=meta_ads,
+  // which overwrote ThriveCart's real "cold" or "warm" passthrough
+  // value and lost per-campaign attribution. Now passthrough wins;
+  // hardcoded stays as fallback so direct-to-cart buyers still get
+  // an ads tag if the Zap sends one.
+  const utmSource   = trunc200(body.passthrough_utm_source   || body.utm_source);
+  const utmMedium   = trunc200(body.passthrough_utm_medium   || body.utm_medium);
+  const utmCampaign = trunc200(body.passthrough_utm_campaign || body.utm_campaign);
+  const utmContent  = trunc200(body.passthrough_utm_content  || body.utm_content);
+  const utmTerm     = trunc200(body.passthrough_utm_term     || body.utm_term);
 
   // Build the raw_payload marker so a later reconciliation against
   // ThriveCart can spot manually-entered rows and treat them differently
