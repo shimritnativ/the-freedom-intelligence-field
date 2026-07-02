@@ -146,11 +146,12 @@ export default async function handler(req, res) {
     // utm_source=meta (or facebook), with optional per-campaign matching.
     // Plus landing-page funnel events (visits + checkout scrolls) for
     // the abandoned-cart picture.
-    const [signupsByCampaign, revenueByCampaign, signupsByDay, funnelByCampaign] = await Promise.all([
+    const [signupsByCampaign, revenueByCampaign, signupsByDay, funnelByCampaign, totalAdsSignups] = await Promise.all([
       loadSignupsByCampaign(from, to),
       loadRevenueByCampaign(from, to),
       loadSignupsByDay(from, to),
       loadFunnelByCampaign(from, to),
+      loadTotalAdsSignups(from, to),
     ]);
 
     // Build a campaign-name → totals map. Both inputs can be null if
@@ -326,6 +327,12 @@ export default async function handler(req, res) {
       cpc: totalClicks > 0 ? totalSpend / totalClicks : 0,
       cpm: totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0,
       signups_attributed: totalSignups,
+      // total_ads_signups uses the Members-tab classifier (utm_source in
+      // meta/facebook/instagram/power-reset OR utm_campaign in cold/warm),
+      // so it captures every ads buyer regardless of whether their
+      // utm_campaign matches a specific Meta campaign name. This is what
+      // the funnel widget's headline "Purchased" count uses.
+      total_ads_signups: totalAdsSignups,
       cost_per_signup: totalSignups > 0 ? totalSpend / totalSignups : null,
       revenue_attributed_cents: totalRevenueCents,
       roas: totalSpend > 0 ? (totalRevenueCents / 100) / totalSpend : null,
@@ -333,13 +340,15 @@ export default async function handler(req, res) {
       visits: totalVisits,
       cta_clicks: totalCtaClicks,
       checkout_scrolls: totalCheckoutScrolls,
-      // Abandoned cart = visitors who clicked the CTA but didn't buy
-      abandoned_cart: Math.max(0, totalCtaClicks - totalSignups),
+      // Abandoned cart = visitors who clicked the CTA but didn't buy.
+      // Uses the broader total_ads_signups so we don't over-count "abandoned"
+      // when per-campaign attribution misses buyers.
+      abandoned_cart: Math.max(0, totalCtaClicks - totalAdsSignups),
       cta_to_visit_rate: totalVisits > 0 ? (totalCtaClicks / totalVisits) * 100 : null,
-      purchase_to_cta_rate: totalCtaClicks > 0 ? (totalSignups / totalCtaClicks) * 100 : null,
+      purchase_to_cta_rate: totalCtaClicks > 0 ? (totalAdsSignups / totalCtaClicks) * 100 : null,
       // Legacy scroll-based rates kept for old landing pages
       scroll_to_visit_rate: totalVisits > 0 ? (totalCheckoutScrolls / totalVisits) * 100 : null,
-      purchase_to_scroll_rate: totalCheckoutScrolls > 0 ? (totalSignups / totalCheckoutScrolls) * 100 : null,
+      purchase_to_scroll_rate: totalCheckoutScrolls > 0 ? (totalAdsSignups / totalCheckoutScrolls) * 100 : null,
     };
 
     // Daily time series. The Meta call is per-campaign-per-day, so we
@@ -458,6 +467,40 @@ async function fetchCampaignList({ accessToken, accountId, apiVersion }) {
 // product) rather than the channel. Anyone tagging UTMs gets to pick
 // their own convention; we just trust that if a utm is set, the signup
 // came from an attributed campaign.
+// Total ads-attributed signups using the SAME classifier the Members tab
+// uses (formatSource in admin.html). Fixes an under-count in the Ads-tab
+// funnel widget: signups_attributed is computed per campaign by checking
+// whether the user's utm_campaign value appears inside a Meta campaign
+// NAME. When Zaps hardcode utm_campaign=meta_ads (which doesn't appear in
+// any actual campaign name like "72-Hour Power Reset | Cold Audience"),
+// those buyers stay at zero attribution even though they clearly came
+// from ads. This function catches them so the total headline count is
+// truthful, while per-campaign attribution stays as-is for the by-
+// campaign breakdown table.
+//
+// Criteria mirrors admin.html formatSource:
+//   utm_campaign IN ('cold', 'warm') OR
+//   utm_source   IN ('power-reset', 'meta', 'facebook', 'instagram')
+async function loadTotalAdsSignups(from, to) {
+  try {
+    const { rows } = await sql`
+      SELECT COUNT(*)::int AS n
+      FROM users
+      WHERE created_at >= ${from}::date
+        AND created_at < (${to}::date + INTERVAL '1 day')
+        AND email NOT LIKE '%@shimritnativ.com'
+        AND (
+          LOWER(COALESCE(utm_campaign, '')) IN ('cold', 'warm')
+          OR LOWER(COALESCE(utm_source, '')) IN ('power-reset', 'meta', 'facebook', 'instagram')
+        )
+    `;
+    return Number(rows?.[0]?.n || 0);
+  } catch (e) {
+    console.warn("total_ads_signups_failed", e?.message);
+    return 0;
+  }
+}
+
 async function loadSignupsByCampaign(from, to) {
   try {
     const { rows } = await sql`
