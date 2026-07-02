@@ -422,7 +422,37 @@ export default async function handler(req, res) {
 // Meta Graph API helpers
 // =============================================================================
 
+// Small in-memory cache for Meta API responses. Meta's ad stats don't
+// change from second to second — a 60-second cache is invisible to the
+// user but eliminates the "dashboard feels slow" problem when the same
+// endpoint is hit multiple times in quick succession (auto-refresh,
+// tab focus, campaign filter re-runs). Cache is per-serverless-instance
+// so Vercel's warm invocations reuse it; cold starts pay the full cost.
+const META_CACHE = new Map();
+const META_TTL_MS = 60_000;
+function metaCacheGet(key) {
+  const entry = META_CACHE.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > META_TTL_MS) {
+    META_CACHE.delete(key);
+    return null;
+  }
+  return entry.value;
+}
+function metaCacheSet(key, value) {
+  META_CACHE.set(key, { ts: Date.now(), value });
+  // Prevent unbounded growth on long-lived instances.
+  if (META_CACHE.size > 50) {
+    const firstKey = META_CACHE.keys().next().value;
+    META_CACHE.delete(firstKey);
+  }
+}
+
 async function fetchInsights({ accessToken, accountId, apiVersion, from, to, level, fields, timeIncrement }) {
+  const cacheKey = `insights:${accountId}:${from}:${to}:${level}:${fields}:${timeIncrement || 0}`;
+  const cached = metaCacheGet(cacheKey);
+  if (cached) return cached;
+
   const params = new URLSearchParams({
     access_token: accessToken,
     fields,
@@ -439,13 +469,18 @@ async function fetchInsights({ accessToken, accountId, apiVersion, from, to, lev
     throw new Error(`meta_insights_${res.status}: ${body.slice(0, 200)}`);
   }
   const json = await res.json();
-  return json.data || [];
+  const data = json.data || [];
+  metaCacheSet(cacheKey, data);
+  return data;
 }
 
 async function fetchCampaignList({ accessToken, accountId, apiVersion }) {
   // Just the basics. `effective_status` and budget fields sometimes
   // trigger permission errors on tokens that only have ads_read —
   // status is enough for the dashboard's ACTIVE/PAUSED badge.
+  const cacheKey = `campaigns:${accountId}`;
+  const cached = metaCacheGet(cacheKey);
+  if (cached) return cached;
   const params = new URLSearchParams({
     access_token: accessToken,
     fields: "id,name,status",
@@ -458,11 +493,13 @@ async function fetchCampaignList({ accessToken, accountId, apiVersion }) {
     throw new Error(`meta_campaigns_${res.status}: ${body.slice(0, 200)}`);
   }
   const json = await res.json();
-  return (json.data || []).map((c) => ({
+  const list = (json.data || []).map((c) => ({
     id: c.id,
     name: c.name,
     status: c.status,
   }));
+  metaCacheSet(cacheKey, list);
+  return list;
 }
 
 // =============================================================================
@@ -703,7 +740,7 @@ async function loadOrganicMetrics(from, to) {
   try {
     const { rows: revRows } = await sql`
       SELECT
-        COUNT(*)::int AS orders,
+        COUNT(DISTINCT thrivecart_id)::int AS orders,
         COALESCE(SUM(amount_cents), 0)::bigint AS revenue_cents
       FROM purchases
       WHERE created_at >= ${from}::date
@@ -712,6 +749,12 @@ async function loadOrganicMetrics(from, to) {
         AND amount_cents > 0
         AND product_name = ${ORG_PRODUCT_EXACT}
     `;
+    // COUNT(DISTINCT thrivecart_id) instead of COUNT(*) — one purchase
+    // per ThriveCart transaction, even if duplicate rows exist in the
+    // purchases table. Geo caught the inflation on 2026-07-02: organic
+    // showed 49 purchases while she only had ~38 organic members, and
+    // the delta was exactly the number of duplicate rows sitting in the
+    // DB from earlier backfill work.
     purchases = Number(revRows[0]?.orders || 0);
     revenueCents = Number(revRows[0]?.revenue_cents || 0);
   } catch (e) {
