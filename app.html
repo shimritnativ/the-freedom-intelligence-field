@@ -8304,18 +8304,91 @@ Begin.` },
       audio.onended = () => {
         if (speakerState.currentAudio === audio) stopCurrentAudio();
       };
-      audio.onerror = () => {
+      audio.onerror = (e) => {
+        // Fires when the audio element can't play the decoded blob (rare —
+        // usually a codec issue or browser autoplay policy). Surface it so
+        // the user isn't left staring at a silent speaker button.
+        console.error("speak_audio_element_error", e);
+        showTtsError("Your browser couldn't play the audio. Try tapping again.");
         if (speakerState.currentAudio === audio) stopCurrentAudio();
       };
       setSpeakerBtnState(btnEl, "playing");
-      await audio.play();
+      // Wrap audio.play() so autoplay policy rejections (Safari/iOS) get
+      // surfaced instead of silently failing. Play returns a promise that
+      // rejects when the browser blocks playback, which is one of the two
+      // silent-failure modes members reported.
+      try {
+        await audio.play();
+      } catch (playErr) {
+        console.error("speak_play_blocked", playErr);
+        showTtsError("Tap the speaker again to allow the audio to play.");
+        setSpeakerBtnState(btnEl, "idle");
+        speakerState.currentAudio = null;
+      }
     } catch (err) {
       console.error("speak_failed", err);
+      // Give the user visible feedback instead of silently resetting the
+      // button. Message maps common server errors to plain language so
+      // members know why the speak icon didn't do anything.
+      const msg = String(err && err.message || "");
+      if (msg.includes("text_too_long")) {
+        showTtsError("This message is too long to read aloud. Try a shorter section.");
+      } else if (msg.includes("tts_unavailable")) {
+        showTtsError("Voice reading is temporarily unavailable.");
+      } else if (msg.includes("tts_failed")) {
+        showTtsError("Voice reading failed. Please try again.");
+      } else if (msg.includes("unauthorized")) {
+        showTtsError("Your session expired. Refresh the page and sign in again.");
+      } else {
+        showTtsError("Couldn't read this message aloud. Please try again.");
+      }
       setSpeakerBtnState(btnEl, "idle");
       speakerState.currentAudio = null;
       speakerState.currentBtnEl = null;
       speakerState.currentIndex = -1;
     }
+  }
+
+  // Small transient toast at the bottom of the screen so TTS failures are
+  // visible without hijacking the whole conversation with a blocking alert.
+  // Auto-dismisses after 4 seconds. Reuses the same DOM node on repeat
+  // errors so we don't stack them.
+  function showTtsError(text) {
+    try {
+      let el = document.getElementById("tts-error-toast");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "tts-error-toast";
+        el.setAttribute("role", "status");
+        el.setAttribute("aria-live", "polite");
+        el.style.cssText = [
+          "position: fixed",
+          "bottom: 24px",
+          "left: 50%",
+          "transform: translateX(-50%)",
+          "background: rgba(20, 20, 20, 0.95)",
+          "color: #f0ead6",
+          "font-family: Georgia, serif",
+          "font-size: 14px",
+          "line-height: 1.4",
+          "padding: 12px 18px",
+          "border: 1px solid rgba(201, 168, 76, 0.35)",
+          "border-radius: 10px",
+          "box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28)",
+          "z-index: 9999",
+          "max-width: 320px",
+          "text-align: center",
+          "opacity: 0",
+          "transition: opacity 0.25s ease",
+          "pointer-events: none",
+        ].join(";");
+        document.body.appendChild(el);
+      }
+      el.textContent = text;
+      requestAnimationFrame(() => { el.style.opacity = "1"; });
+      clearTimeout(showTtsError._t);
+      showTtsError._t = setTimeout(() => { el.style.opacity = "0"; }, 4000);
+    } catch (e) { /* swallow — toast is best-effort */ }
   }
 
   function onSpeakerClick(e) {
