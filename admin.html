@@ -2504,6 +2504,10 @@
       const params = new URLSearchParams();
       if (from) params.set("from", from);
       if (to) params.set("to", to);
+      // Cache-buster so every load hits fresh data from the DB. Without
+      // this, a stale response along the path (browser, edge, CDN) could
+      // stick the numbers even when the API code was updated.
+      params.set("_t", Date.now().toString());
 
       try {
         // Fire metrics + real-profit in parallel so the Overview's Real
@@ -2515,10 +2519,12 @@
           fetch("/api/admin/metrics?" + params.toString(), {
             method: "GET",
             headers: { "x-session-token": token },
+            cache: "no-store",
           }),
-          fetch("/api/admin/real-profit", {
+          fetch("/api/admin/real-profit?_t=" + Date.now(), {
             method: "GET",
             headers: { "x-session-token": token },
+            cache: "no-store",
           }).catch(() => null),
         ]);
         if (r.status === 401) {
@@ -4428,10 +4434,16 @@
       } else {
         params.set("range", _adsRange);
       }
+      // Cache-buster. Vercel + browser + intermediaries have been
+      // occasionally serving a stale response even with no-cache headers.
+      // Appending a millisecond timestamp forces a unique URL every time
+      // so nothing along the path can hand us the previous payload.
+      params.set("_t", Date.now().toString());
 
       try {
         const r = await fetch(`/api/admin/ads-metrics?${params.toString()}`, {
           headers: { "x-session-token": token },
+          cache: "no-store",
         });
         const data = await r.json();
         if (!r.ok) {
@@ -5883,6 +5895,33 @@
     window.onApplyCustom = onApplyCustom;
 
     loadMetrics();
+
+    // ===== Auto-refresh every 60 seconds =====
+    // Silent background refresh keeps the dashboard "live" so Geo
+    // doesn't have to click Refresh after every new signup. Pauses
+    // when the tab is hidden (no point burning API calls) and resumes
+    // on visibility change. Also re-runs the currently-active side
+    // panel (Ads / Real Profit / etc.) so those numbers stay fresh.
+    let _autoRefreshTimer = null;
+    function scheduleAutoRefresh() {
+      if (_autoRefreshTimer) clearInterval(_autoRefreshTimer);
+      _autoRefreshTimer = setInterval(() => {
+        if (document.hidden) return;
+        try { loadMetrics(); } catch (e) { /* ignore */ }
+        try { if (typeof loadAdsMetrics === "function") loadAdsMetrics(); } catch (e) { /* ignore */ }
+      }, 60000);
+    }
+    scheduleAutoRefresh();
+    // Fire an immediate refresh when the tab regains focus. Common flow:
+    // Geo makes a manual purchase, switches back to the dashboard tab, expects
+    // to see it. Without this she'd have to wait up to a minute for the
+    // interval to fire.
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) {
+        try { loadMetrics(); } catch (e) { /* ignore */ }
+        try { if (typeof loadAdsMetrics === "function") loadAdsMetrics(); } catch (e) { /* ignore */ }
+      }
+    });
 
     // ===== Pull-to-refresh (mobile) =====
     // Native browser PTR breaks on this page because some containers
