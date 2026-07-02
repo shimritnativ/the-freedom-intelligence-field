@@ -52,6 +52,13 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-session-token");
+  // Aggressive no-cache so every dashboard refresh hits the live query.
+  // Without this Vercel + browser + any intermediary CDN can serve a
+  // stale response for up to a few minutes, which is why numbers "stick"
+  // and Geo had to click Refresh multiple times to see fresh counts.
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
 
   if (req.method !== "GET") {
     return res.status(405).json({ error: "method_not_allowed" });
