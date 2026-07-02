@@ -8,10 +8,17 @@
 
 import { getUserBySessionToken } from "../lib/db.js";
 
-// Allow up to 10MB request body. A 5-minute WebM/Opus clip base64-encoded is
-// roughly 1.5MB; this leaves headroom for higher-bitrate codecs (Safari mp4).
+// Allow up to 25MB request body. A 5-minute clip:
+//   • WebM/Opus @ 48kbps ≈ 1.5MB (Chrome/Firefox default)
+//   • Safari mp4 @ 128kbps ≈ 5MB
+//   • Higher-bitrate codecs on some Android browsers ≈ 8-12MB
+// Base64 encoding inflates by ~1.33x, so 25MB bodyParser accepts up to
+// ~18MB of raw audio, comfortably fitting every codec at 5 minutes.
+// Bumped July 2026 after members reported "recording is too large"
+// errors — the previous 10MB limit + 5MB per-clip cap wasn't matching
+// the 5-minute client-side recording ceiling.
 export const config = {
-  api: { bodyParser: { sizeLimit: "10mb" } }
+  api: { bodyParser: { sizeLimit: "25mb" } }
 };
 
 function applyCors(req, res) {
@@ -74,11 +81,16 @@ export default async function handler(req, res) {
     }
 
     // Sanity-check size. < 1KB is almost certainly an empty recording.
-    // > 5MB is suspicious for a 60s capped clip.
+    // Whisper accepts up to 25MB per file. We cap at 20MB to leave headroom
+    // for the HTTP overhead + slight base64 decoding variance. A 5-minute
+    // Safari mp4 recording at 128 kbps is ~5MB, and 5 min at 256 kbps ≈
+    // 10MB — 20MB safely covers every browser at the full client-side 5-min
+    // recording ceiling. Previous 5MB cap assumed 60-second clips and was
+    // the cause of the "recording is too large" errors members reported.
     if (audioBuffer.length < 1000) {
       return res.status(400).json({ error: "audio_too_short" });
     }
-    if (audioBuffer.length > 5 * 1024 * 1024) {
+    if (audioBuffer.length > 20 * 1024 * 1024) {
       return res.status(413).json({ error: "audio_too_large" });
     }
 
