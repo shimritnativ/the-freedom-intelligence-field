@@ -4955,6 +4955,16 @@
                   <th class="num">${middleColHeader}</th>
                   <th class="num">Abandoned</th>` : '';
 
+      // Footnote when the ads-LP headline (which counts real ads-LP activity
+      // regardless of utm_campaign) exceeds the sum of per-campaign attribution.
+      // The gap represents ads-LP clicks with no utm_campaign in the URL —
+      // usually direct navigation, bookmarks, or ads where the passthrough
+      // dropped the campaign param. Shown so headline + attribution reconcile.
+      const unattributedClicks = (data.totals && data.totals.unattributed_cta_clicks) || 0;
+      const unattributedVisits = (data.totals && data.totals.unattributed_visits) || 0;
+      const unattributedFooter = (unattributedClicks > 0 || unattributedVisits > 0)
+        ? `<div style="margin-top: 8px; font-size: 11px; color: var(--text-mute); font-style: italic;">Not shown per campaign: ${num(unattributedVisits)} visit${unattributedVisits === 1 ? '' : 's'} and ${num(unattributedClicks)} CTA click${unattributedClicks === 1 ? '' : 's'} that reached the ads LP without a utm_campaign tag (direct navigation, bookmarks, or dropped ad passthrough).</div>`
+        : '';
       const campaignTable = data.campaigns && data.campaigns.length > 0
         ? `<div style="overflow-x: auto;">
             <table>
@@ -4973,7 +4983,7 @@
               </thead>
               <tbody>${campaignRows}</tbody>
             </table>
-          </div>`
+          </div>${unattributedFooter}`
         : '<div class="empty-state">No campaign data for this range.</div>';
 
       // Daily series — text bars, since adding a chart lib is overkill
