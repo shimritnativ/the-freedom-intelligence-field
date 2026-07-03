@@ -2102,14 +2102,14 @@
     z-index: 1;
     box-shadow: 0 0 12px rgba(201, 168, 76, 0.55);
   }
-  .welcome-particle.drift-1 { animation: welcomeDrift1 14s ease-in-out infinite; }
-  .welcome-particle.drift-2 { animation: welcomeDrift2 18s ease-in-out infinite; }
-  .welcome-particle.drift-3 { animation: welcomeDrift3 22s ease-in-out infinite; }
-  .welcome-particle.pulse   { animation: welcomePulse 10s ease-in-out infinite; }
-  @keyframes welcomeDrift1 { 0%,100% { transform: translate(0,0); opacity: 0.25; } 50% { transform: translate(30px,-40px); opacity: 0.7; } }
-  @keyframes welcomeDrift2 { 0%,100% { transform: translate(0,0); opacity: 0.3; } 50% { transform: translate(-36px,28px); opacity: 0.75; } }
-  @keyframes welcomeDrift3 { 0%,100% { transform: translate(0,0); opacity: 0.2; } 50% { transform: translate(22px,-46px); opacity: 0.65; } }
-  @keyframes welcomePulse   { 0%,100% { opacity: 0.35; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.3); } }
+  .welcome-particle.drift-1 { animation: welcomeDrift1 10s ease-in-out infinite; }
+  .welcome-particle.drift-2 { animation: welcomeDrift2 13s ease-in-out infinite; }
+  .welcome-particle.drift-3 { animation: welcomeDrift3 16s ease-in-out infinite; }
+  .welcome-particle.pulse   { animation: welcomePulse 7s ease-in-out infinite; }
+  @keyframes welcomeDrift1 { 0%,100% { transform: translate(0,0); opacity: 0.35; } 50% { transform: translate(52px,-68px); opacity: 0.85; } }
+  @keyframes welcomeDrift2 { 0%,100% { transform: translate(0,0); opacity: 0.4; } 50% { transform: translate(-58px,46px); opacity: 0.9; } }
+  @keyframes welcomeDrift3 { 0%,100% { transform: translate(0,0); opacity: 0.3; } 50% { transform: translate(38px,-72px); opacity: 0.8; } }
+  @keyframes welcomePulse   { 0%,100% { opacity: 0.45; transform: scale(1); } 50% { opacity: 0.95; transform: scale(1.5); } }
   /* Light theme dials particles WAY down so they sit as gold shimmer
      rather than dominating the cream background. Keep the same motion,
      just softer presence. */
@@ -2663,6 +2663,7 @@
     min-width: 0;
     overflow-y: auto;
     background: var(--bg);
+    position: relative;
   }
   .library-view {
     max-width: 980px;
@@ -2670,6 +2671,8 @@
     padding: 50px 36px 80px;
     width: 100%;
     animation: cat-fade 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    position: relative;
+    z-index: 1;
   }
   .library-eyebrow {
     text-align: center;
@@ -7135,6 +7138,26 @@ Begin.` },
   // skipping the introduction). Clicking a card from here drills into that
   // category's detail page via onCategoryClick(key).
   function renderLibraryView() {
+    // Deterministic gold-particle scatter matching the Welcome pane — 25
+    // particles spread by a small hash across the full main area, four
+    // animation profiles cycled by index, negative delays desync loops.
+    const libraryParticlesHtml = (function () {
+      const anims = ['drift-1', 'drift-2', 'drift-3', 'pulse'];
+      const parts = [];
+      for (let i = 0; i < 25; i++) {
+        const top = 4 + ((i * 137 + 11) % 92);
+        const left = 4 + ((i * 251 + 40) % 92);
+        const size = 4 + ((i * 3) % 7);
+        const cls = anims[i % 4];
+        const delay = -(i * 1.3).toFixed(1);
+        parts.push(
+          '<span class="welcome-particle ' + cls +
+          '" style="top:' + top + '%;left:' + left + '%;width:' + size +
+          'px;height:' + size + 'px;animation-delay:' + delay + 's;"></span>'
+        );
+      }
+      return parts.join('');
+    })();
     const cards = PROCESS_CATEGORIES.map(c => {
       const builtCount = c.processes.filter(p => !p.comingSoon).length;
       const totalCount = c.processes.length;
@@ -7160,6 +7183,7 @@ Begin.` },
     }).join("");
     return `
       <main class="main library-main">
+        ${libraryParticlesHtml}
         <div class="library-view">
           <div class="library-eyebrow">The Field Library</div>
           <h1 class="library-title">Start a guided process</h1>
