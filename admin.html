@@ -4819,6 +4819,66 @@
       // Render the ads-side CTA breakdown block now
       const ctaBreakdownBlock = renderCtaBreakdown(data.cta_breakdown);
 
+      // Per-ad performance breakdown. Groups by utm_content so each ad
+      // (identified by the "utm_content=<ad_name>" tag Geo puts on Meta
+      // ad URLs) shows LP visits → CTA clicks → purchases with two
+      // conversion rates. Shows the top-performing creative at a glance.
+      // Rows with no visits AND no clicks are hidden — those are usually
+      // historical backfill artifacts.
+      function renderPerAdTable(perAd) {
+        const rows = (perAd || []).filter(a => (a.visits || 0) > 0 || (a.cta_clicks || 0) > 0 || (a.purchases || 0) > 0);
+        if (rows.length === 0) return '';
+        // Sort by CTA clicks desc so the winner sits at the top.
+        rows.sort((a, b) => (b.cta_clicks || 0) - (a.cta_clicks || 0));
+        const topClicks = rows[0].cta_clicks || 0;
+        const rowsHtml = rows.map(a => {
+          const isTop = (a.cta_clicks || 0) === topClicks && topClicks > 0;
+          const ctaRateFmt = a.cta_rate == null ? '<span style="color: var(--text-mute);">—</span>' : pct(a.cta_rate);
+          const purchRateFmt = a.purchase_rate == null ? '<span style="color: var(--text-mute);">—</span>' : pct(a.purchase_rate);
+          const campaignBadge = a.campaign
+            ? `<span class="tier-badge" style="background: rgba(201, 168, 76, 0.12); color: var(--gold); border-color: rgba(201, 168, 76, 0.3); font-size: 10px;">${escapeHtml(a.campaign)}</span>`
+            : '';
+          return `
+            <tr>
+              <td data-label="Ad">${isTop ? '<span style="color: var(--gold);">★</span> ' : ''}<strong>${escapeHtml(a.ad_name)}</strong> ${campaignBadge}</td>
+              <td data-label="LP visits" class="num">${num(a.visits)}</td>
+              <td data-label="CTA clicks" class="num">${num(a.cta_clicks)}</td>
+              <td data-label="CTR" class="num">${ctaRateFmt}</td>
+              <td data-label="Purchases" class="num">${num(a.purchases)}</td>
+              <td data-label="Conv %" class="num">${purchRateFmt}</td>
+              <td data-label="Revenue" class="num">${cur((a.revenue_cents || 0) / 100)}</td>
+            </tr>`;
+        }).join('');
+        return `
+          <div style="background: var(--bg-warm); border: 1px solid var(--gold-line); border-radius: 12px; padding: 18px 22px; margin-bottom: 22px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+              <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold);">Per-ad performance${help(
+                'Per-ad performance',
+                "Which specific ad drove the most LP visits, CTA clicks, and purchases. Groups by the utm_content value on your Meta ad URLs. Top-performing ad by CTA clicks gets a gold star.",
+                "Compare CTR (CTA-clicks-per-visit) across ads to find the strongest hook. Compare Conv % (purchases-per-CTA-click) to find the strongest offer messaging."
+              )}</div>
+              <div style="font-size: 11px; color: var(--text-dim);">${rows.length} ad${rows.length === 1 ? '' : 's'} tracked</div>
+            </div>
+            <div style="overflow-x: auto;">
+              <table class="data-table" style="min-width: 640px;">
+                <thead>
+                  <tr>
+                    <th>Ad</th>
+                    <th class="num">LP visits</th>
+                    <th class="num">CTA clicks</th>
+                    <th class="num">CTR</th>
+                    <th class="num">Purchases</th>
+                    <th class="num">Conv %</th>
+                    <th class="num">Revenue</th>
+                  </tr>
+                </thead>
+                <tbody>${rowsHtml}</tbody>
+              </table>
+            </div>
+          </div>`;
+      }
+      const perAdBlock = renderPerAdTable(data.per_ad);
+
       // Per-campaign table — funnel columns added when we have any
       // landing-event data, so the table stays compact pre-tracking.
       const showFunnelCols = (data.campaigns || []).some(c => (c.visits || 0) > 0);
@@ -5036,7 +5096,7 @@
           </div>`;
       })();
 
-      return warningBlock + kpis + funnelBlock + ctaBreakdownBlock + campaignTable + dailyBlock + organicBlock + accountNote;
+      return warningBlock + kpis + funnelBlock + ctaBreakdownBlock + perAdBlock + campaignTable + dailyBlock + organicBlock + accountNote;
     }
 
     // Range / refresh / dates / campaign chips — all delegated so the
