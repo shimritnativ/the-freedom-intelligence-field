@@ -153,13 +153,14 @@ export default async function handler(req, res) {
     // utm_source=meta (or facebook), with optional per-campaign matching.
     // Plus landing-page funnel events (visits + checkout scrolls) for
     // the abandoned-cart picture.
-    const [signupsByCampaign, revenueByCampaign, signupsByDay, funnelByCampaign, totalAdsSignups, perAdBreakdown] = await Promise.all([
+    const [signupsByCampaign, revenueByCampaign, signupsByDay, funnelByCampaign, totalAdsSignups, perAdBreakdown, adsLpFunnelTotals] = await Promise.all([
       loadSignupsByCampaign(from, to),
       loadRevenueByCampaign(from, to),
       loadSignupsByDay(from, to),
       loadFunnelByCampaign(from, to),
       loadTotalAdsSignups(from, to),
       loadPerAdBreakdown(from, to),
+      loadAdsLpFunnelTotals(from, to),
     ]);
 
     // Build a campaign-name → totals map. Both inputs can be null if
@@ -323,9 +324,21 @@ export default async function handler(req, res) {
     const totalSignups = campaigns.reduce((s, c) => s + c.signups_attributed, 0);
     const totalRevenueCents = campaigns.reduce((s, c) => s + c.revenue_attributed_cents, 0);
 
-    const totalVisits = campaigns.reduce((s, c) => s + (c.visits || 0), 0);
+    // Per-campaign sums (used to compute how many real clicks/visits are
+    // NOT attributed to a specific campaign, so we can footnote it).
+    const campaignVisitsSum = campaigns.reduce((s, c) => s + (c.visits || 0), 0);
+    const campaignCtaClicksSum = campaigns.reduce((s, c) => s + (c.cta_clicks || 0), 0);
     const totalCheckoutScrolls = campaigns.reduce((s, c) => s + (c.checkout_scrolls || 0), 0);
-    const totalCtaClicks = campaigns.reduce((s, c) => s + (c.cta_clicks || 0), 0);
+    // Headline totals come from the ads-LP page-URL query so they match
+    // the per-ad breakdown table exactly. Falls back to the per-campaign
+    // sum if the direct query failed (returns zeros), so the dashboard
+    // still shows something sensible.
+    const totalVisits = adsLpFunnelTotals.visits > 0 ? adsLpFunnelTotals.visits : campaignVisitsSum;
+    const totalCtaClicks = adsLpFunnelTotals.cta_clicks > 0 ? adsLpFunnelTotals.cta_clicks : campaignCtaClicksSum;
+    // Delta between headline and per-campaign sums = real ads-LP clicks
+    // that carry no utm_campaign (direct nav, broken passthrough URLs).
+    const unattributedVisits = Math.max(0, totalVisits - campaignVisitsSum);
+    const unattributedCtaClicks = Math.max(0, totalCtaClicks - campaignCtaClicksSum);
 
     const totals = {
       spend: totalSpend,
@@ -344,10 +357,18 @@ export default async function handler(req, res) {
       cost_per_signup: totalSignups > 0 ? totalSpend / totalSignups : null,
       revenue_attributed_cents: totalRevenueCents,
       roas: totalSpend > 0 ? (totalRevenueCents / 100) / totalSpend : null,
-      // Funnel totals — CTA click is the new headline step
+      // Funnel totals — CTA click is the new headline step. Source: the
+      // ads-LP page_url query, which captures every real click (including
+      // ones with no utm_campaign) and excludes synthetic backfill events.
       visits: totalVisits,
       cta_clicks: totalCtaClicks,
       checkout_scrolls: totalCheckoutScrolls,
+      // Clicks/visits that reached the ads LP but had no utm_campaign to
+      // attribute them to a specific Meta campaign row. Frontend footnotes
+      // these under the per-campaign table so headline vs. attribution sums
+      // reconcile visibly instead of being a silent gap.
+      unattributed_visits: unattributedVisits,
+      unattributed_cta_clicks: unattributedCtaClicks,
       // Abandoned cart = visitors who clicked the CTA but didn't buy.
       // Uses the broader total_ads_signups so we don't over-count "abandoned"
       // when per-campaign attribution misses buyers.
@@ -719,6 +740,9 @@ async function loadFunnelByCampaign(from, to) {
     // tapped two buttons doesn't double-count. checkout_scrolls is kept for
     // legacy rows but the CTA event is the relevant signal now that CTAs
     // link out to ThriveCart instead of opening an embedded checkout.
+    // Excludes synthetic backfill events (utm_content ~ /backfill/i) so the
+    // per-campaign attribution table doesn't over-count real activity by
+    // treating retroactively-added purchase markers as real clicks/visits.
     const { rows } = await sql`
       SELECT utm_campaign,
              COUNT(*) FILTER (WHERE event_type = 'page_view')::int                                   AS visits,
@@ -728,6 +752,7 @@ async function loadFunnelByCampaign(from, to) {
       WHERE created_at >= ${from}::date
         AND created_at < (${to}::date + INTERVAL '1 day')
         AND utm_campaign IS NOT NULL
+        AND (utm_content IS NULL OR utm_content !~* 'backfill')
       GROUP BY utm_campaign
     `;
     const map = {};
@@ -746,6 +771,37 @@ async function loadFunnelByCampaign(from, to) {
     // Return empty map so the rest of the dashboard still loads.
     console.warn("funnel_by_campaign_failed", e?.message);
     return {};
+  }
+}
+
+// Source-of-truth totals for the ads landing page funnel widget headline.
+// Uses the ads-LP page_url as the filter rather than utm_campaign, so it
+// captures every real click on the ads LP including those with no UTMs at
+// all (direct navigation, broken passthrough, bookmarked URL). Synthetic
+// backfill events are excluded so headline numbers reflect real user
+// activity. This is what the funnel KPI cards should show — the sum of
+// per-campaign values misses no-UTM sessions, and the raw utm_campaign
+// query over-counts by including backfill.
+async function loadAdsLpFunnelTotals(from, to) {
+  try {
+    const ADS_URL_PATTERN = '%/the-power-reset-ads%';
+    const { rows } = await sql`
+      SELECT
+        COUNT(*) FILTER (WHERE event_type = 'page_view')::int AS visits,
+        COUNT(DISTINCT session_id) FILTER (WHERE event_type LIKE 'power_reset_cta_click%')::int AS cta_clicks
+      FROM landing_events
+      WHERE created_at >= ${from}::date
+        AND created_at < (${to}::date + INTERVAL '1 day')
+        AND page_url LIKE ${ADS_URL_PATTERN}
+        AND (utm_content IS NULL OR utm_content !~* 'backfill')
+    `;
+    return {
+      visits: Number(rows?.[0]?.visits || 0),
+      cta_clicks: Number(rows?.[0]?.cta_clicks || 0),
+    };
+  } catch (e) {
+    console.warn("ads_lp_funnel_totals_failed", e?.message);
+    return { visits: 0, cta_clicks: 0 };
   }
 }
 
