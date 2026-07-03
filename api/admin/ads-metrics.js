@@ -153,12 +153,13 @@ export default async function handler(req, res) {
     // utm_source=meta (or facebook), with optional per-campaign matching.
     // Plus landing-page funnel events (visits + checkout scrolls) for
     // the abandoned-cart picture.
-    const [signupsByCampaign, revenueByCampaign, signupsByDay, funnelByCampaign, totalAdsSignups] = await Promise.all([
+    const [signupsByCampaign, revenueByCampaign, signupsByDay, funnelByCampaign, totalAdsSignups, perAdBreakdown] = await Promise.all([
       loadSignupsByCampaign(from, to),
       loadRevenueByCampaign(from, to),
       loadSignupsByDay(from, to),
       loadFunnelByCampaign(from, to),
       loadTotalAdsSignups(from, to),
+      loadPerAdBreakdown(from, to),
     ]);
 
     // Build a campaign-name → totals map. Both inputs can be null if
@@ -399,6 +400,7 @@ export default async function handler(req, res) {
       daily,
       organic,
       cta_breakdown: ctaBreakdown,
+      per_ad: perAdBreakdown,
       meta: {
         fetched_at: new Date().toISOString(),
         account_id: accountId,
@@ -596,6 +598,76 @@ async function loadRevenueByCampaign(from, to) {
   } catch (e) {
     console.warn("revenue_by_campaign_failed", e?.message);
     return {};
+  }
+}
+
+// Per-ad performance breakdown. Groups by utm_content (which by
+// convention identifies the specific ad — e.g. "testimonials",
+// "hook_v2", etc.). Combines LP visits + CTA clicks (from landing_events)
+// with purchase counts + revenue (from users → purchases via first-touch
+// utm_content attribution). Returns an array sorted by CTA clicks
+// descending so the top-performing ads land at the top of the table.
+//
+// This is the answer to the recurring question "which specific ad drove
+// the most clicks / purchases?" — impossible before per-ad UTM tagging
+// but easy now that Geo has utm_content=<ad_name> on every ad URL.
+async function loadPerAdBreakdown(from, to) {
+  try {
+    const { rows } = await sql`
+      WITH visits_by_ad AS (
+        SELECT
+          utm_content AS ad_name,
+          MAX(utm_campaign) AS campaign,
+          COUNT(*) FILTER (WHERE event_type = 'page_view')::int AS visits,
+          COUNT(DISTINCT session_id) FILTER (WHERE event_type LIKE 'power_reset_cta_click%')::int AS cta_clicks
+        FROM landing_events
+        WHERE created_at >= ${from}::date
+          AND created_at < (${to}::date + INTERVAL '1 day')
+          AND utm_content IS NOT NULL
+          AND utm_content <> ''
+        GROUP BY utm_content
+      ),
+      purchases_by_ad AS (
+        SELECT
+          u.utm_content AS ad_name,
+          COUNT(DISTINCT LOWER(u.email))::int AS purchases,
+          COALESCE(SUM(p.amount_cents), 0)::bigint AS revenue_cents
+        FROM users u
+        LEFT JOIN purchases p
+          ON LOWER(p.email) = LOWER(u.email)
+          AND p.event_type IN ('order.success', 'order.subscription_payment')
+          AND p.amount_cents > 0
+        WHERE u.created_at >= ${from}::date
+          AND u.created_at < (${to}::date + INTERVAL '1 day')
+          AND u.utm_content IS NOT NULL
+          AND u.utm_content <> ''
+          AND u.email NOT LIKE '%@shimritnativ.com'
+        GROUP BY u.utm_content
+      )
+      SELECT
+        COALESCE(v.ad_name, p.ad_name) AS ad_name,
+        v.campaign,
+        COALESCE(v.visits, 0)::int AS visits,
+        COALESCE(v.cta_clicks, 0)::int AS cta_clicks,
+        COALESCE(p.purchases, 0)::int AS purchases,
+        COALESCE(p.revenue_cents, 0)::bigint AS revenue_cents
+      FROM visits_by_ad v
+      FULL OUTER JOIN purchases_by_ad p ON v.ad_name = p.ad_name
+      ORDER BY cta_clicks DESC, visits DESC, purchases DESC
+    `;
+    return rows.map((r) => ({
+      ad_name: r.ad_name,
+      campaign: r.campaign,
+      visits: Number(r.visits || 0),
+      cta_clicks: Number(r.cta_clicks || 0),
+      purchases: Number(r.purchases || 0),
+      revenue_cents: Number(r.revenue_cents || 0),
+      cta_rate: r.visits > 0 ? (Number(r.cta_clicks) / Number(r.visits)) * 100 : null,
+      purchase_rate: r.cta_clicks > 0 ? (Number(r.purchases) / Number(r.cta_clicks)) * 100 : null,
+    }));
+  } catch (e) {
+    console.warn("per_ad_breakdown_failed", e?.message);
+    return [];
   }
 }
 
