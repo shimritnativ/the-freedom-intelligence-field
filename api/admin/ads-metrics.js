@@ -613,6 +613,11 @@ async function loadRevenueByCampaign(from, to) {
 // but easy now that Geo has utm_content=<ad_name> on every ad URL.
 async function loadPerAdBreakdown(from, to) {
   try {
+    // Ads-LP URL pattern. Used to isolate untagged (pre-per-ad-tracking)
+    // clicks to the ads landing page so they can be shown as their own
+    // "untagged (pre-tracking)" bucket in the table. Without this filter
+    // organic LP events (which also carry NULL utm_content) would leak in.
+    const ADS_URL_PATTERN = '%/the-power-reset-ads%';
     const { rows } = await sql`
       WITH visits_by_ad AS (
         SELECT
@@ -626,6 +631,31 @@ async function loadPerAdBreakdown(from, to) {
           AND utm_content IS NOT NULL
           AND utm_content <> ''
         GROUP BY utm_content
+      ),
+      -- Synthetic "untagged" bucket for ads LP clicks that happened before
+      -- per-ad tracking was live. These have NULL utm_content but reached
+      -- the ads LP URL, so they're real ad traffic we couldn't attribute
+      -- to a specific creative. Filtered to ads LP URL so organic LP
+      -- visits (which also have NULL utm_content) don't leak in.
+      untagged_ads_visits AS (
+        SELECT
+          'untagged (pre-tracking)'::text AS ad_name,
+          NULL::text AS campaign,
+          COUNT(*) FILTER (WHERE event_type = 'page_view')::int AS visits,
+          COUNT(DISTINCT session_id) FILTER (WHERE event_type LIKE 'power_reset_cta_click%')::int AS cta_clicks
+        FROM landing_events
+        WHERE created_at >= ${from}::date
+          AND created_at < (${to}::date + INTERVAL '1 day')
+          AND (utm_content IS NULL OR utm_content = '')
+          AND page_url LIKE ${ADS_URL_PATTERN}
+        HAVING
+          COUNT(*) FILTER (WHERE event_type = 'page_view') > 0
+          OR COUNT(DISTINCT session_id) FILTER (WHERE event_type LIKE 'power_reset_cta_click%') > 0
+      ),
+      visits_all AS (
+        SELECT ad_name, campaign, visits, cta_clicks FROM visits_by_ad
+        UNION ALL
+        SELECT ad_name, campaign, visits, cta_clicks FROM untagged_ads_visits
       ),
       purchases_by_ad AS (
         SELECT
@@ -657,7 +687,7 @@ async function loadPerAdBreakdown(from, to) {
         COALESCE(v.cta_clicks, 0)::int AS cta_clicks,
         COALESCE(p.purchases, 0)::int AS purchases,
         COALESCE(p.revenue_cents, 0)::bigint AS revenue_cents
-      FROM visits_by_ad v
+      FROM visits_all v
       FULL OUTER JOIN purchases_by_ad p ON v.ad_name = p.ad_name
       ORDER BY cta_clicks DESC, visits DESC, purchases DESC
     `;
