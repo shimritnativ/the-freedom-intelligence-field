@@ -4833,11 +4833,16 @@
         // scanning the per-ad performance table. We hide them from the main
         // table and summarize them in a footer line so totals still reconcile.
         const isBackfillTag = (name) => /backfill/i.test(name || '');
+        const isUntaggedTag = (name) => /^untagged/i.test(name || '');
         const activeRows = (perAd || []).filter(a => (a.visits || 0) > 0 || (a.cta_clicks || 0) > 0 || (a.purchases || 0) > 0);
         const backfillRows = activeRows.filter(a => isBackfillTag(a.ad_name));
-        const rows = activeRows.filter(a => !isBackfillTag(a.ad_name));
-        if (rows.length === 0 && backfillRows.length === 0) return '';
-        // Sort by CTA clicks desc so the winner sits at the top.
+        const untaggedRows = activeRows.filter(a => isUntaggedTag(a.ad_name));
+        const rows = activeRows.filter(a => !isBackfillTag(a.ad_name) && !isUntaggedTag(a.ad_name));
+        if (rows.length === 0 && backfillRows.length === 0 && untaggedRows.length === 0) return '';
+        // Sort real ads by CTA clicks desc so the winner sits at the top.
+        // Untagged (pre-tracking) rows are appended at the bottom regardless
+        // of their click count so they don't compete for the gold star or
+        // visually dominate what should read as real per-ad performance.
         rows.sort((a, b) => (b.cta_clicks || 0) - (a.cta_clicks || 0));
         const topClicks = rows.length > 0 ? (rows[0].cta_clicks || 0) : 0;
         // Backfill footer summary: total purchases and revenue from synthetic
@@ -4865,12 +4870,30 @@
               <td data-label="Revenue" class="num">${cur((a.revenue_cents || 0) / 100)}</td>
             </tr>`;
         }).join('');
+        // Untagged (pre-tracking) rows: rendered after the real ads, muted
+        // and italicised so they read as a reconciliation row rather than
+        // a real ad. No gold star, no campaign badge (we don't know which),
+        // and Conv % stays as em-dash since attribution to a specific ad
+        // is impossible here.
+        const untaggedHtml = untaggedRows.map(a => {
+          const ctaRateFmt = a.cta_rate == null ? '<span style="color: var(--text-mute);">—</span>' : pct(a.cta_rate);
+          return `
+            <tr style="color: var(--text-mute); font-style: italic;">
+              <td data-label="Ad">${escapeHtml(a.ad_name)}</td>
+              <td data-label="LP visits" class="num">${num(a.visits)}</td>
+              <td data-label="CTA clicks" class="num">${num(a.cta_clicks)}</td>
+              <td data-label="CTR" class="num">${ctaRateFmt}</td>
+              <td data-label="Purchases" class="num">${num(a.purchases)}</td>
+              <td data-label="Conv %" class="num"><span style="color: var(--text-mute);">—</span></td>
+              <td data-label="Revenue" class="num">${cur((a.revenue_cents || 0) / 100)}</td>
+            </tr>`;
+        }).join('');
         return `
           <div style="background: var(--bg-warm); border: 1px solid var(--gold-line); border-radius: 12px; padding: 18px 22px; margin-bottom: 22px;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
               <div class="has-help" style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold);">Per-ad performance${help(
                 'Per-ad performance',
-                "Which specific ad drove the most LP visits, CTA clicks, and purchases. Groups by the utm_content value on your Meta ad URLs. Top-performing ad by CTA clicks gets a gold star. Backfilled synthetic tags (historical/ads-purchase backfill) are excluded from the table so real ad performance is uncluttered.",
+                "Which specific ad drove the most LP visits, CTA clicks, and purchases. Groups by the utm_content value on your Meta ad URLs. Top-performing ad by CTA clicks gets a gold star. Backfilled synthetic tags (historical/ads-purchase backfill) are excluded and summarised in the footer. Ads-LP clicks from before per-ad tracking was live are shown as an italic 'untagged (pre-tracking)' row so LP funnel totals reconcile.",
                 "Compare CTR (CTA-clicks-per-visit) across ads to find the strongest hook. Compare Conv % (purchases-per-CTA-click) to find the strongest offer messaging."
               )}</div>
               <div style="font-size: 11px; color: var(--text-dim);">${rows.length} ad${rows.length === 1 ? '' : 's'} tracked</div>
@@ -4888,7 +4911,7 @@
                     <th class="num">Revenue</th>
                   </tr>
                 </thead>
-                <tbody>${rowsHtml}</tbody>
+                <tbody>${rowsHtml}${untaggedHtml}</tbody>
               </table>
             </div>
             ${backfillFooter}
