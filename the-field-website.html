@@ -173,6 +173,27 @@
     transition: background 0.15s ease, transform 0.15s ease;
   }
   .nav-cta:hover { background: var(--gold-warm); transform: translateY(-1px); }
+  /* Ghost-styled "Log in" pill — same shape as the primary CTA but with
+     a gold border instead of a gold fill so it doesn't compete for
+     attention. Existing members can find their sign-in path without
+     dragging the eye away from the primary "Enter The Field" CTA that's
+     targeting new visitors. */
+  .nav-login {
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid var(--gold);
+    padding: 8px 16px;
+    border-radius: var(--radius-pill);
+    font-weight: 600;
+    font-size: 13px;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+    text-decoration: none;
+  }
+  .nav-login:hover {
+    background: var(--gold);
+    color: var(--bg-dark);
+    transform: translateY(-1px);
+  }
   @media (max-width: 720px) {
     .nav-links .nav-link { display: none; }
     .nav-links { gap: 12px; }
@@ -2881,6 +2902,7 @@
       <a href="#how-it-works" class="nav-link">How It Works</a>
       <a href="#differentiators" class="nav-link">Compare</a>
       <a href="#pricing" class="nav-link">Pricing</a>
+      <a href="https://thefieldai.app/" class="nav-login">Log in</a>
       <a href="https://thefieldai.app/" class="nav-cta">Enter The Field →</a>
     </div>
   </div>
