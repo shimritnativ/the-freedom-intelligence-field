@@ -4826,11 +4826,27 @@
       // Rows with no visits AND no clicks are hidden — those are usually
       // historical backfill artifacts.
       function renderPerAdTable(perAd) {
-        const rows = (perAd || []).filter(a => (a.visits || 0) > 0 || (a.cta_clicks || 0) > 0 || (a.purchases || 0) > 0);
-        if (rows.length === 0) return '';
+        // Split into real ads vs synthetic backfill tags. Backfill entries
+        // (`historical_backfill`, `ads-purchase-backfill`, anything matching
+        // /backfill/i) exist so ads purchases from before per-ad tagging still
+        // count in totals, but they aren't real ads and would mislead anyone
+        // scanning the per-ad performance table. We hide them from the main
+        // table and summarize them in a footer line so totals still reconcile.
+        const isBackfillTag = (name) => /backfill/i.test(name || '');
+        const activeRows = (perAd || []).filter(a => (a.visits || 0) > 0 || (a.cta_clicks || 0) > 0 || (a.purchases || 0) > 0);
+        const backfillRows = activeRows.filter(a => isBackfillTag(a.ad_name));
+        const rows = activeRows.filter(a => !isBackfillTag(a.ad_name));
+        if (rows.length === 0 && backfillRows.length === 0) return '';
         // Sort by CTA clicks desc so the winner sits at the top.
         rows.sort((a, b) => (b.cta_clicks || 0) - (a.cta_clicks || 0));
-        const topClicks = rows[0].cta_clicks || 0;
+        const topClicks = rows.length > 0 ? (rows[0].cta_clicks || 0) : 0;
+        // Backfill footer summary: total purchases and revenue from synthetic
+        // tags, shown as a small note so numbers reconcile with the KPI cards.
+        const backfillCount = backfillRows.reduce((s, a) => s + (a.purchases || 0), 0);
+        const backfillRevenue = backfillRows.reduce((s, a) => s + (a.revenue_cents || 0), 0);
+        const backfillFooter = backfillCount > 0
+          ? `<div style="margin-top: 10px; font-size: 11px; color: var(--text-mute); font-style: italic;">Not shown in table: ${backfillCount} backfilled ads purchase${backfillCount === 1 ? '' : 's'} (${cur(backfillRevenue / 100)}). These come from tracking tags added retroactively, not from a specific ad creative.</div>`
+          : '';
         const rowsHtml = rows.map(a => {
           const isTop = (a.cta_clicks || 0) === topClicks && topClicks > 0;
           const ctaRateFmt = a.cta_rate == null ? '<span style="color: var(--text-mute);">—</span>' : pct(a.cta_rate);
@@ -4852,9 +4868,9 @@
         return `
           <div style="background: var(--bg-warm); border: 1px solid var(--gold-line); border-radius: 12px; padding: 18px 22px; margin-bottom: 22px;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
-              <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold);">Per-ad performance${help(
+              <div class="has-help" style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold);">Per-ad performance${help(
                 'Per-ad performance',
-                "Which specific ad drove the most LP visits, CTA clicks, and purchases. Groups by the utm_content value on your Meta ad URLs. Top-performing ad by CTA clicks gets a gold star.",
+                "Which specific ad drove the most LP visits, CTA clicks, and purchases. Groups by the utm_content value on your Meta ad URLs. Top-performing ad by CTA clicks gets a gold star. Backfilled synthetic tags (historical/ads-purchase backfill) are excluded from the table so real ad performance is uncluttered.",
                 "Compare CTR (CTA-clicks-per-visit) across ads to find the strongest hook. Compare Conv % (purchases-per-CTA-click) to find the strongest offer messaging."
               )}</div>
               <div style="font-size: 11px; color: var(--text-dim);">${rows.length} ad${rows.length === 1 ? '' : 's'} tracked</div>
@@ -4875,6 +4891,7 @@
                 <tbody>${rowsHtml}</tbody>
               </table>
             </div>
+            ${backfillFooter}
           </div>`;
       }
       const perAdBlock = renderPerAdTable(data.per_ad);
