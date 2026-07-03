@@ -630,6 +630,12 @@ async function loadPerAdBreakdown(from, to) {
       purchases_by_ad AS (
         SELECT
           u.utm_content AS ad_name,
+          -- Buyer's actual campaign from users table. Preferred over the
+          -- landing_events campaign when both exist, because backfilled
+          -- events sometimes carry a stale/wrong campaign tag (e.g.
+          -- historical_backfill events written as 'warm' but the actual
+          -- buyer signed up with 'cold'). Buyer's campaign wins.
+          MAX(u.utm_campaign) AS buyer_campaign,
           COUNT(DISTINCT LOWER(u.email))::int AS purchases,
           COALESCE(SUM(p.amount_cents), 0)::bigint AS revenue_cents
         FROM users u
@@ -646,7 +652,7 @@ async function loadPerAdBreakdown(from, to) {
       )
       SELECT
         COALESCE(v.ad_name, p.ad_name) AS ad_name,
-        v.campaign,
+        COALESCE(p.buyer_campaign, v.campaign) AS campaign,
         COALESCE(v.visits, 0)::int AS visits,
         COALESCE(v.cta_clicks, 0)::int AS cta_clicks,
         COALESCE(p.purchases, 0)::int AS purchases,
