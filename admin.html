@@ -696,6 +696,83 @@
         display: block;
         width: 100%;
       }
+      /* Any data-table rendered inside an overflow-x wrapper (like per-ad
+         performance and campaign tables) must also stack on mobile,
+         otherwise the inline min-width: 640px + overflow-x: auto forces
+         horizontal scrolling and pushes half of each row's content off
+         screen. Kill the min-width and free the wrapper's overflow so the
+         same stacked-card rules apply. */
+      .data-table {
+        min-width: 0 !important;
+        width: 100%;
+      }
+      /* Wrappers that use overflow-x: auto for horizontal scroll on desktop
+         should release that constraint on mobile. Matches inline style so
+         no HTML changes needed. */
+      div[style*="overflow-x: auto"] {
+        overflow-x: visible !important;
+      }
+      /* Data tables not inside a `.section` also need the stacked-card
+         treatment. Duplicated rule set targeting .data-table directly so
+         both patterns work regardless of parent structure. */
+      .data-table,
+      .data-table > tbody {
+        display: block;
+        max-width: 100%;
+        white-space: normal;
+        background: transparent !important;
+      }
+      .data-table > thead { display: none; }
+      .data-table > tbody > tr {
+        display: block;
+        background: var(--bg-card);
+        border: 1px solid var(--gold-line);
+        border-radius: 14px;
+        padding: 14px 16px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      }
+      [data-theme="dark"] .data-table > tbody > tr {
+        background: var(--bg-card);
+        border: 1px solid rgba(224, 190, 104, 0.18);
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.28);
+      }
+      .data-table > tbody > tr > td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 7px 0;
+        border: none !important;
+        border-bottom: 1px solid rgba(201, 168, 76, 0.08) !important;
+        font-size: 13px;
+        white-space: normal;
+        text-align: right;
+        word-break: break-word;
+        min-width: 0;
+        color: var(--text);
+      }
+      [data-theme="dark"] .data-table > tbody > tr > td {
+        border-bottom: 1px solid rgba(224, 190, 104, 0.09) !important;
+      }
+      .data-table > tbody > tr > td:last-child {
+        border-bottom: none !important;
+      }
+      .data-table > tbody > tr > td::before {
+        content: attr(data-label);
+        font-weight: 700;
+        color: var(--text-mute);
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        flex-shrink: 0;
+        text-align: left;
+        min-width: 60px;
+      }
+      .data-table > tbody > tr > td:empty,
+      .data-table > tbody > tr > td[data-label=""] {
+        display: none;
+      }
       /* Field-brand stacked card treatment for mobile tables. Each row is
          its own card with softer surfaces, subtle gold divider between
          fields, and a compact rhythm so more members fit on-screen without
