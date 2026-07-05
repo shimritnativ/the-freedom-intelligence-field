@@ -58,34 +58,55 @@
     }
     [data-theme="dark"] {
       /* Warm dark palette tuned to feel like the Field itself: deep sepia
-         base, three layered surfaces (bg / card / panel) that create visual
-         depth without harsh contrast, brighter gold for legibility against
-         the dark, softer creams so text reads warm rather than glaring. */
-      --bg: #14100B;
-      --bg-card: #1E1811;
-      --bg-warm: #2A2318;
-      --panel: #2A2318;
-      --gold: #E0BE68;
-      --gold-soft: rgba(224, 190, 104, 0.14);
-      --gold-line: rgba(224, 190, 104, 0.35);
+         base with clear 3-tier surface hierarchy so cards visibly lift off
+         the page. Bright saturated gold for accents. Cream text reads warm
+         rather than glaring. Cards, borders, and hovers all get bolder
+         values than the initial pass so the theme feels intentional. */
+      --bg: #100C08;
+      --bg-card: #241C13;
+      --bg-warm: #2E2519;
+      --panel: #2E2519;
+      --gold: #EFC670;
+      --gold-soft: rgba(239, 198, 112, 0.16);
+      --gold-line: rgba(239, 198, 112, 0.42);
       --dark: #FAF5E4;
-      --text: #F5EDD8;
-      --text-dim: #C6B992;
-      --text-mute: #857A5D;
-      --border: rgba(224, 190, 104, 0.18);
-      --green: #86BE68;
-      --red: #E68C86;
-      --shadow: 0 20px 60px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.35);
-      --kpi-bg: #1E1811;
+      --text: #F7F0DA;
+      --text-dim: #CFC29C;
+      --text-mute: #8F8567;
+      --border: rgba(239, 198, 112, 0.22);
+      --green: #8FCB6E;
+      --red: #EA958E;
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.6), 0 2px 10px rgba(0, 0, 0, 0.4);
+      --kpi-bg: #241C13;
     }
-    /* Subtle warm vignette on the body so the whole page reads as a
-       single dim-lit space rather than a flat black rectangle. Almost
-       imperceptible but gives the dark theme depth. */
+    /* Warm radial glow across the top so the page feels dim-lit from
+       above rather than uniformly dark. More pronounced than the first
+       pass so it actually registers visually. */
     [data-theme="dark"] body {
       background:
-        radial-gradient(ellipse at top, rgba(224, 190, 104, 0.04), transparent 60%),
-        radial-gradient(ellipse at bottom, rgba(224, 190, 104, 0.025), transparent 55%),
+        radial-gradient(ellipse 1200px 800px at 50% -100px, rgba(239, 198, 112, 0.08), transparent 65%),
+        radial-gradient(ellipse at bottom, rgba(239, 198, 112, 0.03), transparent 55%),
         var(--bg);
+      background-attachment: fixed;
+    }
+    /* KPI + section cards get a warm gradient surface + soft gold ring
+       so they feel lifted and lit rather than pasted onto a black plate.
+       The gradient is a 1-2% shift so it's subtle but the ring makes the
+       edge feel intentional. */
+    [data-theme="dark"] .kpi,
+    [data-theme="dark"] .section {
+      background:
+        linear-gradient(180deg, rgba(239, 198, 112, 0.03), rgba(239, 198, 112, 0.01)),
+        var(--bg-card);
+      border-color: rgba(239, 198, 112, 0.22);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(239, 198, 112, 0.06);
+    }
+    [data-theme="dark"] .kpi.kpi-revenue {
+      /* Money hero card: a slightly stronger warm gradient so revenue reads
+         as the primary anchor of the page. */
+      background:
+        linear-gradient(180deg, rgba(239, 198, 112, 0.06), rgba(239, 198, 112, 0.015)),
+        var(--bg-card);
     }
     /* Table rows in dark mode alternate very subtly so long lists scan
        cleanly. Too much difference reads as banded/loud; the values here
@@ -2342,6 +2363,15 @@
       const n = Number(cents) / 100;
       return "€" + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
+    // Whole-euro format for headline KPI values so big numbers (€3,146.07)
+    // don't chew up horizontal space with cents. Uses banker rounding via
+    // Math.round which is fine for display: the underlying analytics still
+    // use the exact cent value.
+    function fmtEurWhole(cents) {
+      if (cents == null) return "€0";
+      const euros = Math.round(Number(cents) / 100);
+      return "€" + euros.toLocaleString();
+    }
 
     function fmtPct(num, denom) {
       if (!denom) return "0%";
@@ -2811,8 +2841,8 @@
                       "Money The Field earned in the selected date range from real customers, with VAT (19% tax) already removed. Excludes refunds and team comp purchases.",
                       "If lower than expected, check Revenue tab for product breakdown."
                     )}</div>
-                    <div class="kpi-value" style="font-size: 32px;">${fmtEur(netCents)}</div>
-                    <div class="kpi-sub">${fmtNum(tcSummary.orders || 0)} orders · ${fmtNum(tcSummary.unique_buyers || 0)} buyers <span style="opacity:0.7;">· ${fmtEur(Math.round(netCents * VAT_DIVISOR))} gross</span></div>
+                    <div class="kpi-value" style="font-size: 32px;">${fmtEurWhole(netCents)}</div>
+                    <div class="kpi-sub">${fmtNum(tcSummary.orders || 0)} orders · ${fmtNum(tcSummary.unique_buyers || 0)} buyers <span style="opacity:0.7;">· ${fmtEurWhole(Math.round(netCents * VAT_DIVISOR))} gross</span></div>
                   </div>
                   <div class="kpi clickable" onclick="goToPanel('launch', 'panel-cost-snapshot')" style="padding: 22px;">
                     <div class="kpi-label">Total Costs · lifetime${help(
@@ -2820,8 +2850,8 @@
                       "Every euro spent on running The Field since launch: tools (GHL, Vercel, Anthropic, etc.) × 2-month launch period, plus WhatsApp campaigns, plus Meta ad spend on Field campaigns.",
                       "Click to manage monthly tool costs in the Launch Tracker."
                     )}</div>
-                    <div class="kpi-value" style="font-size: 32px;">${fmtEur(totalCostsCents)}</div>
-                    <div class="kpi-sub">Ops ${fmtEur(opsCents)} · Ads ${fmtEur(adsCents)}</div>
+                    <div class="kpi-value" style="font-size: 32px;">${fmtEurWhole(totalCostsCents)}</div>
+                    <div class="kpi-sub">Ops ${fmtEurWhole(opsCents)} · Ads ${fmtEurWhole(adsCents)}</div>
                   </div>
                   <div class="kpi clickable" style="border-left: 4px solid ${profitColor}; padding: 22px;">
                     <div class="kpi-label">Real Profit · lifetime${help(
@@ -2829,8 +2859,8 @@
                       "The honest 'are we making money' number. Lifetime revenue minus all costs (operating + ads). Independent of the date picker above — always shows the business-since-launch total.",
                       isProfit ? "Healthy. Watch the margin trend over time." : "Costs exceed revenue. Reduce ad spend or improve conversion."
                     )}</div>
-                    <div class="kpi-value" style="color: ${profitColor}; font-size: 32px;">${(rp.realProfit || 0) >= 0 ? '' : '−'}${fmtEur(Math.abs(profitCents))}</div>
-                    <div class="kpi-sub" style="color: ${profitColor};">${isProfit ? '✓' : ''} ${marginPct.toFixed(1)}% margin · Rev ${fmtEur(rpRevCents)}</div>
+                    <div class="kpi-value" style="color: ${profitColor}; font-size: 32px;">${(rp.realProfit || 0) >= 0 ? '' : '−'}${fmtEurWhole(Math.abs(profitCents))}</div>
+                    <div class="kpi-sub" style="color: ${profitColor};">${isProfit ? '✓' : ''} ${marginPct.toFixed(1)}% margin · Rev ${fmtEurWhole(rpRevCents)}</div>
                   </div>
                 </div>
               `;
