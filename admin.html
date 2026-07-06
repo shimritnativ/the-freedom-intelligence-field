@@ -30,8 +30,20 @@
       try {
         var params = new URLSearchParams(location.search);
         if (!params.has("v") && !sessionStorage.getItem("admin_v_reload")) {
+          // First load in this session: force a cache-bust reload so a
+          // fresh deploy is picked up even if the browser cached the old
+          // HTML. Uses ?v=timestamp because location.reload(true) isn't
+          // reliable across browsers.
           sessionStorage.setItem("admin_v_reload", "1");
           location.replace(location.pathname + "?v=" + Date.now() + location.hash);
+        } else if (params.has("v")) {
+          // Second load (post cache-bust): strip the ?v= param from the
+          // URL so the address bar shows the clean /admin URL. Uses
+          // history.replaceState so no navigation happens (no scroll
+          // jump, no reload, just an in-place URL rewrite).
+          params.delete("v");
+          var clean = location.pathname + (params.toString() ? "?" + params.toString() : "") + location.hash;
+          history.replaceState({}, "", clean);
         }
       } catch {}
     })();
