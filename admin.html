@@ -3373,6 +3373,7 @@
 
           <!-- ===== REVENUE TAB ===== -->
           <div data-tab-content="revenue" style="display: none;">
+            ${renderChannelDeepDive(d.channelAttribution, d.realProfit, d.monthlyCosts)}
             ${tc.connected ? renderThrivecartSection(tc) : renderThrivecartNotConnected()}
           </div>
           <!-- /end Revenue tab -->
@@ -4452,6 +4453,232 @@
             ${cards}
           </div>
           <div style="margin-top: 10px; font-size: 10.5px; color: var(--text-mute); font-style: italic;">WhatsApp bucket includes untagged signups from before per-channel tagging. Tag new WhatsApp campaigns with utm_source=whatsapp so future attribution stays clean. GHL monthly cost pulls from your Monthly Costs snapshot (2-month launch portion).</div>
+        </div>
+      `;
+    }
+
+    // Render the Channel Deep Dive on the Revenue tab. Extended per-channel
+    // analytics: unit economics (CAC, LTV, payback), product mix, and
+    // conversion funnels. Same three channels as Channel P&L on Overview
+    // (WhatsApp / Cold ads / Warm ads) with the same first-touch UTM
+    // attribution and the same spend sources (Meta campaigns + monthly
+    // GHL cost). Intended as the "you sit down to think about channel
+    // strategy" surface, whereas the Overview widget is the at-a-glance.
+    function renderChannelDeepDive(attribution, realProfit, monthlyCosts) {
+      if (!attribution || !realProfit) return '';
+      const ops = realProfit.breakdown && realProfit.breakdown.ops;
+      const ads = realProfit.breakdown && realProfit.breakdown.ads;
+      if (!ops || !ads) return '';
+      // Same spend calculation as renderChannelPnl so the two widgets
+      // reconcile exactly. Kept inline (rather than DRY'd into a helper)
+      // so this function is self-contained and easy to reason about.
+      let coldSpendEur = 0;
+      let warmSpendEur = 0;
+      for (const c of (ads.campaigns || [])) {
+        const lower = String(c.name || '').toLowerCase();
+        const spend = Number(c.spend || 0);
+        if (lower.includes('cold')) coldSpendEur += spend;
+        else if (lower.includes('warm')) warmSpendEur += spend;
+      }
+      const ghlRow = (monthlyCosts || []).find(mc =>
+        String(mc.service_key || '').toLowerCase() === 'ghl'
+      );
+      const opGhlMonthlyEur = ghlRow ? Number(ghlRow.amount || 0) : 0;
+      const whatsappSpendEur = Number(ops.preGhl || 0)
+        + Number(ops.preWhatsApp || 0)
+        + Number(ops.launchWhatsApp || 0)
+        + (opGhlMonthlyEur * 2);
+
+      const channelData = [
+        { label: 'WhatsApp', sub: 'GHL outreach + campaigns', spendEur: whatsappSpendEur, data: attribution.whatsapp || {} },
+        { label: 'Cold ads', sub: 'Meta · cold audience',      spendEur: coldSpendEur,     data: attribution.cold     || {} },
+        { label: 'Warm ads', sub: 'Meta · warm audience',      spendEur: warmSpendEur,     data: attribution.warm     || {} },
+      ];
+
+      // Precompute the metrics we need for all three sections.
+      const enriched = channelData.map(ch => {
+        const revenueCents = Number(ch.data.total_revenue_cents || 0);
+        const revenueEur = revenueCents / 100;
+        const signups = Number(ch.data.signups || 0);
+        const buyers = Number(ch.data.buyers || 0);
+        const upgraded = Number(ch.data.upgraded || 0);
+        const resetCents = Number(ch.data.reset_revenue_cents || 0);
+        const activationCents = Number(ch.data.activation_revenue_cents || 0);
+        const unlimitedCents = Number(ch.data.unlimited_revenue_cents || 0);
+        const cac = buyers > 0 ? ch.spendEur / buyers : null;
+        const ltv = buyers > 0 ? revenueEur / buyers : null;
+        const paybackRatio = (cac !== null && cac > 0 && ltv !== null) ? ltv / cac : null;
+        const signupToBuyPct = signups > 0 ? (buyers / signups) * 100 : null;
+        const buyToUpgradePct = buyers > 0 ? (upgraded / buyers) * 100 : null;
+        return {
+          ...ch,
+          revenueEur, revenueCents, signups, buyers, upgraded,
+          resetCents, activationCents, unlimitedCents,
+          cac, ltv, paybackRatio, signupToBuyPct, buyToUpgradePct,
+        };
+      });
+
+      // ---- Section 1: Unit economics per channel ----
+      const goodColor = 'var(--green, #4A7C3A)';
+      const badColor = 'var(--red, #C03A2B)';
+      const muted = 'var(--text-mute)';
+      const eur0 = (n) => (n == null) ? '—' : ('€' + Math.round(n).toLocaleString());
+      const pct1 = (n) => (n == null) ? '—' : (n.toFixed(1) + '%');
+      const paybackPill = (p) => {
+        if (p == null) return `<span style="font-size: 11px; padding: 2px 8px; background: rgba(154,141,108,0.15); color: ${muted}; border-radius: 999px; font-weight: 700; margin-left: auto;">No buyers yet</span>`;
+        const good = p >= 1;
+        return `<span style="font-size: 11px; padding: 2px 8px; background: ${good ? 'rgba(74,124,58,0.16)' : 'rgba(192,58,43,0.12)'}; color: ${good ? goodColor : badColor}; border-radius: 999px; font-weight: 700; margin-left: auto; white-space: nowrap;">${p.toFixed(2)}× payback</span>`;
+      };
+      const unitCards = enriched.map(e => {
+        const cacColor = (e.cac != null && e.ltv != null && e.cac > e.ltv) ? badColor : 'var(--text)';
+        const ltvColor = (e.ltv != null && e.ltv > 0) ? goodColor : 'var(--text)';
+        const s2bColor = e.signupToBuyPct == null ? muted
+          : (e.signupToBuyPct >= 30 ? goodColor : e.signupToBuyPct < 10 ? badColor : 'var(--text)');
+        const b2uColor = e.buyToUpgradePct == null ? muted
+          : (e.buyToUpgradePct >= 20 ? goodColor : e.buyToUpgradePct < 5 ? badColor : 'var(--text)');
+        const paybackText = e.paybackRatio == null ? '—' : (e.paybackRatio >= 1 ? 'Immediate' : 'Not yet');
+        const paybackColor = e.paybackRatio == null ? muted : (e.paybackRatio >= 1 ? goodColor : badColor);
+        return `
+          <div style="background: var(--bg-card, #FFFFFF); border: 1px solid var(--gold-line, rgba(201, 168, 76, 0.28)); border-radius: 12px; padding: 14px 16px;">
+            <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;">
+              <span style="font-weight: 700; font-size: 15px; color: var(--text);">${escapeHtml(e.label)}</span>
+              <span style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim);">${escapeHtml(e.sub)}</span>
+              ${paybackPill(e.paybackRatio)}
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;">
+              <div>
+                <div style="font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: ${muted};">CAC</div>
+                <div style="font-size: 15px; font-weight: 700; margin-top: 2px; color: ${cacColor}; font-variant-numeric: tabular-nums;">${eur0(e.cac)}</div>
+              </div>
+              <div>
+                <div style="font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: ${muted};">LTV / buyer</div>
+                <div style="font-size: 15px; font-weight: 700; margin-top: 2px; color: ${ltvColor}; font-variant-numeric: tabular-nums;">${eur0(e.ltv)}</div>
+              </div>
+              <div>
+                <div style="font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: ${muted};">Signup → buy</div>
+                <div style="font-size: 15px; font-weight: 700; margin-top: 2px; color: ${s2bColor}; font-variant-numeric: tabular-nums;">${pct1(e.signupToBuyPct)}</div>
+              </div>
+              <div>
+                <div style="font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: ${muted};">Buy → upgrade</div>
+                <div style="font-size: 15px; font-weight: 700; margin-top: 2px; color: ${b2uColor}; font-variant-numeric: tabular-nums;">${pct1(e.buyToUpgradePct)}</div>
+              </div>
+              <div>
+                <div style="font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: ${muted};">Payback</div>
+                <div style="font-size: 15px; font-weight: 700; margin-top: 2px; color: ${paybackColor};">${paybackText}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // ---- Section 2: Product mix per channel (stacked bars) ----
+      const resetSwatch = '#C9A84C';
+      const activationSwatch = '#7A6B3F';
+      const unlimitedSwatch = '#4A7C3A';
+      const mixRows = enriched.map(e => {
+        const total = e.resetCents + e.activationCents + e.unlimitedCents;
+        if (total === 0) {
+          return `
+            <div style="margin-bottom: 12px;">
+              <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px;">
+                <span style="font-size: 13px; font-weight: 600; color: var(--text);">${escapeHtml(e.label)}</span>
+                <span style="font-size: 11px; color: var(--text-dim);">€0</span>
+              </div>
+              <div style="display: flex; height: 20px; border-radius: 4px; overflow: hidden; background: var(--bg-warm, #F4ECD0);"></div>
+              <div style="font-size: 11px; color: ${muted}; margin-top: 4px;">No revenue yet</div>
+            </div>
+          `;
+        }
+        const resetPct = (e.resetCents / total) * 100;
+        const actPct = (e.activationCents / total) * 100;
+        const unlPct = (e.unlimitedCents / total) * 100;
+        return `
+          <div style="margin-bottom: 12px;">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px;">
+              <span style="font-size: 13px; font-weight: 600; color: var(--text);">${escapeHtml(e.label)}</span>
+              <span style="font-size: 11px; color: var(--text-dim);">${eur0(e.revenueEur)}</span>
+            </div>
+            <div style="display: flex; height: 20px; border-radius: 4px; overflow: hidden;">
+              ${resetPct > 0 ? `<div style="width: ${resetPct}%; background: ${resetSwatch};" title="Reset ${eur0(e.resetCents/100)}"></div>` : ''}
+              ${actPct > 0 ? `<div style="width: ${actPct}%; background: ${activationSwatch};" title="Activation ${eur0(e.activationCents/100)}"></div>` : ''}
+              ${unlPct > 0 ? `<div style="width: ${unlPct}%; background: ${unlimitedSwatch};" title="Unlimited ${eur0(e.unlimitedCents/100)}"></div>` : ''}
+            </div>
+            <div style="font-size: 11px; color: ${muted}; margin-top: 4px;">${resetPct.toFixed(0)}% Reset · ${actPct.toFixed(0)}% Activation · ${unlPct.toFixed(0)}% Unlimited${unlPct === 0 ? ' (no upgrades yet)' : ''}</div>
+          </div>
+        `;
+      }).join('');
+
+      // ---- Section 3: Conversion funnel per channel ----
+      const funnels = enriched.map(e => {
+        const maxSignups = Math.max(1, e.signups);
+        const buyerBarPct = e.signups > 0 ? (e.buyers / maxSignups) * 100 : 0;
+        const upgradedBarPct = e.signups > 0 ? (e.upgraded / maxSignups) * 100 : 0;
+        const s2bColor = e.signupToBuyPct == null ? muted
+          : (e.signupToBuyPct >= 30 ? goodColor : e.signupToBuyPct < 10 ? badColor : muted);
+        const b2uColor = e.buyToUpgradePct == null ? muted
+          : (e.buyToUpgradePct >= 20 ? goodColor : e.buyToUpgradePct < 5 ? badColor : muted);
+        return `
+          <div>
+            <div style="font-size: 13px; font-weight: 700; margin-bottom: 10px; color: var(--text);">${escapeHtml(e.label)}</div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <div style="flex: 1; height: 22px; background: var(--bg-warm, #F4ECD0); border-radius: 3px; position: relative;">
+                <div style="height: 100%; width: 100%; background: rgba(201, 168, 76, 0.5); border-radius: 3px;"></div>
+                <span style="position: absolute; left: 6px; top: 4px; font-size: 11px; font-weight: 600; color: var(--text);">${fmtNum(e.signups)} signup${e.signups === 1 ? '' : 's'}</span>
+              </div>
+            </div>
+            <div style="font-size: 10px; color: ${s2bColor}; margin-bottom: 6px;">↓ ${pct1(e.signupToBuyPct)} convert</div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <div style="flex: 1; height: 22px; background: var(--bg-warm, #F4ECD0); border-radius: 3px; position: relative;">
+                <div style="height: 100%; width: ${Math.max(0, buyerBarPct)}%; background: rgba(201, 168, 76, 0.75); border-radius: 3px;"></div>
+                <span style="position: absolute; left: 6px; top: 4px; font-size: 11px; font-weight: 600; color: ${e.buyers > 0 ? 'var(--text)' : muted};">${fmtNum(e.buyers)} buyer${e.buyers === 1 ? '' : 's'}</span>
+              </div>
+            </div>
+            <div style="font-size: 10px; color: ${b2uColor}; margin-bottom: 6px;">↓ ${pct1(e.buyToUpgradePct)} upgrade</div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="flex: 1; height: 22px; background: var(--bg-warm, #F4ECD0); border-radius: 3px; position: relative;">
+                <div style="height: 100%; width: ${Math.max(0, upgradedBarPct)}%; background: ${goodColor}; border-radius: 3px;"></div>
+                <span style="position: absolute; left: 6px; top: 4px; font-size: 11px; font-weight: 600; color: ${e.upgraded > 0 ? 'var(--text)' : muted};">${fmtNum(e.upgraded)} upgraded</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // ---- Compose the widget ----
+      const sectionHeader = (n, title) => `
+        <div style="font-size: 11px; color: var(--gold); letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; margin-bottom: 10px; margin-top: 6px;">${n} &middot; ${title}</div>
+      `;
+      return `
+        <div class="section" style="background: var(--bg-warm, #F4ECD0); border: 1px solid var(--gold-line); border-radius: 12px; padding: 20px 22px; margin-bottom: 22px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+            <div style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 22px; color: var(--text);">Channel deep dive</div>
+            <div style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim);">Lifetime &middot; Ex VAT</div>
+          </div>
+          <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 16px;">Extended per-channel breakdown of unit economics, product mix, and conversion funnels.</div>
+
+          ${sectionHeader('1', 'Unit economics per channel')}
+          <div style="display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 22px;">
+            ${unitCards}
+          </div>
+
+          ${sectionHeader('2', 'Product mix per channel')}
+          <div style="background: var(--bg-card, #FFFFFF); border: 1px solid var(--gold-line, rgba(201, 168, 76, 0.28)); border-radius: 12px; padding: 14px 16px; margin-bottom: 22px;">
+            <div style="display: flex; align-items: center; margin-bottom: 12px; gap: 12px; flex-wrap: wrap;">
+              <span style="font-size: 11px; display: inline-flex; align-items: center; gap: 5px; color: var(--text);"><span style="display: inline-block; width: 10px; height: 10px; background: ${resetSwatch}; border-radius: 2px;"></span>Reset</span>
+              <span style="font-size: 11px; display: inline-flex; align-items: center; gap: 5px; color: var(--text);"><span style="display: inline-block; width: 10px; height: 10px; background: ${activationSwatch}; border-radius: 2px;"></span>Activation</span>
+              <span style="font-size: 11px; display: inline-flex; align-items: center; gap: 5px; color: var(--text);"><span style="display: inline-block; width: 10px; height: 10px; background: ${unlimitedSwatch}; border-radius: 2px;"></span>Unlimited (upgrades)</span>
+            </div>
+            ${mixRows}
+          </div>
+
+          ${sectionHeader('3', 'Conversion funnel per channel')}
+          <div style="background: var(--bg-card, #FFFFFF); border: 1px solid var(--gold-line, rgba(201, 168, 76, 0.28)); border-radius: 12px; padding: 14px 16px;">
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+              ${funnels}
+            </div>
+          </div>
+
+          <div style="margin-top: 14px; font-size: 10.5px; color: var(--text-mute); font-style: italic;">Unit economics use lifetime spend and revenue. Payback: LTV / CAC ≥ 1 means one average buyer covers the acquisition cost. Funnel is signups → paying buyers → Unlimited upgraders per channel.</div>
         </div>
       `;
     }
