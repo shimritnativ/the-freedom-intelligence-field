@@ -2620,7 +2620,7 @@
           body: JSON.stringify({ segment_key: segmentKey, target_user_id: userId }),
         });
         if (!r.ok) throw new Error("save_failed");
-        showIntelToast(`Dismissed ${displayName || "member"} for 7 days`);
+        showIntelToast(`Dismissed ${displayName || "member"}. Restore anytime.`);
         // Refresh dismissals state + re-render so the "X dismissed (show)"
         // count updates and the toggle appears.
         await fetchIntelDismissals();
@@ -3900,7 +3900,7 @@
           const bullets = (s.why(u) || []).map(b => `<li>${b}</li>`).join("");
           return `
             <div class="intel-member" data-segment="${escapeHtml(s.key)}" data-user-id="${escapeHtml(u.id || '')}">
-              <button type="button" class="intel-member-dismiss" title="Dismiss for 7 days"
+              <button type="button" class="intel-member-dismiss" title="Dismiss (permanent until you restore)"
                       onclick="dismissIntelMember('${escapeHtml(s.key)}', '${escapeHtml(u.id || '')}', '${escapeHtml(primary)}')"
                       aria-label="Dismiss this suggestion">✕</button>
               <div class="intel-member-head">
@@ -3923,11 +3923,14 @@
             <div class="intel-dismissed-list" id="intel-dismissed-${escapeHtml(s.key)}">
               ${dismissedRows.map(d => {
                 const name = (d.display_name && d.display_name.trim()) || humanizeEmail(d.email) || d.email;
-                const expIso = d.expires_at;
-                const expRel = expIso ? fmtRelative(expIso) : "soon";
+                // Dismissals no longer auto-expire. Show when the member
+                // was dismissed rather than a misleading "reappears in X"
+                // countdown that was baked in for the old 7-day timer.
+                const dismissedIso = d.dismissed_at;
+                const dismissedRel = dismissedIso ? fmtRelative(dismissedIso) : "";
                 return `
                   <div class="intel-dismissed-row">
-                    <span><strong>${escapeHtml(name)}</strong> <span style="color: var(--text-mute);">— reappears ${escapeHtml(expRel)}</span></span>
+                    <span><strong>${escapeHtml(name)}</strong> <span style="color: var(--text-mute);">${dismissedRel ? '&mdash; dismissed ' + escapeHtml(dismissedRel) : ''}</span></span>
                     <button class="intel-restore-btn" onclick="restoreIntelMember('${escapeHtml(s.key)}', '${escapeHtml(d.target_user_id)}')">Restore</button>
                   </div>
                 `;
