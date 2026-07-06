@@ -1157,6 +1157,7 @@ export default async function handler(req, res) {
 // spend = GHL + per-message costs) to compute ROAS per channel.
 async function loadChannelRevenueAttribution() {
   const excludedCoupons = EXCLUDED_COUPONS;
+  const excludePatterns = EMAIL_EXCLUDE_PATTERNS;
   try {
     const { rows } = await sql`
       WITH user_channel AS (
@@ -1173,7 +1174,11 @@ async function loadChannelRevenueAttribution() {
           END AS channel
         FROM users u
         WHERE u.email IS NOT NULL AND u.email <> ''
-          AND u.email NOT LIKE '%@shimritnativ.com'
+          -- Same email-exclude pattern set the Total Members KPI uses:
+          -- @shimritnativ.com team + Geo's Gmail testing accounts + all
+          -- their plus-aliases. Without this, Geo's own test signups
+          -- inflate the WhatsApp bucket by ~5 rows.
+          AND NOT (u.email LIKE ANY(${excludePatterns}))
           -- Same filters the Total Members KPI (42) uses so the channel
           -- signup counts reconcile with the top-line member count.
           -- kajabi_entitled = true is the key one: it excludes ~89
