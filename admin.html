@@ -2710,9 +2710,14 @@
           el.textContent = original;
           return;
         }
-        // Success — patch every in-memory reference to this member so
-        // every render path (Members roster, Intelligence cards, Overview
-        // activity list) shows the new name after we re-render.
+        // Success. Patch every in-memory reference so the next time
+        // renderDashboard runs (from the user hitting Refresh or from an
+        // auto-fetch) it picks up the new name. But DO NOT call
+        // renderDashboard here: doing so wipes the current view including
+        // filter state on the Members tab and made it look like the
+        // roster had disappeared. In-place text update on the cell is
+        // enough for immediate visual feedback; other views pick up the
+        // new name on the next natural render.
         const emailLc = email.toLowerCase();
         const patch = (list) => {
           if (!Array.isArray(list)) return;
@@ -2731,11 +2736,13 @@
             }
           }
         }
+        // Persist the new value on the editable span so subsequent edits
+        // treat this as the baseline (Esc reverts to it, not to the
+        // pre-edit value). Also flip the "fallback" italic class off
+        // since the name is now a real DB value.
         el.dataset.original = next;
+        el.classList.remove('name-editable--fallback');
         showIntelToast("Name updated.");
-        if (typeof renderDashboard === "function" && state && state.data) {
-          renderDashboard(state.data);
-        }
       } catch (e) {
         showIntelToast("Save failed: network error");
         el.textContent = original;
