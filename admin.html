@@ -139,12 +139,9 @@
       line-height: 1.5;
     }
     .wrap {
-      /* Wider container so wide monitors don't waste 400+px of side
-         gutter. 1800px still comfortably centered on 27" screens and
-         doesn't push tables into hard-to-scan territory on 32"+ ultras. */
-      max-width: 1800px;
+      max-width: 1480px;
       margin: 0 auto;
-      padding: 36px 40px 80px;
+      padding: 36px 32px 80px;
     }
     .topbar {
       display: flex;
@@ -6885,25 +6882,35 @@
     //   • Both trigger IMMEDIATELY on tab focus, so switching back
     //     from another tab shows fresh numbers within one round-trip
     //   • Both pause when the tab is hidden (no wasted API calls)
+    // Periodic auto-refresh disabled: Geo flagged that the page jumping
+    // to top every 90s while she's in the middle of scrolling / editing
+    // felt buggy. She has a big manual Refresh button in the top bar,
+    // and the visibilitychange listener below still refreshes when she
+    // returns to the tab, which is enough freshness for daily use.
+    // If we ever want this back, use a partial-update approach that
+    // patches KPIs in place instead of re-rendering the whole dashboard.
     let _autoOverviewTimer = null;
     let _autoAdsTimer = null;
-    function scheduleAutoRefresh() {
-      if (_autoOverviewTimer) clearInterval(_autoOverviewTimer);
-      if (_autoAdsTimer) clearInterval(_autoAdsTimer);
-      _autoOverviewTimer = setInterval(() => {
-        if (document.hidden) return;
-        try { loadMetrics(); } catch (e) { /* ignore */ }
-      }, 90000);
-      _autoAdsTimer = setInterval(() => {
-        if (document.hidden) return;
-        try { if (typeof loadAdsMetrics === "function") loadAdsMetrics(); } catch (e) { /* ignore */ }
-      }, 180000);
-    }
+    function scheduleAutoRefresh() { /* intentionally noop */ }
     scheduleAutoRefresh();
-    // Immediate refresh on tab focus. Geo makes a purchase in another tab,
-    // switches back → sees it show up on the next network round-trip.
+    // Refresh on tab focus, but only if it's been at least 5 minutes
+    // since the last load. Was firing every time Geo clicked back to the
+    // dashboard tab (even after a 30-second detour), causing the same
+    // "page jumped and reset scroll" complaint as the interval timer.
+    // 5min threshold gives a safe balance between "fresh enough" and
+    // "not disruptive when I just tabbed away for a second."
+    let _lastMetricsLoadAt = Date.now();
+    const originalLoadMetrics = typeof loadMetrics === "function" ? loadMetrics : null;
+    if (originalLoadMetrics) {
+      window.loadMetrics = async function () {
+        _lastMetricsLoadAt = Date.now();
+        return originalLoadMetrics.apply(this, arguments);
+      };
+    }
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) {
+        const staleMs = Date.now() - _lastMetricsLoadAt;
+        if (staleMs < 5 * 60 * 1000) return; // less than 5 min, skip
         try { loadMetrics(); } catch (e) { /* ignore */ }
         try { if (typeof loadAdsMetrics === "function") loadAdsMetrics(); } catch (e) { /* ignore */ }
       }
