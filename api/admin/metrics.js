@@ -677,14 +677,14 @@ export default async function handler(req, res) {
         HAVING COUNT(*) FILTER (WHERE m.role = 'user') >= 30
         ORDER BY messages_30d DESC
       `),
-      // 19. Hot Reset graduate — completed Day 3 in the last 72 hours,
-      // still on Reset tier. 72h is the outer bound of the "peak
-      // emotional state" window per the action script; anything older
-      // has lost the conversion heat and should be handled by nurture
-      // sequences rather than the Convert Today segment. Without this
-      // filter the segment kept surfacing members who finished Day 3
-      // 8-9 days ago with a hardcoded "Window closes in ~24h" label,
-      // which was misleading and eroded trust in the Intelligence tab.
+      // 19. Hot Reset graduate — completed Day 3 recently, still on
+      // Reset tier. Window is weekend-aware:
+      //   - Tue/Wed/Thu/Fri: 3 calendar days (base "peak" window)
+      //   - Sat/Sun/Mon:     5 calendar days (bridges the weekend so a
+      //                      Fri/Sat/Sun completion isn't dropped before
+      //                      Geo can work it on Monday morning)
+      // Anything older has lost the conversion heat and rolls into
+      // nurture rather than the Convert Today segment.
       safeQuery(sql`
         SELECT
           u.id, u.email, u.display_name,
@@ -705,7 +705,12 @@ export default async function handler(req, res) {
               AND COALESCE(p2.coupon_code, '') <> ALL(${excludedCoupons})
           )
         GROUP BY u.id, u.email, u.display_name
-        HAVING MAX(dc.completed_at) >= NOW() - INTERVAL '72 hours'
+        HAVING MAX(dc.completed_at) >= NOW() - (
+          CASE
+            WHEN EXTRACT(DOW FROM NOW())::int IN (6, 0, 1) THEN INTERVAL '5 days'
+            ELSE INTERVAL '3 days'
+          END
+        )
         ORDER BY day3_completed_at DESC
       `),
       // 20. Book Launch warmer — used LAUNCHTEAM coupons + showed engagement
