@@ -1174,6 +1174,12 @@ async function loadChannelRevenueAttribution() {
         FROM users u
         WHERE u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE '%@shimritnativ.com'
+          -- Match the "Total Members" KPI: only count real Field members
+          -- (paid Reset preview tier + paid Unlimited full tier), not all
+          -- users in the DB (Kajabi grants, mailing list, guests, etc.).
+          -- Without this, "signups per channel" was inflated to ~131 for
+          -- WhatsApp vs. the true member count of ~42.
+          AND u.tier::text IN ('preview', 'full')
       ),
       per_user AS (
         SELECT
