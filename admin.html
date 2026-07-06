@@ -1196,7 +1196,15 @@
       line-height: 1.5;
     }
     .intel-card-action strong { color: var(--text); font-weight: 600; }
-    .intel-member-list { display: grid; gap: 8px; }
+    .intel-member-list {
+      display: grid;
+      /* Two-column grid where each column is at least 320px wide. On
+         wider screens this fits 2 (or occasionally 3) columns and cuts
+         vertical scroll in half. On narrower screens it falls back to
+         one column automatically via auto-fit. */
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 10px;
+    }
     .intel-member {
       padding: 12px 14px;
       background: var(--panel);
@@ -3654,12 +3662,43 @@
             const stage = day === 0
               ? "Logged in but never started Day 1, needs onboarding rescue"
               : `Started but stalled on Day ${day}, needs finish-the-reset nudge`;
-            const windowLine = previewOpen
-              ? "Preview still open, urgency angle works"
-              : "Preview expired, offer a re-open or pitch Unlimited";
+            // Days completed as a compact list. Backend returns an int[]
+            // like [1, 2] via ARRAY_AGG; render as "Day 1, Day 2" or a
+            // "none yet" marker when the list is empty/null.
+            const daysArr = Array.isArray(u.days_completed) ? u.days_completed.filter(d => d != null) : [];
+            const daysCompletedLine = daysArr.length > 0
+              ? `Days completed: <strong>${daysArr.map(d => `Day ${d}`).join(", ")}</strong>`
+              : "Days completed: <em>none yet</em>";
+            // Signup + preview window. Show absolute date + "X days ago"
+            // so Geo can eyeball how long they've been sitting.
+            const signedUpLine = u.signed_up_at
+              ? `Joined <strong>${fmtDate(u.signed_up_at)}</strong> (${fmtRelative(u.signed_up_at)})`
+              : "Joined date unknown";
+            // Preview window timing. Show remaining time if still open,
+            // or how long ago it expired otherwise, so Geo can pick the
+            // right outreach angle (urgency vs re-open).
+            let windowLine;
+            if (u.preview_ends_at) {
+              const ends = new Date(u.preview_ends_at);
+              const nowMs = Date.now();
+              const diffDays = (ends.getTime() - nowMs) / (1000 * 60 * 60 * 24);
+              if (previewOpen) {
+                const daysLeft = Math.max(0, Math.round(diffDays));
+                windowLine = `Preview <strong>still open</strong>, closes ${fmtDate(u.preview_ends_at)} (${daysLeft}d left), urgency angle works`;
+              } else {
+                const daysAgo = Math.max(0, Math.round(-diffDays));
+                windowLine = `Preview <strong>expired</strong> ${fmtDate(u.preview_ends_at)} (${daysAgo}d ago), offer a re-open or pitch Unlimited`;
+              }
+            } else {
+              windowLine = previewOpen
+                ? "Preview still open, urgency angle works"
+                : "Preview expired, offer a re-open or pitch Unlimited";
+            }
             return [
               "Paid for the Reset",
+              signedUpLine,
               stage,
+              daysCompletedLine,
               `<strong>${fmtNum(since)} days</strong> since their last login`,
               windowLine,
             ];
@@ -3679,13 +3718,25 @@
         });
       });
 
-      // Sort: actionable segments first (by priority hot > ready > nurture),
-      // empty ones to the bottom in muted state.
+      // Sort: actionable segments first, then key-based promotion
+      // (Geo's most-used segment lives at the top regardless of its
+      // priority label), then by priority (hot > ready > nurture).
+      // Empty segments sink to the bottom in muted state.
+      // Stuck Reset is the day-to-day re-engagement work, so it opens
+      // first even though its priority label is "nurture".
       const priorityRank = { hot: 0, ready: 1, nurture: 2 };
+      const keyRank = { stuck_reset: 0 };
       segments.sort((a, b) => {
         const aEmpty = a.rows.length === 0;
         const bEmpty = b.rows.length === 0;
         if (aEmpty !== bEmpty) return aEmpty ? 1 : -1;
+        const ka = keyRank[a.key];
+        const kb = keyRank[b.key];
+        if (ka !== undefined || kb !== undefined) {
+          if (ka === undefined) return 1;
+          if (kb === undefined) return -1;
+          return ka - kb;
+        }
         return priorityRank[a.priority] - priorityRank[b.priority];
       });
 
