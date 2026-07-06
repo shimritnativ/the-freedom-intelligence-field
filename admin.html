@@ -3550,16 +3550,22 @@
           rows: intel.hot_reset_graduate || [],
           why: u => {
             const when = u.day3_completed_at ? `Just finished Day 3 (${fmtRelative(u.day3_completed_at)})` : "Just completed Day 3";
-            // Dynamic window message. The action script assumes <24h is
-            // the peak; anything older but within 72h is still worth
-            // outreach but with a softer angle. The API already restricts
-            // this segment to <72h so we never hit the "too cold" branch,
-            // but keep the fallback for robustness.
-            const hoursAgo = u.day3_completed_at
-              ? (Date.now() - new Date(u.day3_completed_at).getTime()) / 3600000
-              : 0;
+            // Dynamic window message. Base logic: <24h peak, 24-48h still
+            // warm, older = past peak. Weekend awareness: if the person
+            // finished Day 3 during Fri/Sat/Sun and today is Sat/Sun/Mon,
+            // frame it as a weekend graduate whose first business-day
+            // window is now, so Geo knows outreach is still timely even
+            // if calendar hours look older.
+            const completedAt = u.day3_completed_at ? new Date(u.day3_completed_at) : null;
+            const hoursAgo = completedAt ? (Date.now() - completedAt.getTime()) / 3600000 : 0;
+            const completedDow = completedAt ? completedAt.getDay() : -1; // 0=Sun, 6=Sat
+            const todayDow = new Date().getDay();
+            const finishedOnWeekend = [5, 6, 0].includes(completedDow); // Fri/Sat/Sun
+            const nowIsPostWeekend = [6, 0, 1].includes(todayDow); // Sat/Sun/Mon
             let windowMsg;
-            if (hoursAgo < 24) {
+            if (finishedOnWeekend && nowIsPostWeekend && hoursAgo < 120) {
+              windowMsg = "Weekend graduate, first business-day outreach window";
+            } else if (hoursAgo < 24) {
               windowMsg = "Window closes in ~24h, peak conversion moment";
             } else if (hoursAgo < 48) {
               const extra = Math.max(1, Math.round(hoursAgo - 24));
