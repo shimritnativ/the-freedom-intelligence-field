@@ -183,6 +183,7 @@ export default async function handler(req, res) {
       segBookLaunchWarmer,
       segAtRiskSubscriber,
       segStuckReset,
+      segResetAlumni,
       segHighIntent,
       todaySignups,
       todayRevenue,
@@ -808,7 +809,15 @@ export default async function handler(req, res) {
           AND u.first_login_at IS NOT NULL
           AND u.first_login_at < NOW() - INTERVAL '3 days'
           AND u.first_login_at > NOW() - INTERVAL '60 days'
-          AND COALESCE(u.last_completed_day, 0) < 3
+          -- Source of truth for "have they finished?" is day_completions
+          -- itself, not the u.last_completed_day cache, which was going
+          -- stale for members like Nihan (all 3 days done but cache read
+          -- 1). Fully-completed members belong in the reset-alumni
+          -- segment (need Unlimited upsell), not the stuck segment.
+          AND (
+            SELECT COUNT(DISTINCT dc2.day)
+            FROM day_completions dc2 WHERE dc2.user_id = u.id
+          ) < 3
           AND u.email IS NOT NULL AND u.email <> ''
           AND NOT (u.email LIKE ANY(${excludePatterns}))
           AND u.email <> ALL(${extraExcluded})
@@ -819,6 +828,47 @@ export default async function handler(req, res) {
               AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
           )
         ORDER BY days_since_login DESC
+      `),
+      // 22.5 Reset alumni ready to upgrade — completed all 3 days but
+      // haven't purchased Unlimited yet, and they're past the 72h "hot"
+      // window so the Hot Reset graduates segment no longer includes
+      // them. Prime upsell candidates: they know the work, they got the
+      // full experience, they just need a nudge to keep going.
+      safeQuery(sql`
+        SELECT
+          u.id, u.email, u.display_name,
+          u.created_at AS signed_up_at,
+          u.first_login_at,
+          u.preview_ends_at,
+          (u.preview_ends_at > NOW()) AS preview_still_open,
+          MAX(dc.completed_at) AS day3_completed_at,
+          EXTRACT(DAY FROM (NOW() - MAX(dc.completed_at)))::int AS days_since_day3,
+          (SELECT ARRAY_AGG(dcx.day ORDER BY dcx.day)
+             FROM day_completions dcx WHERE dcx.user_id = u.id) AS days_completed
+        FROM users u
+        JOIN day_completions dc ON dc.user_id = u.id
+        WHERE u.tier = 'preview'
+          AND u.email IS NOT NULL AND u.email <> ''
+          AND NOT (u.email LIKE ANY(${excludePatterns}))
+          AND u.email <> ALL(${extraExcluded})
+          AND (
+            SELECT COUNT(DISTINCT dc2.day)
+            FROM day_completions dc2 WHERE dc2.user_id = u.id
+          ) >= 3
+          -- Only alumni who finished more than 72h ago; anyone fresher
+          -- is already surfacing in the Hot Reset graduates segment with
+          -- the peak-conversion window messaging.
+          AND (SELECT MAX(dc3.completed_at) FROM day_completions dc3
+               WHERE dc3.user_id = u.id AND dc3.day = 3) < NOW() - INTERVAL '3 days'
+          AND EXISTS (
+            SELECT 1 FROM purchases p
+            WHERE p.email = u.email
+              AND p.event_type IN ('order.success', 'order.subscription_payment')
+              AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
+          )
+        GROUP BY u.id, u.email, u.display_name, u.created_at,
+                 u.first_login_at, u.preview_ends_at
+        ORDER BY MAX(dc.completed_at) DESC
       `),
       // 23. High-intent buyer — multiple ThriveCart purchases (front-end stacked)
       safeQuery(sql`
@@ -1045,6 +1095,7 @@ export default async function handler(req, res) {
         book_launch_warmer: segBookLaunchWarmer ? segBookLaunchWarmer.rows : [],
         at_risk_subscriber: segAtRiskSubscriber ? segAtRiskSubscriber.rows : [],
         stuck_reset: segStuckReset ? segStuckReset.rows : [],
+        reset_alumni: segResetAlumni ? segResetAlumni.rows : [],
         high_intent_buyer: segHighIntent ? segHighIntent.rows : [],
       },
       signupsByDay: signupsByDay.rows,
