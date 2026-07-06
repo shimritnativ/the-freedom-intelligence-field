@@ -17,7 +17,12 @@ import { sql } from "@vercel/postgres";
 import { getUserBySessionToken } from "../../lib/db.js";
 
 const ALLOWED_DOMAIN = "@shimritnativ.com";
-const DEFAULT_EXPIRY_DAYS = 7;
+// Dismissals are now effectively permanent. Historically they auto-expired
+// after 7 days ("re-surface the member so they get another look"), but Geo
+// wanted the simpler mental model: once dismissed, stays dismissed until
+// explicitly restored. Using a 100-year expiry preserves the schema column
+// so we don't need a migration, but functionally there's no timeout.
+const DEFAULT_EXPIRY_DAYS = 36500;
 
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -50,6 +55,9 @@ export default async function handler(req, res) {
       // Return every active dismissal so the UI can filter rows and
       // populate the "X dismissed (show)" counter per segment. Joined
       // with users to surface email/display_name for the restore UI.
+      // No expires_at filter: dismissals are permanent until explicitly
+      // restored. Historical 7-day-expired rows are treated as still-
+      // dismissed so Geo doesn't have to re-dismiss them one by one.
       const { rows } = await sql`
         SELECT
           d.segment_key,
@@ -62,7 +70,6 @@ export default async function handler(req, res) {
           u.display_name
         FROM intelligence_dismissals d
         JOIN users u ON u.id = d.target_user_id
-        WHERE d.expires_at > NOW()
         ORDER BY d.dismissed_at DESC
       `;
       return res.status(200).json({ ok: true, dismissals: rows });
@@ -104,14 +111,13 @@ export default async function handler(req, res) {
       if (!segmentKey || !targetUserId) {
         return res.status(400).json({ error: "missing_params" });
       }
-      // Delete ALL active dismissals for this (segment, user) — there
-      // should normally be just one but defensive against historical
-      // duplicates from the upsert pattern.
+      // Delete ALL dismissals for this (segment, user), including any
+      // already-expired historical rows so the Restore button always
+      // works regardless of when the dismissal was written.
       const { rowCount } = await sql`
         DELETE FROM intelligence_dismissals
         WHERE segment_key = ${segmentKey}
           AND target_user_id = ${targetUserId}::uuid
-          AND expires_at > NOW()
       `;
       return res.status(200).json({ ok: true, removed: rowCount });
     }
