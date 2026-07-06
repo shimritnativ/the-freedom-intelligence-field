@@ -139,9 +139,12 @@
       line-height: 1.5;
     }
     .wrap {
-      max-width: 1480px;
+      /* Wider container so wide monitors don't waste 400+px of side
+         gutter. 1800px still comfortably centered on 27" screens and
+         doesn't push tables into hard-to-scan territory on 32"+ ultras. */
+      max-width: 1800px;
       margin: 0 auto;
-      padding: 36px 32px 80px;
+      padding: 36px 40px 80px;
     }
     .topbar {
       display: flex;
