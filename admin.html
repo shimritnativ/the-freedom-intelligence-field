@@ -887,31 +887,29 @@
       padding: 2px 8px; border-radius: 999px; text-transform: uppercase;
       white-space: nowrap;
     }
-    /* Inline name editor affordance. Clicking the name in the Members
-       roster opens a prompt to update the display_name so email-prefix
-       fallback names (like "Majbrittgilbertj") can be replaced with the
-       real person's name. The pencil icon appears on hover so the
-       editable UX is discoverable but not noisy. */
+    /* Inline name editor. The Name cell in the Members roster is
+       contenteditable so clicking it puts the caret in place and typing
+       replaces the value. Enter saves. Esc reverts. Fallback names
+       (generated from email prefix) show in muted italic so the ones
+       that need real names are easy to spot. */
     .name-editable {
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+      cursor: text;
+      display: inline-block;
+      padding: 2px 6px;
+      margin: -2px -6px;
+      border-radius: 4px;
       border-bottom: 1px dotted transparent;
-      transition: border-color 0.15s;
+      transition: background 0.15s, border-color 0.15s;
+      outline: none;
     }
     .name-editable:hover {
+      background: var(--gold-soft);
       border-bottom-color: var(--gold-line);
     }
-    .name-editable::after {
-      content: '\270E';
-      font-size: 11px;
-      color: var(--text-mute);
-      opacity: 0;
-      transition: opacity 0.15s;
-    }
-    .name-editable:hover::after {
-      opacity: 1;
+    .name-editable:focus {
+      background: var(--bg-warm);
+      border-bottom-color: var(--gold);
+      box-shadow: 0 0 0 2px var(--gold-soft);
     }
     /* Marker class for names that came from the email-prefix fallback
        rather than a real DB value. Slight italic to signal "not
@@ -1348,10 +1346,17 @@
     }
     .intel-member-name {
       font-size: 14px;
-      font-weight: 600;
+      font-weight: 700;
       color: var(--text);
     }
-    .intel-member-name--anon { color: var(--text-dim); font-weight: 500; }
+    /* Fallback names (generated from email prefix) stay bold and bright
+       for readability. Only italic marks them as unverified so Geo can
+       still spot which ones need a real display_name edit. */
+    .intel-member-name--anon {
+      color: var(--text);
+      font-weight: 700;
+      font-style: italic;
+    }
     .intel-member-email {
       font-size: 12px;
       color: var(--text-dim);
@@ -2657,46 +2662,57 @@
     }
     window.restoreIntelMember = restoreIntelMember;
 
-    // Inline member-name editor. Called from the Name cell in the Members
-    // roster. Uses window.prompt for the input so it works on any device
-    // without needing custom modal chrome. On success, updates the cell
-    // in place, patches state.data so subsequent renders reflect the new
-    // name, and triggers a full re-render so every table that shows this
-    // member (Overview activity list, Intelligence cards, etc.) picks it
-    // up too.
-    async function editMemberName(email, currentName) {
+    // Inline member-name editor. The Name cell is contenteditable; click
+    // it, type the correct name, hit Enter to save (or blur to save on
+    // desktop). Esc reverts. Uses fetch against the admin endpoint and
+    // surfaces the actual server error so we can debug 4xx/5xx cases
+    // instead of a generic "save failed".
+    async function saveMemberName(el) {
+      if (!el || el.dataset.saving === "true") return;
+      const email = (el.dataset.email || "").trim();
+      const original = (el.dataset.original || "").trim();
+      const next = (el.textContent || "").trim();
       if (!email) return;
-      const trimmedCurrent = (currentName || "").trim();
-      const raw = window.prompt(`Update display name for ${email}:`, trimmedCurrent);
-      if (raw === null) return; // cancelled
-      const next = raw.trim();
       if (!next) {
-        window.alert("Name can't be empty.");
+        // Empty input — revert silently.
+        el.textContent = original;
         return;
       }
-      if (next === trimmedCurrent) return;
+      if (next === original) return;
       if (next.length > 120) {
-        window.alert("Name too long (max 120 characters).");
+        showIntelToast("Name too long (max 120 characters).");
+        el.textContent = original;
         return;
       }
       const token = localStorage.getItem(STORAGE_KEY);
       if (!token) {
-        window.alert("Session expired. Refresh the page and sign in again.");
+        showIntelToast("Session expired. Refresh + sign in again.");
+        el.textContent = original;
         return;
       }
+      el.dataset.saving = "true";
+      el.style.opacity = "0.55";
       try {
         const r = await fetch("/api/admin/update-member-name", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-session-token": token },
+          headers: {
+            "Content-Type": "application/json",
+            "x-session-token": token,
+          },
           body: JSON.stringify({ email: email.toLowerCase(), display_name: next }),
         });
+        const payload = await r.json().catch(() => ({}));
         if (!r.ok) {
-          window.alert("Save failed. Try again.");
+          // Surface the real reason so we can fix it fast next time
+          // (unauthorized, user_not_found, invalid_display_name, etc.).
+          const reason = payload && payload.error ? payload.error : `HTTP ${r.status}`;
+          showIntelToast("Save failed: " + reason);
+          el.textContent = original;
           return;
         }
-        // Patch every in-memory reference to this member so every render
-        // path (Members roster, Intelligence cards, Overview activity)
-        // shows the new name after we re-render.
+        // Success — patch every in-memory reference to this member so
+        // every render path (Members roster, Intelligence cards, Overview
+        // activity list) shows the new name after we re-render.
         const emailLc = email.toLowerCase();
         const patch = (list) => {
           if (!Array.isArray(list)) return;
@@ -2715,14 +2731,45 @@
             }
           }
         }
+        el.dataset.original = next;
+        showIntelToast("Name updated.");
         if (typeof renderDashboard === "function" && state && state.data) {
           renderDashboard(state.data);
         }
       } catch (e) {
-        window.alert("Save failed. Try again.");
+        showIntelToast("Save failed: network error");
+        el.textContent = original;
+      } finally {
+        el.dataset.saving = "false";
+        el.style.opacity = "";
       }
     }
-    window.editMemberName = editMemberName;
+    window.saveMemberName = saveMemberName;
+
+    // Enter to commit, Esc to revert. Prevents newlines in the
+    // contenteditable span so the value stays clean.
+    function handleMemberNameKey(event, el) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        el.blur(); // triggers onblur → saveMemberName
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        el.textContent = el.dataset.original || "";
+        el.blur();
+      }
+    }
+    window.handleMemberNameKey = handleMemberNameKey;
+
+    // Select the whole text on focus so a fresh click lets the admin
+    // just start typing over the value without needing to select first.
+    function selectMemberNameOnFocus(el) {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    window.selectMemberNameOnFocus = selectMemberNameOnFocus;
 
     function toggleDismissedList(segmentKey) {
       const el = document.getElementById(`intel-dismissed-${segmentKey}`);
@@ -5777,11 +5824,21 @@
               const dbName = u.display_name && String(u.display_name).trim();
               const shown = nameOrFallback(u);
               const isFallback = !dbName; // came from email-prefix humanization
-              // Use data attributes to pass email + name to the click
-              // handler safely — no risk of quote-injection since
-              // escapeHtml handles HTML-attribute escaping and dataset
-              // access reads them back as plain strings.
-              return `<span class="name-editable ${isFallback ? 'name-editable--fallback' : ''}" title="Click to edit display name" data-email="${escapeHtml(u.email || '')}" data-current-name="${escapeHtml(shown || '')}" onclick="editMemberName(this.dataset.email, this.dataset.currentName)">${escapeHtml(shown)}</span>`;
+              // Contenteditable inline editor. Click to focus, type,
+              // Enter to save (or click away). Esc reverts. All the
+              // handlers live on window.* so onclick/onblur can reach
+              // them from generated HTML.
+              return `<span
+                class="name-editable ${isFallback ? 'name-editable--fallback' : ''}"
+                contenteditable="true"
+                spellcheck="false"
+                title="Click to edit, Enter to save, Esc to cancel"
+                data-email="${escapeHtml(u.email || '')}"
+                data-original="${escapeHtml(shown || '')}"
+                onfocus="selectMemberNameOnFocus(this)"
+                onblur="saveMemberName(this)"
+                onkeydown="handleMemberNameKey(event, this)"
+              >${escapeHtml(shown)}</span>`;
             })()}</td>
             <td data-label="Tier"><span class="tier-badge ${u.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(tierLabel(u.tier))}</span></td>
             <td data-label="Plan">${escapeHtml(u.subscription_plan || "—")}</td>
