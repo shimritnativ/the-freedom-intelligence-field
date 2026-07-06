@@ -3103,7 +3103,7 @@
                  Revenue attribution is first-touch UTM (buyer's channel at
                  signup gets credit for their lifetime purchases including
                  Reset + Activation + Unlimited upgrades). -->
-            ${renderChannelPnl(d.channelAttribution, d.realProfit)}
+            ${renderChannelPnl(d.channelAttribution, d.realProfit, d.monthlyCosts)}
 
             <!-- Operational KPI strip — who's in the system. Smaller cards
                  so the financial row above stays the visual anchor. -->
@@ -4321,13 +4321,20 @@
     // Three channels: Cold ads, Warm ads, WhatsApp. Revenue attribution is
     // first-touch UTM from the users table (backend function
     // loadChannelRevenueAttribution). Spend for cold/warm comes from the
-    // Meta ads campaign breakdown in realProfit; WhatsApp spend comes from
-    // ops.preGhl + ops.preWhatsApp + ops.launchWhatsApp.
+    // Meta ads campaign breakdown in realProfit. WhatsApp spend combines
+    // per-message costs (pre + launch, from the Launch Tracker), pre-launch
+    // GHL subscription, and 2 months of the ongoing GHL monthly cost (same
+    // 2-month convention Real Profit uses for opsLaunchPortion).
+    //
+    // Compact table layout: one row per channel with all metrics on a
+    // single line and product breakdown on a muted secondary line
+    // underneath. Takes about a third of the vertical space of the
+    // per-channel card layout.
     //
     // "Untagged" signups (no utm_source at all) are grouped into WhatsApp
     // as a legacy heuristic per Geo's Jul 2026 decision. Google organic
     // detection is a phase-2 upgrade using landing_events.referrer.
-    function renderChannelPnl(attribution, realProfit) {
+    function renderChannelPnl(attribution, realProfit, monthlyCosts) {
       if (!attribution || !realProfit) return '';
       const ops = realProfit.breakdown && realProfit.breakdown.ops;
       const ads = realProfit.breakdown && realProfit.breakdown.ads;
@@ -4343,31 +4350,34 @@
         if (lower.includes('cold')) coldSpendEur += spend;
         else if (lower.includes('warm')) warmSpendEur += spend;
       }
-      // WhatsApp spend = per-message costs (pre + launch) + pre-launch GHL
-      // subscription. The GHL monthly subscription itself is bundled into
-      // ops.opsMonthly, but that's for the whole business, not WhatsApp
-      // alone, so we don't double-count it here.
+      // GHL monthly subscription from monthly_costs table, attributed
+      // entirely to WhatsApp since GHL's primary use in this business is
+      // WhatsApp outreach. Uses the same 2-month launch-portion convention
+      // as Real Profit's opsLaunchPortion so channel totals reconcile.
+      const ghlRow = (monthlyCosts || []).find(mc =>
+        String(mc.service_key || '').toLowerCase() === 'ghl'
+      );
+      const opGhlMonthlyEur = ghlRow ? Number(ghlRow.amount || 0) : 0;
+      const opGhlLifetimeEur = opGhlMonthlyEur * 2;
       const whatsappSpendEur = Number(ops.preGhl || 0)
         + Number(ops.preWhatsApp || 0)
-        + Number(ops.launchWhatsApp || 0);
+        + Number(ops.launchWhatsApp || 0)
+        + opGhlLifetimeEur;
 
       const channelData = [
         {
-          key: 'whatsapp',
           label: 'WhatsApp',
           sub: 'GHL outreach + campaigns',
           spendEur: whatsappSpendEur,
           data: attribution.whatsapp || {},
         },
         {
-          key: 'cold',
           label: 'Cold ads',
           sub: 'Meta · cold audience',
           spendEur: coldSpendEur,
           data: attribution.cold || {},
         },
         {
-          key: 'warm',
           label: 'Warm ads',
           sub: 'Meta · warm audience',
           spendEur: warmSpendEur,
@@ -4375,72 +4385,57 @@
         },
       ];
 
-      const cards = channelData.map(ch => {
+      const cur = (eur) => fmtEurWhole(Math.round(eur * 100));
+      const rows = channelData.map(ch => {
         const revenueCents = Number(ch.data.total_revenue_cents || 0);
         const revenueEur = revenueCents / 100;
         const spend = ch.spendEur;
         const netEur = revenueEur - spend;
         const roas = spend > 0 ? (revenueEur / spend) : (revenueEur > 0 ? Infinity : 0);
-        const roasStr = spend > 0 ? roas.toFixed(2) + '×' : (revenueEur > 0 ? '∞' : '0.00×');
-        const netColor = netEur > 0 ? 'var(--green, #4A7C3A)' : (netEur < 0 ? 'var(--red, #C03A2B)' : 'var(--text-mute)');
-        const roasColor = spend > 0 && roas >= 1 ? 'var(--green, #4A7C3A)'
-          : spend > 0 ? 'var(--red, #C03A2B)'
-          : 'var(--text-mute)';
-        const netPill = `<span style="font-size: 11px; padding: 3px 10px; background: ${netEur >= 0 ? 'rgba(74,124,58,0.14)' : 'rgba(192,58,43,0.12)'}; color: ${netColor}; border-radius: 999px; font-weight: 700;">${netEur >= 0 ? '+' : '−'}${fmtEurWhole(Math.abs(Math.round(netEur * 100)))} net</span>`;
+        const roasStr = spend > 0 ? roas.toFixed(2) + '×' : (revenueEur > 0 ? '∞' : '—');
         const buyers = Number(ch.data.buyers || 0);
         const upgraded = Number(ch.data.upgraded || 0);
         const resetCents = Number(ch.data.reset_revenue_cents || 0);
         const activationCents = Number(ch.data.activation_revenue_cents || 0);
         const unlimitedCents = Number(ch.data.unlimited_revenue_cents || 0);
-        const breakdownLine = revenueCents > 0
-          ? `Reset ${fmtEurWhole(resetCents)} · Activation ${fmtEurWhole(activationCents)} · Unlimited ${fmtEurWhole(unlimitedCents)} <span style="color: var(--text-mute);">(${upgraded} upgraded)</span>`
-          : `No revenue yet · ${buyers} buyer${buyers === 1 ? '' : 's'}`;
-
+        const netColor = netEur > 0 ? 'var(--green, #4A7C3A)'
+          : (netEur < 0 ? 'var(--red, #C03A2B)' : 'var(--text-mute)');
+        const roasColor = spend > 0 && roas >= 1 ? 'var(--green, #4A7C3A)'
+          : spend > 0 ? 'var(--red, #C03A2B)'
+          : 'var(--text-mute)';
+        const revColor = revenueEur > 0 ? 'var(--green, #4A7C3A)' : 'var(--text)';
+        const breakdown = revenueCents > 0
+          ? `${escapeHtml(ch.sub)} &middot; Reset ${cur(resetCents/100)} &middot; Activation ${cur(activationCents/100)} &middot; Unlimited ${cur(unlimitedCents/100)} <span style="color: var(--text-mute);">(${upgraded} upgraded)</span>`
+          : `${escapeHtml(ch.sub)} &middot; No revenue yet`;
         return `
-          <div style="background: var(--bg-card, #FFFFFF); border: 1px solid var(--gold-line, rgba(201, 168, 76, 0.28)); border-radius: 12px; padding: 14px 16px;">
-            <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; gap: 12px; flex-wrap: wrap;">
-              <div style="display: flex; align-items: baseline; gap: 10px; min-width: 0;">
-                <span style="font-weight: 700; font-size: 15px; color: var(--text);">${escapeHtml(ch.label)}</span>
-                <span style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim);">${escapeHtml(ch.sub)}</span>
-              </div>
-              ${netPill}
-            </div>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 8px;">
-              <div>
-                <div style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute);">Spend</div>
-                <div style="font-size: 18px; font-weight: 700; margin-top: 2px; color: var(--text);">${fmtEurWhole(Math.round(spend * 100))}</div>
-              </div>
-              <div>
-                <div style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute);">Revenue</div>
-                <div style="font-size: 18px; font-weight: 700; margin-top: 2px; color: ${revenueEur > 0 ? 'var(--green, #4A7C3A)' : 'var(--text)'};">${fmtEurWhole(revenueCents)}</div>
-              </div>
-              <div>
-                <div style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute);">Buyers</div>
-                <div style="font-size: 18px; font-weight: 700; margin-top: 2px; color: var(--text);">${fmtNum(buyers)}</div>
-              </div>
-              <div>
-                <div style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute);">ROAS</div>
-                <div style="font-size: 18px; font-weight: 700; margin-top: 2px; color: ${roasColor};">${roasStr}</div>
-              </div>
-            </div>
-            <div style="font-size: 12px; color: var(--text-dim); border-top: 1px solid var(--gold-line, rgba(201, 168, 76, 0.2)); padding-top: 8px; margin-top: 4px;">
-              ${breakdownLine}
-            </div>
+          <div style="display: grid; grid-template-columns: 1.4fr 0.9fr 0.9fr 0.7fr 0.8fr 1fr; gap: 12px; align-items: baseline; padding: 10px 4px; border-top: 1px solid rgba(201, 168, 76, 0.18);">
+            <div style="font-weight: 700; font-size: 14px; color: var(--text);">${escapeHtml(ch.label)}</div>
+            <div style="font-size: 14px; font-weight: 600; color: var(--text); text-align: right; font-variant-numeric: tabular-nums;">${cur(spend)}</div>
+            <div style="font-size: 14px; font-weight: 700; color: ${revColor}; text-align: right; font-variant-numeric: tabular-nums;">${cur(revenueEur)}</div>
+            <div style="font-size: 14px; font-weight: 600; color: var(--text); text-align: right; font-variant-numeric: tabular-nums;">${fmtNum(buyers)}</div>
+            <div style="font-size: 14px; font-weight: 700; color: ${roasColor}; text-align: right; font-variant-numeric: tabular-nums;">${roasStr}</div>
+            <div style="font-size: 14px; font-weight: 700; color: ${netColor}; text-align: right; font-variant-numeric: tabular-nums;">${netEur >= 0 ? '+' : '−'}${cur(Math.abs(netEur))}</div>
           </div>
+          <div style="font-size: 11px; color: var(--text-dim); padding: 0 4px 8px; margin-top: -6px;">${breakdown}</div>
         `;
       }).join('');
 
       return `
-        <div style="background: var(--bg-warm, #F4ECD0); border: 1px solid var(--gold-line); border-radius: 12px; padding: 18px 22px; margin-bottom: 18px;">
-          <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
-            <div style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 18px; color: var(--text);">Channel P&L</div>
-            <div style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim);">Lifetime · Ex VAT</div>
+        <div style="background: var(--bg-warm, #F4ECD0); border: 1px solid var(--gold-line); border-radius: 12px; padding: 16px 20px; margin-bottom: 18px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+            <div style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 17px; color: var(--text);">Channel P&amp;L</div>
+            <div style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim);">Lifetime &middot; Ex VAT &middot; First-touch attribution</div>
           </div>
-          <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 14px;">Full sales cycle: spend vs revenue including Reset + Activation + Unlimited upgrades, attributed to first-touch channel.</div>
-          <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
-            ${cards}
+          <div style="display: grid; grid-template-columns: 1.4fr 0.9fr 0.9fr 0.7fr 0.8fr 1fr; gap: 12px; padding: 6px 4px 4px; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute); font-weight: 700;">
+            <div>Channel</div>
+            <div style="text-align: right;">Spend</div>
+            <div style="text-align: right;">Revenue</div>
+            <div style="text-align: right;">Buyers</div>
+            <div style="text-align: right;">ROAS</div>
+            <div style="text-align: right;">Net</div>
           </div>
-          <div style="margin-top: 12px; font-size: 11px; color: var(--text-mute); font-style: italic;">WhatsApp bucket includes untagged signups from before per-channel tagging was live. New WhatsApp campaigns should use utm_source=whatsapp so future attribution stays clean.</div>
+          ${rows}
+          <div style="margin-top: 8px; font-size: 10.5px; color: var(--text-mute); font-style: italic; border-top: 1px solid rgba(201, 168, 76, 0.15); padding-top: 8px;">WhatsApp bucket includes untagged signups from before per-channel tagging. Tag new WhatsApp campaigns with utm_source=whatsapp so future attribution stays clean. GHL monthly cost pulls from your Monthly Costs snapshot (2-month launch portion).</div>
         </div>
       `;
     }
