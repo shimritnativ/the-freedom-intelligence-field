@@ -155,6 +155,72 @@
       margin: 0 auto;
       padding: 36px 32px 80px;
     }
+    /* ===== High-end refresh experience =====
+       Three coordinated pieces that fire together on any data reload:
+       (1) a subtle gold progress bar that crawls across the top of the
+       viewport, (2) a soft opacity dim on the content so members know
+       they're looking at stale data being updated, and (3) a spinning
+       icon on the Refresh button that stays disabled until done. Nothing
+       jumps, nothing scrolls, no flashes. Matches how Linear, Notion,
+       and Hubspot handle background updates. */
+    .top-progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: transparent;
+      z-index: 9999;
+      pointer-events: none;
+    }
+    .top-progress::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 0%;
+      background: linear-gradient(90deg, transparent 0%, var(--gold) 25%, var(--gold) 75%, transparent 100%);
+      transition: width 0.35s ease-out, opacity 0.25s ease-out;
+      opacity: 0;
+    }
+    body.is-refreshing .top-progress::after {
+      opacity: 1;
+      width: 85%;
+      transition: width 8s cubic-bezier(0.1, 0.5, 0.2, 0.95), opacity 0.15s ease-in;
+    }
+    body.refresh-completing .top-progress::after {
+      opacity: 0;
+      width: 100%;
+      transition: width 0.2s ease-out, opacity 0.4s ease-out 0.15s;
+    }
+    /* Dim the dashboard body while refreshing so it's clear the data is
+       being updated. Top bar and Refresh button stay bright so the user
+       can still interact. Content fades back up smoothly on completion. */
+    .dashboard-body,
+    [data-tab-content] {
+      transition: opacity 0.28s ease-out;
+    }
+    body.is-refreshing .dashboard-body,
+    body.is-refreshing [data-tab-content] {
+      opacity: 0.55;
+      pointer-events: none;
+    }
+    /* Refresh button state: spinner replaces ↻ while loading. Uses a
+       small keyframe rotation so the icon feels alive rather than
+       swapped-out mid-motion. */
+    @keyframes refresh-spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    .refresh-btn[disabled] {
+      cursor: wait;
+      opacity: 0.8;
+    }
+    .refresh-btn.is-loading .refresh-icon {
+      display: inline-block;
+      animation: refresh-spin 0.9s linear infinite;
+    }
     .topbar {
       display: flex;
       align-items: flex-start;
@@ -2808,6 +2874,58 @@
     // there's nothing to reconcile. If a placeholder gets created
     // during the reconcile, it'll show up on the NEXT refresh — but
     // most clicks are just to see fresh data, not to backfill.
+    // High-end refresh UX: start/end helpers that toggle the top
+    // progress bar, dim the dashboard body, and animate the Refresh
+    // button spinner. All state lives on the body element so multiple
+    // in-flight refreshes don't fight each other, and the same helpers
+    // work for background auto-refreshes too if we ever re-enable them.
+    let _refreshDepth = 0;
+    let _refreshTopBarEl = null;
+    function ensureTopProgressBar() {
+      if (_refreshTopBarEl && document.body.contains(_refreshTopBarEl)) return _refreshTopBarEl;
+      let el = document.querySelector('.top-progress');
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'top-progress';
+        el.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(el);
+      }
+      _refreshTopBarEl = el;
+      return el;
+    }
+    function setRefreshButtonState(isLoading) {
+      const btns = document.querySelectorAll('.refresh-btn');
+      btns.forEach(btn => {
+        if (isLoading) {
+          btn.classList.add('is-loading');
+          btn.disabled = true;
+          btn.dataset.originalText = btn.dataset.originalText || btn.textContent;
+          btn.innerHTML = '<span class="refresh-icon">↻</span> Refreshing…';
+        } else {
+          btn.classList.remove('is-loading');
+          btn.disabled = false;
+          btn.innerHTML = '<span class="refresh-icon">↻</span> Refresh';
+        }
+      });
+    }
+    function startRefresh() {
+      _refreshDepth++;
+      ensureTopProgressBar();
+      document.body.classList.remove('refresh-completing');
+      document.body.classList.add('is-refreshing');
+      setRefreshButtonState(true);
+    }
+    function endRefresh() {
+      _refreshDepth = Math.max(0, _refreshDepth - 1);
+      if (_refreshDepth > 0) return;
+      document.body.classList.remove('is-refreshing');
+      document.body.classList.add('refresh-completing');
+      setRefreshButtonState(false);
+      setTimeout(() => document.body.classList.remove('refresh-completing'), 500);
+    }
+    window.startRefresh = startRefresh;
+    window.endRefresh = endRefresh;
+
     async function refreshWithReconcile() {
       const token = localStorage.getItem(STORAGE_KEY);
       if (token) {
@@ -2840,6 +2958,8 @@
       let token;
       try { token = localStorage.getItem(STORAGE_KEY); } catch { token = null; }
       if (!token) {
+        // No token means we can't fetch anything. Skip the whole refresh
+        // UX (no progress bar to end, nothing was started).
         renderGate("You need to log in to The Field first. Open the app, log in with your @shimritnativ.com email, then come back here.");
         return;
       }
@@ -2853,6 +2973,7 @@
       // stick the numbers even when the API code was updated.
       params.set("_t", Date.now().toString());
 
+      startRefresh();
       try {
         // Fire metrics + real-profit in parallel so the Overview's Real
         // Profit card lands at the same time as everything else. The
@@ -2931,6 +3052,11 @@
         }, 100);
       } catch (err) {
         renderGate("Network error. Check your connection and refresh.");
+      } finally {
+        // End the refresh UX state regardless of success/error/gate path
+        // so the progress bar and dim always resolve. Small delay so the
+        // eye registers the completion animation rather than snapping.
+        setTimeout(() => endRefresh(), 60);
       }
     }
 
@@ -3042,7 +3168,7 @@
               <div>Viewing as <span class="v-email">${escapeHtml(d.viewer.email)}</span></div>
               <div>Last refresh: ${new Date(d.asOf).toLocaleTimeString()}</div>
               <div style="margin-top: 6px; display: flex; align-items: center; justify-content: flex-end;">
-                <button class="preset-btn" onclick="refreshWithReconcile()">↻ Refresh</button>
+                <button class="preset-btn refresh-btn" onclick="refreshWithReconcile()"><span class="refresh-icon">↻</span> Refresh</button>
                 <button class="theme-toggle" onclick="toggleTheme()" id="theme-toggle-btn" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">☾</button>
               </div>
             </div>
