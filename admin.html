@@ -3550,11 +3550,28 @@
           rows: intel.hot_reset_graduate || [],
           why: u => {
             const when = u.day3_completed_at ? `Just finished Day 3 (${fmtRelative(u.day3_completed_at)})` : "Just completed Day 3";
+            // Dynamic window message. The action script assumes <24h is
+            // the peak; anything older but within 72h is still worth
+            // outreach but with a softer angle. The API already restricts
+            // this segment to <72h so we never hit the "too cold" branch,
+            // but keep the fallback for robustness.
+            const hoursAgo = u.day3_completed_at
+              ? (Date.now() - new Date(u.day3_completed_at).getTime()) / 3600000
+              : 0;
+            let windowMsg;
+            if (hoursAgo < 24) {
+              windowMsg = "Window closes in ~24h, peak conversion moment";
+            } else if (hoursAgo < 48) {
+              const extra = Math.max(1, Math.round(hoursAgo - 24));
+              windowMsg = `Peak window passed ~${extra}h ago, still warm`;
+            } else {
+              windowMsg = "Past peak window, use a softer nudge angle";
+            }
             const bullets = [
               when,
-              "Peak emotional state — has just felt the value",
+              "Peak emotional state, has just felt the value",
               "Highest-intent moment in the entire funnel",
-              "Window closes in ~24h",
+              windowMsg,
             ];
             if (u.coupon_used) bullets.push(`Came in via <strong>${escapeHtml(u.coupon_used)}</strong>`);
             return bullets;
