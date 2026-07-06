@@ -1156,6 +1156,7 @@ export default async function handler(req, res) {
 // (for cold/warm spend) and data.realProfit.breakdown.ops (for WhatsApp
 // spend = GHL + per-message costs) to compute ROAS per channel.
 async function loadChannelRevenueAttribution() {
+  const excludedCoupons = EXCLUDED_COUPONS;
   try {
     const { rows } = await sql`
       WITH user_channel AS (
@@ -1195,7 +1196,7 @@ async function loadChannelRevenueAttribution() {
           ON LOWER(p.email) = uc.email_lc
           AND p.event_type IN ('order.success', 'order.subscription_payment')
           AND p.amount_cents > 0
-          AND COALESCE(p.coupon_code, '') NOT IN ('GEO100')
+          AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
         GROUP BY uc.channel, uc.email_lc
       )
       SELECT
