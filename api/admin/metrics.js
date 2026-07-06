@@ -190,6 +190,7 @@ export default async function handler(req, res) {
       todayActivity,
       memberSourceBreakdown,
       resetToUnlimitedConversion,
+      channelAttribution,
     ] = await Promise.all([
       // 1. Members by tier × plan (filtered)
       //
@@ -1070,6 +1071,9 @@ export default async function handler(req, res) {
           (SELECT COUNT(*)::int FROM reset_buyers r JOIN unlimited_buyers u ON r.email = u.email WHERE u.has_yearly) AS converted_yearly,
           (SELECT COUNT(*)::int FROM reset_buyers r JOIN unlimited_buyers u ON r.email = u.email WHERE u.has_monthly AND NOT u.has_yearly) AS converted_monthly
       `,
+      // Channel P&L revenue attribution (cold / warm / whatsapp buckets).
+      // Frontend combines this with data.realProfit for spend to compute ROAS.
+      loadChannelRevenueAttribution(),
     ]);
 
     return res.status(200).json({
@@ -1104,6 +1108,14 @@ export default async function handler(req, res) {
       recentSignups: recentSignups.rows,
       memberSourceBreakdown: memberSourceBreakdown ? memberSourceBreakdown.rows : [],
       resetToUnlimitedConversion: resetToUnlimitedConversion ? resetToUnlimitedConversion.rows[0] : null,
+      // Channel P&L revenue attribution grouped by first-touch UTM channel.
+      // Consumed by the Overview widget alongside data.realProfit for spend.
+      channelAttribution: channelAttribution || {
+        cold: { signups: 0, buyers: 0, upgraded: 0, reset_revenue_cents: 0, activation_revenue_cents: 0, unlimited_revenue_cents: 0, total_revenue_cents: 0 },
+        warm: { signups: 0, buyers: 0, upgraded: 0, reset_revenue_cents: 0, activation_revenue_cents: 0, unlimited_revenue_cents: 0, total_revenue_cents: 0 },
+        whatsapp: { signups: 0, buyers: 0, upgraded: 0, reset_revenue_cents: 0, activation_revenue_cents: 0, unlimited_revenue_cents: 0, total_revenue_cents: 0 },
+        other: { signups: 0, buyers: 0, upgraded: 0, reset_revenue_cents: 0, activation_revenue_cents: 0, unlimited_revenue_cents: 0, total_revenue_cents: 0 },
+      },
       windowState: windowState.rows[0],
       webhookActivity: webhookActivity.rows,
       processUsage: processUsage.rows,
@@ -1127,6 +1139,113 @@ export default async function handler(req, res) {
 // Wrap a promise so a missing-table error (purchases not created yet) resolves
 // to null instead of crashing the whole metrics fan-out. Real errors still log.
 // Pull the monthly cost snapshot — one row per service (GHL, Anthropic,
+// Channel P&L revenue attribution. Groups every buyer by their first-touch
+// UTM into one of three channels (cold ads / warm ads / whatsapp) and sums
+// their lifetime purchases split by product (Reset, Activation, Unlimited)
+// so the Overview widget can show spend vs revenue per channel.
+//
+// Attribution logic:
+//   - Cold ads:  utm_campaign = 'cold'
+//   - Warm ads:  utm_campaign = 'warm'
+//   - WhatsApp:  utm_source = 'whatsapp' OR no utm at all (legacy
+//                organic/past-WhatsApp bucket per Geo's Jul 2026 decision;
+//                Google organic detection is a future add via landing_events.referrer)
+//   - Other:     anything else (dropped from the widget, still queryable)
+//
+// The result is combined on the frontend with data.realProfit.breakdown.ads
+// (for cold/warm spend) and data.realProfit.breakdown.ops (for WhatsApp
+// spend = GHL + per-message costs) to compute ROAS per channel.
+async function loadChannelRevenueAttribution() {
+  try {
+    const { rows } = await sql`
+      WITH user_channel AS (
+        SELECT
+          u.id,
+          LOWER(u.email) AS email_lc,
+          CASE
+            WHEN LOWER(COALESCE(u.utm_campaign, '')) = 'cold'    THEN 'cold'
+            WHEN LOWER(COALESCE(u.utm_campaign, '')) = 'warm'    THEN 'warm'
+            WHEN LOWER(COALESCE(u.utm_source, ''))   = 'whatsapp' THEN 'whatsapp'
+            WHEN COALESCE(u.utm_source, '') = ''
+              AND COALESCE(u.utm_campaign, '') = ''              THEN 'whatsapp'
+            ELSE 'other'
+          END AS channel
+        FROM users u
+        WHERE u.email IS NOT NULL AND u.email <> ''
+          AND u.email NOT LIKE '%@shimritnativ.com'
+      ),
+      per_user AS (
+        SELECT
+          uc.channel,
+          uc.email_lc,
+          SUM(CASE WHEN p.product_name ILIKE '%Reset%'      THEN p.amount_cents ELSE 0 END)::bigint AS reset_cents,
+          SUM(CASE WHEN p.product_name ILIKE '%Activation%' THEN p.amount_cents ELSE 0 END)::bigint AS activation_cents,
+          SUM(CASE
+            WHEN p.product_name ILIKE '%Unlimited%'
+              OR p.product_name ILIKE '%Freedom%Field%'
+              OR p.event_type = 'order.subscription_payment'
+            THEN p.amount_cents ELSE 0 END)::bigint AS unlimited_cents,
+          BOOL_OR(
+            p.product_name ILIKE '%Unlimited%'
+            OR p.product_name ILIKE '%Freedom%Field%'
+            OR p.event_type = 'order.subscription_payment'
+          ) AS is_upgrader
+        FROM user_channel uc
+        LEFT JOIN purchases p
+          ON LOWER(p.email) = uc.email_lc
+          AND p.event_type IN ('order.success', 'order.subscription_payment')
+          AND p.amount_cents > 0
+          AND COALESCE(p.coupon_code, '') NOT IN ('GEO100')
+        GROUP BY uc.channel, uc.email_lc
+      )
+      SELECT
+        channel,
+        COUNT(*)::int AS signups,
+        COUNT(*) FILTER (
+          WHERE reset_cents > 0 OR activation_cents > 0 OR unlimited_cents > 0
+        )::int AS buyers,
+        COUNT(*) FILTER (WHERE is_upgrader = true)::int AS upgraded,
+        COALESCE(SUM(reset_cents), 0)::bigint AS reset_revenue_cents,
+        COALESCE(SUM(activation_cents), 0)::bigint AS activation_revenue_cents,
+        COALESCE(SUM(unlimited_cents), 0)::bigint AS unlimited_revenue_cents,
+        (COALESCE(SUM(reset_cents), 0)
+          + COALESCE(SUM(activation_cents), 0)
+          + COALESCE(SUM(unlimited_cents), 0))::bigint AS total_revenue_cents
+      FROM per_user
+      GROUP BY channel
+    `;
+    const byChannel = { cold: null, warm: null, whatsapp: null, other: null };
+    for (const r of rows) {
+      byChannel[r.channel] = {
+        signups: Number(r.signups),
+        buyers: Number(r.buyers),
+        upgraded: Number(r.upgraded),
+        reset_revenue_cents: Number(r.reset_revenue_cents),
+        activation_revenue_cents: Number(r.activation_revenue_cents),
+        unlimited_revenue_cents: Number(r.unlimited_revenue_cents),
+        total_revenue_cents: Number(r.total_revenue_cents),
+      };
+    }
+    // Empty shape so the frontend can always destructure. If a channel
+    // has no signups yet (e.g. warm ads before first buyer), we return
+    // zeros rather than null so the widget renders cleanly.
+    const empty = {
+      signups: 0, buyers: 0, upgraded: 0,
+      reset_revenue_cents: 0, activation_revenue_cents: 0,
+      unlimited_revenue_cents: 0, total_revenue_cents: 0,
+    };
+    return {
+      cold: byChannel.cold || empty,
+      warm: byChannel.warm || empty,
+      whatsapp: byChannel.whatsapp || empty,
+      other: byChannel.other || empty,
+    };
+  } catch (e) {
+    console.warn("channel_revenue_attribution_failed", e?.message);
+    return null;
+  }
+}
+
 // Vercel, etc.). Used by the Launch Tracker to auto-fill its operational
 // cost fields without making the admin maintain costs in two places.
 // Returns an empty array if the table doesn't exist yet so callers don't
