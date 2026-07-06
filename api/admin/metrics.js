@@ -782,19 +782,28 @@ export default async function handler(req, res) {
           AND (lm.last_at IS NULL OR lm.last_at < NOW() - INTERVAL '14 days')
         ORDER BY days_quiet DESC NULLS FIRST
       `),
-      // 22. Stuck Reset — logged in but not completing within 3+ days
+      // 22. Stuck Reset — logged in but not completing within 3+ days.
+      // Includes members whose preview window has already closed: they
+      // still paid, still logged in, still never finished, and are still
+      // valid re-engagement candidates. Bullet in the UI surfaces
+      // whether the preview is still open or has expired so Geo can pick
+      // the right outreach angle (nudge vs "extend your preview" offer).
+      // Cap at 60 days since login so the segment doesn't accumulate
+      // ancient members who are truly gone.
       safeQuery(sql`
         SELECT
           u.id, u.email, u.display_name,
           COALESCE(u.last_completed_day, 0)::int AS last_completed_day,
           u.first_login_at,
+          u.preview_ends_at,
+          (u.preview_ends_at > NOW()) AS preview_still_open,
           EXTRACT(DAY FROM (NOW() - u.first_login_at))::int AS days_since_login
         FROM users u
         WHERE u.tier = 'preview'
           AND u.first_login_at IS NOT NULL
           AND u.first_login_at < NOW() - INTERVAL '3 days'
+          AND u.first_login_at > NOW() - INTERVAL '60 days'
           AND COALESCE(u.last_completed_day, 0) < 3
-          AND u.preview_ends_at > NOW()
           AND u.email IS NOT NULL AND u.email <> ''
           AND NOT (u.email LIKE ANY(${excludePatterns}))
           AND u.email <> ALL(${extraExcluded})
