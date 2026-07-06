@@ -887,6 +887,39 @@
       padding: 2px 8px; border-radius: 999px; text-transform: uppercase;
       white-space: nowrap;
     }
+    /* Inline name editor affordance. Clicking the name in the Members
+       roster opens a prompt to update the display_name so email-prefix
+       fallback names (like "Majbrittgilbertj") can be replaced with the
+       real person's name. The pencil icon appears on hover so the
+       editable UX is discoverable but not noisy. */
+    .name-editable {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 1px dotted transparent;
+      transition: border-color 0.15s;
+    }
+    .name-editable:hover {
+      border-bottom-color: var(--gold-line);
+    }
+    .name-editable::after {
+      content: '\270E';
+      font-size: 11px;
+      color: var(--text-mute);
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .name-editable:hover::after {
+      opacity: 1;
+    }
+    /* Marker class for names that came from the email-prefix fallback
+       rather than a real DB value. Slight italic to signal "not
+       verified" so Geo knows which members need editing at a glance. */
+    .name-editable--fallback {
+      font-style: italic;
+      color: var(--text-dim);
+    }
     /* Make the Tier column wide enough that "POWER RESET" doesn't wrap.
        Also pin Plan + Day to their minimum so the new Source column
        has room to breathe instead of crushing everything together. */
@@ -2623,6 +2656,73 @@
       }
     }
     window.restoreIntelMember = restoreIntelMember;
+
+    // Inline member-name editor. Called from the Name cell in the Members
+    // roster. Uses window.prompt for the input so it works on any device
+    // without needing custom modal chrome. On success, updates the cell
+    // in place, patches state.data so subsequent renders reflect the new
+    // name, and triggers a full re-render so every table that shows this
+    // member (Overview activity list, Intelligence cards, etc.) picks it
+    // up too.
+    async function editMemberName(email, currentName) {
+      if (!email) return;
+      const trimmedCurrent = (currentName || "").trim();
+      const raw = window.prompt(`Update display name for ${email}:`, trimmedCurrent);
+      if (raw === null) return; // cancelled
+      const next = raw.trim();
+      if (!next) {
+        window.alert("Name can't be empty.");
+        return;
+      }
+      if (next === trimmedCurrent) return;
+      if (next.length > 120) {
+        window.alert("Name too long (max 120 characters).");
+        return;
+      }
+      const token = localStorage.getItem(STORAGE_KEY);
+      if (!token) {
+        window.alert("Session expired. Refresh the page and sign in again.");
+        return;
+      }
+      try {
+        const r = await fetch("/api/admin/update-member-name", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-session-token": token },
+          body: JSON.stringify({ email: email.toLowerCase(), display_name: next }),
+        });
+        if (!r.ok) {
+          window.alert("Save failed. Try again.");
+          return;
+        }
+        // Patch every in-memory reference to this member so every render
+        // path (Members roster, Intelligence cards, Overview activity)
+        // shows the new name after we re-render.
+        const emailLc = email.toLowerCase();
+        const patch = (list) => {
+          if (!Array.isArray(list)) return;
+          for (const u of list) {
+            if (u && (u.email || "").toLowerCase() === emailLc) {
+              u.display_name = next;
+            }
+          }
+        };
+        if (state && state.data) {
+          patch(state.data.members);
+          patch(state.data.perUserUnlimited);
+          if (state.data.intelligence) {
+            for (const key of Object.keys(state.data.intelligence)) {
+              patch(state.data.intelligence[key]);
+            }
+          }
+        }
+        if (typeof renderDashboard === "function" && state && state.data) {
+          renderDashboard(state.data);
+        }
+      } catch (e) {
+        window.alert("Save failed. Try again.");
+      }
+    }
+    window.editMemberName = editMemberName;
 
     function toggleDismissedList(segmentKey) {
       const el = document.getElementById(`intel-dismissed-${segmentKey}`);
@@ -5670,7 +5770,16 @@
         return `
           <tr>
             <td data-label="Email">${escapeHtml(u.email)}</td>
-            <td data-label="Name">${escapeHtml(nameOrFallback(u))}</td>
+            <td data-label="Name">${(() => {
+              const dbName = u.display_name && String(u.display_name).trim();
+              const shown = nameOrFallback(u);
+              const isFallback = !dbName; // came from email-prefix humanization
+              // Use data attributes to pass email + name to the click
+              // handler safely — no risk of quote-injection since
+              // escapeHtml handles HTML-attribute escaping and dataset
+              // access reads them back as plain strings.
+              return `<span class="name-editable ${isFallback ? 'name-editable--fallback' : ''}" title="Click to edit display name" data-email="${escapeHtml(u.email || '')}" data-current-name="${escapeHtml(shown || '')}" onclick="editMemberName(this.dataset.email, this.dataset.currentName)">${escapeHtml(shown)}</span>`;
+            })()}</td>
             <td data-label="Tier"><span class="tier-badge ${u.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(tierLabel(u.tier))}</span></td>
             <td data-label="Plan">${escapeHtml(u.subscription_plan || "—")}</td>
             <td class="num" data-label="Spent">${spentCell}</td>
