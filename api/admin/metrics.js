@@ -789,15 +789,20 @@ export default async function handler(req, res) {
       // whether the preview is still open or has expired so Geo can pick
       // the right outreach angle (nudge vs "extend your preview" offer).
       // Cap at 60 days since login so the segment doesn't accumulate
-      // ancient members who are truly gone.
+      // ancient members who are truly gone. Returns signup date,
+      // completed-days array, and preview-window timing so the frontend
+      // can show the full member picture without extra round-trips.
       safeQuery(sql`
         SELECT
           u.id, u.email, u.display_name,
           COALESCE(u.last_completed_day, 0)::int AS last_completed_day,
+          u.created_at AS signed_up_at,
           u.first_login_at,
           u.preview_ends_at,
           (u.preview_ends_at > NOW()) AS preview_still_open,
-          EXTRACT(DAY FROM (NOW() - u.first_login_at))::int AS days_since_login
+          EXTRACT(DAY FROM (NOW() - u.first_login_at))::int AS days_since_login,
+          (SELECT ARRAY_AGG(dc.day ORDER BY dc.day)
+             FROM day_completions dc WHERE dc.user_id = u.id) AS days_completed
         FROM users u
         WHERE u.tier = 'preview'
           AND u.first_login_at IS NOT NULL
