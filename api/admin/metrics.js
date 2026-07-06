@@ -677,7 +677,14 @@ export default async function handler(req, res) {
         HAVING COUNT(*) FILTER (WHERE m.role = 'user') >= 30
         ORDER BY messages_30d DESC
       `),
-      // 19. Hot Reset graduate — completed Day 3, still on Reset tier
+      // 19. Hot Reset graduate — completed Day 3 in the last 72 hours,
+      // still on Reset tier. 72h is the outer bound of the "peak
+      // emotional state" window per the action script; anything older
+      // has lost the conversion heat and should be handled by nurture
+      // sequences rather than the Convert Today segment. Without this
+      // filter the segment kept surfacing members who finished Day 3
+      // 8-9 days ago with a hardcoded "Window closes in ~24h" label,
+      // which was misleading and eroded trust in the Intelligence tab.
       safeQuery(sql`
         SELECT
           u.id, u.email, u.display_name,
@@ -698,6 +705,7 @@ export default async function handler(req, res) {
               AND COALESCE(p2.coupon_code, '') <> ALL(${excludedCoupons})
           )
         GROUP BY u.id, u.email, u.display_name
+        HAVING MAX(dc.completed_at) >= NOW() - INTERVAL '72 hours'
         ORDER BY day3_completed_at DESC
       `),
       // 20. Book Launch warmer — used LAUNCHTEAM coupons + showed engagement
