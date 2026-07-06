@@ -1174,12 +1174,27 @@ async function loadChannelRevenueAttribution() {
         FROM users u
         WHERE u.email IS NOT NULL AND u.email <> ''
           AND u.email NOT LIKE '%@shimritnativ.com'
-          -- Match the "Total Members" KPI: only count real Field members
-          -- (paid Reset preview tier + paid Unlimited full tier), not all
-          -- users in the DB (Kajabi grants, mailing list, guests, etc.).
-          -- Without this, "signups per channel" was inflated to ~131 for
-          -- WhatsApp vs. the true member count of ~42.
-          AND u.tier::text IN ('preview', 'full')
+          -- Same filters the Total Members KPI (42) uses so the channel
+          -- signup counts reconcile with the top-line member count.
+          -- kajabi_entitled = true is the key one: it excludes ~89
+          -- users who exist in the users table but aren't real Field
+          -- members (Kajabi migrations, mailing list, guests, etc.).
+          AND u.kajabi_entitled = true
+          -- Include the person if they have no purchases at all (Kajabi
+          -- grant with no ThriveCart order) OR if at least one of their
+          -- purchases uses a coupon that isn't a test-comp exclusion
+          -- (GEO100, GEOALL). LAUNCHTEAM stays IN so team comps count
+          -- as members, matching the Total Members convention.
+          AND (
+            NOT EXISTS (SELECT 1 FROM purchases p WHERE LOWER(p.email) = LOWER(u.email))
+            OR EXISTS (
+              SELECT 1 FROM purchases p
+              WHERE LOWER(p.email) = LOWER(u.email)
+                AND COALESCE(p.coupon_code, '') <> ALL(
+                  ARRAY['GEO100', 'GEOALL']::text[]
+                )
+            )
+          )
       ),
       per_user AS (
         SELECT
