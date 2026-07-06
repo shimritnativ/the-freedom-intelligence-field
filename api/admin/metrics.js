@@ -1205,22 +1205,35 @@ async function loadChannelRevenueAttribution() {
         SELECT
           uc.channel,
           uc.email_lc,
-          SUM(CASE WHEN p.product_name ILIKE '%Reset%'      THEN p.amount_cents ELSE 0 END)::bigint AS reset_cents,
-          SUM(CASE WHEN p.product_name ILIKE '%Activation%' THEN p.amount_cents ELSE 0 END)::bigint AS activation_cents,
+          -- Purchases minus refunds per product. order.success and
+          -- order.subscription_payment are positive contributions,
+          -- order.refund is subtracted so channel revenue reflects the
+          -- actual net money kept per buyer.
           SUM(CASE
-            WHEN p.product_name ILIKE '%Unlimited%'
-              OR p.product_name ILIKE '%Freedom%Field%'
-              OR p.event_type = 'order.subscription_payment'
-            THEN p.amount_cents ELSE 0 END)::bigint AS unlimited_cents,
+            WHEN p.product_name ILIKE '%Reset%' AND p.event_type IN ('order.success', 'order.subscription_payment') THEN p.amount_cents
+            WHEN p.product_name ILIKE '%Reset%' AND p.event_type = 'order.refund' THEN -p.amount_cents
+            ELSE 0 END)::bigint AS reset_cents,
+          SUM(CASE
+            WHEN p.product_name ILIKE '%Activation%' AND p.event_type IN ('order.success', 'order.subscription_payment') THEN p.amount_cents
+            WHEN p.product_name ILIKE '%Activation%' AND p.event_type = 'order.refund' THEN -p.amount_cents
+            ELSE 0 END)::bigint AS activation_cents,
+          SUM(CASE
+            WHEN (p.product_name ILIKE '%Unlimited%' OR p.product_name ILIKE '%Freedom%Field%')
+              AND p.event_type IN ('order.success', 'order.subscription_payment') THEN p.amount_cents
+            WHEN p.event_type = 'order.subscription_payment' THEN p.amount_cents
+            WHEN (p.product_name ILIKE '%Unlimited%' OR p.product_name ILIKE '%Freedom%Field%')
+              AND p.event_type = 'order.refund' THEN -p.amount_cents
+            ELSE 0 END)::bigint AS unlimited_cents,
           BOOL_OR(
-            p.product_name ILIKE '%Unlimited%'
-            OR p.product_name ILIKE '%Freedom%Field%'
-            OR p.event_type = 'order.subscription_payment'
+            (p.product_name ILIKE '%Unlimited%'
+              OR p.product_name ILIKE '%Freedom%Field%'
+              OR p.event_type = 'order.subscription_payment')
+            AND p.event_type IN ('order.success', 'order.subscription_payment')
           ) AS is_upgrader
         FROM user_channel uc
         LEFT JOIN purchases p
           ON LOWER(p.email) = uc.email_lc
-          AND p.event_type IN ('order.success', 'order.subscription_payment')
+          AND p.event_type IN ('order.success', 'order.subscription_payment', 'order.refund')
           AND p.amount_cents > 0
           AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
         GROUP BY uc.channel, uc.email_lc
