@@ -3645,17 +3645,23 @@
           priority: "nurture",
           priorityLabel: "Re-engagement",
           title: "Stuck Reset members",
-          action: "Personalized nudge from Shimrit referencing where they are in the journey. If they finish: pitch <strong>Unlimited Field</strong>. If not: re-launch retarget.",
+          action: "Personalized nudge from Shimrit. If they haven't started Day 1: onboarding rescue (\"here's how to open Day 1, it's 20 min\"). If they stalled midway: reference where they are (\"you're on Day X, want to finish?\"). If preview expired: offer to extend or pitch Unlimited.",
           rows: intel.stuck_reset || [],
           why: u => {
             const day = Number(u.last_completed_day || 0);
             const since = Number(u.days_since_login || 0);
-            const stage = day === 0 ? "Logged in but hasn't started Day 1" : `Stuck on Day ${day}`;
+            const previewOpen = u.preview_still_open === true;
+            const stage = day === 0
+              ? "Logged in but never started Day 1, needs onboarding rescue"
+              : `Started but stalled on Day ${day}, needs finish-the-reset nudge`;
+            const windowLine = previewOpen
+              ? "Preview still open, urgency angle works"
+              : "Preview expired, offer a re-open or pitch Unlimited";
             return [
               "Paid for the Reset",
               stage,
               `<strong>${fmtNum(since)} days</strong> since their last login`,
-              "Window still open — but closing",
+              windowLine,
             ];
           },
         },
@@ -3858,14 +3864,15 @@
         {
           key: "stuck_reset",
           eyebrow: "Re-engagement",
-          title: "Stuck Reset members (window still open)",
-          why: "Logged in, paid, started the 72-hour window, but stopped before Day 3. Window hasn't expired yet, which means there's still time to save the experience for them.",
-          action: "Personalized nudge from Shimrit (text or email) referencing where they are in the journey. The auto push reminders are already firing — this layer adds the human touch when the system alone isn't enough. If they finish: pitch <strong>Unlimited Field</strong>. If they don't: log as a re-launch target for the next promotional window.",
+          title: "Stuck Reset members",
+          why: "Logged in, paid, started the 72-hour window, but stopped before Day 3. Includes members whose preview has already expired: the preview column tells you which angle to lead with (nudge if still open, re-open offer if closed).",
+          action: "Personalized nudge from Shimrit (text or email) referencing where they are. If they haven't started Day 1: onboarding rescue. If they stalled midway: reference their day. If preview expired: offer to extend or pitch <strong>Unlimited Field</strong> directly. Auto push reminders are already firing; this layer adds the human touch.",
           rows: intel.stuck_reset || [],
           cols: [
             { label: "Member", key: "email", render: u => `${escapeHtml(u.email)}${u.display_name ? ` <span style="color:var(--text-dim)">(${escapeHtml(u.display_name)})</span>` : ""}` },
             { label: "On day", key: "last_completed_day", num: true, render: u => fmtNum(u.last_completed_day || 0) },
             { label: "Days since login", key: "days_since_login", num: true, render: u => fmtNum(u.days_since_login || 0) + "d" },
+            { label: "Preview", key: "preview_still_open", render: u => u.preview_still_open === true ? '<span style="color: var(--green, #7AAE5E); font-weight: 600;">open</span>' : '<span style="color: var(--text-mute); font-style: italic;">expired</span>' },
           ],
         },
       ];
