@@ -912,11 +912,12 @@
       box-shadow: 0 0 0 2px var(--gold-soft);
     }
     /* Marker class for names that came from the email-prefix fallback
-       rather than a real DB value. Slight italic to signal "not
-       verified" so Geo knows which members need editing at a glance. */
+       rather than a real DB value. No italic. Left as a hook in case
+       we want a different visual marker later (e.g. muted color) but
+       currently renders identically to real names so nothing jumps out
+       as "wrong" in the roster. */
     .name-editable--fallback {
-      font-style: italic;
-      color: var(--text-dim);
+      color: var(--text);
     }
     /* Make the Tier column wide enough that "POWER RESET" doesn't wrap.
        Also pin Plan + Day to their minimum so the new Source column
@@ -1349,13 +1350,12 @@
       font-weight: 700;
       color: var(--text);
     }
-    /* Fallback names (generated from email prefix) stay bold and bright
-       for readability. Only italic marks them as unverified so Geo can
-       still spot which ones need a real display_name edit. */
+    /* Fallback names (generated from email prefix) look identical to
+       real names, no italic. The email underneath is enough context to
+       tell them apart. */
     .intel-member-name--anon {
       color: var(--text);
       font-weight: 700;
-      font-style: italic;
     }
     .intel-member-email {
       font-size: 12px;
@@ -3847,6 +3847,53 @@
               stage,
               daysCompletedLine,
               `<strong>${fmtNum(since)} days</strong> since their last login`,
+              windowLine,
+            ];
+          },
+        },
+        {
+          // Reset alumni ready for Unlimited. Completed all 3 days, past
+          // the 72h peak window (so not in Hot Reset graduates), still
+          // on the preview tier. Prime upsell: they know the work, they
+          // got the full experience, they just need a nudge to keep going.
+          key: "reset_alumni",
+          priority: "ready",
+          priorityLabel: "Upgrade now",
+          title: "Completed Reset, ready for Unlimited",
+          action: "Personal Shimrit message referencing their reset experience. Pitch <strong>Unlimited Field (€77/mo or €777/yr)</strong> with the \"you're already in the flow, keep going\" angle. Offer <strong>UNLIMITED50</strong> coupon (50% off first month) for softer nudge.",
+          rows: intel.reset_alumni || [],
+          why: u => {
+            const daysAgo = Number(u.days_since_day3 || 0);
+            const daysArr = Array.isArray(u.days_completed) ? u.days_completed.filter(d => d != null) : [];
+            const daysCompletedLine = daysArr.length > 0
+              ? `Days completed: <strong>${daysArr.map(d => `Day ${d}`).join(", ")}</strong>`
+              : "Days completed: <strong>Day 1, Day 2, Day 3</strong>";
+            const previewOpen = u.preview_still_open === true;
+            const signedUpLine = u.signed_up_at
+              ? `Joined <strong>${fmtDate(u.signed_up_at)}</strong> (${fmtRelative(u.signed_up_at)})`
+              : "Joined date unknown";
+            const finishedLine = daysAgo > 0
+              ? `Finished the Reset <strong>${fmtNum(daysAgo)}d ago</strong>, past the peak window`
+              : "Finished the Reset recently, past the peak window";
+            let windowLine;
+            if (u.preview_ends_at) {
+              const ends = new Date(u.preview_ends_at);
+              const diffDays = (ends.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+              if (previewOpen) {
+                const daysLeft = Math.max(0, Math.round(diffDays));
+                windowLine = `Preview <strong>still open</strong> (${daysLeft}d left), extend into Unlimited seamlessly`;
+              } else {
+                const daysAgoP = Math.max(0, Math.round(-diffDays));
+                windowLine = `Preview <strong>expired</strong> ${daysAgoP}d ago, Unlimited is the way back in`;
+              }
+            } else {
+              windowLine = "Ready for the next step: Unlimited";
+            }
+            return [
+              "Paid for the Reset",
+              signedUpLine,
+              daysCompletedLine,
+              finishedLine,
               windowLine,
             ];
           },
