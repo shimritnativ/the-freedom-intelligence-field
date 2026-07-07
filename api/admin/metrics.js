@@ -75,6 +75,10 @@ const EMAIL_EXCLUDE_PATTERNS = [
   "ge.amaral+%@gmail.com",
   "geoamaral333@gmail.com",
   "geoamaral333+%@gmail.com",
+  // Shimrit's personal Gmail — she's the founder, not a customer.
+  // Kept out of the roster + all member counts so the numbers reflect
+  // real Field customers only.
+  "shimrit.nativ@gmail.com",
 ];
 
 // Parse a YYYY-MM-DD query param into an ISO timestamp string we can safely
@@ -386,6 +390,18 @@ export default async function handler(req, res) {
               AND p.amount_cents > 0
               AND COALESCE(p.coupon_code, '') <> ALL(${excludedCoupons})
           ), 0)::bigint AS total_spent_cents,
+          -- Sum of refunds so the frontend can show a REFUNDED pill on
+          -- rows where all purchases have been refunded (net_spent = 0).
+          -- Also lets us distinguish "refunded partial" from "refunded
+          -- fully" in future UI. Refunds are stored as positive cents
+          -- with event_type = 'order.refund' from the ThriveCart webhook.
+          COALESCE((
+            SELECT SUM(p.amount_cents)
+            FROM purchases p
+            WHERE p.email = u.email
+              AND p.event_type = 'order.refund'
+              AND p.amount_cents > 0
+          ), 0)::bigint AS total_refund_cents,
           COALESCE((
             SELECT COUNT(DISTINCT p.thrivecart_id)
             FROM purchases p
