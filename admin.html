@@ -3074,6 +3074,13 @@
           const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
           const activeTab = document.querySelector('[data-tab-content]:not([style*="display: none"])')?.getAttribute('data-tab-content');
           if (typeof renderDashboard === "function") renderDashboard(state.data);
+          // renderDashboard rebuilds the roster shell but doesn't populate
+          // the rows — renderRoster reads state.data.recentSignups and
+          // paints them into the roster tbody. Without this call, the
+          // re-render leaves the Members tab table empty.
+          if (typeof renderRoster === "function") {
+            try { renderRoster(); } catch (e) { console.warn("renderRoster_failed", e); }
+          }
           if (typeof applyMobileTableLabels === "function") applyMobileTableLabels();
           // Restore tab + scroll after the re-render. Use requestAnimationFrame
           // so the browser has painted the new DOM before we scroll.
@@ -3568,20 +3575,28 @@
               <!-- Pagination controls — populated by JS based on filter results -->
               <div id="roster-pagination" style="display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-top: 14px; font-size: 12px; color: var(--text-dim);"></div>
             </div>
-          <!-- Signups by day -->
-          <div class="section" id="panel-signups">
-            <h2><span class="h2-eyebrow">Recent</span>Signups by day</h2>
-            ${signupDates.length === 0
-              ? '<div class="empty-state">No signups in this range.</div>'
-              : signupDates.map(day => `
-                <div class="signup-row">
-                  <div class="date">${fmtDate(day)}</div>
-                  <div class="signup-bar-track"><div class="signup-bar-fill" style="width:${(signupsByDate[day] / maxSignup) * 100}%;"></div></div>
-                  <div class="n">${fmtNum(signupsByDate[day])}</div>
-                </div>
-              `).join("")
-            }
-          </div>
+          <!-- Signups by day — collapsed by default, click header to expand.
+               Was taking up a lot of scroll space beneath the roster; more
+               useful as an opt-in detail view. Uses <details> so the toggle
+               state is native and the whole thing degrades gracefully. -->
+          <details class="section" id="panel-signups" style="cursor: default;">
+            <summary style="list-style: none; cursor: pointer; padding: 0; margin: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+              <h2 style="margin: 0;"><span class="h2-eyebrow">Recent</span>Signups by day</h2>
+              <span class="signups-toggle-hint" style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.14em; text-transform: uppercase;">Click to expand ↓</span>
+            </summary>
+            <div style="margin-top: 12px;">
+              ${signupDates.length === 0
+                ? '<div class="empty-state">No signups in this range.</div>'
+                : signupDates.map(day => `
+                  <div class="signup-row">
+                    <div class="date">${fmtDate(day)}</div>
+                    <div class="signup-bar-track"><div class="signup-bar-fill" style="width:${(signupsByDate[day] / maxSignup) * 100}%;"></div></div>
+                    <div class="n">${fmtNum(signupsByDate[day])}</div>
+                  </div>
+                `).join("")
+              }
+            </div>
+          </details>
           </div>
           <!-- /end Members tab -->
 
