@@ -1002,6 +1002,32 @@
       padding: 2px 8px; border-radius: 999px; text-transform: uppercase;
       white-space: nowrap;
     }
+    /* Small "Extend" action button in the roster Actions column.
+       Subtle by default so the roster stays scannable; brightens on
+       hover to signal it's clickable. Disabled while an extension is
+       being saved to prevent double-clicks. */
+    .roster-action-btn {
+      background: transparent;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .roster-action-btn:hover:not(:disabled) {
+      background: var(--gold-soft);
+      color: var(--text);
+      border-color: var(--gold);
+    }
+    .roster-action-btn:disabled {
+      cursor: wait;
+      opacity: 0.6;
+    }
     /* Inline name editor. The Name cell in the Members roster is
        contenteditable so clicking it puts the caret in place and typing
        replaces the value. Enter saves. Esc reverts. Fallback names
@@ -2777,6 +2803,86 @@
     }
     window.restoreIntelMember = restoreIntelMember;
 
+    // Extend a member's Reset preview window. Called by the "Extend"
+    // button in the roster Actions column. Prompts for a number of days,
+    // POSTs to the extend-preview endpoint (which runs the same UPDATE
+    // we've been doing by hand in Neon), then updates the row's preview
+    // state in memory + shows a success toast. If the API fails, we
+    // surface the actual error so it's diagnosable.
+    async function extendPreviewFromRoster(email, displayName) {
+      if (!email) return;
+      const raw = window.prompt(
+        `Extend Reset preview for ${displayName || email}?\n\n` +
+        `Enter how many days to add. The extension always starts FROM RIGHT NOW.\n` +
+        `If their preview already expired, they get a fresh window.\n` +
+        `If it's still open, the new time is added on top.\n\n` +
+        `Common values: 3 (standard), 7 (generous), 30 (special case).`,
+        "4"
+      );
+      if (raw === null) return;
+      const days = parseInt(String(raw).trim(), 10);
+      if (!Number.isFinite(days) || days < 1 || days > 60) {
+        window.alert("Please enter a whole number of days between 1 and 60.");
+        return;
+      }
+      const token = localStorage.getItem(STORAGE_KEY);
+      if (!token) {
+        window.alert("Session expired. Refresh the page and sign in again.");
+        return;
+      }
+      const btn = document.querySelector(`.roster-action-btn[data-email="${email}"]`);
+      const originalLabel = btn ? btn.textContent : "Extend";
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Extending…";
+      }
+      try {
+        const r = await fetch("/api/admin/extend-preview", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-session-token": token,
+          },
+          body: JSON.stringify({ email: email.toLowerCase(), days }),
+        });
+        const payload = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          const reason = payload && payload.error ? payload.error : `HTTP ${r.status}`;
+          showIntelToast("Extension failed: " + reason);
+          if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+          return;
+        }
+        const emailLc = email.toLowerCase();
+        const newEndsAt = payload && payload.user && payload.user.preview_ends_at;
+        if (state && state.data && Array.isArray(state.data.recentSignups)) {
+          for (const u of state.data.recentSignups) {
+            if (u && (u.email || "").toLowerCase() === emailLc) {
+              u.preview_ends_at = newEndsAt;
+            }
+          }
+        }
+        showIntelToast(`Extended by ${days} day${days === 1 ? '' : 's'}. New window closes ${newEndsAt ? new Date(newEndsAt).toLocaleDateString() : 'soon'}.`);
+        if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+      } catch (e) {
+        showIntelToast("Extension failed: network error");
+        if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+      }
+    }
+    window.extendPreviewFromRoster = extendPreviewFromRoster;
+
+    // Delegated click handler for the roster Actions buttons. Runs from
+    // body so it survives re-renders of the roster tbody.
+    document.body.addEventListener("click", (e) => {
+      const btn = e.target && e.target.closest && e.target.closest('.roster-action-btn');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      const email = btn.dataset.email;
+      const name = btn.dataset.name;
+      if (action === 'extend-preview') {
+        extendPreviewFromRoster(email, name);
+      }
+    });
+
     // Inline member-name editor. The Name cell is contenteditable; click
     // it, type the correct name, hit Enter to save (or blur to save on
     // desktop). Esc reverts. Uses fetch against the admin endpoint and
@@ -3567,6 +3673,11 @@
                       'Day',
                       "How far they got in the Reset: 0 = paid but never started Day 1; 1/2/3 = how many days they completed. Day 3 = finished the full program.",
                       "Day 3 completers convert best to Unlimited. Day 1 stalls = nudge with a reminder email."
+                    )}</th>
+                    <th class="has-help" style="text-align: right;">Actions${help(
+                      'Actions',
+                      "Per-member quick actions. Currently: Extend the Reset preview window for Reset-tier members. Prompts you for how many days to add.",
+                      "Useful when someone email supports asking for extra time on their €9 program."
                     )}</th>
                   </tr>
                 </thead>
@@ -6576,6 +6687,12 @@
             <td class="date-cell" data-label="Joined">${fmtDate(u.created_at)}</td>
             <td class="date-cell" data-label="1st login">${u.first_login_at ? fmtDate(u.first_login_at) : "—"}</td>
             <td class="num" data-label="Day">${u.last_completed_day || 0}</td>
+            <td class="roster-actions-cell" data-label="Actions" style="text-align: right; white-space: nowrap;">
+              ${u.tier === 'preview'
+                ? `<button type="button" class="roster-action-btn" title="Extend Reset preview window" data-action="extend-preview" data-email="${escapeHtml(u.email || '')}" data-name="${escapeHtml(nameOrFallback(u) || '')}">Extend</button>`
+                : '<span style="color: var(--text-mute); font-size: 11px;">—</span>'
+              }
+            </td>
           </tr>
         `;
       }).join("");
