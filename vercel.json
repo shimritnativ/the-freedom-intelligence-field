@@ -31,6 +31,10 @@
     {
       "source": "/admin",
       "destination": "/admin.html"
+    },
+    {
+      "source": "/reset",
+      "destination": "/reset.html"
     }
   ],
   "crons": [
@@ -88,7 +92,7 @@
   ],
   "headers": [
     {
-      "source": "/(app|admin|demo|embed|launch-tracker|the-field-website)\\.html",
+      "source": "/(app|admin|demo|embed|launch-tracker|the-field-website|reset)\\.html",
       "headers": [
         {
           "key": "Cache-Control",
@@ -107,6 +111,15 @@
     },
     {
       "source": "/admin",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/reset",
       "headers": [
         {
           "key": "Cache-Control",
