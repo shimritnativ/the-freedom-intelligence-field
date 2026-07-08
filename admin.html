@@ -3649,11 +3649,6 @@
                       "POWER RESET = bought the €9 72-hour program (preview tier). UNLIMITED = paying recurring subscriber (full tier). Free Kajabi grants without a purchase show as Reset too.",
                       "Filter by tier in the dropdown above to see only one type."
                     )}</th>
-                    <th class="has-help">Plan${help(
-                      'Plan',
-                      "For Unlimited members only: 'monthly' (€64.70/mo) or 'yearly' (€653 upfront). Yearly = higher LTV, monthly = higher churn risk.",
-                      ""
-                    )}</th>
                     <th class="num has-help">Spent${help(
                       'Spent',
                       "Total euros this member paid across ALL their orders, NET (without VAT). Hover the orders badge to see the per-product breakdown.",
@@ -6686,7 +6681,6 @@
               >${escapeHtml(shown)}</span>`;
             })()}</td>
             <td data-label="Tier"><span class="tier-badge ${u.tier === 'full' ? 'tier-full' : 'tier-preview'}">${escapeHtml(tierLabel(u.tier))}</span></td>
-            <td data-label="Plan">${escapeHtml(u.subscription_plan || "—")}</td>
             <td class="num" data-label="Spent">${spentCell}</td>
             <td data-label="Source">${formatSource(u)}</td>
             <td class="date-cell" data-label="Joined">${fmtDate(u.created_at)}</td>
