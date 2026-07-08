@@ -151,7 +151,12 @@
       line-height: 1.5;
     }
     .wrap {
-      max-width: 1480px;
+      /* 1600px is the "goldilocks" width tested against the roster + new
+         Actions column: everything fits without wrapping, and other tabs
+         (Overview, Revenue, Ads) still read nicely without lines getting
+         so long they hurt scannability. 1480 was too tight for the new
+         column; 1800 was too wide and made KPI rows look sparse. */
+      max-width: 1600px;
       margin: 0 auto;
       padding: 36px 32px 80px;
     }
