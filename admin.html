@@ -745,6 +745,12 @@
         gap: 10px;
         margin-bottom: 22px;
       }
+      /* Collapsible daily breakdown chevron: rotates 90deg when the
+         details element is open. Hides the default disclosure triangle
+         Safari draws. */
+      details > summary::-webkit-details-marker { display: none; }
+      details[open] > summary .details-chevron { transform: rotate(90deg); }
+      details > summary { list-style: none; }
       .kpi { padding: 14px 14px 12px; min-width: 0; }
       /* Values shrink to fit and NEVER mid-break a currency like €3,146.07.
          Use !important because the three big Overview KPIs (Net Revenue,
@@ -6179,33 +6185,30 @@
             </tr>`;
         }).join('');
         return `
-          <div style="background: var(--bg-warm); border: 1px solid var(--gold-line); border-radius: 12px; padding: 18px 22px; margin-bottom: 22px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
-              <div class="has-help" style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold);">WhatsApp Campaigns${help(
-                'WhatsApp Campaigns',
-                "Traffic and conversions from WhatsApp campaigns you send via GHL. Requires links tagged with utm_source=whatsapp and a per-campaign utm_campaign (like 'surveyfollowup' or 'nurture-jul-week1'). Only campaigns with at least one visit, click, or buyer show up here.",
-                "Compare CTR (clicks per visit) and Conv % (buyers per click) across campaigns to find the message that converts. The top campaign by buyers gets a gold star."
-              )}</div>
-              <div style="font-size: 11px; color: var(--text-dim);">${activeRows.length} campaign${activeRows.length === 1 ? '' : 's'} tracked</div>
-            </div>
-            <div style="overflow-x: auto;">
-              <table class="data-table" style="min-width: 640px;">
-                <thead>
-                  <tr>
-                    <th>Campaign</th>
-                    <th class="num">LP visits</th>
-                    <th class="num">CTA clicks</th>
-                    <th class="num">CTR</th>
-                    <th class="num">Buyers</th>
-                    <th class="num">Conv %</th>
-                    <th class="num">Revenue</th>
-                  </tr>
-                </thead>
-                <tbody>${rowsHtml}</tbody>
-              </table>
-            </div>
-            <div style="margin-top: 10px; font-size: 11px; color: var(--text-mute); font-style: italic;">Tag WhatsApp links with utm_source=whatsapp and a distinct utm_campaign value per campaign (example: utm_source=whatsapp&amp;utm_campaign=surveyfollowup). Spend is not shown per campaign; total GHL cost sits in the Channel P&amp;L.</div>
+          <div style="display: flex; align-items: center; justify-content: flex-end; margin-bottom: 12px;">
+            <div style="font-size: 11px; color: var(--text-dim);">${activeRows.length} campaign${activeRows.length === 1 ? '' : 's'} tracked${help(
+              'WhatsApp Campaigns',
+              "Traffic and conversions from WhatsApp campaigns you send via GHL. Requires links tagged with utm_source=whatsapp and a per-campaign utm_campaign (like 'surveyfollowup' or 'nurture-jul-week1'). Only campaigns with at least one visit, click, or buyer show up here.",
+              "Compare CTR (clicks per visit) and Conv % (buyers per click) across campaigns to find the message that converts. The top campaign by buyers gets a gold star."
+            )}</div>
           </div>
+          <div style="overflow-x: auto;">
+            <table class="data-table" style="min-width: 640px;">
+              <thead>
+                <tr>
+                  <th>Campaign</th>
+                  <th class="num">LP visits</th>
+                  <th class="num">CTA clicks</th>
+                  <th class="num">CTR</th>
+                  <th class="num">Buyers</th>
+                  <th class="num">Conv %</th>
+                  <th class="num">Revenue</th>
+                </tr>
+              </thead>
+              <tbody>${rowsHtml}</tbody>
+            </table>
+          </div>
+          <div style="margin-top: 10px; font-size: 11px; color: var(--text-mute); font-style: italic;">Tag WhatsApp links with utm_source=whatsapp and a distinct utm_campaign value per campaign (example: utm_source=whatsapp&amp;utm_campaign=surveyfollowup). Spend is not shown per campaign; total GHL cost sits in the Channel P&amp;L.</div>
         `;
       }
       const whatsappBlock = renderWhatsappCampaigns(data.whatsapp_campaigns);
@@ -6302,7 +6305,14 @@
       }).join("");
 
       const dailyBlock = data.daily && data.daily.length > 0
-        ? `<h3 style="font-family: Georgia, serif; font-style: italic; font-weight: 500; font-size: 16px; margin: 24px 0 12px;">Daily breakdown</h3>${dailyRows}`
+        ? `<details style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 4px;">
+             <summary style="cursor: pointer; list-style: none; padding: 10px 0; font-family: Georgia, serif; font-style: italic; font-weight: 500; font-size: 16px; color: var(--text); user-select: none; display: flex; align-items: center; gap: 8px;">
+               <span class="details-chevron" style="display: inline-block; transition: transform 0.2s; font-size: 12px; color: var(--gold);">&#9656;</span>
+               Daily breakdown
+               <span style="font-size: 11px; color: var(--text-mute); font-style: normal; font-weight: 400; margin-left: 4px;">(${data.daily.length} day${data.daily.length === 1 ? '' : 's'})</span>
+             </summary>
+             <div style="padding-top: 8px;">${dailyRows}</div>
+           </details>`
         : '';
 
       const filterNote = data._filtered
@@ -6345,12 +6355,7 @@
             </div>`).join('');
 
         return `
-          <div style="margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--gold-line);">
-            <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px;">
-              <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold);">Organic Landing Page</span>
-            </div>
-            <h2 style="font-family: Georgia, serif; font-style: italic; font-weight: 500; margin: 0 0 18px;">Free traffic to /the-power-reset</h2>
-
+          <div>
             <div class="kpi-grid" style="margin-bottom: 22px;">
               <div class="kpi">
                 <div class="kpi-label">Page visits${help(
@@ -6432,12 +6437,55 @@
             ${renderCtaBreakdown(o.cta_breakdown)}
 
             ${dailyOrgRows ? `
-              <h3 style="font-family: Georgia, serif; font-style: italic; font-weight: 500; font-size: 16px; margin: 24px 0 12px;">Daily breakdown (organic)</h3>
-              ${dailyOrgRows}` : ''}
+              <details style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 4px;">
+                <summary style="cursor: pointer; list-style: none; padding: 10px 0; font-family: Georgia, serif; font-style: italic; font-weight: 500; font-size: 16px; color: var(--text); user-select: none; display: flex; align-items: center; gap: 8px;">
+                  <span class="details-chevron" style="display: inline-block; transition: transform 0.2s; font-size: 12px; color: var(--gold);">&#9656;</span>
+                  Daily breakdown
+                  <span style="font-size: 11px; color: var(--text-mute); font-style: normal; font-weight: 400; margin-left: 4px;">(organic)</span>
+                </summary>
+                <div style="padding-top: 8px;">${dailyOrgRows}</div>
+              </details>` : ''}
           </div>`;
       })();
 
-      return warningBlock + kpis + funnelBlock + ctaBreakdownBlock + perAdBlock + campaignTable + whatsappBlock + dailyBlock + organicBlock + accountNote;
+      // Three source-specific section boxes so ads/whatsapp/organic each
+      // read as their own contained area instead of one long scroll.
+      // Each box has a gold top stripe + eyebrow/title header for parity.
+      const sectionHeader = (eyebrow, title, note) => `
+        <div style="margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--border);">
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold);">${eyebrow}</div>
+          <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-top: 4px;">
+            <h2 style="font-family: Georgia, serif; font-style: italic; font-weight: 500; margin: 0; font-size: 20px;">${title}</h2>
+            ${note ? `<span style="font-size: 12px; color: var(--text-mute);">${note}</span>` : ''}
+          </div>
+        </div>`;
+      const sectionBoxOpen = `<div style="margin: 28px 0; padding: 22px 24px; background: var(--panel); border: 1px solid var(--border); border-top: 3px solid var(--gold); border-radius: 14px; box-shadow: 0 2px 8px rgba(26, 20, 8, 0.04);">`;
+      const sectionBoxClose = `</div>`;
+
+      const metaAdsBox = (perAdBlock || campaignTable || dailyBlock)
+        ? `${sectionBoxOpen}
+             ${sectionHeader('Meta Ads', 'Paid traffic performance', 'Ads → LP → checkout funnel from Meta campaigns')}
+             ${perAdBlock}
+             ${campaignTable}
+             ${dailyBlock}
+           ${sectionBoxClose}`
+        : '';
+
+      const whatsappBoxed = whatsappBlock
+        ? `${sectionBoxOpen}
+             ${sectionHeader('WhatsApp Campaigns', 'Traffic from GHL WhatsApp broadcasts', 'Tagged with utm_source=whatsapp + per-campaign utm_campaign')}
+             ${whatsappBlock}
+           ${sectionBoxClose}`
+        : '';
+
+      const organicBoxed = organicBlock
+        ? `${sectionBoxOpen}
+             ${sectionHeader('Organic Landing Page', 'Free traffic to /the-power-reset', 'Email, word-of-mouth, social shares, direct URL')}
+             ${organicBlock}
+           ${sectionBoxClose}`
+        : '';
+
+      return warningBlock + kpis + funnelBlock + ctaBreakdownBlock + metaAdsBox + whatsappBoxed + organicBoxed + accountNote;
     }
 
     // Range / refresh / dates / campaign chips — all delegated so the
