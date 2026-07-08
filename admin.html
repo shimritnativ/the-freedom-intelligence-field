@@ -6143,6 +6143,73 @@
       }
       const perAdBlock = renderPerAdTable(data.per_ad);
 
+      // WhatsApp Campaigns table — sits below the Meta ads content on the
+      // Ads tab. Same visual language as per_ad and campaign tables so
+      // both channels feel like part of one report. Only renders if there
+      // is at least one WhatsApp campaign with visits, clicks, or buyers.
+      function renderWhatsappCampaigns(rows) {
+        if (!Array.isArray(rows) || rows.length === 0) return '';
+        const activeRows = rows.filter(r =>
+          (r.visits || 0) > 0 || (r.cta_clicks || 0) > 0 || (r.buyers || 0) > 0
+        );
+        if (activeRows.length === 0) return '';
+        // Sort by buyers desc so best-converting campaigns land on top.
+        activeRows.sort((a, b) =>
+          (b.buyers || 0) - (a.buyers || 0)
+          || (b.cta_clicks || 0) - (a.cta_clicks || 0)
+        );
+        const topBuyers = activeRows[0].buyers || 0;
+        const rowsHtml = activeRows.map(r => {
+          const isTop = (r.buyers || 0) === topBuyers && topBuyers > 0;
+          const ctaRateFmt = r.cta_rate == null
+            ? '<span style="color: var(--text-mute);">&mdash;</span>'
+            : pct(r.cta_rate);
+          const buyRateFmt = r.buy_rate == null
+            ? '<span style="color: var(--text-mute);">&mdash;</span>'
+            : pct(r.buy_rate);
+          return `
+            <tr>
+              <td data-label="Campaign">${isTop ? '<span style="color: var(--gold);">&starf;</span> ' : ''}<strong>${escapeHtml(r.campaign)}</strong></td>
+              <td data-label="LP visits" class="num">${num(r.visits)}</td>
+              <td data-label="CTA clicks" class="num">${num(r.cta_clicks)}</td>
+              <td data-label="CTR" class="num">${ctaRateFmt}</td>
+              <td data-label="Buyers" class="num">${num(r.buyers)}</td>
+              <td data-label="Conv %" class="num">${buyRateFmt}</td>
+              <td data-label="Revenue" class="num">${cur((r.revenue_cents || 0) / 100)}</td>
+            </tr>`;
+        }).join('');
+        return `
+          <div style="background: var(--bg-warm); border: 1px solid var(--gold-line); border-radius: 12px; padding: 18px 22px; margin-bottom: 22px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+              <div class="has-help" style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold);">WhatsApp Campaigns${help(
+                'WhatsApp Campaigns',
+                "Traffic and conversions from WhatsApp campaigns you send via GHL. Requires links tagged with utm_source=whatsapp and a per-campaign utm_campaign (like 'surveyfollowup' or 'nurture-jul-week1'). Only campaigns with at least one visit, click, or buyer show up here.",
+                "Compare CTR (clicks per visit) and Conv % (buyers per click) across campaigns to find the message that converts. The top campaign by buyers gets a gold star."
+              )}</div>
+              <div style="font-size: 11px; color: var(--text-dim);">${activeRows.length} campaign${activeRows.length === 1 ? '' : 's'} tracked</div>
+            </div>
+            <div style="overflow-x: auto;">
+              <table class="data-table" style="min-width: 640px;">
+                <thead>
+                  <tr>
+                    <th>Campaign</th>
+                    <th class="num">LP visits</th>
+                    <th class="num">CTA clicks</th>
+                    <th class="num">CTR</th>
+                    <th class="num">Buyers</th>
+                    <th class="num">Conv %</th>
+                    <th class="num">Revenue</th>
+                  </tr>
+                </thead>
+                <tbody>${rowsHtml}</tbody>
+              </table>
+            </div>
+            <div style="margin-top: 10px; font-size: 11px; color: var(--text-mute); font-style: italic;">Tag WhatsApp links with utm_source=whatsapp and a distinct utm_campaign value per campaign (example: utm_source=whatsapp&amp;utm_campaign=surveyfollowup). Spend is not shown per campaign; total GHL cost sits in the Channel P&amp;L.</div>
+          </div>
+        `;
+      }
+      const whatsappBlock = renderWhatsappCampaigns(data.whatsapp_campaigns);
+
       // Per-campaign table — funnel columns added when we have any
       // landing-event data, so the table stays compact pre-tracking.
       const showFunnelCols = (data.campaigns || []).some(c => (c.visits || 0) > 0);
@@ -6370,7 +6437,7 @@
           </div>`;
       })();
 
-      return warningBlock + kpis + funnelBlock + ctaBreakdownBlock + perAdBlock + campaignTable + dailyBlock + organicBlock + accountNote;
+      return warningBlock + kpis + funnelBlock + ctaBreakdownBlock + perAdBlock + campaignTable + whatsappBlock + dailyBlock + organicBlock + accountNote;
     }
 
     // Range / refresh / dates / campaign chips — all delegated so the
