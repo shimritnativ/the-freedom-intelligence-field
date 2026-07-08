@@ -6082,6 +6082,24 @@
         const backfillFooter = backfillCount > 0
           ? `<div style="margin-top: 10px; font-size: 11px; color: var(--text-mute); font-style: italic;">Not shown in table: ${backfillCount} backfilled ads purchase${backfillCount === 1 ? '' : 's'} (${cur(backfillRevenue / 100)}). These come from tracking tags added retroactively, not from a specific ad creative.</div>`
           : '';
+        // Geo badge: colored pill next to each ad name showing which
+        // audience it was served to. Reads from utm_term captured on the
+        // landing event or user record. Two known geos get their own
+        // color for glance-scanning; anything else falls back to a
+        // neutral pill with the raw value.
+        const geoBadge = (geo) => {
+          if (!geo) return '';
+          const g = String(geo).toLowerCase();
+          let label, bg, color, border;
+          if (g.includes('usa') || g.includes('canada') || g === 'us_ca' || g.includes('north_america') || g.includes('north-america')) {
+            label = 'USA/CAN'; bg = 'rgba(59, 130, 200, 0.14)'; color = '#3d7db7'; border = 'rgba(59, 130, 200, 0.32)';
+          } else if (g === 'europe' || g === 'eu' || g.includes('europe')) {
+            label = 'EUROPE'; bg = 'rgba(122, 174, 94, 0.14)'; color = '#4d8f52'; border = 'rgba(122, 174, 94, 0.32)';
+          } else {
+            label = String(geo).toUpperCase().replace(/_/g, '/'); bg = 'rgba(122, 122, 122, 0.10)'; color = 'var(--text-mute)'; border = 'rgba(122, 122, 122, 0.24)';
+          }
+          return `<span class="tier-badge" title="utm_term=${escapeHtml(String(geo))}" style="background: ${bg}; color: ${color}; border-color: ${border}; font-size: 10px; margin-left: 4px;">${escapeHtml(label)}</span>`;
+        };
         const rowsHtml = rows.map(a => {
           const isTop = (a.cta_clicks || 0) === topClicks && topClicks > 0;
           const ctaRateFmt = a.cta_rate == null ? '<span style="color: var(--text-mute);">—</span>' : pct(a.cta_rate);
@@ -6091,7 +6109,7 @@
             : '';
           return `
             <tr>
-              <td data-label="Ad">${isTop ? '<span style="color: var(--gold);">★</span> ' : ''}<strong>${escapeHtml(a.ad_name)}</strong> ${campaignBadge}</td>
+              <td data-label="Ad">${isTop ? '<span style="color: var(--gold);">★</span> ' : ''}<strong>${escapeHtml(a.ad_name)}</strong> ${campaignBadge}${geoBadge(a.geo)}</td>
               <td data-label="LP visits" class="num">${num(a.visits)}</td>
               <td data-label="CTA clicks" class="num">${num(a.cta_clicks)}</td>
               <td data-label="CTR" class="num">${ctaRateFmt}</td>
@@ -6701,10 +6719,17 @@
         const camp = (u.utm_campaign || "").toLowerCase();
         const content = u.utm_content || "";
         // Meta ad detection: known campaign tags from the live ad URLs.
+        // Keep the roster label short — just "Meta · cold" or "Meta · warm".
+        // The specific ad (utm_content) and geo (utm_term) live on the Ads
+        // tab; carrying them here made the column wrap awkwardly.
         if (camp === "cold" || camp === "warm" || src === "power-reset" || src === "meta" || src === "facebook" || src === "instagram") {
-          let label = "Meta · " + (camp || src);
-          if (content) label += " · " + content;
-          return `<span title="${escapeHtml('utm_source=' + (u.utm_source || '') + ', utm_campaign=' + (u.utm_campaign || '') + ', utm_content=' + (u.utm_content || ''))}" style="color: var(--gold); font-weight: 600;">${escapeHtml(label)}</span>`;
+          const label = "Meta · " + (camp || src);
+          const tipParts = [
+            'utm_source=' + (u.utm_source || ''),
+            'utm_campaign=' + (u.utm_campaign || ''),
+            'utm_content=' + (u.utm_content || '')
+          ];
+          return `<span title="${escapeHtml(tipParts.join(', '))}" style="color: var(--gold); font-weight: 600;">${escapeHtml(label)}</span>`;
         }
         // Email
         if (src.includes("email") || src.includes("newsletter") || src.includes("klaviyo") || src.includes("mailchimp") || src.includes("kajabi")) {
