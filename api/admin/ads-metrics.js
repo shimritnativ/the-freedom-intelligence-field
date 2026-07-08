@@ -153,7 +153,7 @@ export default async function handler(req, res) {
     // utm_source=meta (or facebook), with optional per-campaign matching.
     // Plus landing-page funnel events (visits + checkout scrolls) for
     // the abandoned-cart picture.
-    const [signupsByCampaign, revenueByCampaign, signupsByDay, funnelByCampaign, totalAdsSignups, perAdBreakdown, adsLpFunnelTotals] = await Promise.all([
+    const [signupsByCampaign, revenueByCampaign, signupsByDay, funnelByCampaign, totalAdsSignups, perAdBreakdown, adsLpFunnelTotals, whatsappCampaigns] = await Promise.all([
       loadSignupsByCampaign(from, to),
       loadRevenueByCampaign(from, to),
       loadSignupsByDay(from, to),
@@ -161,6 +161,7 @@ export default async function handler(req, res) {
       loadTotalAdsSignups(from, to),
       loadPerAdBreakdown(from, to),
       loadAdsLpFunnelTotals(from, to),
+      loadWhatsappCampaignBreakdown(from, to),
     ]);
 
     // Build a campaign-name → totals map. Both inputs can be null if
@@ -422,6 +423,11 @@ export default async function handler(req, res) {
       organic,
       cta_breakdown: ctaBreakdown,
       per_ad: perAdBreakdown,
+      // WhatsApp campaign breakdown for the Ads tab's "WhatsApp Campaigns"
+      // section below the Meta ads content. Same shape as per_ad but
+      // grouped by utm_campaign (not utm_content) since WhatsApp campaigns
+      // don't have per-message tracking yet.
+      whatsapp_campaigns: whatsappCampaigns,
       meta: {
         fetched_at: new Date().toISOString(),
         account_id: accountId,
@@ -835,6 +841,72 @@ async function loadCtaBreakdown(from, to) {
     return rows.map(r => ({ label: r.label, clicks: Number(r.clicks) }));
   } catch (e) {
     console.warn("cta_breakdown_failed", e?.message);
+    return [];
+  }
+}
+
+// WhatsApp campaign breakdown — one row per unique utm_campaign value
+// from utm_source=whatsapp traffic. Mirrors the Meta ads per-campaign
+// table structure so the Ads tab can display both side by side without
+// any custom UI logic. Metrics: LP visits, CTA clicks, buyers, revenue.
+// No spend column because WhatsApp campaigns have no attributable spend
+// per message (GHL cost is a flat monthly subscription, allocated to
+// the WhatsApp channel as a whole in Channel P&L, not per campaign).
+async function loadWhatsappCampaignBreakdown(from, to) {
+  try {
+    const { rows } = await sql`
+      WITH visits_by_campaign AS (
+        SELECT
+          utm_campaign AS campaign,
+          COUNT(*) FILTER (WHERE event_type = 'page_view')::int AS visits,
+          COUNT(DISTINCT session_id) FILTER (WHERE event_type LIKE 'power_reset_cta_click%')::int AS cta_clicks
+        FROM landing_events
+        WHERE created_at >= ${from}::date
+          AND created_at < (${to}::date + INTERVAL '1 day')
+          AND LOWER(COALESCE(utm_source, '')) = 'whatsapp'
+          AND utm_campaign IS NOT NULL
+          AND utm_campaign <> ''
+        GROUP BY utm_campaign
+      ),
+      buyers_by_campaign AS (
+        SELECT
+          u.utm_campaign AS campaign,
+          COUNT(DISTINCT LOWER(u.email))::int AS buyers,
+          COALESCE(SUM(p.amount_cents), 0)::bigint AS revenue_cents
+        FROM users u
+        LEFT JOIN purchases p
+          ON LOWER(p.email) = LOWER(u.email)
+          AND p.event_type IN ('order.success', 'order.subscription_payment')
+          AND p.amount_cents > 0
+        WHERE u.created_at >= ${from}::date
+          AND u.created_at < (${to}::date + INTERVAL '1 day')
+          AND LOWER(COALESCE(u.utm_source, '')) = 'whatsapp'
+          AND u.utm_campaign IS NOT NULL
+          AND u.utm_campaign <> ''
+          AND u.email NOT LIKE '%@shimritnativ.com'
+        GROUP BY u.utm_campaign
+      )
+      SELECT
+        COALESCE(v.campaign, b.campaign) AS campaign,
+        COALESCE(v.visits, 0)::int AS visits,
+        COALESCE(v.cta_clicks, 0)::int AS cta_clicks,
+        COALESCE(b.buyers, 0)::int AS buyers,
+        COALESCE(b.revenue_cents, 0)::bigint AS revenue_cents
+      FROM visits_by_campaign v
+      FULL OUTER JOIN buyers_by_campaign b ON v.campaign = b.campaign
+      ORDER BY buyers DESC, cta_clicks DESC, visits DESC
+    `;
+    return rows.map(r => ({
+      campaign: r.campaign,
+      visits: Number(r.visits || 0),
+      cta_clicks: Number(r.cta_clicks || 0),
+      buyers: Number(r.buyers || 0),
+      revenue_cents: Number(r.revenue_cents || 0),
+      cta_rate: r.visits > 0 ? (Number(r.cta_clicks) / Number(r.visits)) * 100 : null,
+      buy_rate: r.cta_clicks > 0 ? (Number(r.buyers) / Number(r.cta_clicks)) * 100 : null,
+    }));
+  } catch (e) {
+    console.warn("whatsapp_campaign_breakdown_failed", e?.message);
     return [];
   }
 }
