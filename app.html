@@ -5892,8 +5892,16 @@ Begin.` },
     if (btn.disabled) return;
     btn.disabled = true;
     btn.textContent = "Saving…";
+    let httpStatus = 0;
+    let serverError = null;
     try {
       const token = localStorage.getItem(STORAGE_KEY);
+      if (!token) {
+        alert("Your session expired. Refresh the page and log in again to save your progress.");
+        btn.disabled = false;
+        btn.textContent = `Complete Day ${day} →`;
+        return;
+      }
       const r = await fetch("/api/complete-day", {
         method: "POST",
         headers: {
@@ -5902,8 +5910,10 @@ Begin.` },
         },
         body: JSON.stringify({ day }),
       });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || "request_failed");
+      httpStatus = r.status;
+      const data = await r.json().catch(() => ({}));
+      serverError = data && data.error;
+      if (!r.ok) throw new Error(serverError || `http_${httpStatus}`);
       // Update state with fresh values from server
       state.lastCompletedDay = data.last_completed_day;
       state.currentDay = data.current_day;
@@ -5911,10 +5921,24 @@ Begin.` },
       // Re-render so the button disappears + sidebar reflects the new unlock
       if (typeof render === "function") render();
     } catch (err) {
-      console.warn("complete_day_failed", err);
+      console.warn("complete_day_failed", { status: httpStatus, error: serverError, err: err && err.message });
       btn.disabled = false;
       btn.textContent = `Complete Day ${day} →`;
-      alert("Couldn't save right now. Please try again in a moment.");
+      // Show a specific, actionable message based on what actually
+      // failed. Session issues (401) tell them exactly what to do.
+      // Server errors surface the reason so support can see it in a
+      // screenshot. Network / offline gets a distinct message.
+      if (httpStatus === 401 || serverError === "unauthorized") {
+        alert("Your session expired. Refresh the page and log in again to save your progress.");
+      } else if (httpStatus === 400 && serverError === "invalid_day") {
+        alert("Something went wrong with the day tracker. Refresh the page and try again.");
+      } else if (httpStatus === 0) {
+        alert("You seem to be offline. Check your internet connection and try again.");
+      } else if (httpStatus >= 500) {
+        alert("The Field's servers are having a moment. Please try again in 30 seconds. If this keeps happening, tell support and share this code: " + (serverError || "server_" + httpStatus) + ".");
+      } else {
+        alert("Couldn't save right now. Please try again in a moment. Error: " + (serverError || "http_" + httpStatus));
+      }
     }
   });
 
