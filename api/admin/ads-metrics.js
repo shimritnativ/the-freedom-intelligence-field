@@ -650,6 +650,16 @@ async function loadPerAdBreakdown(from, to) {
         SELECT
           utm_content AS ad_name,
           MAX(utm_campaign) AS campaign,
+          -- Geo tag from utm_term. When one ad runs to multiple geos we
+          -- take the most-frequent value so the badge reflects the primary
+          -- audience. If an ad's utm_term is missing, geo is NULL and the
+          -- badge is hidden in the UI.
+          (SELECT utm_term FROM landing_events le2
+             WHERE le2.utm_content = landing_events.utm_content
+               AND le2.utm_term IS NOT NULL AND le2.utm_term <> ''
+               AND le2.created_at >= ${from}::date
+               AND le2.created_at < (${to}::date + INTERVAL '1 day')
+             GROUP BY utm_term ORDER BY COUNT(*) DESC LIMIT 1) AS geo,
           COUNT(*) FILTER (WHERE event_type = 'page_view')::int AS visits,
           COUNT(DISTINCT session_id) FILTER (WHERE event_type LIKE 'power_reset_cta_click%')::int AS cta_clicks
         FROM landing_events
@@ -668,6 +678,7 @@ async function loadPerAdBreakdown(from, to) {
         SELECT
           'untagged (pre-tracking)'::text AS ad_name,
           NULL::text AS campaign,
+          NULL::text AS geo,
           COUNT(*) FILTER (WHERE event_type = 'page_view')::int AS visits,
           COUNT(DISTINCT session_id) FILTER (WHERE event_type LIKE 'power_reset_cta_click%')::int AS cta_clicks
         FROM landing_events
@@ -680,9 +691,9 @@ async function loadPerAdBreakdown(from, to) {
           OR COUNT(DISTINCT session_id) FILTER (WHERE event_type LIKE 'power_reset_cta_click%') > 0
       ),
       visits_all AS (
-        SELECT ad_name, campaign, visits, cta_clicks FROM visits_by_ad
+        SELECT ad_name, campaign, geo, visits, cta_clicks FROM visits_by_ad
         UNION ALL
-        SELECT ad_name, campaign, visits, cta_clicks FROM untagged_ads_visits
+        SELECT ad_name, campaign, geo, visits, cta_clicks FROM untagged_ads_visits
       ),
       purchases_by_ad AS (
         SELECT
@@ -693,6 +704,8 @@ async function loadPerAdBreakdown(from, to) {
           -- historical_backfill events written as 'warm' but the actual
           -- buyer signed up with 'cold'). Buyer's campaign wins.
           MAX(u.utm_campaign) AS buyer_campaign,
+          -- Buyer's geo (utm_term). Same MAX-most-common pattern as visits.
+          MAX(u.utm_term) AS buyer_geo,
           COUNT(DISTINCT LOWER(u.email))::int AS purchases,
           COALESCE(SUM(p.amount_cents), 0)::bigint AS revenue_cents
         FROM users u
@@ -710,6 +723,7 @@ async function loadPerAdBreakdown(from, to) {
       SELECT
         COALESCE(v.ad_name, p.ad_name) AS ad_name,
         COALESCE(p.buyer_campaign, v.campaign) AS campaign,
+        COALESCE(v.geo, p.buyer_geo) AS geo,
         COALESCE(v.visits, 0)::int AS visits,
         COALESCE(v.cta_clicks, 0)::int AS cta_clicks,
         COALESCE(p.purchases, 0)::int AS purchases,
@@ -721,6 +735,7 @@ async function loadPerAdBreakdown(from, to) {
     return rows.map((r) => ({
       ad_name: r.ad_name,
       campaign: r.campaign,
+      geo: r.geo,
       visits: Number(r.visits || 0),
       cta_clicks: Number(r.cta_clicks || 0),
       purchases: Number(r.purchases || 0),
