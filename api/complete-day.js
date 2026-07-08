@@ -50,14 +50,37 @@ export default async function handler(req, res) {
       });
     }
 
+    // day_completions.session_id is NOT NULL in the schema, so we must
+    // resolve a session_id before inserting. Pull the user's most recent
+    // OPEN chat session (fallback: most recent overall). Without this
+    // the INSERT hits a "null value in column session_id" constraint
+    // violation and the button silently fails — which is exactly what
+    // Soetkin hit on Jul 8. If the user somehow has zero sessions we
+    // return a soft error rather than crashing, so support can see it.
+    const { rows: sessionRows } = await sql`
+      SELECT id
+      FROM sessions
+      WHERE user_id = ${user.id}
+      ORDER BY COALESCE(last_message_at, started_at) DESC
+      LIMIT 1
+    `;
+    if (sessionRows.length === 0) {
+      return res.status(500).json({
+        error: "no_session_found",
+        message: "Can't record the day completion because there is no chat session yet. Open the process at least once, then try again.",
+      });
+    }
+    const sessionId = sessionRows[0].id;
+
     // Insert a day_completions row marking manual completion. ON CONFLICT
     // DO NOTHING so a button-click after the auto-detector already
     // recorded the completion is a safe no-op (same vice-versa). Both
     // mechanisms feed the same row.
     await sql`
-      INSERT INTO day_completions (user_id, day, schema_version, data, completed_at)
+      INSERT INTO day_completions (user_id, session_id, day, schema_version, data, completed_at)
       VALUES (
         ${user.id},
+        ${sessionId}::uuid,
         ${day},
         1,
         ${JSON.stringify({ source: "manual_button" })}::jsonb,
