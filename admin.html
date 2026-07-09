@@ -5653,6 +5653,11 @@
     let _adsCustomTo = null;
     let _adsLastData = null;          // last successful API response
     let _adsSelectedCampaigns = null; // Set of campaign IDs to include; null = all
+    // Per-ad table filters. Values: 'all' | 'cold' | 'warm' for campaign,
+    // 'all' | 'usa' | 'europe' | 'other' for geo, 'all' | 'active' | 'paused' for status.
+    let _perAdFilterCampaign = 'all';
+    let _perAdFilterGeo = 'all';
+    let _perAdFilterStatus = 'all';
 
     async function loadAdsMetrics() {
       const content = document.getElementById("ads-content");
@@ -6083,7 +6088,36 @@
         // of their click count so they don't compete for the gold star or
         // visually dominate what should read as real per-ad performance.
         rows.sort((a, b) => (b.cta_clicks || 0) - (a.cta_clicks || 0));
-        const topClicks = rows.length > 0 ? (rows[0].cta_clicks || 0) : 0;
+
+        // Apply the three filters (campaign type, geo, Meta status) as a
+        // pipeline. Filters are stored on module-level state so they
+        // survive re-renders. Chip UI below reads and writes them.
+        const geoBucket = (geo) => {
+          if (!geo) return 'other';
+          const g = String(geo).toLowerCase();
+          if (g.includes('usa') || g.includes('canada') || g === 'us_ca' || g.includes('north_america') || g.includes('north-america')) return 'usa';
+          if (g === 'europe' || g === 'eu' || g.includes('europe')) return 'europe';
+          return 'other';
+        };
+        const statusBucket = (s) => {
+          if (!s) return 'unknown';
+          const v = String(s).toUpperCase();
+          if (v === 'ACTIVE') return 'active';
+          if (v.includes('PAUSED') || v === 'CAMPAIGN_PAUSED' || v === 'ADSET_PAUSED') return 'paused';
+          if (v === 'DELETED' || v === 'ARCHIVED') return 'archived';
+          return 'other';
+        };
+        const filteredRows = rows.filter(a => {
+          if (_perAdFilterCampaign !== 'all') {
+            const c = String(a.campaign || '').toLowerCase();
+            if (c !== _perAdFilterCampaign) return false;
+          }
+          if (_perAdFilterGeo !== 'all' && geoBucket(a.geo) !== _perAdFilterGeo) return false;
+          if (_perAdFilterStatus !== 'all' && statusBucket(a.status) !== _perAdFilterStatus) return false;
+          return true;
+        });
+
+        const topClicks = filteredRows.length > 0 ? (filteredRows[0].cta_clicks || 0) : 0;
         // Backfill footer summary: total purchases and revenue from synthetic
         // tags, shown as a small note so numbers reconcile with the KPI cards.
         const backfillCount = backfillRows.reduce((s, a) => s + (a.purchases || 0), 0);
@@ -6109,7 +6143,20 @@
           }
           return `<span class="tier-badge" title="utm_term=${escapeHtml(String(geo))}" style="background: ${bg}; color: ${color}; border-color: ${border}; font-size: 10px; margin-left: 4px;">${escapeHtml(label)}</span>`;
         };
-        const rowsHtml = rows.map(a => {
+        // Status badge: green pill for ACTIVE, gray-red for PAUSED, faint
+        // for anything else (unknown, archived, etc). Only shown when we
+        // know the ad's Meta status.
+        const statusBadge = (s) => {
+          if (!s) return '';
+          const bucket = statusBucket(s);
+          const v = String(s).toUpperCase().replace(/_/g, ' ');
+          let bg, color, border;
+          if (bucket === 'active') { bg = 'rgba(122, 174, 94, 0.15)'; color = '#4d8f52'; border = 'rgba(122, 174, 94, 0.3)'; }
+          else if (bucket === 'paused') { bg = 'rgba(200, 130, 60, 0.14)'; color = '#c07030'; border = 'rgba(200, 130, 60, 0.3)'; }
+          else { bg = 'rgba(122, 122, 122, 0.10)'; color = 'var(--text-mute)'; border = 'rgba(122, 122, 122, 0.24)'; }
+          return `<span class="tier-badge" title="Meta status=${escapeHtml(String(s))}" style="background: ${bg}; color: ${color}; border-color: ${border}; font-size: 10px; margin-left: 4px;">${escapeHtml(v)}</span>`;
+        };
+        const rowsHtml = filteredRows.map(a => {
           const isTop = (a.cta_clicks || 0) === topClicks && topClicks > 0;
           const ctaRateFmt = a.cta_rate == null ? '<span style="color: var(--text-mute);">—</span>' : pct(a.cta_rate);
           const purchRateFmt = a.purchase_rate == null ? '<span style="color: var(--text-mute);">—</span>' : pct(a.purchase_rate);
@@ -6118,7 +6165,7 @@
             : '';
           return `
             <tr>
-              <td data-label="Ad">${isTop ? '<span style="color: var(--gold);">★</span> ' : ''}<strong>${escapeHtml(a.ad_name)}</strong> ${campaignBadge}${geoBadge(a.geo)}</td>
+              <td data-label="Ad">${isTop ? '<span style="color: var(--gold);">★</span> ' : ''}<strong>${escapeHtml(a.ad_name)}</strong> ${campaignBadge}${geoBadge(a.geo)}${statusBadge(a.status)}</td>
               <td data-label="LP visits" class="num">${num(a.visits)}</td>
               <td data-label="CTA clicks" class="num">${num(a.cta_clicks)}</td>
               <td data-label="CTR" class="num">${ctaRateFmt}</td>
@@ -6145,6 +6192,21 @@
               <td data-label="Revenue" class="num">${cur((a.revenue_cents || 0) / 100)}</td>
             </tr>`;
         }).join('');
+        // Filter chip renderer. Highlights the active chip and hides
+        // itself if all rows share the same value (nothing to filter).
+        const filterChip = (label, value, activeVal, filterKey) => {
+          const isActive = activeVal === value;
+          const bg = isActive ? 'var(--gold)' : 'transparent';
+          const color = isActive ? '#1a1408' : 'var(--text-dim)';
+          const border = isActive ? 'var(--gold)' : 'var(--border)';
+          return `<button data-perad-filter="${filterKey}" data-value="${value}" style="background: ${bg}; color: ${color}; border: 1px solid ${border}; border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s;">${escapeHtml(label)}</button>`;
+        };
+        // Show only geo options that appear in the data; same for status.
+        // Cold/Warm always shown since they are the primary axis.
+        const geoBuckets = new Set(rows.map(r => geoBucket(r.geo)));
+        const statusBuckets = new Set(rows.map(r => statusBucket(r.status)));
+        const knownStatus = statusBuckets.has('active') || statusBuckets.has('paused');
+
         return `
           <div style="background: var(--bg-warm); border: 1px solid var(--gold-line); border-radius: 12px; padding: 18px 22px; margin-bottom: 22px;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
@@ -6153,7 +6215,29 @@
                 "Which specific ad drove the most LP visits, CTA clicks, and purchases. Groups by the utm_content value on your Meta ad URLs. Top-performing ad by CTA clicks gets a gold star. Backfilled synthetic tags (historical/ads-purchase backfill) are excluded and summarised in the footer. Ads-LP clicks from before per-ad tracking was live are shown as an italic 'untagged (pre-tracking)' row so LP funnel totals reconcile.",
                 "Compare CTR (CTA-clicks-per-visit) across ads to find the strongest hook. Compare Conv % (purchases-per-CTA-click) to find the strongest offer messaging."
               )}</div>
-              <div style="font-size: 11px; color: var(--text-dim);">${rows.length} ad${rows.length === 1 ? '' : 's'} tracked</div>
+              <div style="font-size: 11px; color: var(--text-dim);">${filteredRows.length} of ${rows.length} ad${rows.length === 1 ? '' : 's'}</div>
+            </div>
+            <div style="display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border);">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-mute); margin-right: 2px;">Type</span>
+                ${filterChip('All', 'all', _perAdFilterCampaign, 'campaign')}
+                ${filterChip('Cold', 'cold', _perAdFilterCampaign, 'campaign')}
+                ${filterChip('Warm', 'warm', _perAdFilterCampaign, 'campaign')}
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-mute); margin-right: 2px;">Geo</span>
+                ${filterChip('All', 'all', _perAdFilterGeo, 'geo')}
+                ${geoBuckets.has('usa') ? filterChip('USA/CAN', 'usa', _perAdFilterGeo, 'geo') : ''}
+                ${geoBuckets.has('europe') ? filterChip('Europe', 'europe', _perAdFilterGeo, 'geo') : ''}
+                ${geoBuckets.has('other') ? filterChip('Other', 'other', _perAdFilterGeo, 'geo') : ''}
+              </div>
+              ${knownStatus ? `
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-mute); margin-right: 2px;">Status</span>
+                ${filterChip('All', 'all', _perAdFilterStatus, 'status')}
+                ${statusBuckets.has('active') ? filterChip('Active', 'active', _perAdFilterStatus, 'status') : ''}
+                ${statusBuckets.has('paused') ? filterChip('Paused', 'paused', _perAdFilterStatus, 'status') : ''}
+              </div>` : ''}
             </div>
             <div style="overflow-x: auto;">
               <table class="data-table" style="min-width: 640px;">
@@ -6562,6 +6646,17 @@
       }
       if (e.target.closest("#ads-refresh-btn")) {
         loadAdsMetrics();
+        return;
+      }
+      // Per-ad table filter chips (campaign type / geo / status)
+      const peradFilter = e.target.closest("[data-perad-filter]");
+      if (peradFilter) {
+        const key = peradFilter.dataset.peradFilter;
+        const value = peradFilter.dataset.value;
+        if (key === 'campaign') _perAdFilterCampaign = value;
+        else if (key === 'geo') _perAdFilterGeo = value;
+        else if (key === 'status') _perAdFilterStatus = value;
+        rerenderAdsContent();
         return;
       }
       // Campaign chip toggle
