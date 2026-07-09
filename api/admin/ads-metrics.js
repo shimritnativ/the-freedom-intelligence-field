@@ -114,7 +114,7 @@ export default async function handler(req, res) {
     // Fire Meta Graph requests in parallel. Each wrapped in safe() so
     // they fail independently — common case: campaign list fetch fails
     // on a field permission, but insights succeed (or vice versa).
-    const [campaignInsights, dailyInsights, campaignMeta] = await Promise.all([
+    const [campaignInsights, dailyInsights, campaignMeta, metaAdList] = await Promise.all([
       safe("campaign_insights", fetchInsights({
         accessToken,
         accountId,
@@ -147,6 +147,10 @@ export default async function handler(req, res) {
         timeIncrement: 1,
       })),
       safe("campaign_list", fetchCampaignList({ accessToken, accountId, apiVersion })),
+      // Ad-level list (with effective_status) used to filter the per-ad
+      // table by ACTIVE/PAUSED. Fails silently to [] so a permission
+      // issue on this one endpoint does not break the whole tab.
+      safe("ad_list", fetchAdListWithStatus({ accessToken, accountId, apiVersion })),
     ]);
 
     // Pull our own attribution data — signups and purchases tagged with
@@ -422,7 +426,7 @@ export default async function handler(req, res) {
       daily,
       organic,
       cta_breakdown: ctaBreakdown,
-      per_ad: perAdBreakdown,
+      per_ad: enrichPerAdWithStatus(perAdBreakdown, metaAdList),
       // WhatsApp campaign breakdown for the Ads tab's "WhatsApp Campaigns"
       // section below the Meta ads content. Same shape as per_ad but
       // grouped by utm_campaign (not utm_content) since WhatsApp campaigns
@@ -501,6 +505,58 @@ async function fetchInsights({ accessToken, accountId, apiVersion, from, to, lev
   const data = json.data || [];
   metaCacheSet(cacheKey, data);
   return data;
+}
+
+// Fetches ad-level list from Meta with effective_status so the per-ad
+// table can filter by ACTIVE/PAUSED. Uses a broad fetch (limit 500) since
+// account ad counts are usually small; increase if you scale past that.
+// Fails silently to [] so a token permission issue does not break the
+// whole ads endpoint — per-ad rows just show status: null in that case.
+async function fetchAdListWithStatus({ accessToken, accountId, apiVersion }) {
+  const cacheKey = `ads:${accountId}`;
+  const cached = metaCacheGet(cacheKey);
+  if (cached) return cached;
+  try {
+    const params = new URLSearchParams({
+      access_token: accessToken,
+      fields: "id,name,effective_status,status",
+      limit: "500",
+    });
+    const url = `https://graph.facebook.com/${apiVersion}/${accountId}/ads?${params.toString()}`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const json = await res.json();
+    const list = (json.data || []).map((a) => ({
+      id: a.id,
+      name: a.name || "",
+      status: a.effective_status || a.status || "UNKNOWN",
+    }));
+    metaCacheSet(cacheKey, list);
+    return list;
+  } catch (e) {
+    console.warn("meta_ads_list_failed", e?.message);
+    return [];
+  }
+}
+
+// Match utm_content ad names against Meta ad names to attach status. Two
+// sides can differ in casing, spaces, or naming style — so we normalize
+// and do substring matching in both directions before giving up.
+function enrichPerAdWithStatus(perAdRows, metaAds) {
+  if (!metaAds || metaAds.length === 0) {
+    return perAdRows.map((r) => ({ ...r, status: null }));
+  }
+  const norm = (s) => String(s || "").toLowerCase().trim().replace(/\s+/g, "");
+  return perAdRows.map((row) => {
+    if (!row.ad_name) return { ...row, status: null };
+    const target = norm(row.ad_name);
+    const match = metaAds.find((m) => {
+      const n = norm(m.name);
+      if (!n || !target) return false;
+      return n === target || n.includes(target) || target.includes(n);
+    });
+    return { ...row, status: match ? match.status : null };
+  });
 }
 
 async function fetchCampaignList({ accessToken, accountId, apiVersion }) {
