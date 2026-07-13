@@ -363,28 +363,27 @@ This override applies only to the upgrade invitation and button at the end of th
       messageId: assistantRow ? assistantRow.id : null,
     });
 
-    // If the auto-detector just recorded a fresh completion, fire the
-    // day_completed GHL event so workflows can react. The Complete Day
-    // button fires the same event from its own endpoint — either path
-    // triggers exactly one event per (user, day) because completionRow
-    // is null when the row already existed (ON CONFLICT DO NOTHING).
-    if (completionRow && user.tier === "preview") {
-      // Also bump last_completed_day so the next-day unlock takes
-      // effect immediately. The Complete Day endpoint does the same;
-      // here we mirror it for auto-detected completions.
-      try {
-        await sql`
-          UPDATE users
-          SET last_completed_day = GREATEST(COALESCE(last_completed_day, 0), ${day}),
-              updated_at = NOW()
-          WHERE id = ${user.id}
-        `;
-      } catch (e) {
-        console.warn("auto_complete_bump_failed", { message: e?.message });
-      }
-      // day_completed GHL event used to fire here. Removed because
-      // ghlWebhook.js is not deployed. No-op for now.
-    }
+    // NOTE: previously this block ALSO bumped user.last_completed_day
+    // whenever the auto-detector recorded a completion. That created a
+    // real bug (Doris Bell, 2026-07-09): the AI produced Day 1's closing
+    // structured output, last_completed_day was auto-bumped to 1, which
+    // unlocked Day 2 via the completion path in isDayUnlocked. The NEXT
+    // chat turn then resolved to day=2 and the AI silently continued
+    // into Day 2 within the same session. Same cascade for Day 3. All
+    // three days completed in ~48 minutes with no integration time.
+    //
+    // Shimrit's intent (documented in resolveActiveDay comments) is that
+    // each day opens 24h after the first one, OR when the user manually
+    // clicks the "Complete Day N →" button. Auto-bumping short-circuits
+    // both. So we now DO NOT bump last_completed_day from chat.js.
+    //
+    // The day_completions row is still recorded by maybeRecordDayCompletion
+    // above (for analytics). last_completed_day is only advanced by the
+    // /api/complete-day button endpoint, which is the explicit user act
+    // that says "I'm done with today, unlock tomorrow."
+    //
+    // Full-tier users were never affected — this block only ran for
+    // preview tier — but leaving no-op for both to keep behavior uniform.
 
     // ----- Durable-fact extraction (cross-process memory) -----
     // Background pass against the user's message to pull out anything
