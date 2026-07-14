@@ -67,33 +67,34 @@
   .header-date { background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.35); border-radius: 8px; padding: 7px 16px; font-size: 12px; color: var(--gold); font-weight: 600; white-space: nowrap; letter-spacing: 0.3px; }
 
   /* ── NAV ── */
-  .nav-wrap { background: var(--near-black); border-bottom: 1px solid rgba(201,168,76,0.2); position: sticky; top: 82px; z-index: 99; overflow: hidden; }
+  .nav-wrap { background: var(--near-black); border-bottom: 1px solid rgba(201,168,76,0.2); position: sticky; top: 82px; z-index: 99; }
+  /* Inner wrapper matches the 1100px content width so the chevrons hug
+     the visible tabs rather than sitting way off at the viewport edge. */
+  .nav-inner { max-width: 1100px; margin: 0 auto; position: relative; }
   /* Left + right edge chevrons that show scrollability. Driven by JS which
-     toggles .can-scroll-left / .can-scroll-right classes based on the nav's
-     actual scroll position. That way the indicators only appear when there
-     is more content in that direction, and disappear when you've reached
-     the end. Chevrons animate in/out for a soft feel. */
-  .nav-wrap::before,
-  .nav-wrap::after {
-    content: ''; position: absolute; top: 0; bottom: 0; width: 48px;
+     toggles .can-scroll-left / .can-scroll-right classes on .nav-inner
+     based on the nav's actual scroll position. */
+  .nav-inner::before,
+  .nav-inner::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: 44px;
     pointer-events: none; z-index: 2;
     display: flex; align-items: center;
     color: var(--gold); font-size: 26px; font-weight: 300;
     opacity: 0; transition: opacity 0.25s ease;
   }
-  .nav-wrap::before {
+  .nav-inner::before {
     left: 0; justify-content: flex-start; padding-left: 10px;
     background: linear-gradient(90deg, var(--near-black) 40%, rgba(20,16,11,0) 100%);
     content: '‹';
   }
-  .nav-wrap::after {
+  .nav-inner::after {
     right: 0; justify-content: flex-end; padding-right: 10px;
     background: linear-gradient(90deg, rgba(20,16,11,0) 0%, var(--near-black) 60%);
     content: '›';
   }
-  .nav-wrap.can-scroll-left::before { opacity: 0.9; }
-  .nav-wrap.can-scroll-right::after { opacity: 0.9; }
-  .nav { max-width: 1100px; margin: 0 auto; display: flex; overflow-x: auto; padding: 0 20px; scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.3) transparent; scroll-behavior: smooth; }
+  .nav-inner.can-scroll-left::before { opacity: 0.9; }
+  .nav-inner.can-scroll-right::after { opacity: 0.9; }
+  .nav { display: flex; overflow-x: auto; padding: 0 20px; scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.3) transparent; scroll-behavior: smooth; }
   .nav::-webkit-scrollbar { height: 4px; }
   .nav::-webkit-scrollbar-track { background: transparent; }
   .nav::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.3); border-radius: 2px; }
@@ -374,6 +375,7 @@
 
 <!-- NAV -->
 <div class="nav-wrap">
+  <div class="nav-inner">
   <div class="nav">
     <button class="nav-btn active" onclick="showTab('overview', this)">◆ Daily Overview</button>
     <button class="nav-btn" onclick="showTab('morning', this)">☀ Morning Block</button>
@@ -384,6 +386,7 @@
     <button class="nav-btn" onclick="showTab('checklist', this)">✦ Daily Checklist</button>
     <button class="nav-btn" onclick="showTab('notes', this)">✎ Notes Template</button>
     <button class="nav-btn" onclick="showTab('history', this)">◈ History</button>
+  </div>
   </div>
 </div>
 
@@ -1421,13 +1424,13 @@
   // when there is more content in that direction, out when at the end.
   (function () {
     const nav = document.querySelector('.nav');
-    const wrap = document.querySelector('.nav-wrap');
-    if (!nav || !wrap) return;
+    const inner = document.querySelector('.nav-inner');
+    if (!nav || !inner) return;
     function update() {
       const canLeft  = nav.scrollLeft > 8;
       const canRight = nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 8;
-      wrap.classList.toggle('can-scroll-left', canLeft);
-      wrap.classList.toggle('can-scroll-right', canRight);
+      inner.classList.toggle('can-scroll-left', canLeft);
+      inner.classList.toggle('can-scroll-right', canRight);
     }
     nav.addEventListener('scroll', update, { passive: true });
     window.addEventListener('resize', update);
