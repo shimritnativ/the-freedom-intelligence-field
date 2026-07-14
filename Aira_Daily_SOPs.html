@@ -3,39 +3,48 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aira's Daily SOP — Power Reset & Lead Nurture</title>
+<title>Aira's Daily SOP · The Field</title>
+<link rel="icon" type="image/png" href="logomyp.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --black:        #0d0d0d;
-    --near-black:   #1a1a1a;
-    --charcoal:     #2a2520;
+    /* Matches the Field / admin brand system exactly */
+    --font-serif: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --black:        #080604;
+    --near-black:   #14100B;
+    --charcoal:     #1A140E;
     --gold:         #C9A84C;
     --gold-bright:  #DFC06A;
     --gold-dark:    #8B6E2A;
     --gold-pale:    #F5EDD3;
     --gold-tint:    #FBF7EC;
-    --cream:        #FAF6EE;
-    --cream-dark:   #F0EAD8;
+    --cream:        #FBF6EA;
+    --cream-dark:   #F5EDD5;
     --taupe:        #D4C5A9;
     --taupe-mid:    #B5A080;
     --taupe-dark:   #7A6A52;
     --white:        #FFFFFF;
-    --text:         #1a1a1a;
+    --text:         #1A1408;
     --text-mid:     #4a3f30;
     --text-light:   #7a6a52;
     --radius:       12px;
-    --shadow:       0 2px 14px rgba(0,0,0,0.07);
-    --shadow-lg:    0 6px 32px rgba(0,0,0,0.18);
+    --shadow:       0 4px 20px rgba(26,20,8,0.06);
+    --shadow-lg:    0 6px 20px rgba(0,0,0,0.25);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: var(--font-sans);
     background: var(--cream);
     color: var(--text);
     font-size: 15px;
-    line-height: 1.6;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
   /* ── HEADER ── */
@@ -51,20 +60,31 @@
   }
   .header-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
   .header-logo { display: flex; align-items: center; gap: 14px; }
-  .header-diamond {
-    width: 36px; height: 36px;
-    background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-    flex-shrink: 0;
-  }
-  .header h1 { font-size: 18px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--white); }
-  .header h1 span { color: var(--gold); }
+  .header-logo img { height: 34px; width: auto; display: block; opacity: 0.95; flex-shrink: 0; }
+  .header h1 { font-size: 20px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; color: var(--white); font-family: var(--font-sans); }
+  .header h1 span { color: var(--gold); font-family: var(--font-serif); font-style: italic; font-weight: 500; letter-spacing: 0; text-transform: none; font-size: 22px; margin-left: 2px; }
   .header p { font-size: 12px; color: var(--taupe); margin-top: 2px; letter-spacing: 0.3px; }
   .header-date { background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.35); border-radius: 8px; padding: 7px 16px; font-size: 12px; color: var(--gold); font-weight: 600; white-space: nowrap; letter-spacing: 0.3px; }
 
   /* ── NAV ── */
   .nav-wrap { background: var(--near-black); border-bottom: 1px solid rgba(201,168,76,0.2); position: sticky; top: 82px; z-index: 99; }
-  .nav { max-width: 1100px; margin: 0 auto; display: flex; overflow-x: auto; padding: 0 20px; }
+  /* Right-edge fade + chevron so users know the nav scrolls horizontally
+     when content overflows. Hidden on wide desktops where nothing scrolls. */
+  .nav-wrap::after {
+    content: '›';
+    position: absolute; right: 0; top: 0; bottom: 0;
+    display: flex; align-items: center; justify-content: flex-end;
+    padding-right: 12px; padding-left: 40px;
+    color: var(--gold); font-size: 22px; font-weight: 400;
+    pointer-events: none;
+    background: linear-gradient(90deg, rgba(20,16,11,0) 0%, var(--near-black) 60%);
+    opacity: 0.85;
+  }
+  @media (min-width: 1200px) { .nav-wrap::after { display: none; } }
+  .nav { max-width: 1100px; margin: 0 auto; display: flex; overflow-x: auto; padding: 0 20px; scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.3) transparent; }
+  .nav::-webkit-scrollbar { height: 4px; }
+  .nav::-webkit-scrollbar-track { background: transparent; }
+  .nav::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.3); border-radius: 2px; }
   .nav-btn {
     padding: 13px 18px; font-size: 12px; font-weight: 600; color: var(--taupe-mid);
     border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent;
@@ -84,7 +104,7 @@
     box-shadow: var(--shadow); margin-bottom: 20px;
     border: 1px solid var(--cream-dark);
   }
-  .card h2 { font-size: 17px; font-weight: 700; margin-bottom: 18px; color: var(--black); display: flex; align-items: center; gap: 10px; letter-spacing: 0.3px; }
+  .card h2 { font-family: var(--font-serif); font-style: italic; font-size: 24px; font-weight: 500; margin-bottom: 18px; color: var(--black); display: flex; align-items: center; gap: 10px; letter-spacing: -0.005em; }
   .card h3 { font-size: 11px; font-weight: 700; margin-bottom: 10px; color: var(--taupe-mid); text-transform: uppercase; letter-spacing: 1px; }
 
   /* ── GRID ── */
@@ -330,7 +350,7 @@
 <div class="header">
   <div class="header-inner">
     <div class="header-logo">
-      <div class="header-diamond"></div>
+      <img src="logomyp.png" alt="Master Your Path">
       <div>
         <h1>MASTER YOUR PATH &nbsp;<span>— Aira's Daily SOP</span></h1>
         <p>Power Reset &amp; Lead Nurture · Follow this every working day</p>
@@ -351,7 +371,7 @@
     <button class="nav-btn" onclick="showTab('priority', this)">▲ Priority Order</button>
     <button class="nav-btn" onclick="showTab('checklist', this)">✦ Daily Checklist</button>
     <button class="nav-btn" onclick="showTab('notes', this)">✎ Notes Template</button>
-    <button class="nav-btn" onclick="showTab('history', this)">📅 History</button>
+    <button class="nav-btn" onclick="showTab('history', this)">◈ History</button>
   </div>
 </div>
 
@@ -466,11 +486,11 @@
           <div><strong style="color:var(--gold)">US / Canada / UK = Manual WhatsApp</strong><span style="color:var(--taupe)"> People in these countries often can't receive GHL WhatsApp. Always verify delivery.</span></div>
         </div>
         <div class="alert dark">
-          <div class="alert-icon">🏷</div>
+          <div class="alert-icon">⚑</div>
           <div><strong style="color:var(--gold)">Newly Engaged Tag = Automation Stops</strong><span style="color:var(--taupe)"> When you add this tag, check which automated messages stop. Send them manually.</span></div>
         </div>
         <div class="alert gold">
-          <div class="alert-icon">📅</div>
+          <div class="alert-icon">◈</div>
           <div><strong>Next Follow-Up Date is Mandatory</strong>Every lead must have one. Notes describe the past. The date determines the future.</div>
         </div>
       </div>
@@ -573,7 +593,7 @@
             <p style="margin-top:8px">For every person: open contact → review activity → check recommendation → apply human judgment → act → update GHL.</p>
             <div class="alert gold" style="margin-top:12px">
               <div class="alert-icon">◆</div>
-              <div>The AI is a <strong>guide, not a decision-maker.</strong> Use your judgment. If someone is on Day 3 and is from the UK, proactively contact them manually even if Intelligence doesn't flag it.</div>
+              <div><strong style="display:inline">The AI is a guide, not a decision-maker.</strong> Use your judgment. If someone is on Day 3 and is from the UK, proactively contact them manually even if Intelligence doesn't flag it.</div>
             </div>
           </div>
         </div>
@@ -713,7 +733,7 @@
             <div class="dt-arrow-label yes">✔ Yes</div>
             <div class="dt-arrow">↓</div>
             <div class="dt-node action-yes" style="max-width:100%">
-              ✅ Continue monitoring the sequence. Check for replies and move them through their journey stage normally.
+              ✓ Continue monitoring the sequence. Check for replies and move them through their journey stage normally.
             </div>
           </div>
 
@@ -764,7 +784,7 @@
     </div>
 
     <div class="card">
-      <h2>🏷 Newly Engaged Power Reset Tag — What It Means</h2>
+      <h2>⚑ Newly Engaged Power Reset Tag — What It Means</h2>
       <div class="alert dark">
         <div class="alert-icon">◆</div>
         <div><strong style="color:var(--gold)">Adding this tag changes the automation.</strong> <span style="color:var(--taupe)">Some messages stop sending automatically. Aira must know exactly which ones and send them manually at the right time.</span></div>
@@ -955,7 +975,7 @@
       <p style="color:var(--text-mid);margin-bottom:18px;font-size:13.5px">If GHL WhatsApp and WhatsApp Business both fail, try these in order:</p>
       <div class="grid-3">
         <div class="channel-card-dark">
-          <div class="channel-icon">📧</div>
+          <div class="channel-icon">✉</div>
           <h4>Personal Email</h4>
           <p>Subject: <em style="color:var(--gold-dark)">"Re: Your 72 Hour Power Reset"</em><br>Make it feel personal and directly connected to their purchase.</p>
         </div>
@@ -965,7 +985,7 @@
           <p>Personal, warm message. Use scripts stored in the SOP resources folder.</p>
         </div>
         <div class="channel-card-dark">
-          <div class="channel-icon">💬</div>
+          <div class="channel-icon">❝</div>
           <h4>Facebook Messenger</h4>
           <p>Use if they're connected via Facebook or came through a Facebook ad.</p>
         </div>
@@ -985,7 +1005,7 @@
     </div>
 
     <div class="checklist-controls">
-      <button class="btn btn-primary" onclick="archiveAndReset()">📅 Archive &amp; Reset for Tomorrow</button>
+      <button class="btn btn-primary" onclick="archiveAndReset()">◈ Archive &amp; Reset for Tomorrow</button>
       <button class="btn btn-secondary" onclick="resetAll()">↩ Reset Today</button>
     </div>
 
@@ -1147,7 +1167,7 @@
 
     <div class="card">
       <div class="history-header-row">
-        <h2 style="margin-bottom:0">📅 Daily Checklist History</h2>
+        <h2 style="margin-bottom:0">◈ Daily Checklist History</h2>
         <button class="history-clear-btn" onclick="clearHistory()">Clear All History</button>
       </div>
       <p style="color:var(--text-mid);font-size:13.5px;margin-bottom:20px">Every time you tick a checkbox, that day's progress is automatically saved here. Click any entry to see the category breakdown.</p>
