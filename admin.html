@@ -6181,6 +6181,10 @@
         // neutral pill with the raw value.
         const geoBadge = (geo) => {
           if (!geo) return '';
+          // Reject Meta ad ID leftovers (15+ digit strings) so they never
+          // render as fake geo badges. Belt-and-suspenders alongside the
+          // SQL filter that already excludes them.
+          if (/^\d{15,}$/.test(String(geo).trim())) return '';
           const g = String(geo).toLowerCase();
           let label, bg, color, border;
           if (g.includes('usa') || g.includes('canada') || g === 'us_ca' || g.includes('north_america') || g.includes('north-america')) {
