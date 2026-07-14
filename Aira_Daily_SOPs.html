@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aira's Daily SOP — Power Reset & Lead Nurture</title>
+<style>
+  :root {
+    --black:        #0d0d0d;
+    --near-black:   #1a1a1a;
+    --charcoal:     #2a2520;
+    --gold:         #C9A84C;
+    --gold-bright:  #DFC06A;
+    --gold-dark:    #8B6E2A;
+    --gold-pale:    #F5EDD3;
+    --gold-tint:    #FBF7EC;
+    --cream:        #FAF6EE;
+    --cream-dark:   #F0EAD8;
+    --taupe:        #D4C5A9;
+    --taupe-mid:    #B5A080;
+    --taupe-dark:   #7A6A52;
+    --white:        #FFFFFF;
+    --text:         #1a1a1a;
+    --text-mid:     #4a3f30;
+    --text-light:   #7a6a52;
+    --radius:       12px;
+    --shadow:       0 2px 14px rgba(0,0,0,0.07);
+    --shadow-lg:    0 6px 32px rgba(0,0,0,0.18);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--black);
+    color: white;
+    padding: 28px 40px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow-lg);
+    border-bottom: 2px solid var(--gold-dark);
+  }
+  .header-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .header-logo { display: flex; align-items: center; gap: 14px; }
+  .header-diamond {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+    flex-shrink: 0;
+  }
+  .header h1 { font-size: 18px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--white); }
+  .header h1 span { color: var(--gold); }
+  .header p { font-size: 12px; color: var(--taupe); margin-top: 2px; letter-spacing: 0.3px; }
+  .header-date { background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.35); border-radius: 8px; padding: 7px 16px; font-size: 12px; color: var(--gold); font-weight: 600; white-space: nowrap; letter-spacing: 0.3px; }
+
+  /* ── NAV ── */
+  .nav-wrap { background: var(--near-black); border-bottom: 1px solid rgba(201,168,76,0.2); position: sticky; top: 82px; z-index: 99; }
+  .nav { max-width: 1100px; margin: 0 auto; display: flex; overflow-x: auto; padding: 0 20px; }
+  .nav-btn {
+    padding: 13px 18px; font-size: 12px; font-weight: 600; color: var(--taupe-mid);
+    border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent;
+    margin-bottom: -1px; white-space: nowrap; transition: all 0.2s; letter-spacing: 0.4px; text-transform: uppercase;
+  }
+  .nav-btn:hover { color: var(--gold); }
+  .nav-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+  /* ── MAIN ── */
+  .main { max-width: 1100px; margin: 0 auto; padding: 32px 20px 60px; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--white); border-radius: var(--radius); padding: 26px 30px;
+    box-shadow: var(--shadow); margin-bottom: 20px;
+    border: 1px solid var(--cream-dark);
+  }
+  .card h2 { font-size: 17px; font-weight: 700; margin-bottom: 18px; color: var(--black); display: flex; align-items: center; gap: 10px; letter-spacing: 0.3px; }
+  .card h3 { font-size: 11px; font-weight: 700; margin-bottom: 10px; color: var(--taupe-mid); text-transform: uppercase; letter-spacing: 1px; }
+
+  /* ── GRID ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  /* ── DAILY BLOCKS ── */
+  .blocks-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  @media (max-width: 700px) { .blocks-row { grid-template-columns: 1fr; } }
+  .block-card { border-radius: var(--radius); padding: 26px 28px; }
+  .block-card.morning {
+    background: var(--black);
+    border: 1px solid rgba(201,168,76,0.3);
+  }
+  .block-card.afternoon {
+    background: var(--charcoal);
+    border: 1px solid rgba(201,168,76,0.2);
+  }
+  .block-card h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--gold-dark); margin-bottom: 6px; }
+  .block-card h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; color: var(--gold); letter-spacing: 0.5px; }
+  .block-card ul { list-style: none; }
+  .block-card ul li { font-size: 13px; color: var(--taupe); padding: 5px 0; border-bottom: 1px solid rgba(201,168,76,0.1); display: flex; align-items: flex-start; gap: 10px; }
+  .block-card ul li:last-child { border-bottom: none; }
+  .block-card ul li::before { content: '—'; color: var(--gold-dark); flex-shrink: 0; }
+
+  /* ── FLOW STEPS ── */
+  .flow { display: flex; flex-direction: column; gap: 0; }
+  .flow-step { display: flex; gap: 16px; align-items: flex-start; position: relative; padding-bottom: 22px; }
+  .flow-step:not(:last-child)::after {
+    content: ''; position: absolute; left: 19px; top: 44px;
+    width: 1px; bottom: 0; background: var(--taupe);
+  }
+  .step-num {
+    width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-weight: 800; font-size: 16px; flex-shrink: 0;
+    position: relative; z-index: 1;
+  }
+  .step-num.gold { background: var(--gold); color: var(--black); }
+  .step-num.black { background: var(--black); color: var(--gold); border: 1px solid var(--gold-dark); }
+  .step-num.taupe { background: var(--cream-dark); color: var(--taupe-dark); border: 1px solid var(--taupe); }
+  .step-body { flex: 1; }
+  .step-body h4 { font-size: 15px; font-weight: 700; color: var(--black); line-height: 1.3; margin-bottom: 6px; padding-top: 10px; }
+  .step-body p { font-size: 13.5px; color: var(--text-mid); margin-bottom: 8px; }
+  .step-body ul { list-style: none; }
+  .step-body ul li { font-size: 13px; color: var(--text-mid); padding: 3px 0 3px 16px; position: relative; }
+  .step-body ul li::before { content: '—'; position: absolute; left: 0; color: var(--gold); font-size: 11px; top: 4px; }
+
+  /* ── DECISION TREE ── */
+  .decision-tree { display: flex; flex-direction: column; align-items: center; gap: 0; }
+  .dt-node { border-radius: 10px; padding: 13px 20px; text-align: center; font-size: 13.5px; font-weight: 600; position: relative; width: 100%; max-width: 420px; }
+  .dt-node.start { background: var(--black); color: var(--gold); font-size: 15px; font-weight: 700; border: 1px solid var(--gold-dark); letter-spacing: 0.5px; }
+  .dt-node.question { background: var(--gold-pale); border: 2px solid var(--gold); color: var(--gold-dark); }
+  .dt-node.action-yes { background: #f0f7ee; border: 2px solid #6a9b5a; color: #2d5a1e; }
+  .dt-node.action-no { background: #fdf5ec; border: 2px solid var(--taupe-mid); color: var(--taupe-dark); }
+  .dt-node.action-final { background: var(--cream-dark); border: 2px solid var(--gold-dark); color: var(--text-mid); }
+  .dt-arrow { font-size: 20px; color: var(--taupe); line-height: 1; padding: 3px 0; }
+  .dt-arrow-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .dt-arrow-label.yes { color: #6a9b5a; }
+  .dt-arrow-label.no { color: var(--taupe-dark); }
+
+  /* ── STATUS CARDS ── */
+  .status-cards { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  .status-card { border-radius: 10px; padding: 18px 22px; display: flex; gap: 16px; align-items: flex-start; }
+  .status-letter { width: 42px; height: 42px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 19px; flex-shrink: 0; }
+  .status-card.a { background: var(--black); border-left: 4px solid var(--gold); }
+  .status-card.a .status-letter { background: rgba(201,168,76,0.15); color: var(--gold); }
+  .status-card.a .status-card-body h4 { color: var(--gold); }
+  .status-card.a .status-card-body p, .status-card.a .status-card-body li { color: var(--taupe); }
+  .status-card.a .status-card-body li::before { color: var(--gold-dark); }
+  .status-card.b { background: var(--charcoal); border-left: 4px solid var(--gold-bright); }
+  .status-card.b .status-letter { background: rgba(201,168,76,0.1); color: var(--gold-bright); }
+  .status-card.b .status-card-body h4 { color: var(--gold-bright); }
+  .status-card.b .status-card-body p, .status-card.b .status-card-body li { color: var(--taupe); }
+  .status-card.b .status-card-body li::before { color: var(--gold-dark); }
+  .status-card.c { background: var(--cream-dark); border-left: 4px solid var(--taupe-mid); }
+  .status-card.c .status-letter { background: var(--taupe); color: var(--white); }
+  .status-card.c .status-card-body h4 { color: var(--charcoal); }
+  .status-card.c .status-card-body p, .status-card.c .status-card-body li { color: var(--text-mid); }
+  .status-card.c .status-card-body li::before { color: var(--gold-dark); }
+  .status-card.d { background: var(--gold-tint); border-left: 4px solid var(--gold); }
+  .status-card.d .status-letter { background: var(--gold-pale); color: var(--gold-dark); }
+  .status-card.d .status-card-body h4 { color: var(--gold-dark); }
+  .status-card.d .status-card-body p, .status-card.d .status-card-body li { color: var(--text-mid); }
+  .status-card.d .status-card-body li::before { color: var(--gold); }
+  .status-card.e { background: var(--white); border-left: 4px solid var(--taupe-dark); border: 1px solid var(--cream-dark); border-left: 4px solid var(--taupe-dark); }
+  .status-card.e .status-letter { background: var(--cream-dark); color: var(--taupe-dark); }
+  .status-card.e .status-card-body h4 { color: var(--charcoal); }
+  .status-card.e .status-card-body p, .status-card.e .status-card-body li { color: var(--text-mid); }
+  .status-card.e .status-card-body li::before { color: var(--taupe-mid); }
+  .status-card-body h4 { font-size: 15px; font-weight: 700; margin-bottom: 5px; }
+  .status-card-body p { font-size: 13px; margin-bottom: 6px; }
+  .status-card-body ul { list-style: none; }
+  .status-card-body ul li { font-size: 13px; padding: 2px 0 2px 18px; position: relative; }
+  .status-card-body ul li::before { content: '—'; position: absolute; left: 0; font-size: 11px; top: 3px; }
+
+  /* ── PRIORITY ── */
+  .priority-list { display: flex; flex-direction: column; gap: 8px; }
+  .priority-item { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: 10px; font-size: 14px; font-weight: 500; border-left: 4px solid transparent; }
+  .priority-item.p1 { background: var(--black); color: var(--gold); border-left-color: var(--gold); }
+  .priority-item.p2 { background: var(--near-black); color: var(--gold-bright); border-left-color: var(--gold-bright); }
+  .priority-item.p3 { background: var(--charcoal); color: var(--cream); border-left-color: var(--gold-dark); }
+  .priority-item.p4 { background: #2a2215; color: #e0c97a; border-left-color: #a07c30; }
+  .priority-item.p5 { background: #1a1e14; color: #b8d4a0; border-left-color: #7aaa55; }
+  .priority-item.p6 { background: var(--cream-dark); color: var(--text); border-left-color: var(--taupe-mid); }
+  .priority-item.p7 { background: var(--gold-tint); color: var(--text); border-left-color: var(--gold); }
+  .priority-item.p8 { background: var(--cream); color: var(--text); border-left-color: var(--taupe); }
+  .priority-item.p9 { background: var(--white); color: var(--text-mid); border-left-color: var(--taupe); border: 1px solid var(--cream-dark); border-left: 4px solid var(--taupe); }
+  .priority-item.p10 { background: var(--white); color: var(--text-light); border-left-color: var(--cream-dark); border: 1px solid var(--cream-dark); border-left: 4px solid var(--cream-dark); }
+  .priority-item.p11 { background: var(--white); color: var(--text-light); border-left-color: var(--cream-dark); border: 1px solid var(--cream-dark); border-left: 4px solid var(--cream-dark); opacity: 0.8; }
+  .p-num { font-weight: 900; font-size: 18px; width: 28px; flex-shrink: 0; }
+  .p1 .p-num, .p2 .p-num, .p3 .p-num { color: var(--gold); }
+  .p4 .p-num { color: #e0c97a; }
+  .p5 .p-num { color: #b8d4a0; }
+  .p6 .p-num, .p7 .p-num, .p8 .p-num { color: var(--gold-dark); }
+  .p9 .p-num, .p10 .p-num, .p11 .p-num { color: var(--taupe-mid); }
+  .p-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; opacity: 0.6; margin-left: auto; white-space: nowrap; }
+
+  /* ── CHECKLIST ── */
+  .checklist-section { margin-bottom: 20px; }
+  .checklist-section-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-radius: 10px; margin-bottom: 4px; cursor: pointer; user-select: none; }
+  .checklist-section-header h3 { font-size: 12px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 1px; }
+  .checklist-section-header .progress-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+
+  .section-new-members .checklist-section-header { background: var(--black); border: 1px solid rgba(201,168,76,0.3); }
+  .section-new-members .checklist-section-header h3 { color: var(--gold); }
+  .section-new-members .checklist-section-header .progress-badge { background: var(--gold-dark); color: var(--gold-tint); }
+  .section-intel .checklist-section-header { background: var(--charcoal); border: 1px solid rgba(201,168,76,0.2); }
+  .section-intel .checklist-section-header h3 { color: var(--gold-bright); }
+  .section-intel .checklist-section-header .progress-badge { background: rgba(201,168,76,0.2); color: var(--gold-bright); }
+  .section-existing .checklist-section-header { background: var(--cream-dark); border: 1px solid var(--taupe); }
+  .section-existing .checklist-section-header h3 { color: var(--taupe-dark); }
+  .section-existing .checklist-section-header .progress-badge { background: var(--taupe); color: var(--white); }
+  .section-manychat .checklist-section-header { background: var(--gold-pale); border: 1px solid var(--gold); }
+  .section-manychat .checklist-section-header h3 { color: var(--gold-dark); }
+  .section-manychat .checklist-section-header .progress-badge { background: var(--gold); color: var(--black); }
+  .section-tracking .checklist-section-header { background: var(--gold-tint); border: 1px solid var(--taupe); }
+  .section-tracking .checklist-section-header h3 { color: var(--taupe-dark); }
+  .section-tracking .checklist-section-header .progress-badge { background: var(--taupe-mid); color: var(--white); }
+
+  .check-items { padding: 4px 0; }
+  .check-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 14px; border-radius: 8px; cursor: pointer; transition: background 0.15s; }
+  .check-item:hover { background: var(--gold-tint); }
+  .check-item.done { opacity: 0.45; }
+  .check-item.done .check-label { text-decoration: line-through; }
+  .check-box { width: 20px; height: 20px; border-radius: 5px; border: 2px solid var(--taupe); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; margin-top: 1px; }
+  .check-item.done .check-box { background: var(--gold); border-color: var(--gold); }
+  .check-tick { display: none; color: var(--black); font-size: 11px; font-weight: 900; }
+  .check-item.done .check-tick { display: block; }
+  .check-label { font-size: 14px; color: var(--text); line-height: 1.4; }
+
+  .checklist-controls { display: flex; gap: 10px; margin-bottom: 24px; }
+  .btn { padding: 10px 20px; border-radius: 8px; font-size: 12px; font-weight: 700; border: none; cursor: pointer; transition: all 0.15s; letter-spacing: 0.5px; text-transform: uppercase; }
+  .btn-primary { background: var(--gold); color: var(--black); }
+  .btn-primary:hover { background: var(--gold-bright); }
+  .btn-secondary { background: var(--white); color: var(--text-mid); border: 1px solid var(--taupe); }
+  .btn-secondary:hover { background: var(--cream-dark); }
+
+  .total-progress { background: var(--black); border-radius: 10px; padding: 18px 22px; margin-bottom: 20px; display: flex; align-items: center; gap: 20px; border: 1px solid rgba(201,168,76,0.2); }
+  .progress-bar-wrap { flex: 1; background: rgba(255,255,255,0.1); border-radius: 99px; height: 8px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--gold-dark), var(--gold)); border-radius: 99px; transition: width 0.3s; }
+  .progress-text { font-size: 13px; font-weight: 700; color: var(--gold); white-space: nowrap; }
+
+  /* ── NOTES ── */
+  .notes-template { background: var(--black); border-radius: 10px; padding: 22px 24px; font-family: 'Courier New', monospace; font-size: 13px; line-height: 2; color: var(--taupe); position: relative; border: 1px solid rgba(201,168,76,0.2); }
+  .notes-template .field-label { color: var(--gold); font-weight: 700; }
+  .notes-template .field-val { color: rgba(212,197,169,0.6); font-style: italic; }
+  .copy-btn { position: absolute; top: 14px; right: 14px; background: var(--gold); color: var(--black); border: none; border-radius: 6px; padding: 6px 14px; font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; }
+  .copy-btn:hover { background: var(--gold-bright); }
+
+  /* ── ALERTS ── */
+  .alert { border-radius: 10px; padding: 14px 18px; margin-bottom: 16px; font-size: 13.5px; display: flex; gap: 12px; align-items: flex-start; }
+  .alert.gold { background: var(--gold-tint); border-left: 4px solid var(--gold); color: var(--gold-dark); }
+  .alert.dark { background: var(--black); border-left: 4px solid var(--gold); color: var(--taupe); }
+  .alert.taupe { background: var(--cream-dark); border-left: 4px solid var(--taupe-mid); color: var(--text-mid); }
+  .alert.warn { background: #fdf5e6; border-left: 4px solid var(--gold-dark); color: var(--text-mid); }
+  .alert-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .alert strong { display: block; font-weight: 700; margin-bottom: 2px; }
+
+  /* ── TAG ── */
+  .tag { display: inline-block; background: rgba(201,168,76,0.15); border: 1px solid var(--gold-dark); color: var(--gold); padding: 2px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+
+  /* ── COMPLETION CHECKS ── */
+  .done-check { display: flex; align-items: flex-start; gap: 12px; padding: 10px 14px; background: var(--gold-tint); border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--gold-pale); }
+  .done-check-icon { color: var(--gold); font-size: 15px; font-weight: 900; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── CHANNEL CARDS ── */
+  .channel-card { border-radius: 10px; padding: 18px; text-align: center; border: 1px solid var(--cream-dark); background: var(--white); }
+  .channel-card-dark { border-radius: 10px; padding: 18px; text-align: center; background: var(--near-black); border: 1px solid rgba(201,168,76,0.2); }
+  .channel-icon { font-size: 28px; margin-bottom: 10px; }
+  .channel-card h4, .channel-card-dark h4 { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .channel-card h4 { color: var(--text); }
+  .channel-card-dark h4 { color: var(--gold); }
+  .channel-card p { font-size: 12px; color: var(--text-light); }
+  .channel-card-dark p { font-size: 12px; color: var(--taupe); }
+
+  .collapse-icon { font-size: 14px; color: var(--taupe-mid); transition: transform 0.2s; }
+  .collapsed-header .collapse-icon { transform: rotate(-90deg); }
+  .check-items.collapsed { display: none; }
+
+  /* ── SMALL LABEL ── */
+  .label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--taupe-mid); margin-bottom: 8px; display: block; }
+
+  hr.divider { border: none; border-top: 1px solid var(--cream-dark); margin: 20px 0; }
+
+  /* ── HISTORY ── */
+  .history-entry { background: var(--white); border: 1px solid var(--cream-dark); border-radius: 10px; margin-bottom: 12px; overflow: hidden; cursor: pointer; transition: box-shadow 0.15s; }
+  .history-entry:hover { box-shadow: var(--shadow); }
+  .history-entry-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; gap: 16px; }
+  .history-date { font-size: 14px; font-weight: 700; color: var(--black); letter-spacing: 0.2px; }
+  .history-pct { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+  .history-entry-body { padding: 0 20px 16px; border-top: 1px solid var(--cream-dark); }
+  .history-entry-body.collapsed { display: none; }
+  .history-section-row { display: flex; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--gold-tint); }
+  .history-section-row:last-child { border-bottom: none; }
+  .history-section-name { font-size: 12px; color: var(--text-mid); width: 160px; flex-shrink: 0; }
+  .history-section-count { font-size: 12px; font-weight: 700; color: var(--taupe-dark); width: 36px; flex-shrink: 0; text-align: right; }
+  .history-section-count.all-done { color: var(--gold-dark); }
+  .h-bar-wrap { flex: 1; background: var(--cream-dark); border-radius: 99px; height: 6px; overflow: hidden; min-width: 60px; }
+  .h-bar-fill { height: 100%; background: linear-gradient(90deg, var(--gold-dark), var(--gold)); border-radius: 99px; }
+  .history-empty { text-align: center; padding: 40px 20px; color: var(--text-light); }
+  .history-empty .big-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+  .history-empty p { font-size: 13.5px; }
+  .history-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .history-clear-btn { font-size: 11px; font-weight: 700; color: var(--taupe-mid); background: none; border: 1px solid var(--cream-dark); border-radius: 6px; padding: 5px 12px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; }
+  .history-clear-btn:hover { color: var(--rose, #b03030); border-color: currentColor; }
+
+  /* ── MINI INFO BOXES ── */
+  .info-box { background: var(--cream-dark); border-radius: 10px; padding: 16px 18px; }
+  .info-box-dark { background: var(--near-black); border-radius: 10px; padding: 16px 18px; border: 1px solid rgba(201,168,76,0.15); }
+  .info-box h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; color: var(--gold-dark); }
+  .info-box-dark h4 { color: var(--gold); }
+  .info-box ul, .info-box-dark ul { list-style: none; }
+  .info-box ul li { font-size: 13px; color: var(--text-mid); padding: 3px 0; padding-left: 14px; position: relative; }
+  .info-box ul li::before { content: '—'; position: absolute; left: 0; color: var(--taupe-mid); font-size: 10px; top: 4px; }
+  .info-box-dark ul li { font-size: 13px; color: var(--taupe); padding: 3px 0; padding-left: 14px; position: relative; }
+  .info-box-dark ul li::before { content: '—'; position: absolute; left: 0; color: var(--gold-dark); font-size: 10px; top: 4px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div class="header-logo">
+      <div class="header-diamond"></div>
+      <div>
+        <h1>MASTER YOUR PATH &nbsp;<span>— Aira's Daily SOP</span></h1>
+        <p>Power Reset &amp; Lead Nurture · Follow this every working day</p>
+      </div>
+    </div>
+    <div class="header-date" id="todayDate"></div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="nav-wrap">
+  <div class="nav">
+    <button class="nav-btn active" onclick="showTab('overview', this)">◆ Daily Overview</button>
+    <button class="nav-btn" onclick="showTab('morning', this)">☀ Morning Block</button>
+    <button class="nav-btn" onclick="showTab('afternoon', this)">◑ Afternoon Block</button>
+    <button class="nav-btn" onclick="showTab('whatsapp', this)">↗ WhatsApp Flow</button>
+    <button class="nav-btn" onclick="showTab('status', this)">○ Journey Status</button>
+    <button class="nav-btn" onclick="showTab('priority', this)">▲ Priority Order</button>
+    <button class="nav-btn" onclick="showTab('checklist', this)">✦ Daily Checklist</button>
+    <button class="nav-btn" onclick="showTab('notes', this)">✎ Notes Template</button>
+    <button class="nav-btn" onclick="showTab('history', this)">📅 History</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ══════════════ OVERVIEW ══════════════ -->
+  <div class="tab-content active" id="tab-overview">
+
+    <div class="alert dark" style="margin-bottom:20px">
+      <div class="alert-icon">◆</div>
+      <div><strong style="color:var(--gold)">The Central Principle</strong> <span style="color:var(--taupe)">Every Power Reset purchaser must be actively monitored. Every ManyChat lead is high value. No lead should sit inside automation without a human checking on them.</span></div>
+    </div>
+
+    <div class="blocks-row">
+      <div class="block-card morning">
+        <h3>Block 1</h3>
+        <h2>☀ Start of Day</h2>
+        <ul>
+          <li>Identify new purchasers</li>
+          <li>Check communication delivery</li>
+          <li>Review Intelligence tab</li>
+          <li>Take priority actions</li>
+          <li>Check ManyChat</li>
+        </ul>
+      </div>
+      <div class="block-card afternoon">
+        <h3>Block 2</h3>
+        <h2>◑ Later in the Day</h2>
+        <ul>
+          <li>Check for new purchases</li>
+          <li>Review and answer replies</li>
+          <li>Follow up on earlier contacts</li>
+          <li>Update GoHighLevel records</li>
+          <li>Continue manual nurture</li>
+          <li>Check ManyChat again</li>
+          <li>Confirm no urgent lead missed</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Daily Flow at a Glance</h2>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="step-num gold">1</div>
+          <div class="step-body">
+            <h4>Admin Dashboard → New Members</h4>
+            <p>Check for new Power Reset &amp; Field purchasers. Open each contact in GoHighLevel.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num gold">2</div>
+          <div class="step-body">
+            <h4>Check for Duplicate Profiles</h4>
+            <p>Search by name, email, and phone. Merge duplicates <em>before</em> taking any nurture action.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num gold">3</div>
+          <div class="step-body">
+            <h4>Verify WhatsApp Automation Delivery</h4>
+            <p>Check sent / delivered / opened / errors. Manual contact needed for US, Canada, UK.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num black">4</div>
+          <div class="step-body">
+            <h4>Intelligence Tab Review</h4>
+            <p>Review every AI-highlighted category. Apply human judgment. Update GHL after each action.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num black">5</div>
+          <div class="step-body">
+            <h4>Review Contacts NOT Flagged by Intelligence</h4>
+            <p>Check previous members, graduates, Unlimited members, Newly Engaged leads.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num taupe">6</div>
+          <div class="step-body">
+            <h4>Other Newly Engaged Leads</h4>
+            <p>Continue nurture for leads outside the Power Reset. Check replies and last contact date.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num taupe">7</div>
+          <div class="step-body">
+            <h4>ManyChat Review</h4>
+            <p>Check new leads, comments, DMs. Personal follow-up. Sync to GoHighLevel.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num gold">8</div>
+          <div class="step-body">
+            <h4>Update All GoHighLevel Records</h4>
+            <p>Notes, tags, last contact date, next follow-up date. Every active lead needs a clear next action.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Key Rules — Never Forget These</h2>
+      <div class="grid-2">
+        <div class="alert warn">
+          <div class="alert-icon">🔍</div>
+          <div><strong>Always Check for Duplicates</strong>Before touching any record, search by name, email, AND phone. Merge first.</div>
+        </div>
+        <div class="alert dark">
+          <div class="alert-icon">🌐</div>
+          <div><strong style="color:var(--gold)">US / Canada / UK = Manual WhatsApp</strong><span style="color:var(--taupe)"> People in these countries often can't receive GHL WhatsApp. Always verify delivery.</span></div>
+        </div>
+        <div class="alert dark">
+          <div class="alert-icon">🏷</div>
+          <div><strong style="color:var(--gold)">Newly Engaged Tag = Automation Stops</strong><span style="color:var(--taupe)"> When you add this tag, check which automated messages stop. Send them manually.</span></div>
+        </div>
+        <div class="alert gold">
+          <div class="alert-icon">📅</div>
+          <div><strong>Next Follow-Up Date is Mandatory</strong>Every lead must have one. Notes describe the past. The date determines the future.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════ MORNING BLOCK ══════════════ -->
+  <div class="tab-content" id="tab-morning">
+    <div class="card">
+      <h2>☀ Step-by-Step Morning Workflow</h2>
+      <div class="flow">
+
+        <div class="flow-step">
+          <div class="step-num gold">1</div>
+          <div class="step-body">
+            <h4>Open the Admin Dashboard</h4>
+            <p>Check for new members in both:</p>
+            <ul><li>Power Reset</li><li>The Field</li></ul>
+            <p style="margin-top:8px">Note each person's name before opening GHL.</p>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num gold">2</div>
+          <div class="step-body">
+            <h4>Open Their Contact in GoHighLevel</h4>
+            <p>Confirm all of the following before anything else:</p>
+            <ul>
+              <li>What did they purchase?</li>
+              <li>When did they purchase?</li>
+              <li>Have they started?</li>
+              <li>Are they receiving automated communications?</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num gold">3</div>
+          <div class="step-body">
+            <h4>Check for Duplicate Profiles</h4>
+            <p>Search using all three identifiers:</p>
+            <ul><li>Full name</li><li>Email address</li><li>Phone number</li></ul>
+            <div class="alert warn" style="margin-top:12px">
+              <div class="alert-icon">⚠️</div>
+              <div>Duplicates are especially common when someone entered through multiple sources (Power Reset + ManyChat + ad form). <strong>Merge before any nurture decision.</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num gold">4</div>
+          <div class="step-body">
+            <h4>Verify WhatsApp Automation Delivery</h4>
+            <p>Inside the GHL contact record, check:</p>
+            <ul>
+              <li>Were messages sent?</li>
+              <li>Were they delivered?</li>
+              <li>Were they opened?</li>
+              <li>Any errors?</li>
+              <li>Did the contact reply?</li>
+              <li>Which message in the sequence did they last receive?</li>
+            </ul>
+            <div class="alert dark" style="margin-top:12px">
+              <div class="alert-icon">🌐</div>
+              <div><strong style="color:var(--gold)">US, Canada, UK — High Risk</strong> <span style="color:var(--taupe)">Do not assume delivery. Check manually and contact via WhatsApp Business if needed.</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num black">5</div>
+          <div class="step-body">
+            <h4>Verify Phone &amp; Country (If WhatsApp Failed)</h4>
+            <ul>
+              <li>Open their Activity in GHL</li>
+              <li>Review the submitted form</li>
+              <li>If unclear — open the support email inbox</li>
+              <li>Find the ThriveCart sale notification or invoice</li>
+              <li>Use it to verify country + phone number</li>
+              <li>Correct the number in GHL — include the international country code</li>
+              <li>Test delivery again</li>
+              <li>If still failing — contact manually via WhatsApp Business</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num black">6</div>
+          <div class="step-body">
+            <h4>Intelligence Tab Review</h4>
+            <p>Review every AI-highlighted category:</p>
+            <ul>
+              <li>Stuck Reset members</li>
+              <li>Hot Reset members</li>
+              <li>Graduates</li>
+              <li>High intent buyers</li>
+              <li>Other priority categories</li>
+            </ul>
+            <p style="margin-top:8px">For every person: open contact → review activity → check recommendation → apply human judgment → act → update GHL.</p>
+            <div class="alert gold" style="margin-top:12px">
+              <div class="alert-icon">◆</div>
+              <div>The AI is a <strong>guide, not a decision-maker.</strong> Use your judgment. If someone is on Day 3 and is from the UK, proactively contact them manually even if Intelligence doesn't flag it.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num taupe">7</div>
+          <div class="step-body">
+            <h4>Review People NOT Highlighted by Intelligence</h4>
+            <p>Look at contacts who weren't flagged. Pay attention to:</p>
+            <ul>
+              <li>People who stopped responding</li>
+              <li>People who completed but got no next step</li>
+              <li>People who asked questions</li>
+              <li>People with the Newly Engaged tag</li>
+              <li>People no longer receiving automation</li>
+              <li>People whose last contact date is too old</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num taupe">8</div>
+          <div class="step-body">
+            <h4>ManyChat Review</h4>
+            <p>Check new leads, comments, and DMs. Send personal follow-ups. Add to or update GHL. Merge any duplicate profiles. Track next action.</p>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num gold">9</div>
+          <div class="step-body">
+            <h4>Update All GoHighLevel Records</h4>
+            <p>Before finishing the block, update every contact you touched — notes, status, and next follow-up date.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ AFTERNOON BLOCK ══════════════ -->
+  <div class="tab-content" id="tab-afternoon">
+    <div class="card">
+      <h2>◑ Afternoon Block Focus Areas</h2>
+      <div class="flow">
+
+        <div class="flow-step">
+          <div class="step-num black">1</div>
+          <div class="step-body">
+            <h4>Check for New Purchases</h4>
+            <p>New purchasers can come in at any time. Run the same check as the morning block for anyone who arrived after your morning review.</p>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num gold">2</div>
+          <div class="step-body">
+            <h4>Review All Replies</h4>
+            <p>Go through every reply received since the morning block and respond personally:</p>
+            <ul>
+              <li>WhatsApp Business replies</li>
+              <li>GHL messages</li>
+              <li>ManyChat DM replies</li>
+              <li>Email replies</li>
+              <li>Instagram / Facebook replies</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num gold">3</div>
+          <div class="step-body">
+            <h4>Follow Up with Earlier Contacts</h4>
+            <p>Check who you messaged this morning or in previous days without a response. Decide whether a follow-up is appropriate based on timing and journey stage.</p>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num taupe">4</div>
+          <div class="step-body">
+            <h4>Continue Manual Nurture</h4>
+            <p>Continue the sequence for anyone in active manual nurture. Use the automation map to send the next relevant message at the right time — never from memory alone.</p>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num taupe">5</div>
+          <div class="step-body">
+            <h4>ManyChat Second Check</h4>
+            <p>New comments and DMs may have arrived since your morning review. Check and respond personally.</p>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num gold">6</div>
+          <div class="step-body">
+            <h4>Update GHL &amp; End-of-Day Confirmation</h4>
+            <p>Before finishing, confirm:</p>
+            <ul>
+              <li>All new purchasers reviewed</li>
+              <li>Communication delivery checked</li>
+              <li>Manual WhatsApp sent where needed</li>
+              <li>All duplicate profiles merged</li>
+              <li>All replies answered</li>
+              <li>ManyChat checked</li>
+              <li>GHL fields updated</li>
+              <li>Notes added</li>
+              <li>Every active lead has a next action and a Next Follow-Up Date</li>
+              <li>No high intent lead left without a response</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ WHATSAPP FLOW ══════════════ -->
+  <div class="tab-content" id="tab-whatsapp">
+
+    <div class="card">
+      <h2>↗ WhatsApp Troubleshooting — Decision Flow</h2>
+      <p style="color:var(--text-mid);margin-bottom:24px;font-size:13.5px">Follow this for every new purchaser and whenever WhatsApp delivery is in question.</p>
+
+      <div class="decision-tree">
+
+        <div class="dt-node start">👤 &nbsp;New Power Reset Purchaser</div>
+        <div style="display:flex;flex-direction:column;align-items:center;padding:4px 0">
+          <div class="dt-arrow">↓</div>
+        </div>
+
+        <div class="dt-node question">Is GHL WhatsApp showing as delivered and opened?</div>
+
+        <div style="margin-top:12px;width:100%;max-width:680px;display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+            <div class="dt-arrow-label yes">✔ Yes</div>
+            <div class="dt-arrow">↓</div>
+            <div class="dt-node action-yes" style="max-width:100%">
+              ✅ Continue monitoring the sequence. Check for replies and move them through their journey stage normally.
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+            <div class="dt-arrow-label no">✖ No</div>
+            <div class="dt-arrow">↓</div>
+            <div class="dt-node question" style="max-width:100%">Is the phone number and country correct in GHL?</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:10px">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                <div class="dt-arrow-label no" style="font-size:10px">✖ Unsure / No</div>
+                <div class="dt-arrow">↓</div>
+                <div class="dt-node action-no" style="max-width:100%;font-size:12px;text-align:left">
+                  Open GHL Activity → check submitted form → search support email for ThriveCart invoice → verify country + phone → update GHL with international code → retest
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                <div class="dt-arrow-label yes" style="font-size:10px">✔ Confirmed Correct</div>
+                <div class="dt-arrow">↓</div>
+                <div class="dt-node question" style="max-width:100%;font-size:12px">Are they in US / Canada / UK?</div>
+                <div class="dt-arrow">↓</div>
+                <div class="dt-node action-no" style="max-width:100%;font-size:12px">Contact manually via WhatsApp Business</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="width:100%;max-width:680px;margin-top:24px">
+          <div class="dt-node question">Did they respond to the manual message?</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+              <div class="dt-arrow-label yes">✔ Yes</div>
+              <div class="dt-arrow">↓</div>
+              <div class="dt-node action-yes" style="max-width:100%;font-size:13px">
+                Add <span class="tag">Newly Engaged Power Reset</span> tag → continue manually → check which automation messages stop → send those manually at the right time
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+              <div class="dt-arrow-label no">✖ No Reply</div>
+              <div class="dt-arrow">↓</div>
+              <div class="dt-node action-no" style="max-width:100%;font-size:13px">
+                Try alternative channels — personal email, Instagram DM, Facebook Messenger. Log every attempt in GHL. Set Next Follow-Up Date.
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🏷 Newly Engaged Power Reset Tag — What It Means</h2>
+      <div class="alert dark">
+        <div class="alert-icon">◆</div>
+        <div><strong style="color:var(--gold)">Adding this tag changes the automation.</strong> <span style="color:var(--taupe)">Some messages stop sending automatically. Aira must know exactly which ones and send them manually at the right time.</span></div>
+      </div>
+      <div class="grid-2" style="margin-top:18px">
+        <div>
+          <span class="label">When Someone Becomes Newly Engaged</span>
+          <div class="flow">
+            <div class="flow-step">
+              <div class="step-num gold" style="width:32px;height:32px;font-size:13px">1</div>
+              <div class="step-body"><p>Add the <span class="tag">Newly Engaged Power Reset</span> tag immediately</p></div>
+            </div>
+            <div class="flow-step">
+              <div class="step-num gold" style="width:32px;height:32px;font-size:13px">2</div>
+              <div class="step-body"><p>Update their contact record</p></div>
+            </div>
+            <div class="flow-step">
+              <div class="step-num gold" style="width:32px;height:32px;font-size:13px">3</div>
+              <div class="step-body"><p>Continue the conversation manually</p></div>
+            </div>
+            <div class="flow-step">
+              <div class="step-num black" style="width:32px;height:32px;font-size:13px">4</div>
+              <div class="step-body"><p>Check the automation map — what stops? what continues?</p></div>
+            </div>
+            <div class="flow-step">
+              <div class="step-num black" style="width:32px;height:32px;font-size:13px">5</div>
+              <div class="step-body"><p>Send stopped messages manually when they become relevant</p></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <span class="label" style="color:var(--taupe-dark)">What Must Never Happen</span>
+          <div class="alert dark" style="margin-bottom:10px">
+            <div class="alert-icon">✖</div>
+            <div style="color:var(--taupe)">The person misses the <strong style="color:var(--gold)">Connect Call invitation</strong> because the tag stopped the automation and no one sent it manually.</div>
+          </div>
+          <div class="alert dark">
+            <div class="alert-icon">✖</div>
+            <div style="color:var(--taupe)">The person misses the <strong style="color:var(--gold)">Unlimited invitation</strong> because the tag stopped the automation and no one sent it manually.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════ JOURNEY STATUS ══════════════ -->
+  <div class="tab-content" id="tab-status">
+    <div class="card">
+      <h2>○ Power Reset Journey — 5 Status Categories</h2>
+      <p style="color:var(--text-mid);margin-bottom:20px;font-size:13.5px">Every purchaser belongs in one of these categories. Your action depends entirely on where they are.</p>
+
+      <div class="status-cards">
+
+        <div class="status-card a">
+          <div class="status-letter">A</div>
+          <div class="status-card-body">
+            <h4>New Purchaser — Has Not Started</h4>
+            <p>They bought but haven't taken the first step.</p>
+            <ul>
+              <li>Send the welcome or starting message</li>
+              <li>Check if they need access guidance</li>
+              <li>Offer encouragement to begin</li>
+              <li>Help them find the first step</li>
+              <li>If several days have passed — send a restart invitation</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="status-card b">
+          <div class="status-letter">B</div>
+          <div class="status-card-body">
+            <h4>Currently Completing the Power Reset</h4>
+            <p>They are actively going through the experience.</p>
+            <ul>
+              <li>Continue the sequence from their current day forward</li>
+              <li>Do NOT send old messages that no longer apply</li>
+              <li>If they're on Day 3 — continue from Day 3 and follow with what comes after</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="status-card c">
+          <div class="status-letter">C</div>
+          <div class="status-card-body">
+            <h4>Started and Then Stopped</h4>
+            <p>They began but dropped off at some point.</p>
+            <ul>
+              <li>Identify the last day they completed</li>
+              <li>Send a personal follow-up based on where they stopped</li>
+              <li>Guide them back into the experience warmly</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="status-card d">
+          <div class="status-letter">D</div>
+          <div class="status-card-body">
+            <h4>Completed the Power Reset</h4>
+            <p>They finished all four days. Now they need the next step.</p>
+            <ul>
+              <li>Send any post-Reset follow-up they missed</li>
+              <li>Invitation to a Connect Call (if applicable)</li>
+              <li>Invitation to Unlimited (if applicable)</li>
+              <li>Any relevant next step, limited code, or message that still applies</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="status-card e">
+          <div class="status-letter">E</div>
+          <div class="status-card-body">
+            <h4>Purchased But Never Engaged</h4>
+            <p>They bought but have never interacted or responded.</p>
+            <ul>
+              <li>Send the restart message</li>
+              <li>Initiate a personal conversation</li>
+              <li>Goal: help them re-enter the experience — not leave them inactive</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>◆ Automation Awareness — What Aira Must Know</h2>
+      <div class="alert dark" style="margin-bottom:20px">
+        <div class="alert-icon">◆</div>
+        <div><strong style="color:var(--gold)">Request access to the automation map.</strong> <span style="color:var(--taupe)">Aira needs a clear document showing every message, every email, the day and timing of each, and which messages stop when the Newly Engaged tag is applied. She should never rely on memory alone.</span></div>
+      </div>
+      <div class="grid-3">
+        <div class="info-box-dark">
+          <h4>Messages to Map</h4>
+          <ul>
+            <li>Every WhatsApp message</li>
+            <li>Every email</li>
+            <li>Day and timing of each</li>
+            <li>Messages during Days 1–4</li>
+            <li>Messages after Day 4</li>
+          </ul>
+        </div>
+        <div class="info-box-dark">
+          <h4>Key Invitations</h4>
+          <ul>
+            <li>Connect Call invitation</li>
+            <li>Unlimited invitation</li>
+            <li>Limited codes and promos</li>
+          </ul>
+        </div>
+        <div class="info-box-dark">
+          <h4>Tag Impact</h4>
+          <ul>
+            <li>Which messages STOP</li>
+            <li>Which messages CONTINUE</li>
+            <li>Which need to be sent manually</li>
+            <li>When to send them</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════ PRIORITY ══════════════ -->
+  <div class="tab-content" id="tab-priority">
+    <div class="card">
+      <h2>▲ Priority Order</h2>
+      <p style="color:var(--text-mid);margin-bottom:20px;font-size:13.5px">When several leads need attention at the same time, work through them in this order. <strong>Immediate opportunities always take priority over backlog.</strong></p>
+
+      <div class="priority-list">
+        <div class="priority-item p1"><div class="p-num">1</div><div>New Power Reset purchasers who are receiving <strong>no communication at all</strong></div><div class="p-tag">Urgent</div></div>
+        <div class="priority-item p2"><div class="p-num">2</div><div>People highlighted as <strong>high intent buyers</strong></div><div class="p-tag">High</div></div>
+        <div class="priority-item p3"><div class="p-num">3</div><div><strong>Hot Reset members</strong> — actively engaged, momentum is high</div><div class="p-tag">High</div></div>
+        <div class="priority-item p4"><div class="p-num">4</div><div>People who <strong>completed the Reset</strong> but have not received a next step</div><div class="p-tag">Important</div></div>
+        <div class="priority-item p5"><div class="p-num">5</div><div>People who <strong>replied and are awaiting a response</strong> from Aira</div><div class="p-tag">Respond</div></div>
+        <div class="priority-item p6"><div class="p-num">6</div><div><strong>Stuck Reset members</strong> — started but seem to have stalled</div><div class="p-tag">Re-engage</div></div>
+        <div class="priority-item p7"><div class="p-num">7</div><div><strong>Newly engaged Power Reset leads</strong> — recently tagged, manual sequence active</div><div class="p-tag">Continue</div></div>
+        <div class="priority-item p8"><div class="p-num">8</div><div><strong>New ManyChat leads</strong> — organic, high value, personal follow-up needed</div><div class="p-tag">Engage</div></div>
+        <div class="priority-item p9"><div class="p-num">9</div><div><strong>Previous Reset &amp; Unlimited members</strong> needing ongoing nurture</div><div class="p-tag">Nurture</div></div>
+        <div class="priority-item p10"><div class="p-num">10</div><div><strong>Other newly engaged leads</strong> outside the Power Reset</div><div class="p-tag">Nurture</div></div>
+        <div class="priority-item p11"><div class="p-num">11</div><div><strong>Retroactive backlog</strong> — historical ManyChat and Power Reset recovery</div><div class="p-tag">Backlog</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>↗ Proactive Contact Channels</h2>
+      <p style="color:var(--text-mid);margin-bottom:18px;font-size:13.5px">If GHL WhatsApp and WhatsApp Business both fail, try these in order:</p>
+      <div class="grid-3">
+        <div class="channel-card-dark">
+          <div class="channel-icon">📧</div>
+          <h4>Personal Email</h4>
+          <p>Subject: <em style="color:var(--gold-dark)">"Re: Your 72 Hour Power Reset"</em><br>Make it feel personal and directly connected to their purchase.</p>
+        </div>
+        <div class="channel-card-dark">
+          <div class="channel-icon">📸</div>
+          <h4>Instagram DM</h4>
+          <p>Personal, warm message. Use scripts stored in the SOP resources folder.</p>
+        </div>
+        <div class="channel-card-dark">
+          <div class="channel-icon">💬</div>
+          <h4>Facebook Messenger</h4>
+          <p>Use if they're connected via Facebook or came through a Facebook ad.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ CHECKLIST ══════════════ -->
+  <div class="tab-content" id="tab-checklist">
+
+    <div class="total-progress">
+      <div style="font-size:20px;color:var(--gold)">◆</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+      </div>
+      <div class="progress-text" id="progressText">0 / 0 done</div>
+    </div>
+
+    <div class="checklist-controls">
+      <button class="btn btn-primary" onclick="archiveAndReset()">📅 Archive &amp; Reset for Tomorrow</button>
+      <button class="btn btn-secondary" onclick="resetAll()">↩ Reset Today</button>
+    </div>
+
+    <!-- NEW MEMBERS -->
+    <div class="checklist-section section-new-members">
+      <div class="checklist-section-header" onclick="toggleSection(this)">
+        <h3>◆ &nbsp;New Members</h3>
+        <div style="display:flex;align-items:center;gap:10px"><span class="progress-badge" id="badge-new-members">0/9</span><span class="collapse-icon">▼</span></div>
+      </div>
+      <div class="check-items" id="section-new-members">
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Check Admin Dashboard for new Power Reset purchasers</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Check Admin Dashboard for new Field members</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Open each new person in GoHighLevel</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Confirm what they purchased and when</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Confirm whether they have started and are receiving automated comms</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Search for duplicate profiles (name + email + phone)</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Merge any duplicate profiles found</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Verify phone number and country (use ThriveCart invoice if needed)</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Check automated WhatsApp delivery — contact manually via WhatsApp Business if not delivering</span></div>
+      </div>
+    </div>
+
+    <!-- INTELLIGENCE -->
+    <div class="checklist-section section-intel">
+      <div class="checklist-section-header" onclick="toggleSection(this)">
+        <h3>◈ &nbsp;Intelligence Tab</h3>
+        <div style="display:flex;align-items:center;gap:10px"><span class="progress-badge" id="badge-intelligence">0/6</span><span class="collapse-icon" style="color:var(--taupe-mid)">▼</span></div>
+      </div>
+      <div class="check-items" id="section-intelligence">
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Review stuck Reset members and take relevant action</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Review hot Reset members and take relevant action</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Review graduates — send post-Reset follow-up if missing</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Review high intent buyers — prioritise response</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Complete all relevant AI-recommended actions</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Apply human judgment to every recommendation</span></div>
+      </div>
+    </div>
+
+    <!-- EXISTING CONTACTS -->
+    <div class="checklist-section section-existing">
+      <div class="checklist-section-header" onclick="toggleSection(this)">
+        <h3>○ &nbsp;Existing Contacts</h3>
+        <div style="display:flex;align-items:center;gap:10px"><span class="progress-badge" id="badge-existing">0/6</span><span class="collapse-icon">▼</span></div>
+      </div>
+      <div class="check-items" id="section-existing">
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Review previous Power Reset members not flagged by Intelligence</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Review Power Reset graduates — do they still need a next step?</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Review Unlimited members requiring ongoing nurture</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Review all Newly Engaged Power Reset contacts</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Continue nurture for other newly engaged leads (outside Power Reset)</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Answer all outstanding replies</span></div>
+      </div>
+    </div>
+
+    <!-- MANYCHAT -->
+    <div class="checklist-section section-manychat">
+      <div class="checklist-section-header" onclick="toggleSection(this)">
+        <h3>↗ &nbsp;ManyChat</h3>
+        <div style="display:flex;align-items:center;gap:10px"><span class="progress-badge" id="badge-manychat">0/8</span><span class="collapse-icon">▼</span></div>
+      </div>
+      <div class="check-items" id="section-manychat">
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Check new leads in ManyChat</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Check new comments and direct messages</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Check whether automated messages were opened or replied to</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Send personal follow-up messages where appropriate</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Check whether each lead is already in GoHighLevel</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Add or sync them to GoHighLevel</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Check for and merge duplicate GHL profiles</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Track next action and follow-up date in GHL</span></div>
+      </div>
+    </div>
+
+    <!-- TRACKING -->
+    <div class="checklist-section section-tracking">
+      <div class="checklist-section-header" onclick="toggleSection(this)">
+        <h3>✎ &nbsp;Tracking &amp; Updates</h3>
+        <div style="display:flex;align-items:center;gap:10px"><span class="progress-badge" id="badge-tracking">0/10</span><span class="collapse-icon">▼</span></div>
+      </div>
+      <div class="check-items" id="section-tracking">
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Add notes to every contact touched today</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Update Platform field</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Update Last DM field</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Update Last Contact Date</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Update tags (including Newly Engaged where relevant)</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Update current Power Reset status and day</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Add Next Follow-Up Date for every active lead</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Confirm no high-intent lead is left without a response</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Confirm every active lead has a clear next action</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">ManyChat checked a second time at end of day</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════ NOTES TEMPLATE ══════════════ -->
+  <div class="tab-content" id="tab-notes">
+
+    <div class="card">
+      <h2>✎ Standard Note Format</h2>
+      <p style="color:var(--text-mid);margin-bottom:22px;font-size:13.5px">Use this format every time you add a note in GoHighLevel. Consistency means anyone on the team can understand the contact history at a glance.</p>
+
+      <div class="notes-template" id="noteTemplate">
+        <button class="copy-btn" onclick="copyNotes()">Copy</button>
+        <span class="field-label">Date:</span> <span class="field-val">[e.g. 13 July 2026]</span><br>
+        <span class="field-label">Platform:</span> <span class="field-val">[WhatsApp Business / GHL WhatsApp / Email / Instagram / Facebook]</span><br>
+        <span class="field-label">Status:</span> <span class="field-val">[e.g. Completed Day 3 / New Purchase / Stuck on Day 1 / Graduate]</span><br>
+        <span class="field-label">Action taken:</span> <span class="field-val">[what you did]</span><br>
+        <span class="field-label">Message sent:</span> <span class="field-val">[which message and what it contained]</span><br>
+        <span class="field-label">Response:</span> <span class="field-val">[Pending / Replied — summary / No reply]</span><br>
+        <span class="field-label">Automation status:</span> <span class="field-val">[Delivering / Not delivering / Unknown]</span><br>
+        <span class="field-label">Next action:</span> <span class="field-val">[exactly what needs to happen next]</span><br>
+        <span class="field-label">Next follow-up date:</span> <span class="field-val">[date]</span>
+      </div>
+
+      <div style="margin-top:26px">
+        <span class="label">Example Note</span>
+        <div class="notes-template" style="margin-top:6px">
+          <span class="field-label">Date:</span> 13 July 2026<br>
+          <span class="field-label">Platform:</span> WhatsApp Business<br>
+          <span class="field-label">Status:</span> Completed Day 3<br>
+          <span class="field-label">Action taken:</span> Manual follow-up sent — GHL WhatsApp not delivering (US number)<br>
+          <span class="field-label">Message sent:</span> Day 3 follow-up and invitation to reply with their experience<br>
+          <span class="field-label">Response:</span> Pending<br>
+          <span class="field-label">Automation status:</span> Not delivering<br>
+          <span class="field-label">Next action:</span> Follow up tomorrow — send post-Reset invitation if they completed Day 4<br>
+          <span class="field-label">Next follow-up date:</span> 14 July 2026
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>◆ Standard of Completion</h2>
+      <p style="color:var(--text-mid);margin-bottom:20px;font-size:13.5px">A lead is only considered properly handled when ALL of these are true:</p>
+      <div class="grid-2">
+        <div>
+          <div class="done-check"><div class="done-check-icon">◆</div><span class="check-label">Full contact profile is accurate and complete</span></div>
+          <div class="done-check"><div class="done-check-icon">◆</div><span class="check-label">Duplicate profiles have been merged</span></div>
+          <div class="done-check"><div class="done-check-icon">◆</div><span class="check-label">Purchase and journey status are known</span></div>
+          <div class="done-check"><div class="done-check-icon">◆</div><span class="check-label">Communication delivery has been checked</span></div>
+        </div>
+        <div>
+          <div class="done-check"><div class="done-check-icon">◆</div><span class="check-label">The relevant message has been sent</span></div>
+          <div class="done-check"><div class="done-check-icon">◆</div><span class="check-label">Response status is known</span></div>
+          <div class="done-check"><div class="done-check-icon">◆</div><span class="check-label">Action is documented in GHL notes</span></div>
+          <div class="done-check"><div class="done-check-icon">◆</div><span class="check-label">A next step AND a Next Follow-Up Date exist</span></div>
+        </div>
+      </div>
+      <div class="alert dark" style="margin-top:18px">
+        <div class="alert-icon" style="color:var(--gold)">◆</div>
+        <div style="color:var(--taupe)"><strong style="color:var(--gold)">Opening a profile or sending one message does not complete the task.</strong> The task is complete only when the lead has a clear current status and a clear next action.</div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ══════════════ HISTORY TAB ══════════════ -->
+  <div class="tab-content" id="tab-history">
+
+    <div class="card">
+      <div class="history-header-row">
+        <h2 style="margin-bottom:0">📅 Daily Checklist History</h2>
+        <button class="history-clear-btn" onclick="clearHistory()">Clear All History</button>
+      </div>
+      <p style="color:var(--text-mid);font-size:13.5px;margin-bottom:20px">Every time you tick a checkbox, that day's progress is automatically saved here. Click any entry to see the category breakdown.</p>
+
+      <div class="alert dark" style="margin-bottom:20px">
+        <div class="alert-icon" style="color:var(--gold)">◆</div>
+        <div style="color:var(--taupe)">
+          <strong style="color:var(--gold)">Auto-saves as you work.</strong>
+          No button needed — your progress is recorded under today's date every time you check or uncheck an item. Use the <strong style="color:var(--gold-bright)">Archive &amp; Reset</strong> button on the Checklist tab to lock in the day and clear for tomorrow.
+        </div>
+      </div>
+
+      <div id="history-list">
+        <div class="history-empty">
+          <div class="big-icon">◆</div>
+          <p>No history yet.<br>Complete items on the checklist and they'll appear here.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  // ── DATE ──
+  const d = new Date();
+  document.getElementById('todayDate').textContent = d.toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+  // ── TAB SWITCHING ──
+  function showTab(id, btn) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + id).classList.add('active');
+    btn.classList.add('active');
+    if (id === 'history') renderHistory();
+  }
+
+  // ── STORAGE KEYS ──
+  const STATE_KEY   = 'myp_aira_checklist';   // today's active state
+  const HISTORY_KEY = 'myp_aira_history';      // date-keyed archive
+
+  function loadState()   { try { return JSON.parse(localStorage.getItem(STATE_KEY)   || '{}'); } catch(e) { return {}; } }
+  function saveState(s)  { try { localStorage.setItem(STATE_KEY, JSON.stringify(s));            } catch(e) {} }
+  function loadHistory() { try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}'); } catch(e) { return {}; } }
+  function saveHistory(h){ try { localStorage.setItem(HISTORY_KEY, JSON.stringify(h));          } catch(e) {} }
+
+  function getToday() {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+  }
+
+  function formatDate(dateStr) {
+    const [y,m,dd] = dateStr.split('-');
+    return new Date(+y, +m-1, +dd).toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  }
+
+  // ── SAVE PROGRESS TO HISTORY (auto, on every change) ──
+  function persistToHistory(state) {
+    const history = loadHistory();
+    const today   = getToday();
+    const total   = document.querySelectorAll('.check-item').length;
+    const done    = Object.keys(state).length;
+    history[today] = { items: Object.assign({}, state), total, done, savedAt: new Date().toISOString() };
+    saveHistory(history);
+  }
+
+  // ── ITEM ID ──
+  function getItemId(el) {
+    const section = el.closest('.check-items');
+    const items   = Array.from(section.querySelectorAll('.check-item'));
+    return section.id + '_' + items.indexOf(el);
+  }
+
+  // ── TOGGLE CHECKBOX ──
+  function toggleCheck(el) {
+    const state = loadState();
+    const id    = getItemId(el);
+    if (el.classList.contains('done')) { el.classList.remove('done'); delete state[id]; }
+    else                               { el.classList.add('done');    state[id] = true;  }
+    saveState(state);
+    persistToHistory(state);
+    updateProgress();
+  }
+
+  // ── ARCHIVE & RESET (end of day) ──
+  function archiveAndReset() {
+    const state = loadState();
+    persistToHistory(state);        // lock in today
+    saveState({});                  // clear active checklist
+    document.querySelectorAll('.check-item').forEach(el => el.classList.remove('done'));
+    updateProgress();
+    // brief visual confirmation
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✓ Archived!';
+    btn.style.background = 'var(--gold-dark)';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 2500);
+  }
+
+  // ── RESET TODAY (keep history untouched) ──
+  function resetAll() {
+    saveState({});
+    document.querySelectorAll('.check-item').forEach(el => el.classList.remove('done'));
+    updateProgress();
+  }
+
+  // ── PROGRESS BAR & BADGES ──
+  function updateProgress() {
+    const state = loadState();
+    const total = document.querySelectorAll('.check-item').length;
+    const done  = Object.keys(state).length;
+    const pct   = total > 0 ? Math.round(done / total * 100) : 0;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressText').textContent = done + ' / ' + total + ' done';
+    ['new-members','intelligence','existing','manychat','tracking'].forEach(sId => {
+      const sEl  = document.getElementById('section-' + sId);
+      if (!sEl) return;
+      const doneCount = sEl.querySelectorAll('.check-item.done').length;
+      const total     = sEl.querySelectorAll('.check-item').length;
+      const badge     = document.getElementById('badge-' + sId);
+      if (badge) badge.textContent = doneCount + '/' + total;
+    });
+  }
+
+  // ── RESTORE ACTIVE STATE ON LOAD ──
+  function restoreState() {
+    const state = loadState();
+    document.querySelectorAll('.check-items').forEach(section => {
+      section.querySelectorAll('.check-item').forEach((item, i) => {
+        if (state[section.id + '_' + i]) item.classList.add('done');
+      });
+    });
+    updateProgress();
+  }
+
+  // ── SECTION COLLAPSE ──
+  function toggleSection(header) {
+    header.nextElementSibling.classList.toggle('collapsed');
+    header.classList.toggle('collapsed-header');
+  }
+
+  // ── NOTES COPY ──
+  function copyNotes() {
+    const text = `Date: \nPlatform: \nStatus: \nAction taken: \nMessage sent: \nResponse: \nAutomation status: \nNext action: \nNext follow-up date: `;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = event.target;
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 2000);
+    });
+  }
+
+  // ── SECTION DEFINITIONS (for history breakdown) ──
+  const SECTIONS = [
+    { id: 'new-members',  label: '◆ New Members',          total: 9  },
+    { id: 'intelligence', label: '◈ Intelligence Tab',      total: 6  },
+    { id: 'existing',     label: '○ Existing Contacts',     total: 6  },
+    { id: 'manychat',     label: '↗ ManyChat',              total: 8  },
+    { id: 'tracking',     label: '✎ Tracking & Updates',    total: 10 },
+  ];
+
+  function getSectionBreakdown(items) {
+    return SECTIONS.map(s => {
+      const done = Object.keys(items).filter(k => k.startsWith('section-' + s.id + '_')).length;
+      return { ...s, done };
+    });
+  }
+
+  // ── RENDER HISTORY TAB ──
+  function renderHistory() {
+    const history = loadHistory();
+    const dates   = Object.keys(history).sort().reverse();
+    const container = document.getElementById('history-list');
+
+    if (dates.length === 0) {
+      container.innerHTML = `
+        <div class="history-empty">
+          <div class="big-icon">◆</div>
+          <p>No history yet.<br>Tick items on the checklist and your progress will appear here automatically.</p>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = dates.map(date => {
+      const entry    = history[date];
+      const pct      = entry.total > 0 ? Math.round(entry.done / entry.total * 100) : 0;
+      const sections = getSectionBreakdown(entry.items);
+      const isToday  = date === getToday();
+
+      return `
+        <div class="history-entry" onclick="toggleHistoryEntry(this)">
+          <div class="history-entry-header">
+            <div>
+              <div class="history-date">${formatDate(date)}${isToday ? ' <span style="background:var(--gold);color:var(--black);font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;margin-left:8px;letter-spacing:0.5px;text-transform:uppercase">Today</span>' : ''}</div>
+              <div class="history-pct">${entry.done} / ${entry.total} completed &nbsp;—&nbsp; ${pct}%</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:14px">
+              <div style="width:80px">
+                <div class="h-bar-wrap"><div class="h-bar-fill" style="width:${pct}%"></div></div>
+              </div>
+              <span class="collapse-icon" style="color:var(--taupe-mid)">▼</span>
+            </div>
+          </div>
+          <div class="history-entry-body collapsed">
+            ${sections.map(s => {
+              const sPct = s.total > 0 ? Math.round(s.done / s.total * 100) : 0;
+              return `
+                <div class="history-section-row">
+                  <span class="history-section-name">${s.label}</span>
+                  <span class="history-section-count ${s.done === s.total ? 'all-done' : ''}">${s.done}/${s.total}</span>
+                  <div class="h-bar-wrap"><div class="h-bar-fill" style="width:${sPct}%"></div></div>
+                </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function toggleHistoryEntry(el) {
+    const body = el.querySelector('.history-entry-body');
+    const icon = el.querySelector('.collapse-icon');
+    body.classList.toggle('collapsed');
+    icon.style.transform = body.classList.contains('collapsed') ? '' : 'rotate(180deg)';
+  }
+
+  // ── CLEAR ALL HISTORY ──
+  function clearHistory() {
+    if (!confirm('Clear all history? This cannot be undone.')) return;
+    saveHistory({});
+    renderHistory();
+  }
+
+  // ── INIT ──
+  restoreState();
+</script>
+</body>
+</html>
