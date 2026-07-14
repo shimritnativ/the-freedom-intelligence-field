@@ -254,6 +254,9 @@
   .section-manychat .checklist-section-header { background: var(--gold-pale); border: 1px solid var(--gold); }
   .section-manychat .checklist-section-header h3 { color: var(--gold-dark); }
   .section-manychat .checklist-section-header .progress-badge { background: var(--gold); color: var(--black); }
+  .section-backlog .checklist-section-header { background: var(--charcoal); border: 1px solid var(--gold-dark); }
+  .section-backlog .checklist-section-header h3 { color: var(--gold); }
+  .section-backlog .checklist-section-header .progress-badge { background: var(--gold-dark); color: var(--gold-tint); }
   .section-tracking .checklist-section-header { background: var(--gold-tint); border: 1px solid var(--taupe); }
   .section-tracking .checklist-section-header h3 { color: var(--taupe-dark); }
   .section-tracking .checklist-section-header .progress-badge { background: var(--taupe-mid); color: var(--white); }
@@ -382,7 +385,9 @@
     <button class="nav-btn" onclick="showTab('afternoon', this)">◑ Afternoon Block</button>
     <button class="nav-btn" onclick="showTab('whatsapp', this)">↗ WhatsApp Flow</button>
     <button class="nav-btn" onclick="showTab('status', this)">○ Journey Status</button>
+    <button class="nav-btn" onclick="showTab('automation', this)">⌇ Automation Map</button>
     <button class="nav-btn" onclick="showTab('priority', this)">▲ Priority Order</button>
+    <button class="nav-btn" onclick="showTab('backlog', this)">◇ Backlog Projects</button>
     <button class="nav-btn" onclick="showTab('checklist', this)">✦ Daily Checklist</button>
     <button class="nav-btn" onclick="showTab('notes', this)">✎ Notes Template</button>
     <button class="nav-btn" onclick="showTab('history', this)">◈ History</button>
@@ -508,6 +513,56 @@
           <div class="alert-icon">◈</div>
           <div><strong>Next Follow-Up Date is Mandatory</strong>Every lead must have one. Notes describe the past. The date determines the future.</div>
         </div>
+      </div>
+    </div>
+
+    <!-- Intelligence → SOP Playbook bridge -->
+    <div class="card">
+      <h2>◆ Intelligence Flags a Lead → Which Playbook to Follow</h2>
+      <p style="color: var(--text-mid); margin-bottom: 18px;">The Intelligence tab tells you <em>who</em> needs attention today. The Journey Status tab tells you <em>what to do</em> for each of them. Use this map to bridge them.</p>
+      <div class="grid-2" style="gap: 12px;">
+        <div class="info-box">
+          <h4>If Intelligence shows</h4>
+          <ul>
+            <li>Hot Reset member</li>
+            <li>Stuck Reset member</li>
+            <li>Graduate</li>
+            <li>High-intent buyer</li>
+            <li>Newly engaged lead</li>
+            <li>Silent purchaser (Day 0 no login)</li>
+          </ul>
+        </div>
+        <div class="info-box-dark">
+          <h4>Open Journey Status → apply</h4>
+          <ul>
+            <li>Status B: currently in Days 1-3</li>
+            <li>Status C: started, stopped</li>
+            <li>Status D: completed the Reset</li>
+            <li>Status D or B (depends on stage)</li>
+            <li>Status B or D (depends on stage)</li>
+            <li>Status A: purchased, never started</li>
+          </ul>
+        </div>
+      </div>
+      <div class="alert dark" style="margin-top:14px">
+        <div class="alert-icon">◆</div>
+        <div>Intelligence surfaces the person. Journey Status tells you which script and message set to use. Always cross-reference before acting.</div>
+      </div>
+    </div>
+
+    <!-- Standard of Completion -->
+    <div class="card" style="border: 2px solid var(--gold);">
+      <h2>◈ Standard of Completion — When is a Lead Actually Done?</h2>
+      <p style="color: var(--text-mid); margin-bottom: 18px;">Opening a profile is not the task. Sending one message is not the task. The task is complete only when all eight boxes below are checked.</p>
+      <div class="grid-2" style="gap: 10px;">
+        <div class="done-check"><span class="done-check-icon">✓</span><span>Full contact profile is accurate</span></div>
+        <div class="done-check"><span class="done-check-icon">✓</span><span>Duplicate profiles merged</span></div>
+        <div class="done-check"><span class="done-check-icon">✓</span><span>Purchase + journey status known</span></div>
+        <div class="done-check"><span class="done-check-icon">✓</span><span>Delivery verified (or manual sent)</span></div>
+        <div class="done-check"><span class="done-check-icon">✓</span><span>Response noted in GHL</span></div>
+        <div class="done-check"><span class="done-check-icon">✓</span><span>Action documented in Notes</span></div>
+        <div class="done-check"><span class="done-check-icon">✓</span><span>Next Step assigned</span></div>
+        <div class="done-check"><span class="done-check-icon">✓</span><span><strong style="display:inline">Next Follow-Up Date set</strong></span></div>
       </div>
     </div>
 
@@ -849,8 +904,12 @@
   <!-- ══════════════ JOURNEY STATUS ══════════════ -->
   <div class="tab-content" id="tab-status">
     <div class="card">
-      <h2>○ Power Reset Journey — 5 Status Categories</h2>
-      <p style="color:var(--text-mid);margin-bottom:20px;font-size:13.5px">Every purchaser belongs in one of these categories. Your action depends entirely on where they are.</p>
+      <h2>○ Power Reset Journey — 5 Status Categories · The Playbook</h2>
+      <p style="color:var(--text-mid);margin-bottom:12px;font-size:13.5px">Every purchaser belongs in one of these categories. The Intelligence tab tells you who to work on today; this tab tells you exactly what to do for each of them.</p>
+      <div class="alert dark" style="margin-bottom: 20px;">
+        <div class="alert-icon">◆</div>
+        <div>Cross-reference with the <strong style="display:inline">Automation Map</strong> tab to know which messages already went out automatically vs. which ones you need to send manually.</div>
+      </div>
 
       <div class="status-cards">
 
@@ -964,6 +1023,355 @@
 
   </div>
 
+  <!-- ══════════════ AUTOMATION MAP ══════════════ -->
+  <div class="tab-content" id="tab-automation">
+    <div class="card">
+      <h2>⌇ Power Reset · WhatsApp Ascension Sequence</h2>
+      <p style="color:var(--text-mid);margin-bottom:20px;font-size:13.5px">The actual 9-message WhatsApp sequence every Power Reset buyer moves through. Use this to know exactly which message a member should have received by day X — and which ones you may need to send manually.</p>
+
+      <div class="alert dark" style="margin-bottom: 20px;">
+        <div class="alert-icon">◆</div>
+        <div><strong style="display:inline">Legend:</strong> <span style="color:#8FCB6E">● Continues</span> for everyone · <span style="color:#EA958E">● Excludes</span> Unlimited buyers + Book Launch members + <span class="tag">Newly Engaged</span> · <span style="color:var(--gold-bright)">● Manual</span> = check + send yourself if needed</div>
+      </div>
+
+      <!-- Quick lookup: which message should this person be receiving? -->
+      <div class="info-box-dark" style="margin-bottom: 22px;">
+        <h4>Quick Lookup — Which Message Should They Have Received?</h4>
+        <p style="color:var(--taupe);font-size:12.5px;margin-bottom:10px">Count days from their purchase date, then check what should have gone out by now.</p>
+        <ul style="columns:2;column-gap:24px">
+          <li>Day 1 → <strong style="display:inline;color:var(--gold)">Message 1</strong> (welcome)</li>
+          <li>Day 2 → <strong style="display:inline;color:var(--gold)">Message 2</strong> (Decision & Action)</li>
+          <li>Day 3 → <strong style="display:inline;color:var(--gold)">Message 3</strong> (Frequency Calibration + first Unlimited mention)</li>
+          <li>Day 4 → <strong style="display:inline;color:var(--gold)">Message 4</strong> (Bonus Integration + Unlimited push)</li>
+          <li>Day 5 → <strong style="display:inline;color:var(--gold)">Message 5</strong> (Aira YES/NO check-in)</li>
+          <li>Day 7 → <strong style="display:inline;color:var(--gold)">Message 6</strong> (Upgrade + UNLIMITED50 code)</li>
+          <li>Day 9 → <strong style="display:inline;color:var(--gold)">Message 7</strong> (Orientation Call invite)</li>
+          <li>Day 11 → <strong style="display:inline;color:var(--gold)">Message 8</strong> (Aira focus check-in)</li>
+          <li>Day 14 → <strong style="display:inline;color:var(--gold)">Message 9</strong> (Final Unlimited push)</li>
+        </ul>
+      </div>
+
+      <div class="flow">
+
+        <!-- MESSAGE 1 -->
+        <div class="flow-step">
+          <div class="step-num gold">1</div>
+          <div class="step-body">
+            <h4>Day 1 · Welcome <span style="color:#8FCB6E;font-size:12px;margin-left:8px">● Everyone</span></h4>
+            <p style="font-size:12.5px;color:var(--text-light)">Fires immediately at purchase. This is the door-opener.</p>
+            <div class="notes-template" style="margin:10px 0;font-size:12px;line-height:1.7">
+              Hi [NAME] ❤️‍🔥<br>
+              You're in.<br>
+              Your 72-Hour Power Reset starts now.<br>
+              Check your email for the full instructions. Also check spam/promotions.<br>
+              Today is Day 1: State Reset.<br>
+              Portal: [PORTAL LINK]<br>
+              WhatsApp group: [GROUP LINK]<br>
+              You only have 4 days of access to this Power Reset version of The Field, so begin today.
+            </div>
+          </div>
+        </div>
+
+        <!-- MESSAGE 2 -->
+        <div class="flow-step">
+          <div class="step-num gold">2</div>
+          <div class="step-body">
+            <h4>Day 2 · Decision & Action Alignment <span style="color:#8FCB6E;font-size:12px;margin-left:8px">● Everyone</span></h4>
+            <div class="notes-template" style="margin:10px 0;font-size:12px;line-height:1.7">
+              Hi [NAME] ✨<br>
+              Day 2 is open: Decision & Action Alignment.<br>
+              Check your email for the full instructions.<br>
+              Today you bring one decision, goal, or situation into The Field and let it guide you through:<br>
+              Mind, Heart & Body alignment and produce your Living Power Declaration<br>
+              Start Day 2 here: [DAY 2 LINK]
+            </div>
+          </div>
+        </div>
+
+        <!-- MESSAGE 3 -->
+        <div class="flow-step">
+          <div class="step-num gold">3</div>
+          <div class="step-body">
+            <h4>Day 3 · Frequency Calibration + First Unlimited Mention <span style="color:#8FCB6E;font-size:12px;margin-left:8px">● Everyone</span></h4>
+            <div class="notes-template" style="margin:10px 0;font-size:12px;line-height:1.7">
+              Hi [NAME] 🔥<br>
+              Day 3 is open: Power Frequency Calibration.<br>
+              Today you step into the frequency of the reality you just decided to create & tuning to it.<br>
+              Start Day 3 here: [DAY 3 LINK]<br>
+              The Unlimited Freedom Intelligence Field is now open for founding members access.<br>
+              Explore The Unlimited Field here: [UNLIMITED FIELD LINK]
+            </div>
+          </div>
+        </div>
+
+        <div class="alert warn" style="margin: 14px 0;">
+          <div class="alert-icon">▲</div>
+          <div><strong style="display:inline">From here on, messages 4-9 EXCLUDE:</strong> Unlimited buyers · Book Launch members · anyone with the <span class="tag">Newly Engaged</span> tag. If someone is tagged Newly Engaged, YOU send these manually (adapted to their conversation context).</div>
+        </div>
+
+        <!-- MESSAGE 4 -->
+        <div class="flow-step">
+          <div class="step-num black">4</div>
+          <div class="step-body">
+            <h4>Day 4 · Bonus Integration + Unlimited Push <span style="color:#EA958E;font-size:12px;margin-left:8px">● Excludes Unlimited + Book Launch + Newly Engaged</span></h4>
+            <div class="notes-template" style="margin:10px 0;font-size:12px;line-height:1.7">
+              Hi [NAME] ❤️‍🔥<br>
+              Today is your Bonus Integration Day.<br>
+              This is your final 24-hour window before your Power Reset access closes.<br>
+              Complete anything you missed, save your conversations, take your aligned action, and watch The Architecture of Freedom class.<br>
+              Portal: [PORTAL LINK]<br>
+              🔔 IMPORTANT: The Reset was the doorway into The Unlimited Field. When upgrading you can keep this door open and access the full ever-growing library processes and activations + monthly Live Q&A calls with Shimrit.<br>
+              Explore The Unlimited Field here: [UNLIMITED FIELD LINK]
+            </div>
+          </div>
+        </div>
+
+        <!-- MESSAGE 5 -->
+        <div class="flow-step">
+          <div class="step-num black">5</div>
+          <div class="step-body">
+            <h4>Day 5 · Aira Check-In (YES/NO) <span style="color:#EA958E;font-size:12px;margin-left:8px">● Excludes Unlimited + Book Launch + Newly Engaged</span></h4>
+            <div class="notes-template" style="margin:10px 0;font-size:12px;line-height:1.7">
+              Hi [NAME],<br>
+              I'm Aira from Shimrit's team.<br>
+              I'm here to answer any questions you may have 🙌<br>
+              And I'd love to hear from you:<br>
+              Have you enjoyed the 72H Power Reset?<br>
+              You can simply reply with YES / NO 🙏
+            </div>
+          </div>
+        </div>
+
+        <!-- MESSAGE 6 -->
+        <div class="flow-step">
+          <div class="step-num black">6</div>
+          <div class="step-body">
+            <h4>Day 7 · Upgrade Push with UNLIMITED50 Code <span style="color:#EA958E;font-size:12px;margin-left:8px">● Excludes Unlimited + Book Launch + Newly Engaged</span></h4>
+            <div class="notes-template" style="margin:10px 0;font-size:12px;line-height:1.7">
+              Hi [NAME] ✨<br>
+              If the last 4 days showed you the value of having The Freedom Intelligence Field available in real time, the next step is simple:<br>
+              🚀 Upgrade to the Unlimited now.<br>
+              And to make it even more exciting - you can join the first month with 50% off 🎉 Use the code UNLIMITED50 now!<br>
+              Founding members circle still open. Options:<br>
+              Monthly: €77/month (normally €99) — first month €38.50 only<br>
+              Annual: €777/year with annual bonus stack (normally €999)<br>
+              Explore here: [UNLIMITED FIELD LINK]
+            </div>
+          </div>
+        </div>
+
+        <!-- MESSAGE 7 -->
+        <div class="flow-step">
+          <div class="step-num black">7</div>
+          <div class="step-body">
+            <h4>Day 9 · Orientation Call Invite <span style="color:#EA958E;font-size:12px;margin-left:8px">● Excludes Unlimited + Book Launch + Newly Engaged + already booked</span></h4>
+            <div class="notes-template" style="margin:10px 0;font-size:12px;line-height:1.7">
+              Hi [NAME],<br>
+              You are invited to book a complimentary Orientation Call 🙌<br>
+              We'll help you understand whether The Unlimited Freedom Intelligence Field is the right next step for you, or simply offer some clarity and support for your journey.<br>
+              Book here: [CONNECT CALL LINK]
+            </div>
+          </div>
+        </div>
+
+        <!-- MESSAGE 8 -->
+        <div class="flow-step">
+          <div class="step-num black">8</div>
+          <div class="step-body">
+            <h4>Day 11 · Aira Focus Check-In <span style="color:#EA958E;font-size:12px;margin-left:8px">● Excludes Unlimited + Book Launch + Newly Engaged</span></h4>
+            <div class="notes-template" style="margin:10px 0;font-size:12px;line-height:1.7">
+              Hi [NAME],<br>
+              I'm Aira from Shimrit's team.<br>
+              I'd love to hear from you - let me know which one is true for you atm:<br>
+              1. Focusing on business success<br>
+              2. Focusing on relationships<br>
+              3. Focusing on financial growth<br>
+              4. Starting a new path<br>
+              5. Focusing on my health
+            </div>
+          </div>
+        </div>
+
+        <!-- MESSAGE 9 -->
+        <div class="flow-step">
+          <div class="step-num black">9</div>
+          <div class="step-body">
+            <h4>Day 14 · Final Unlimited Push <span style="color:#EA958E;font-size:12px;margin-left:8px">● Excludes Unlimited + Book Launch + Newly Engaged</span></h4>
+            <div class="notes-template" style="margin:10px 0;font-size:12px;line-height:1.7">
+              Hi [NAME],<br>
+              The Power Reset interrupted a pattern. But interruption and replacement are not the same thing.<br>
+              The Unlimited Field is where you keep returning, practicing, choosing, and replacing the old loop with a new way of leading yourself.<br>
+              Founding members' access is still open. Use UNLIMITED50 for 50% off your first month.<br>
+              After this window, pricing and bonuses change.<br>
+              Explore The Unlimited Field here: [UNLIMITED FIELD LINK]
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="alert warn" style="margin-top: 20px;">
+        <div class="alert-icon">▲</div>
+        <div><strong style="display:inline">The pattern to watch:</strong> The Newly Engaged tag protects the conversation from spam BUT silently kills every message from #4 to #9 — including the Connect Call invite (#7) and the two Unlimited pushes (#6 and #9). If you tag someone Newly Engaged, plan to send those manually adapted to the conversation you're already having.</div>
+      </div>
+    </div>
+
+    <!-- CURRENT MANUAL OUTREACH QUEUE (snapshot) -->
+    <div class="card" style="border: 2px solid var(--gold);">
+      <h2>◆ Current Manual Outreach Queue · USA / Canada / UK</h2>
+      <p style="color:var(--text-mid);margin-bottom:12px;font-size:13.5px">These members are from geos where GHL WhatsApp automation is unreliable. They may not be receiving the sequence. Contact them manually via WhatsApp Business, adapted to their current stage.</p>
+      <p style="color:var(--text-light);margin-bottom:20px;font-size:12px;font-style:italic">Snapshot taken 14 July 2026. This list changes daily as new purchasers land. Rerun the query in Neon (see below) to refresh.</p>
+
+      <div style="overflow-x:auto;margin-bottom:16px">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:var(--near-black);color:var(--gold)">
+              <th style="text-align:left;padding:10px 12px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase">Name</th>
+              <th style="text-align:left;padding:10px 12px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase">Purchased</th>
+              <th style="text-align:center;padding:10px 12px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase">Days Ago</th>
+              <th style="text-align:center;padding:10px 12px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase">Reset Progress</th>
+              <th style="text-align:left;padding:10px 12px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase">What They Need</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--cream-dark)">
+              <td style="padding:12px;color:var(--text);vertical-align:top">
+                <strong style="display:inline">Robert Arrese</strong><br>
+                <span style="font-size:11px;color:var(--text-light)">drrarrese@yahoo.com</span>
+              </td>
+              <td style="padding:12px;color:var(--text-mid);vertical-align:top">Jul 9</td>
+              <td style="padding:12px;text-align:center;color:var(--text);font-weight:600;vertical-align:top">5</td>
+              <td style="padding:12px;text-align:center;vertical-align:top">
+                <span class="tag" style="background:rgba(122,174,94,0.2);border-color:#6a9b5a;color:#4d8f52">Day 3 done</span>
+              </td>
+              <td style="padding:12px;color:var(--text-mid);vertical-align:top">
+                <strong style="display:inline;color:var(--gold-dark)">Between Messages 5 and 6.</strong> Send Message 5 (Aira YES/NO check-in) if not received. Message 6 (UNLIMITED50) due in 2 days.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:12px;color:var(--text);vertical-align:top">
+                <strong style="display:inline">Bernie</strong><br>
+                <span style="font-size:11px;color:var(--text-light)">locutusborg22@gmail.com</span>
+              </td>
+              <td style="padding:12px;color:var(--text-mid);vertical-align:top">Jul 8</td>
+              <td style="padding:12px;text-align:center;color:var(--text);font-weight:600;vertical-align:top">5</td>
+              <td style="padding:12px;text-align:center;vertical-align:top">
+                <span class="tag" style="background:rgba(200,130,60,0.2);border-color:#c07030;color:#c07030">Never started</span>
+              </td>
+              <td style="padding:12px;color:var(--text-mid);vertical-align:top">
+                <strong style="display:inline;color:#c07030">Restart candidate.</strong> He bought Reset + Activation but never opened a session. Send the Restart code message (see below) so he gets a fresh 4-day window.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="alert warn">
+        <div class="alert-icon">▲</div>
+        <div><strong style="display:inline">To refresh this list, paste this query in Neon:</strong><br>
+        <code style="font-family:'Courier New',monospace;font-size:11px;color:var(--text-mid);display:block;margin-top:6px">
+          SELECT email, display_name, utm_term, created_at::date, EXTRACT(DAY FROM (NOW()-created_at))::int AS days, COALESCE(last_completed_day,0) AS day_done, tier FROM users WHERE kajabi_entitled=true AND email NOT LIKE '%@shimritnativ.com' AND (LOWER(COALESCE(utm_term,'')) LIKE '%usa%' OR LOWER(COALESCE(utm_term,'')) LIKE '%canada%' OR LOWER(COALESCE(utm_term,'')) LIKE '%uk%') AND (tier IS NULL OR tier != 'full') AND created_at > NOW() - INTERVAL '30 days' ORDER BY created_at DESC;
+        </code>
+        </div>
+      </div>
+
+      <div class="alert dark" style="margin-top: 12px;">
+        <div class="alert-icon">◆</div>
+        <div><strong style="display:inline">Note on coverage:</strong> This query only catches buyers from ADS (they have utm_term). Organic US/UK/Canada buyers won't show up unless we add country data to the users table. Cross-check the Members tab for anyone with a US/CA/UK phone number who isn't on this list.</div>
+      </div>
+    </div>
+
+    <!-- GHL MANUAL FILTER — how to catch organic buyers by phone country code -->
+    <div class="card">
+      <h2>↗ How to Find US / UK / Canada Buyers in GHL Directly</h2>
+      <p style="color:var(--text-mid);margin-bottom:16px;font-size:13.5px">Phone country code data lives in GHL, not in our admin dashboard. To catch ALL members (ads + organic) from these regions, filter directly in GHL every morning.</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="step-num gold" style="width:32px;height:32px;font-size:13px">1</div>
+          <div class="step-body">
+            <h4>Open GHL Contacts</h4>
+            <p>Go to the Contacts view in GoHighLevel.</p>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num gold" style="width:32px;height:32px;font-size:13px">2</div>
+          <div class="step-body">
+            <h4>Apply these filters</h4>
+            <ul>
+              <li>Phone <strong style="display:inline">starts with</strong> <span class="tag" style="background:rgba(59,130,200,0.14);color:#3d7db7;border-color:rgba(59,130,200,0.32)">+1</span> (USA / Canada) or <span class="tag" style="background:rgba(122,174,94,0.14);color:#4d8f52;border-color:rgba(122,174,94,0.32)">+44</span> (UK)</li>
+              <li>Tag <strong style="display:inline">contains</strong> Power Reset buyer (or your equivalent purchase tag)</li>
+              <li>Date Added <strong style="display:inline">in last 30 days</strong></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num gold" style="width:32px;height:32px;font-size:13px">3</div>
+          <div class="step-body">
+            <h4>Sort by Date Added descending</h4>
+            <p>Newest members first. Work down the list, oldest still-relevant last.</p>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num gold" style="width:32px;height:32px;font-size:13px">4</div>
+          <div class="step-body">
+            <h4>For each member on the list</h4>
+            <ul>
+              <li>Check the day since purchase → determines which message they should have received (see Quick Lookup above)</li>
+              <li>Check GHL activity log → did the automation actually deliver?</li>
+              <li>If undelivered → send that message manually via WhatsApp Business</li>
+              <li>Add or update Notes + Next Follow-Up Date in their GHL record</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num black" style="width:32px;height:32px;font-size:13px">5</div>
+          <div class="step-body">
+            <h4>Save this as a Smart List</h4>
+            <p>In GHL, save the filter as a Smart List called "US/CAN/UK Manual Outreach" so you can open it in one click every morning instead of rebuilding the filter.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert warn" style="margin-top: 16px;">
+        <div class="alert-icon">▲</div>
+        <div><strong style="display:inline">Why manual instead of automated:</strong> GHL's WhatsApp automation is unreliable for numbers with +1 or +44 country codes. Meta/GHL cannot reliably deliver template messages to these regions. This is a known limitation, not a bug you can fix. Manual WhatsApp Business is the workaround.</div>
+      </div>
+    </div>
+
+    <!-- RESTART / RECOVERY SEQUENCE -->
+    <div class="card">
+      <h2>◇ Restart Sequence · For People Who Never Activated</h2>
+      <p style="color:var(--text-mid);margin-bottom:16px;font-size:13.5px">Fires for buyers who did not activate on Days 1, 2, or 3, whose access has now expired. <strong style="display:inline">Excludes Unlimited buyers.</strong></p>
+
+      <div class="flow-step">
+        <div class="step-num gold">◇</div>
+        <div class="step-body">
+          <h4>Restart Code — Fresh 4-Day Reset</h4>
+          <div class="notes-template" style="margin:10px 0;font-size:12px;line-height:1.7">
+            Hi [First Name] 😊<br>
+            We noticed your Power Reset access expired before you had the chance to start.<br>
+            We'd love for you to experience it, so we've created a personal one-time restart code for you:<br>
+            🎁 [PERSONAL CODE]<br>
+            Use it to re-enroll at no cost and receive a fresh 4-day Power Reset experience from Day 1.<br>
+            Redeem it here: [LINK]<br>
+            This code can only be used once, so activate it when you're ready to begin 🙌🏼
+          </div>
+        </div>
+      </div>
+
+      <div class="alert dark" style="margin-top: 16px;">
+        <div class="alert-icon">◆</div>
+        <div>For the retroactive project (past purchasers who never started): this restart code is what you send them. Log the code + issue date in GHL Notes so we can track redemption rates.</div>
+      </div>
+    </div>
+  </div>
+  </div>
+
   <!-- ══════════════ PRIORITY ══════════════ -->
   <div class="tab-content" id="tab-priority">
     <div class="card">
@@ -1005,6 +1413,92 @@
           <p>Use if they're connected via Facebook or came through a Facebook ad.</p>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ BACKLOG PROJECTS ══════════════ -->
+  <div class="tab-content" id="tab-backlog">
+    <div class="card">
+      <h2>◇ Retroactive Power Reset Recovery</h2>
+      <p style="color:var(--text-mid);margin-bottom:16px;font-size:13.5px">One-time project. Every person who ever purchased the Power Reset needs to be reviewed for missed communication and recovered.</p>
+      <p style="color:var(--text-mid);margin-bottom:20px;font-size:13.5px">This is the highest-ROI backlog work we have. These people already paid. They are our warmest possible leads. Some never received the WhatsApp sequence. Some completed the Reset and never got the Connect Call or Unlimited invite. Every one of them is a conversion opportunity being wasted right now.</p>
+
+      <h3>For every past purchaser, check:</h3>
+      <ul class="book-list" style="list-style:none;padding:0;margin:16px 0;">
+        <li style="padding:6px 0;padding-left:22px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">◆</span>Did they receive the WhatsApp welcome + Day 1/2/3 sequence?</li>
+        <li style="padding:6px 0;padding-left:22px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">◆</span>Which specific messages did they miss?</li>
+        <li style="padding:6px 0;padding-left:22px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">◆</span>Did they start? Which day did they reach?</li>
+        <li style="padding:6px 0;padding-left:22px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">◆</span>Did they complete the full 72 hours?</li>
+        <li style="padding:6px 0;padding-left:22px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">◆</span>Were they invited to a Connect Call?</li>
+        <li style="padding:6px 0;padding-left:22px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">◆</span>Did they get the Unlimited invitation?</li>
+        <li style="padding:6px 0;padding-left:22px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">◆</span>Do they have the Newly Engaged tag (which may have blocked messages)?</li>
+      </ul>
+
+      <h3>Retroactive action based on where they are today:</h3>
+      <div class="status-cards" style="margin-top:12px">
+        <div class="status-card a">
+          <div class="status-letter">A</div>
+          <div class="status-card-body">
+            <h4>Purchased but never started</h4>
+            <p>Send restart invitation. Personal WhatsApp. Ask if they need help accessing.</p>
+          </div>
+        </div>
+        <div class="status-card b">
+          <div class="status-letter">B</div>
+          <div class="status-card-body">
+            <h4>Currently mid-Reset</h4>
+            <p>Continue from their current day. Send the message they should have received today or yesterday. Do NOT send the whole sequence blindly.</p>
+          </div>
+        </div>
+        <div class="status-card c">
+          <div class="status-letter">C</div>
+          <div class="status-card-body">
+            <h4>Started, then stopped</h4>
+            <p>Send personal check-in referencing the last day they completed. Invite them to return.</p>
+          </div>
+        </div>
+        <div class="status-card d">
+          <div class="status-letter">D</div>
+          <div class="status-card-body">
+            <h4>Completed the Reset</h4>
+            <p>Send any missed post-Reset messages: Connect Call invite, Unlimited invite, follow-up. Prioritize these — completion + no next step = leaked revenue.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert warn" style="margin-top:20px">
+        <div class="alert-icon">▲</div>
+        <div><strong style="display:inline">Log every retroactive contact in GHL.</strong> Notes + Next Follow-Up Date + Last DM. Track this as its own backlog project until every purchaser has been reviewed once.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>◇ Retroactive ManyChat Outreach</h2>
+      <p style="color:var(--text-mid);margin-bottom:16px;font-size:13.5px">One-time project. Every person who ever entered ManyChat needs to be reviewed and, if relevant, invited to the Power Reset.</p>
+
+      <h3>For every past ManyChat contact, determine:</h3>
+      <ul class="book-list" style="list-style:none;padding:0;margin:16px 0;">
+        <li style="padding:6px 0;padding-left:22px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">◆</span>Did they ever receive an invitation to the Power Reset?</li>
+        <li style="padding:6px 0;padding-left:22px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">◆</span>Did they open our messages? Did they respond?</li>
+        <li style="padding:6px 0;padding-left:22px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">◆</span>Did they eventually purchase? (If yes, cross-check with Power Reset backlog above)</li>
+        <li style="padding:6px 0;padding-left:22px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">◆</span>Are they already in GHL? Check for duplicates.</li>
+        <li style="padding:6px 0;padding-left:22px;position:relative"><span style="position:absolute;left:0;color:var(--gold)">◆</span>Are they still relevant to contact (or clearly not our audience)?</li>
+      </ul>
+
+      <div class="alert dark" style="margin-top:16px">
+        <div class="alert-icon">◆</div>
+        <div><strong style="display:inline">Anyone still relevant who never got the Reset invitation → personal outreach.</strong> These are people who already opted in to the world of the Field once. Most are warm.</div>
+      </div>
+
+      <h3 style="margin-top:20px">Tracking</h3>
+      <p style="color:var(--text-mid);font-size:13.5px">Every contact reviewed = one line in a running tracker (Notion, Google Sheet, or a dedicated GHL smart list). Mark: Reviewed / Invited / Not relevant / Already purchased. Work through it until the list is empty.</p>
+    </div>
+
+    <div class="card" style="border: 2px solid var(--gold);">
+      <h2>◈ Why These Two Projects Matter Most</h2>
+      <p style="color:var(--text-mid);font-size:13.5px;margin-bottom:12px">Cold ads bring in leads for €10 to €40 each. The people in these two backlogs cost you €0. They already raised their hand. They already engaged. Some already paid.</p>
+      <p style="color:var(--text-mid);font-size:13.5px;margin-bottom:12px">Every hour spent on this backlog is worth more than an hour spent on almost any other activity, because the conversion rate on warm existing contacts is dramatically higher than cold traffic.</p>
+      <p style="color:var(--text-mid);font-size:13.5px;margin-bottom:0"><strong style="display:inline">Rule:</strong> If Aira has finished her daily new-lead work and has time left, backlog is what she works on. Never scroll ManyChat aimlessly. Always be moving someone from the backlog forward.</p>
     </div>
   </div>
 
@@ -1093,6 +1587,23 @@
       </div>
     </div>
 
+    <!-- PAST PURCHASER AUDIT (Backlog work) -->
+    <div class="checklist-section section-backlog">
+      <div class="checklist-section-header" onclick="toggleSection(this)">
+        <h3>◇ &nbsp;Past Purchaser Audit</h3>
+        <div style="display:flex;align-items:center;gap:10px"><span class="progress-badge" id="badge-backlog">0/7</span><span class="collapse-icon">▼</span></div>
+      </div>
+      <div class="check-items" id="section-backlog">
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Verify they received the WhatsApp welcome + Day 1/2/3 sequence</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Identify which specific messages they missed</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Confirm whether they started, and which day they reached</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Confirm whether they completed the full 72 hours</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Verify the Connect Call invitation was sent (send manually if missed)</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Verify the Unlimited invitation was sent (send manually if missed)</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"><span class="check-tick">✓</span></div><span class="check-label">Check for Newly Engaged tag — did it block any critical messages?</span></div>
+      </div>
+    </div>
+
     <!-- TRACKING -->
     <div class="checklist-section section-tracking">
       <div class="checklist-section-header" onclick="toggleSection(this)">
@@ -1132,7 +1643,12 @@
         <span class="field-label">Response:</span> <span class="field-val">[Pending / Replied — summary / No reply]</span><br>
         <span class="field-label">Automation status:</span> <span class="field-val">[Delivering / Not delivering / Unknown]</span><br>
         <span class="field-label">Next action:</span> <span class="field-val">[exactly what needs to happen next]</span><br>
-        <span class="field-label">Next follow-up date:</span> <span class="field-val">[date]</span>
+        <span class="field-label" style="color:#EA958E">Next follow-up date:</span> <span class="field-val">[MANDATORY — date]</span>
+      </div>
+
+      <div class="alert warn" style="margin-top:16px">
+        <div class="alert-icon">▲</div>
+        <div><strong style="display:inline">Next Follow-Up Date is not optional.</strong> Every note without one is a lead that will silently disappear. If you do not know when to follow up, set it to 3 days from today by default and revise later. Never leave it blank.</div>
       </div>
 
       <div style="margin-top:26px">
@@ -1341,6 +1857,7 @@
     { id: 'intelligence', label: '◈ Intelligence Tab',      total: 6  },
     { id: 'existing',     label: '○ Existing Contacts',     total: 6  },
     { id: 'manychat',     label: '↗ ManyChat',              total: 8  },
+    { id: 'backlog',      label: '◇ Past Purchaser Audit', total: 7  },
     { id: 'tracking',     label: '✎ Tracking & Updates',    total: 10 },
   ];
 
