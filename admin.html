@@ -6246,14 +6246,29 @@
               <td data-label="Revenue" class="num">${cur((a.revenue_cents || 0) / 100)}</td>
             </tr>`;
         }).join('');
-        // Filter chip renderer. Highlights the active chip and hides
-        // itself if all rows share the same value (nothing to filter).
+        // Filter chip renderer. Color-coded to match the badges each
+        // filter maps to, so users can visually connect pill → badge:
+        //   Cold/Warm → gold, USA/CAN → blue, Europe → green,
+        //   Active → green, Paused → orange, All/Other → neutral gold.
+        const filterPillColors = (filterKey, value) => {
+          const map = {
+            'campaign|cold':   { on: '#c9a84c', onFg: '#1a1408', off: '#8a7530' },
+            'campaign|warm':   { on: '#c9a84c', onFg: '#1a1408', off: '#8a7530' },
+            'geo|usa':         { on: '#3d7db7', onFg: '#ffffff', off: '#3d7db7' },
+            'geo|europe':      { on: '#4d8f52', onFg: '#ffffff', off: '#4d8f52' },
+            'status|active':   { on: '#4d8f52', onFg: '#ffffff', off: '#4d8f52' },
+            'status|paused':   { on: '#c07030', onFg: '#ffffff', off: '#c07030' },
+          };
+          return map[`${filterKey}|${value}`] || { on: 'var(--gold)', onFg: '#1a1408', off: 'var(--text-dim)' };
+        };
         const filterChip = (label, value, activeVal, filterKey) => {
           const isActive = activeVal === value;
-          const bg = isActive ? 'var(--gold)' : 'transparent';
-          const color = isActive ? '#1a1408' : 'var(--text-dim)';
-          const border = isActive ? 'var(--gold)' : 'var(--border)';
-          return `<button data-perad-filter="${filterKey}" data-value="${value}" style="background: ${bg}; color: ${color}; border: 1px solid ${border}; border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s;">${escapeHtml(label)}</button>`;
+          const c = filterPillColors(filterKey, value);
+          const bg = isActive ? c.on : 'transparent';
+          const color = isActive ? c.onFg : c.off;
+          const border = isActive ? c.on : (c.off === 'var(--text-dim)' ? 'var(--border)' : c.off);
+          const opacity = isActive ? '1' : '0.85';
+          return `<button data-perad-filter="${filterKey}" data-value="${value}" style="background: ${bg}; color: ${color}; border: 1px solid ${border}; border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; opacity: ${opacity};">${escapeHtml(label)}</button>`;
         };
         // Show only geo options that appear in the data; same for status.
         // Cold/Warm always shown since they are the primary axis.
@@ -6279,7 +6294,7 @@
                 ${filterChip('Warm', 'warm', _perAdFilterCampaign, 'campaign')}
               </div>
               <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-mute); margin-right: 2px;">Geo</span>
+                <span style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-mute); margin-right: 2px;">Location</span>
                 ${filterChip('All', 'all', _perAdFilterGeo, 'geo')}
                 ${geoBuckets.has('usa') ? filterChip('USA/CAN', 'usa', _perAdFilterGeo, 'geo') : ''}
                 ${geoBuckets.has('europe') ? filterChip('Europe', 'europe', _perAdFilterGeo, 'geo') : ''}
