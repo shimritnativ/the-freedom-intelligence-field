@@ -67,21 +67,33 @@
   .header-date { background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.35); border-radius: 8px; padding: 7px 16px; font-size: 12px; color: var(--gold); font-weight: 600; white-space: nowrap; letter-spacing: 0.3px; }
 
   /* ── NAV ── */
-  .nav-wrap { background: var(--near-black); border-bottom: 1px solid rgba(201,168,76,0.2); position: sticky; top: 82px; z-index: 99; }
-  /* Right-edge fade + chevron so users know the nav scrolls horizontally
-     when content overflows. Hidden on wide desktops where nothing scrolls. */
+  .nav-wrap { background: var(--near-black); border-bottom: 1px solid rgba(201,168,76,0.2); position: sticky; top: 82px; z-index: 99; overflow: hidden; }
+  /* Left + right edge chevrons that show scrollability. Driven by JS which
+     toggles .can-scroll-left / .can-scroll-right classes based on the nav's
+     actual scroll position. That way the indicators only appear when there
+     is more content in that direction, and disappear when you've reached
+     the end. Chevrons animate in/out for a soft feel. */
+  .nav-wrap::before,
   .nav-wrap::after {
-    content: '›';
-    position: absolute; right: 0; top: 0; bottom: 0;
-    display: flex; align-items: center; justify-content: flex-end;
-    padding-right: 12px; padding-left: 40px;
-    color: var(--gold); font-size: 22px; font-weight: 400;
-    pointer-events: none;
-    background: linear-gradient(90deg, rgba(20,16,11,0) 0%, var(--near-black) 60%);
-    opacity: 0.85;
+    content: ''; position: absolute; top: 0; bottom: 0; width: 48px;
+    pointer-events: none; z-index: 2;
+    display: flex; align-items: center;
+    color: var(--gold); font-size: 26px; font-weight: 300;
+    opacity: 0; transition: opacity 0.25s ease;
   }
-  @media (min-width: 1200px) { .nav-wrap::after { display: none; } }
-  .nav { max-width: 1100px; margin: 0 auto; display: flex; overflow-x: auto; padding: 0 20px; scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.3) transparent; }
+  .nav-wrap::before {
+    left: 0; justify-content: flex-start; padding-left: 10px;
+    background: linear-gradient(90deg, var(--near-black) 40%, rgba(20,16,11,0) 100%);
+    content: '‹';
+  }
+  .nav-wrap::after {
+    right: 0; justify-content: flex-end; padding-right: 10px;
+    background: linear-gradient(90deg, rgba(20,16,11,0) 0%, var(--near-black) 60%);
+    content: '›';
+  }
+  .nav-wrap.can-scroll-left::before { opacity: 0.9; }
+  .nav-wrap.can-scroll-right::after { opacity: 0.9; }
+  .nav { max-width: 1100px; margin: 0 auto; display: flex; overflow-x: auto; padding: 0 20px; scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.3) transparent; scroll-behavior: smooth; }
   .nav::-webkit-scrollbar { height: 4px; }
   .nav::-webkit-scrollbar-track { background: transparent; }
   .nav::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.3); border-radius: 2px; }
@@ -1402,6 +1414,26 @@
 
   // ── INIT ──
   restoreState();
+
+  // ── NAV SCROLL INDICATORS ──
+  // Toggle .can-scroll-left / .can-scroll-right on the nav wrapper based on
+  // the actual scroll position of the nav. The CSS chevrons/fades fade in
+  // when there is more content in that direction, out when at the end.
+  (function () {
+    const nav = document.querySelector('.nav');
+    const wrap = document.querySelector('.nav-wrap');
+    if (!nav || !wrap) return;
+    function update() {
+      const canLeft  = nav.scrollLeft > 8;
+      const canRight = nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 8;
+      wrap.classList.toggle('can-scroll-left', canLeft);
+      wrap.classList.toggle('can-scroll-right', canRight);
+    }
+    nav.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    // First run on next frame so layout is fully measured
+    requestAnimationFrame(update);
+  })();
 </script>
 </body>
 </html>
