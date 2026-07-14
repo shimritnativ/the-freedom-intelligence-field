@@ -1000,8 +1000,13 @@
     }
     th {
       font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
-      color: var(--text-dim); text-transform: uppercase; background: var(--panel);
+      color: var(--text-mute); text-transform: uppercase; background: transparent;
     }
+    /* In light mode we want table headers to have more contrast than the
+       generic muted color, since section boxes now use white backgrounds
+       and the old warm-brown th color was reading yellow against cream. */
+    :root th { color: #7A6D48; }
+    [data-theme="dark"] th { color: var(--text-mute); background: rgba(239,198,112,0.04); }
     td.num { text-align: right; font-variant-numeric: tabular-nums; }
     th.num { text-align: right; }
     tr:last-child td { border-bottom: none; }
@@ -6620,7 +6625,7 @@
             ${note ? `<span style="font-size: 12px; color: var(--text-mute);">${note}</span>` : ''}
           </div>
         </div>`;
-      const sectionBoxOpen = `<div style="margin: 28px 0; padding: 22px 24px; background: var(--panel); border: 1px solid var(--border); border-top: 3px solid var(--gold); border-radius: 14px; box-shadow: 0 2px 8px rgba(26, 20, 8, 0.04);">`;
+      const sectionBoxOpen = `<div style="margin: 28px 0; padding: 22px 24px; background: var(--bg-card); border: 1px solid var(--border); border-top: 3px solid var(--gold); border-radius: 14px; box-shadow: 0 4px 20px rgba(26, 20, 8, 0.06);">`;
       const sectionBoxClose = `</div>`;
 
       // Meta Ads section now owns the CTA breakdown too, since those
