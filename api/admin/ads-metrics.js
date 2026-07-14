@@ -709,10 +709,13 @@ async function loadPerAdBreakdown(from, to) {
           -- Geo tag from utm_term. When one ad runs to multiple geos we
           -- take the most-frequent value so the badge reflects the primary
           -- audience. If an ad's utm_term is missing, geo is NULL and the
-          -- badge is hidden in the UI.
+          -- badge is hidden in the UI. Excludes utm_term values that look
+          -- like Meta ad IDs (15+ digit strings) so old corrupted tracking
+          -- does not render as a geo badge.
           (SELECT utm_term FROM landing_events le2
              WHERE le2.utm_content = landing_events.utm_content
                AND le2.utm_term IS NOT NULL AND le2.utm_term <> ''
+               AND le2.utm_term !~ '^\d{15,}$'
                AND le2.created_at >= ${from}::date
                AND le2.created_at < (${to}::date + INTERVAL '1 day')
              GROUP BY utm_term ORDER BY COUNT(*) DESC LIMIT 1) AS geo,
@@ -723,6 +726,12 @@ async function loadPerAdBreakdown(from, to) {
           AND created_at < (${to}::date + INTERVAL '1 day')
           AND utm_content IS NOT NULL
           AND utm_content <> ''
+          -- Exclude WhatsApp traffic (belongs in WhatsApp Campaigns section)
+          AND (utm_source IS NULL OR LOWER(utm_source) NOT LIKE '%whatsapp%')
+          -- Exclude corrupted utm_content strings that contain "utm_" prefixes
+          -- (from earlier Zap misconfigurations that stored full label blobs)
+          AND utm_content NOT ILIKE '%utm_source:%'
+          AND utm_content NOT ILIKE '%utm_campaign:%'
         GROUP BY utm_content
       ),
       -- Synthetic "untagged" bucket for ads LP clicks that happened before
@@ -761,7 +770,8 @@ async function loadPerAdBreakdown(from, to) {
           -- buyer signed up with 'cold'). Buyer's campaign wins.
           MAX(u.utm_campaign) AS buyer_campaign,
           -- Buyer's geo (utm_term). Same MAX-most-common pattern as visits.
-          MAX(u.utm_term) AS buyer_geo,
+          -- Excludes Meta-ad-ID-looking values so they don't render as geos.
+          MAX(CASE WHEN u.utm_term ~ '^\d{15,}$' THEN NULL ELSE u.utm_term END) AS buyer_geo,
           COUNT(DISTINCT LOWER(u.email))::int AS purchases,
           COALESCE(SUM(p.amount_cents), 0)::bigint AS revenue_cents
         FROM users u
@@ -774,6 +784,11 @@ async function loadPerAdBreakdown(from, to) {
           AND u.utm_content IS NOT NULL
           AND u.utm_content <> ''
           AND u.email NOT LIKE '%@shimritnativ.com'
+          -- Exclude WhatsApp buyers (belongs in WhatsApp Campaigns section)
+          AND (u.utm_source IS NULL OR LOWER(u.utm_source) NOT LIKE '%whatsapp%')
+          -- Exclude corrupted utm_content strings (label-blob leftovers)
+          AND u.utm_content NOT ILIKE '%utm_source:%'
+          AND u.utm_content NOT ILIKE '%utm_campaign:%'
         GROUP BY u.utm_content
       )
       SELECT
