@@ -35,6 +35,10 @@
     {
       "source": "/reset",
       "destination": "/reset.html"
+    },
+    {
+      "source": "/aira",
+      "destination": "/Aira_Daily_SOPs.html"
     }
   ],
   "crons": [
