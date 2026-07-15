@@ -124,15 +124,20 @@ export default async function handler(req, res) {
     const ukContactsMerged = [...ukContacts, ...ukContactsAlt];
 
     // Merge + dedupe by email, post-filter for actual phone prefix match.
+    // GHL sometimes stores phones with "+" and sometimes without. Normalize
+    // to digits-only for matching so both "+441234..." and "441234..." count.
     const seen = new Set();
     const contacts = [];
     for (const c of [...usContacts, ...ukContactsMerged]) {
-      const email = String(c.email || "").toLowerCase();
+      const email = String(c.email || "").toLowerCase().trim();
       const phone = String(c.phone || "").trim();
       if (!email || !phone) continue;
       if (seen.has(email)) continue;
-      const isUS = phone.startsWith("+1");
-      const isUK = phone.startsWith("+44");
+      const digits = phone.replace(/[^0-9]/g, "");
+      // UK: starts with 44 and total 11-13 digits (44 + 9-11 digits of number)
+      const isUK = digits.startsWith("44") && digits.length >= 11 && digits.length <= 13;
+      // US/CAN: 11 digits starting with 1 (country code + 10-digit NANP)
+      const isUS = !isUK && digits.startsWith("1") && digits.length === 11;
       if (!isUS && !isUK) continue;
       seen.add(email);
       contacts.push({
@@ -199,16 +204,43 @@ export default async function handler(req, res) {
       })
       .sort((a, b) => a.days_since_purchase - b.days_since_purchase);
 
-    return res.status(200).json({
+    const response = {
       queue,
       count: queue.length,
       meta: {
         us_can_ghl_contacts: usContacts.length,
-        uk_ghl_contacts: ukContacts.length,
+        uk_ghl_contacts: ukContactsMerged.length,
+        contacts_after_filter: contacts.length,
         matched_members: queue.length,
         fetched_at: new Date().toISOString(),
       },
-    });
+    };
+
+    // ?debug=1 → include raw diagnostic info so we can see why the queue is
+    // smaller than expected (phone format mismatch, missing Neon rows, etc.)
+    if (req.query && req.query.debug === "1") {
+      response.debug = {
+        us_ghl_phone_samples: usContacts.slice(0, 8).map(c => ({
+          email: c.email, phone: c.phone, firstName: c.firstName || c.contactName,
+        })),
+        uk_ghl_phone_samples_44: ukContacts.slice(0, 8).map(c => ({
+          email: c.email, phone: c.phone, firstName: c.firstName || c.contactName,
+        })),
+        uk_ghl_phone_samples_plus44: ukContactsAlt.slice(0, 8).map(c => ({
+          email: c.email, phone: c.phone, firstName: c.firstName || c.contactName,
+        })),
+        matched_us_phones: contacts.filter(c => c.country === "USA/CAN").map(c => ({ email: c.email, phone: c.phone })),
+        matched_uk_phones: contacts.filter(c => c.country === "UK").map(c => ({ email: c.email, phone: c.phone })),
+        all_matched_ghl_emails_count: contacts.length,
+        neon_matched_emails_count: users.length,
+        us_uk_ghl_emails_missing_from_neon: contacts
+          .filter(c => !userMap.has(c.email))
+          .slice(0, 30)
+          .map(c => ({ email: c.email, phone: c.phone, country: c.country })),
+      };
+    }
+
+    return res.status(200).json(response);
   } catch (e) {
     console.error("manual_outreach_queue_failed", e);
     return res.status(500).json({
