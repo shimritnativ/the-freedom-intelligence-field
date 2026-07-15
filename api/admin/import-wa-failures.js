@@ -160,6 +160,9 @@ export default async function handler(req, res) {
       const eventAt = row.timestamp
         ? new Date(row.timestamp).toISOString()
         : new Date().toISOString();
+      // The unique index is PARTIAL (`WHERE contact_phone IS NOT NULL`),
+      // so ON CONFLICT must repeat that predicate or Postgres rejects the
+      // statement with "no unique or exclusion constraint matching".
       const result = await sql`
         INSERT INTO whatsapp_message_events (
           contact_email, contact_phone, contact_name,
@@ -169,7 +172,9 @@ export default async function handler(req, res) {
           ${row.status}, 'WhatsApp', ${eventAt}::timestamptz,
           ${JSON.stringify(row)}::jsonb
         )
-        ON CONFLICT (contact_phone, event_at, status) DO NOTHING
+        ON CONFLICT (contact_phone, event_at, status)
+        WHERE contact_phone IS NOT NULL
+        DO NOTHING
         RETURNING id
       `;
       if (result.rows.length > 0) {
