@@ -6,10 +6,15 @@
 // ranked list of members who likely aren't getting the automated
 // WhatsApp sequence (because GHL delivery is unreliable to those regions).
 //
-// Auth: same @shimritnativ.com session gate as every other admin endpoint.
+// Uses GHL's V1 API (rest.gohighlevel.com/v1) because our token is a V1
+// Location API Key. If we later switch to a V2 PIT with contacts scope,
+// we would swap the fetch URL + auth style.
+//
+// Auth (our side): same @shimritnativ.com session gate as every other
+// admin endpoint.
 //
 // Env vars required (add via Vercel Settings → Environment Variables):
-//   GHL_API_KEY        — Private Integration Token (starts with "pit-")
+//   GHL_API_KEY        — V1 Location API Key (UUID format, no prefix)
 //   GHL_LOCATION_ID    — GHL sub-account location ID
 //
 // Response:
@@ -20,84 +25,46 @@ import { sql } from "@vercel/postgres";
 import { getUserBySessionToken } from "../../lib/db.js";
 
 const ALLOWED_DOMAIN = "@shimritnativ.com";
-const GHL_API_BASE = "https://services.leadconnectorhq.com";
-const GHL_API_VERSION = "2021-07-28";
+const GHL_V1_BASE = "https://rest.gohighlevel.com/v1";
 
-// Fetch GHL contacts whose phone contains the given prefix. Tries two
-// endpoint shapes — POST /contacts/search (modern V2) and GET /contacts/
-// (also modern V2 but different query pattern). Some PITs work with one
-// and not the other depending on scopes/version. Falls through with the
-// detailed error on both failures.
-async function searchGhlContactsByPhone({ apiKey, locationId, phonePrefix }) {
-  const authHeaders = {
-    "Authorization": `Bearer ${apiKey}`,
-    "Version": GHL_API_VERSION,
-    "Content-Type": "application/json",
-    "Accept": "application/json",
-  };
-
-  // Attempt 1: POST /contacts/search
-  try {
-    const url = `${GHL_API_BASE}/contacts/search`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: authHeaders,
-      body: JSON.stringify({
-        locationId,
-        pageLimit: 100,
-        filters: [
-          { field: "phone", operator: "contains", value: phonePrefix }
-        ],
-      }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      return data.contacts || [];
-    }
-    // Save the error for reporting if attempt 2 also fails
-    const body1 = await res.text().catch(() => "");
-    if (res.status !== 401 && res.status !== 404) {
-      throw new Error(`ghl_${res.status} (POST /contacts/search): ${body1.slice(0, 300)}`);
-    }
-    // Fall through to attempt 2 on 401 or 404
-    var errorAttempt1 = `POST /contacts/search → ${res.status}: ${body1.slice(0, 200)}`;
-  } catch (e) {
-    if (e.message && e.message.startsWith("ghl_")) throw e;
-    var errorAttempt1 = `POST /contacts/search → threw: ${e.message}`;
-  }
-
-  // Attempt 2: GET /contacts/ with query params
-  try {
-    const params = new URLSearchParams({
-      locationId,
-      limit: "100",
-      query: phonePrefix,
-    });
-    const url = `${GHL_API_BASE}/contacts/?${params.toString()}`;
+// Fetch contacts from GHL V1 with a query string. GHL's V1 /contacts/
+// endpoint supports a general `query` param that searches across name,
+// email, phone, and other fields. We pass a phone prefix as the query
+// and post-filter for actual phone match. Paginates to catch up to 300
+// results (3 pages of 100).
+async function fetchGhlContactsMatchingPhone({ apiKey, phonePrefix }) {
+  const collected = [];
+  let startAfter = null;
+  let startAfterId = null;
+  for (let page = 0; page < 3; page++) {
+    const params = new URLSearchParams({ limit: "100", query: phonePrefix });
+    if (startAfter) params.set("startAfter", startAfter);
+    if (startAfterId) params.set("startAfterId", startAfterId);
+    const url = `${GHL_V1_BASE}/contacts/?${params.toString()}`;
     const res = await fetch(url, {
       method: "GET",
-      headers: authHeaders,
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Accept": "application/json",
+      },
     });
-    if (res.ok) {
-      const data = await res.json();
-      return data.contacts || [];
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`ghl_v1_${res.status}: ${text.slice(0, 300)}`);
     }
-    const body2 = await res.text().catch(() => "");
-    throw new Error(
-      `ghl_${res.status}: both endpoints failed. ` +
-      `Attempt 1: ${errorAttempt1} · ` +
-      `Attempt 2 (GET /contacts/): ${body2.slice(0, 200)}`
-    );
-  } catch (e) {
-    if (e.message && e.message.startsWith("ghl_")) throw e;
-    throw new Error(`ghl_network: ${e.message}. Attempt 1: ${errorAttempt1}`);
+    const data = await res.json();
+    const contacts = data.contacts || [];
+    collected.push(...contacts);
+    if (contacts.length < 100) break;
+    const last = contacts[contacts.length - 1];
+    startAfter = last.dateAdded ? new Date(last.dateAdded).getTime() : null;
+    startAfterId = last.id;
+    if (!startAfter || !startAfterId) break;
   }
+  return collected;
 }
 
-// Compute which message a member SHOULD have received by now, based on
-// days-since-purchase + whether they ever started (last_completed_day).
-// If they bought > 4 days ago and never started, they need the RESTART
-// sequence, not the regular next message.
+// Compute which message a member SHOULD have received by now.
 function computeNextMessage(days, lastCompleted) {
   if (lastCompleted === 0 && days > 4) {
     return "RESTART CANDIDATE — never started, send restart code";
@@ -129,7 +96,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Auth — same session gate as every other admin endpoint.
     const sessionToken = req.headers["x-session-token"];
     const user = await getUserBySessionToken(sessionToken);
     if (!user || !(user.email || "").toLowerCase().endsWith(ALLOWED_DOMAIN)) {
@@ -145,15 +111,13 @@ export default async function handler(req, res) {
       });
     }
 
-    // Fetch US/CAN and UK contacts in parallel.
+    // Fetch US/CAN and UK contacts in parallel via V1 search.
     const [usContacts, ukContacts] = await Promise.all([
-      searchGhlContactsByPhone({ apiKey, locationId, phonePrefix: "+1" }),
-      searchGhlContactsByPhone({ apiKey, locationId, phonePrefix: "+44" }),
+      fetchGhlContactsMatchingPhone({ apiKey, phonePrefix: "+1" }),
+      fetchGhlContactsMatchingPhone({ apiKey, phonePrefix: "+44" }),
     ]);
 
-    // Merge + dedupe by email (GHL returns duplicates when phone appears
-    // in multiple fields). Also post-filter to ensure phone STARTS with
-    // the prefix (search uses "contains" which can catch false positives).
+    // Merge + dedupe by email, post-filter for actual phone prefix match.
     const seen = new Set();
     const contacts = [];
     for (const c of [...usContacts, ...ukContacts]) {
@@ -161,14 +125,13 @@ export default async function handler(req, res) {
       const phone = String(c.phone || "").trim();
       if (!email || !phone) continue;
       if (seen.has(email)) continue;
-      // Post-filter for prefix match
       const isUS = phone.startsWith("+1");
       const isUK = phone.startsWith("+44");
       if (!isUS && !isUK) continue;
       seen.add(email);
       contacts.push({
         email,
-        first_name: c.firstName || "",
+        first_name: c.firstName || c.contactName || "",
         last_name: c.lastName || "",
         phone,
         country: isUK ? "UK" : "USA/CAN",
@@ -176,11 +139,18 @@ export default async function handler(req, res) {
     }
 
     if (contacts.length === 0) {
-      return res.status(200).json({ queue: [], count: 0 });
+      return res.status(200).json({
+        queue: [], count: 0,
+        meta: {
+          us_can_ghl_contacts: usContacts.length,
+          uk_ghl_contacts: ukContacts.length,
+          matched_members: 0,
+          fetched_at: new Date().toISOString(),
+        },
+      });
     }
 
-    // Cross-reference with our Neon users table. Only include entitled
-    // members who bought in the last 30 days and aren't already Unlimited.
+    // Cross-reference with Neon users.
     const emails = contacts.map(c => c.email);
     const { rows: users } = await sql`
       SELECT
@@ -200,7 +170,6 @@ export default async function handler(req, res) {
         AND u.created_at > NOW() - INTERVAL '30 days'
     `;
 
-    // Build a map for quick lookup, then enrich the GHL contact list.
     const userMap = new Map();
     for (const u of users) userMap.set(u.email, u);
 
