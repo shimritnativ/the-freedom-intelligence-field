@@ -49,8 +49,10 @@ async function lookupGhlEmailByPhone({ apiKey, phone }) {
   }
 }
 
-// Robust CSV line parser — handles quoted fields with commas inside.
-function parseCsvLine(line) {
+// Robust CSV/TSV line parser — handles quoted fields with delimiter inside.
+// GHL exports sometimes come with commas and sometimes with semicolons
+// (locale-dependent), so we auto-detect the delimiter from the header line.
+function parseCsvLine(line, delimiter = ",") {
   const out = [];
   let cur = "";
   let inQuotes = false;
@@ -61,7 +63,7 @@ function parseCsvLine(line) {
       i++;
     } else if (ch === '"') {
       inQuotes = !inQuotes;
-    } else if (ch === "," && !inQuotes) {
+    } else if (ch === delimiter && !inQuotes) {
       out.push(cur);
       cur = "";
     } else {
@@ -70,6 +72,26 @@ function parseCsvLine(line) {
   }
   out.push(cur);
   return out.map(s => s.trim());
+}
+
+// Look at the header line and pick whichever separator appears most —
+// GHL uses commas in English exports, semicolons in some EU locales.
+function detectDelimiter(headerLine) {
+  const commaCount = (headerLine.match(/,/g) || []).length;
+  const semiCount = (headerLine.match(/;/g) || []).length;
+  return semiCount > commaCount ? ";" : ",";
+}
+
+// Normalize a phone number to include a leading "+" when digits look like
+// a full international number. GHL sometimes exports without the plus.
+function normalizePhone(raw) {
+  const trimmed = String(raw || "").trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("+")) return trimmed;
+  const digits = trimmed.replace(/[^0-9]/g, "");
+  // 10+ digits without prefix → assume it's already E.164 minus the plus.
+  if (digits.length >= 10) return "+" + digits;
+  return trimmed;
 }
 
 export default async function handler(req, res) {
@@ -101,9 +123,12 @@ export default async function handler(req, res) {
   const lines = csv.split(/\r?\n/).filter(l => l.trim());
   if (lines.length < 2) return res.status(400).json({ error: "csv_no_data" });
 
+  // Auto-detect delimiter (comma vs semicolon) from the header line.
+  const delimiter = detectDelimiter(lines[0]);
+
   // Parse header — case-insensitive, position-based. Also strip BOM
   // per-field in case it snuck through, and trim whitespace.
-  const header = parseCsvLine(lines[0]).map(s =>
+  const header = parseCsvLine(lines[0], delimiter).map(s =>
     s.replace(/^﻿/, "").trim().toLowerCase()
   );
   const nameIdx = header.indexOf("name");
@@ -115,16 +140,18 @@ export default async function handler(req, res) {
       error: "csv_missing_columns",
       expected: ["name", "phone", "status", "timestamp"],
       found: header,
+      delimiter_used: delimiter,
       first_line_raw: lines[0].slice(0, 200),
     });
   }
 
-  // Parse data rows; keep only failures.
+  // Parse data rows; keep only failures. Normalize phones to E.164 with
+  // leading "+" so subsequent GHL lookups and dedup logic work uniformly.
   const rows = [];
   for (let i = 1; i < lines.length; i++) {
-    const fields = parseCsvLine(lines[i]);
+    const fields = parseCsvLine(lines[i], delimiter);
     const name = nameIdx >= 0 ? fields[nameIdx] : null;
-    const phone = fields[phoneIdx] || "";
+    const phone = normalizePhone(fields[phoneIdx] || "");
     const status = String(fields[statusIdx] || "").toLowerCase();
     const timestamp = timestampIdx >= 0 ? fields[timestampIdx] : null;
     if (!phone || phone.toLowerCase() === "unknown") continue;
