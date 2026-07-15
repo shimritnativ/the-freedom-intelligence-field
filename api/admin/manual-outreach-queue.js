@@ -64,25 +64,49 @@ async function fetchGhlContactsMatchingPhone({ apiKey, phonePrefix }) {
   return collected;
 }
 
-// Compute which message a member SHOULD have received by now.
-function computeNextMessage(days, lastCompleted) {
-  if (lastCompleted === 0 && days > 4) {
-    return "RESTART CANDIDATE — never started, send restart code";
+// Compute member status from Neon activity (the actual source of truth for
+// Field engagement). GHL tags are unreliable — they fire on Kajabi lesson
+// clicks, not real Field use. What matters is: did they send messages to
+// the Field, and did they mark days complete inside the Field itself?
+//
+// Statuses:
+//   never_started  — 0 messages sent, purchased 2+ days ago (RESTART)
+//   started_no_complete — messages sent, no day completed (needs push)
+//   behind         — completed at least 1 day but well behind schedule
+//   on_track       — engaging appropriately for time elapsed
+function computeStatus({ days, userMessages, completions }) {
+  if (days < 2) return "too_recent";
+  if (userMessages === 0) return "never_started";
+  if (completions === 0) return "started_no_complete";
+  if (days >= 5 && completions < 3) return "behind";
+  if (days >= 3 && completions === 0) return "behind";
+  return "on_track";
+}
+
+// Actionable next-step message based on Neon state.
+function computeNextMessage({ days, userMessages, completions }) {
+  if (userMessages === 0 && days >= 2) {
+    return "RESTART CANDIDATE — never opened the Field, send restart code";
   }
-  if (days < 1) return "Message 1 — Day 1 Welcome";
-  if (days < 2) return "Message 2 — Day 2 Decision & Action";
-  if (days < 3) return "Message 3 — Day 3 Frequency + Unlimited";
-  if (days < 4) return "Message 4 — Day 4 Bonus Integration";
-  if (days < 5) return "Message 5 — Day 5 Aira YES/NO";
-  if (days < 7) return "Between Messages 5 and 6";
-  if (days < 8) return "Message 6 — Day 7 UNLIMITED50 code";
-  if (days < 9) return "Between Messages 6 and 7";
-  if (days < 10) return "Message 7 — Day 9 Orientation Call";
-  if (days < 11) return "Between Messages 7 and 8";
-  if (days < 12) return "Message 8 — Day 11 Focus check-in";
-  if (days < 14) return "Between Messages 8 and 9";
-  if (days < 15) return "Message 9 — Day 14 Final push";
-  return "Post-sequence — offer Unlimited or restart";
+  if (completions === 0 && userMessages > 0) {
+    return `Sent ${userMessages} messages but didn't complete Day 1 — check in, help them finish`;
+  }
+  const nextDay = completions + 1;
+  if (nextDay === 1) return "Send Day 1 · Welcome + reminder to open the Field";
+  if (nextDay === 2) return "Send Day 2 · Decision & Action";
+  if (nextDay === 3) return "Send Day 3 · Frequency + Unlimited";
+  if (nextDay === 4) return "Send Day 4 · Bonus Integration";
+  if (nextDay === 5) return "Send Day 5 · Aira YES/NO";
+  if (days < 7) return "Between Day 5 and Day 7 — check in";
+  if (days < 8) return "Send Day 7 · UNLIMITED50 code";
+  if (days < 10) return "Send Day 9 · Orientation Call";
+  if (days < 12) return "Send Day 11 · Focus check-in";
+  if (days < 15) return "Send Day 14 · Final push";
+  return "Post-sequence — offer Unlimited or personal check-in";
+}
+
+function needsManualOutreach(status) {
+  return status === "never_started" || status === "started_no_complete" || status === "behind";
 }
 
 export default async function handler(req, res) {
@@ -161,10 +185,11 @@ export default async function handler(req, res) {
       });
     }
 
-    // Cross-reference with Neon users.
-    // Show ALL matching members — do NOT filter by tier or recency. Geo
-    // wants to see every +1 / +44 member so she can decide who to reach.
-    // Only exclude team accounts.
+    // Cross-reference with Neon users AND pull Field engagement metrics.
+    // We need: total user messages sent to the Field, day completions
+    // actually done inside the Field, and last message timestamp. These
+    // are the TRUE engagement signals — GHL tags are misleading because
+    // they fire on Kajabi lesson-clicks, not Field usage.
     const emails = contacts.map(c => c.email);
     const { rows: users } = await sql`
       SELECT
@@ -173,8 +198,15 @@ export default async function handler(req, res) {
         u.created_at,
         u.tier::text AS tier,
         u.kajabi_entitled,
-        COALESCE(u.last_completed_day, 0)::int AS last_completed_day,
-        GREATEST(EXTRACT(DAY FROM (NOW() - u.created_at))::int, 0) AS days_since_purchase
+        GREATEST(EXTRACT(DAY FROM (NOW() - u.created_at))::int, 0) AS days_since_purchase,
+        (SELECT COUNT(*)::int FROM messages m
+           WHERE m.user_id = u.id AND m.role = 'user') AS user_messages,
+        (SELECT COUNT(*)::int FROM messages m
+           WHERE m.user_id = u.id) AS total_messages,
+        (SELECT MAX(m.created_at) FROM messages m
+           WHERE m.user_id = u.id) AS last_message_at,
+        (SELECT COUNT(*)::int FROM day_completions dc
+           WHERE dc.user_id = u.id) AS completions
       FROM users u
       WHERE LOWER(u.email) = ANY(${emails})
         AND u.email NOT LIKE '%@shimritnativ.com'
@@ -184,10 +216,18 @@ export default async function handler(req, res) {
     const userMap = new Map();
     for (const u of users) userMap.set(u.email, u);
 
+    // Build the queue: only include members who NEED manual outreach based
+    // on real Neon activity. On-track members are filtered out.
     const queue = contacts
       .filter(c => userMap.has(c.email))
       .map(c => {
         const u = userMap.get(c.email);
+        const params = {
+          days: u.days_since_purchase,
+          userMessages: u.user_messages,
+          completions: u.completions,
+        };
+        const status = computeStatus(params);
         return {
           email: c.email,
           display_name: u.display_name || `${c.first_name} ${c.last_name}`.trim() || c.email,
@@ -197,12 +237,23 @@ export default async function handler(req, res) {
           country: c.country,
           purchased_on: u.created_at,
           days_since_purchase: u.days_since_purchase,
-          last_completed_day: u.last_completed_day,
+          user_messages: u.user_messages,
+          total_messages: u.total_messages,
+          last_message_at: u.last_message_at,
+          completions: u.completions,
           tier: u.tier,
-          next_message: computeNextMessage(u.days_since_purchase, u.last_completed_day),
+          status,
+          next_message: computeNextMessage(params),
         };
       })
-      .sort((a, b) => a.days_since_purchase - b.days_since_purchase);
+      .filter(q => needsManualOutreach(q.status))
+      .sort((a, b) => {
+        // Sort: never_started first, then by days_since_purchase (oldest first)
+        const priority = { never_started: 0, started_no_complete: 1, behind: 2 };
+        const p = (priority[a.status] ?? 9) - (priority[b.status] ?? 9);
+        if (p !== 0) return p;
+        return b.days_since_purchase - a.days_since_purchase;
+      });
 
     const response = {
       queue,
