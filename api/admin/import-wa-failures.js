@@ -21,32 +21,60 @@ import { getUserBySessionToken } from "../../lib/db.js";
 const ALLOWED_DOMAIN = "@shimritnativ.com";
 const GHL_V1_BASE = "https://rest.gohighlevel.com/v1";
 
-// GHL V1 lookup by phone — returns the first contact whose phone digits
-// match. Used to map CSV phone → contact email so the queue can join by
-// email (Neon users don't have phone stored).
+// GHL V1 lookup by phone — tries multiple query variations to catch
+// phones stored with different formats (with/without country code,
+// with/without formatting). Match rule: last 10 digits must match, which
+// is the reliable NANP + international pattern (avoids false positives
+// from short-suffix matching while still handling missing country codes).
 async function lookupGhlEmailByPhone({ apiKey, phone }) {
-  const digits = phone.replace(/[^0-9]/g, "");
-  if (!digits) return null;
-  try {
-    const res = await fetch(
-      `${GHL_V1_BASE}/contacts/?query=${encodeURIComponent(digits)}&limit=5`,
-      { headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" } }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const contacts = data.contacts || [];
-    // Find the one whose phone digits match ours (fuzzy query returns
-    // multiple candidates; we want the exact phone match).
-    for (const c of contacts) {
-      const cDigits = String(c.phone || "").replace(/[^0-9]/g, "");
-      if (cDigits && (cDigits === digits || cDigits.endsWith(digits) || digits.endsWith(cDigits))) {
-        return (c.email || "").toLowerCase().trim() || null;
-      }
-    }
-    return null;
-  } catch {
-    return null;
+  const fullDigits = String(phone || "").replace(/[^0-9]/g, "");
+  if (!fullDigits) return null;
+
+  // Try queries in order of specificity: full digits → last 10 → last 7.
+  // GHL's fuzzy search matches ANY field containing the substring, so
+  // shorter queries return more candidates. We compensate by verifying
+  // last-10-digit match on the response side.
+  const queries = [fullDigits];
+  if (fullDigits.length >= 10 && !queries.includes(fullDigits.slice(-10))) {
+    queries.push(fullDigits.slice(-10));
   }
+  if (fullDigits.length >= 7 && !queries.includes(fullDigits.slice(-7))) {
+    queries.push(fullDigits.slice(-7));
+  }
+
+  const csvLast10 = fullDigits.slice(-10);
+
+  for (const query of queries) {
+    try {
+      const res = await fetch(
+        `${GHL_V1_BASE}/contacts/?query=${encodeURIComponent(query)}&limit=25`,
+        { headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" } }
+      );
+      if (!res.ok) continue;
+      const data = await res.json();
+      const contacts = data.contacts || [];
+      for (const c of contacts) {
+        const cDigits = String(c.phone || "").replace(/[^0-9]/g, "");
+        if (!cDigits) continue;
+        // Primary match: last 10 digits identical (handles missing country
+        // code on either side without false positives).
+        if (cDigits.length >= 10 && csvLast10.length >= 10 &&
+            cDigits.slice(-10) === csvLast10) {
+          const email = String(c.email || "").toLowerCase().trim();
+          if (email) return email;
+        }
+        // Secondary: exact full-digits match (for short numbers < 10 digits,
+        // e.g. some European short codes).
+        if (cDigits === fullDigits) {
+          const email = String(c.email || "").toLowerCase().trim();
+          if (email) return email;
+        }
+      }
+    } catch {
+      // move on to next query variation
+    }
+  }
+  return null;
 }
 
 // Robust CSV/TSV line parser — handles quoted fields with delimiter inside.
@@ -180,11 +208,13 @@ export default async function handler(req, res) {
     batch.forEach((p, idx) => phoneToEmail.set(p, results[idx]));
   }
 
-  // Insert into whatsapp_message_events. ON CONFLICT prevents duplicates
-  // when the same CSV is uploaded twice.
-  let imported = 0;
-  let matched = 0;
-  let skipped = 0;
+  // Insert into whatsapp_message_events. On conflict we backfill email if
+  // it was previously NULL — so re-uploading the same CSV with an improved
+  // phone lookup picks up members we missed the first time.
+  let imported = 0;   // new rows inserted this run
+  let backfilled = 0; // existing rows whose email got filled in
+  let matched = 0;    // rows with an email tied to a Neon member candidate
+  let skipped = 0;    // rows that already had all info (nothing to update)
   const errors = [];
 
   for (const row of rows) {
@@ -196,6 +226,9 @@ export default async function handler(req, res) {
       // The unique index is PARTIAL (`WHERE contact_phone IS NOT NULL`),
       // so ON CONFLICT must repeat that predicate or Postgres rejects the
       // statement with "no unique or exclusion constraint matching".
+      // On conflict we BACKFILL contact_email when it was previously NULL —
+      // this lets us re-run the import with an improved phone lookup and
+      // pick up members whose emails weren't resolved the first time.
       const result = await sql`
         INSERT INTO whatsapp_message_events (
           contact_email, contact_phone, contact_name,
@@ -207,11 +240,17 @@ export default async function handler(req, res) {
         )
         ON CONFLICT (contact_phone, event_at, status)
         WHERE contact_phone IS NOT NULL
-        DO NOTHING
-        RETURNING id
+        DO UPDATE SET
+          contact_email = COALESCE(whatsapp_message_events.contact_email, EXCLUDED.contact_email),
+          contact_name  = COALESCE(whatsapp_message_events.contact_name,  EXCLUDED.contact_name)
+        RETURNING id, (xmax = 0) AS was_new
       `;
       if (result.rows.length > 0) {
-        imported++;
+        // Postgres trick: xmax = 0 means a fresh INSERT; nonzero means
+        // an UPDATE fired (row already existed and we backfilled email).
+        const wasNew = result.rows[0].was_new === true;
+        if (wasNew) imported++;
+        else backfilled++;
         if (email) matched++;
       } else {
         skipped++;
@@ -222,9 +261,10 @@ export default async function handler(req, res) {
   }
 
   return res.status(200).json({
-    imported,
-    matched, // rows we successfully mapped to a Neon email
-    skipped, // duplicates already in the table
+    imported,   // brand new failure rows inserted
+    backfilled, // existing rows updated with a newly-resolved email
+    matched,    // rows for which we now have an email (any source)
+    skipped,    // existing rows that were already complete
     total_rows: rows.length,
     unique_phones: uniquePhones.length,
     unmatched_phones: uniquePhones.filter(p => !phoneToEmail.get(p)),
