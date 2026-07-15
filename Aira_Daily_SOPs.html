@@ -397,7 +397,7 @@
       <h2 style="margin:0">◆ Today's Manual Outreach Queue</h2>
       <button type="button" onclick="loadLiveOutreach()" id="live-outreach-refresh" style="background:var(--gold);color:var(--black);border:1px solid var(--gold);padding:6px 14px;border-radius:6px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px">Refresh</button>
     </div>
-    <p style="color:var(--text-mid);margin-bottom:12px;font-size:13px">US / Canada / UK members whose GHL WhatsApp automation may not be delivering. Live from GHL, cross-referenced with our members list. Contact each one manually adapted to their next expected message.</p>
+    <p style="color:var(--text-mid);margin-bottom:12px;font-size:13px">Members needing manual WhatsApp follow-up. Combines <strong style="display:inline">confirmed GHL failures</strong> (from the CSV import below — any country) with US / Canada / UK members showing engagement gaps. Red <strong style="display:inline;color:#b02020">"WA FAILED"</strong> badge = GHL says delivery failed; contact via Email or IG DM.</p>
     <div id="live-outreach-meta" style="font-size:11px;color:var(--text-light);font-style:italic;margin-bottom:14px"></div>
     <div id="live-outreach-content"><div style="text-align:center;padding:20px;color:var(--text-light);font-style:italic">Loading live queue…</div></div>
 
@@ -2032,8 +2032,16 @@
       });
       const rows = sorted.map(q => {
         const st = statusStyles[q.status] || { bg: 'transparent', label: q.status, color: 'var(--text)' };
-        const geoBg = q.country === "UK" ? "rgba(122,174,94,0.14)" : "rgba(59,130,200,0.14)";
-        const geoColor = q.country === "UK" ? "#4d8f52" : "#3d7db7";
+        // Region badge — different colors for the buckets Aira actually
+        // cares about (UK, USA/CAN) vs "OTHER" fallback for European /
+        // international members flagged via CSV import.
+        const geoPalette = {
+          "UK":      { bg: "rgba(122,174,94,0.14)", color: "#4d8f52" },
+          "USA/CAN": { bg: "rgba(59,130,200,0.14)", color: "#3d7db7" },
+        };
+        const geo = geoPalette[q.country] || { bg: "rgba(180,150,90,0.14)", color: "#8a7020" };
+        const geoBg = geo.bg;
+        const geoColor = geo.color;
         // Field activity: real messages + real completions inside the Field
         const activityHtml = q.user_messages === 0
           ? '<span style="color:#c05038;font-weight:600">0 messages · never opened</span>'
@@ -2075,7 +2083,7 @@
         '</table></div>';
       if (metaEl) {
         const m = data.meta || {};
-        metaEl.textContent = data.count + ' members need outreach · ' + (m.us_can_ghl_contacts || 0) + ' US/CAN + ' + (m.uk_ghl_contacts || 0) + ' UK GHL contacts scanned · fetched ' + new Date().toLocaleTimeString();
+        metaEl.textContent = data.count + ' members need outreach · ' + (m.wa_failure_members || 0) + ' with confirmed WA failures · ' + (m.us_can_ghl_contacts || 0) + ' US/CAN + ' + (m.uk_ghl_contacts || 0) + ' UK GHL contacts scanned · fetched ' + new Date().toLocaleTimeString();
       }
     } catch (e) {
       contentEl.innerHTML = '<div class="alert warn" style="margin:0"><div class="alert-icon">▲</div><div>Network error: ' + escapeSopHtml(String(e && e.message || e)) + '</div></div>';
