@@ -2003,11 +2003,12 @@
       // Status-based row styling — most urgent (never opened the Field)
       // gets the strongest color so Aira can see priorities at a glance.
       const statusStyles = {
+        wa_failed:           { bg: 'rgba(220,50,50,0.14)',  label: 'WA FAILED (per GHL)',    color: '#b02020' },
         never_started:       { bg: 'rgba(200,80,60,0.10)',  label: 'NEVER OPENED FIELD',    color: '#c05038' },
         started_no_complete: { bg: 'rgba(200,130,60,0.09)', label: 'STARTED, NOT COMPLETING', color: '#c07030' },
         behind:              { bg: 'rgba(200,170,60,0.07)', label: 'BEHIND SCHEDULE',       color: '#8a7020' },
       };
-      const statusPriority = { never_started: 0, started_no_complete: 1, behind: 2 };
+      const statusPriority = { wa_failed: 0, never_started: 1, started_no_complete: 2, behind: 3 };
       const sorted = data.queue.slice().sort((a, b) => {
         const p = (statusPriority[a.status] ?? 9) - (statusPriority[b.status] ?? 9);
         if (p !== 0) return p;
