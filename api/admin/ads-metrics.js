@@ -619,20 +619,37 @@ async function loadTotalAdsSignups(from, to) {
     //   - purchased via an "-Ads" ThriveCart product (definitive, since
     //     the ads LP has its own product IDs; catches buyers whose UTMs
     //     got dropped or overwritten by a later WhatsApp click)
+    // Explicit non-ads utm_source (whatsapp, email, etc) excludes the buyer
+    // from the ads bucket even if Meta happened to tag utm_medium=paid_social
+    // on their journey. Otherwise Corinne-style WhatsApp buyers get double-
+    // counted as both WhatsApp AND ads.
     const { rows } = await sql`
       SELECT COUNT(*)::int AS n
       FROM users u
       WHERE u.created_at >= ${from}::date
         AND u.created_at < (${to}::date + INTERVAL '1 day')
         AND u.email NOT LIKE '%@shimritnativ.com'
+        AND LOWER(COALESCE(u.utm_source, '')) NOT IN ('whatsapp')
+        AND LOWER(COALESCE(u.utm_source, '')) NOT LIKE '%email%'
+        AND LOWER(COALESCE(u.utm_source, '')) NOT LIKE '%newsletter%'
+        AND LOWER(COALESCE(u.utm_source, '')) NOT LIKE '%klaviyo%'
+        AND LOWER(COALESCE(u.utm_source, '')) NOT LIKE '%mailchimp%'
+        AND LOWER(COALESCE(u.utm_source, '')) NOT LIKE '%kajabi%'
         AND (
+          -- Explicit ads signals
           LOWER(COALESCE(u.utm_campaign, '')) IN ('cold', 'warm')
           OR LOWER(COALESCE(u.utm_source, '')) IN ('power-reset', 'meta', 'facebook', 'instagram', 'fb', 'ig')
-          OR LOWER(COALESCE(u.utm_medium, '')) IN ('paid_social', 'paidsocial', 'cpc', 'ppc')
-          OR EXISTS (
-            SELECT 1 FROM purchases p
-            WHERE LOWER(p.email) = LOWER(u.email)
-              AND (p.product_name ILIKE '%- Ads' OR p.product_name ILIKE '%-ads' OR p.product_name ILIKE '% Ads')
+          -- Fallback ads (only when utm_source is empty)
+          OR (
+            COALESCE(u.utm_source, '') = ''
+            AND (
+              LOWER(COALESCE(u.utm_medium, '')) IN ('paid_social', 'paidsocial', 'cpc', 'ppc')
+              OR EXISTS (
+                SELECT 1 FROM purchases p
+                WHERE LOWER(p.email) = LOWER(u.email)
+                  AND (p.product_name ILIKE '%- Ads' OR p.product_name ILIKE '%-ads' OR p.product_name ILIKE '% Ads')
+              )
+            )
           )
         )
     `;
