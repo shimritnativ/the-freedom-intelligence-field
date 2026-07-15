@@ -64,15 +64,13 @@ async function fetchGhlContactsMatchingPhone({ apiKey, phonePrefix }) {
   return collected;
 }
 
-// Compute member status. Priority order:
-//   wa_failed      — GHL sent a WhatsApp that FAILED to deliver in last 30d
-//                    (highest priority — confirmed delivery problem)
-//   never_started  — 0 messages sent to Field, purchased 2+ days ago
+// Compute member status from Neon activity (the true source of truth for
+// Field engagement). Priority order:
+//   never_started       — 0 messages sent to Field, purchased 2+ days ago
 //   started_no_complete — messages sent, no day completed
-//   behind         — some completions but well behind schedule
-//   on_track       — engaging appropriately
-function computeStatus({ days, userMessages, completions, waFailures }) {
-  if (waFailures > 0) return "wa_failed";
+//   behind              — some completions but well behind schedule
+//   on_track            — engaging appropriately
+function computeStatus({ days, userMessages, completions }) {
   if (days < 2) return "too_recent";
   if (userMessages === 0) return "never_started";
   if (completions === 0) return "started_no_complete";
@@ -82,10 +80,7 @@ function computeStatus({ days, userMessages, completions, waFailures }) {
 }
 
 // Actionable next-step message based on Neon state.
-function computeNextMessage({ days, userMessages, completions, waFailures }) {
-  if (waFailures > 0) {
-    return `WA MESSAGES FAILING (${waFailures} failed in 30d) — contact via alt channel (Email / IG DM)`;
-  }
+function computeNextMessage({ days, userMessages, completions }) {
   if (userMessages === 0 && days >= 2) {
     return "RESTART CANDIDATE — never opened the Field, send restart code";
   }
@@ -107,8 +102,7 @@ function computeNextMessage({ days, userMessages, completions, waFailures }) {
 }
 
 function needsManualOutreach(status) {
-  return status === "wa_failed" ||
-         status === "never_started" ||
+  return status === "never_started" ||
          status === "started_no_complete" ||
          status === "behind";
 }
@@ -210,24 +204,7 @@ export default async function handler(req, res) {
         (SELECT MAX(m.created_at) FROM messages m
            WHERE m.user_id = u.id) AS last_message_at,
         (SELECT COUNT(*)::int FROM day_completions dc
-           WHERE dc.user_id = u.id) AS completions,
-        -- WhatsApp delivery failures in last 30 days (from GHL Workflow
-        -- webhook posts to /api/webhooks/ghl-message-status). NULL-safe:
-        -- if the table doesn't exist yet or no events recorded, returns 0.
-        COALESCE((
-          SELECT COUNT(*)::int FROM whatsapp_message_events wme
-          WHERE LOWER(wme.contact_email) = LOWER(u.email)
-            AND wme.status IN ('failed', 'undelivered', 'error')
-            AND wme.event_at > NOW() - INTERVAL '30 days'
-        ), 0) AS wa_failures_30d,
-        (SELECT wme.event_at FROM whatsapp_message_events wme
-          WHERE LOWER(wme.contact_email) = LOWER(u.email)
-            AND wme.status IN ('failed', 'undelivered', 'error')
-          ORDER BY wme.event_at DESC LIMIT 1) AS last_wa_failure_at,
-        (SELECT wme.message_number FROM whatsapp_message_events wme
-          WHERE LOWER(wme.contact_email) = LOWER(u.email)
-            AND wme.status IN ('failed', 'undelivered', 'error')
-          ORDER BY wme.event_at DESC LIMIT 1) AS last_failed_message_num
+           WHERE dc.user_id = u.id) AS completions
       FROM users u
       WHERE LOWER(u.email) = ANY(${emails})
         AND u.email NOT LIKE '%@shimritnativ.com'
@@ -247,7 +224,6 @@ export default async function handler(req, res) {
           days: u.days_since_purchase,
           userMessages: u.user_messages,
           completions: u.completions,
-          waFailures: u.wa_failures_30d,
         };
         const status = computeStatus(params);
         return {
@@ -263,9 +239,6 @@ export default async function handler(req, res) {
           total_messages: u.total_messages,
           last_message_at: u.last_message_at,
           completions: u.completions,
-          wa_failures_30d: u.wa_failures_30d,
-          last_wa_failure_at: u.last_wa_failure_at,
-          last_failed_message_num: u.last_failed_message_num,
           tier: u.tier,
           status,
           next_message: computeNextMessage(params),
@@ -273,9 +246,8 @@ export default async function handler(req, res) {
       })
       .filter(q => needsManualOutreach(q.status))
       .sort((a, b) => {
-        // Sort: wa_failed (confirmed delivery problem) first, then
-        // never_started, then everything else by days-since-purchase.
-        const priority = { wa_failed: 0, never_started: 1, started_no_complete: 2, behind: 3 };
+        // Sort: never_started first, then started_no_complete, then behind.
+        const priority = { never_started: 0, started_no_complete: 1, behind: 2 };
         const p = (priority[a.status] ?? 9) - (priority[b.status] ?? 9);
         if (p !== 0) return p;
         return b.days_since_purchase - a.days_since_purchase;
