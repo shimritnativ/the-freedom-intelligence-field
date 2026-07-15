@@ -7022,24 +7022,52 @@
         return;
       }
 
+      // Check if a member's purchases include an ads-only ThriveCart
+      // product. That's the strongest signal — beats overwritten UTMs.
+      const boughtAdsProduct = (u) => {
+        let purchases = u.purchases_json;
+        if (!purchases) return false;
+        if (typeof purchases === "string") {
+          try { purchases = JSON.parse(purchases); } catch { return false; }
+        }
+        if (!Array.isArray(purchases)) return false;
+        return purchases.some(p => {
+          const name = String(p.product || "").toLowerCase();
+          return name.endsWith("- ads") || name.endsWith("-ads") || / ads$/.test(name);
+        });
+      };
+
       // Format a member's traffic source from their utm fields. Output is
       // short and human-readable (e.g., "Meta · cold · reel3", "Email",
       // "Organic / Direct"). Hover tooltip carries the full breakdown.
       const formatSource = (u) => {
         const src = (u.utm_source || "").toLowerCase();
         const camp = (u.utm_campaign || "").toLowerCase();
+        const medium = (u.utm_medium || "").toLowerCase();
         const content = u.utm_content || "";
-        // Meta ad detection: known campaign tags from the live ad URLs.
-        // Keep the roster label short — just "Meta · cold" or "Meta · warm".
-        // The specific ad (utm_content) and geo (utm_term) live on the Ads
-        // tab; carrying them here made the column wrap awkwardly.
-        if (camp === "cold" || camp === "warm" || src === "power-reset" || src === "meta" || src === "facebook" || src === "instagram") {
-          const label = "Meta · " + (camp || src);
+        const isAdsProduct = boughtAdsProduct(u);
+        // Meta ad detection — 4 signals, any one wins:
+        //   1. utm_campaign in cold/warm
+        //   2. utm_source in meta/facebook/instagram/power-reset
+        //   3. utm_medium in paid_social/cpc/ppc (Meta auto-tag)
+        //   4. Bought an "-Ads" ThriveCart product (definitive; survives
+        //      UTM overwrites from later WhatsApp/email clicks)
+        const isMetaAds =
+          camp === "cold" || camp === "warm" ||
+          src === "power-reset" || src === "meta" || src === "facebook" || src === "instagram" || src === "fb" || src === "ig" ||
+          medium === "paid_social" || medium === "paidsocial" || medium === "cpc" || medium === "ppc" ||
+          isAdsProduct;
+        if (isMetaAds) {
+          // Prefer specific campaign label; fall back to source; then
+          // just "Meta · ads" when only medium/product signal fired.
+          const label = "Meta · " + (camp || src || (isAdsProduct ? "ads" : medium || "ads"));
           const tipParts = [
             'utm_source=' + (u.utm_source || ''),
             'utm_campaign=' + (u.utm_campaign || ''),
-            'utm_content=' + (u.utm_content || '')
-          ];
+            'utm_medium=' + (u.utm_medium || ''),
+            'utm_content=' + (u.utm_content || ''),
+            isAdsProduct ? 'bought "- Ads" product' : ''
+          ].filter(Boolean);
           return `<span title="${escapeHtml(tipParts.join(', '))}" style="color: var(--gold); font-weight: 600;">${escapeHtml(label)}</span>`;
         }
         // Email
