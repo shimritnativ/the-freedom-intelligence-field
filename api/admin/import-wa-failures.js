@@ -93,14 +93,19 @@ export default async function handler(req, res) {
   let csv = "";
   if (typeof req.body === "string") csv = req.body;
   else if (req.body && typeof req.body === "object") csv = String(req.body.csv || "");
-  csv = csv.trim();
+  // Strip UTF-8 BOM (0xFEFF) that most CSV exporters add. Without this,
+  // the first column parses as "﻿name" and header matching fails.
+  csv = csv.replace(/^﻿/, "").trim();
   if (!csv) return res.status(400).json({ error: "csv_empty" });
 
   const lines = csv.split(/\r?\n/).filter(l => l.trim());
   if (lines.length < 2) return res.status(400).json({ error: "csv_no_data" });
 
-  // Parse header — case-insensitive, position-based.
-  const header = parseCsvLine(lines[0]).map(s => s.toLowerCase());
+  // Parse header — case-insensitive, position-based. Also strip BOM
+  // per-field in case it snuck through, and trim whitespace.
+  const header = parseCsvLine(lines[0]).map(s =>
+    s.replace(/^﻿/, "").trim().toLowerCase()
+  );
   const nameIdx = header.indexOf("name");
   const phoneIdx = header.indexOf("phone");
   const statusIdx = header.indexOf("status");
@@ -110,6 +115,7 @@ export default async function handler(req, res) {
       error: "csv_missing_columns",
       expected: ["name", "phone", "status", "timestamp"],
       found: header,
+      first_line_raw: lines[0].slice(0, 200),
     });
   }
 
