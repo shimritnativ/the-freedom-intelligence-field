@@ -2000,35 +2000,45 @@
         if (metaEl) metaEl.textContent = "Scanned " + (m.us_can_ghl_contacts || 0) + " US/CAN + " + (m.uk_ghl_contacts || 0) + " UK GHL contacts · fetched " + new Date().toLocaleTimeString();
         return;
       }
-      // Sort: never-started restart candidates first, then most-days first.
+      // Status-based row styling — most urgent (never opened the Field)
+      // gets the strongest color so Aira can see priorities at a glance.
+      const statusStyles = {
+        never_started:       { bg: 'rgba(200,80,60,0.10)',  label: 'NEVER OPENED FIELD',  color: '#c05038' },
+        started_no_complete: { bg: 'rgba(200,130,60,0.09)', label: 'STARTED, NOT COMPLETING', color: '#c07030' },
+        behind:              { bg: 'rgba(200,170,60,0.07)', label: 'BEHIND SCHEDULE',      color: '#8a7020' },
+      };
+      const statusPriority = { never_started: 0, started_no_complete: 1, behind: 2 };
       const sorted = data.queue.slice().sort((a, b) => {
-        const aRestart = a.next_message.startsWith("RESTART") ? 1 : 0;
-        const bRestart = b.next_message.startsWith("RESTART") ? 1 : 0;
-        if (aRestart !== bRestart) return bRestart - aRestart;
+        const p = (statusPriority[a.status] ?? 9) - (statusPriority[b.status] ?? 9);
+        if (p !== 0) return p;
         return b.days_since_purchase - a.days_since_purchase;
       });
       const rows = sorted.map(q => {
-        const isRestart = q.next_message.startsWith("RESTART");
+        const st = statusStyles[q.status] || { bg: 'transparent', label: q.status, color: 'var(--text)' };
         const geoBg = q.country === "UK" ? "rgba(122,174,94,0.14)" : "rgba(59,130,200,0.14)";
         const geoColor = q.country === "UK" ? "#4d8f52" : "#3d7db7";
-        const progressHtml = q.last_completed_day > 0
-          ? '<span class="tag" style="background:rgba(122,174,94,0.2);border-color:#6a9b5a;color:#4d8f52">Day ' + q.last_completed_day + ' done</span>'
-          : '<span class="tag" style="background:rgba(200,130,60,0.2);border-color:#c07030;color:#c07030">Never started</span>';
+        // Field activity: real messages + real completions inside the Field
+        const activityHtml = q.user_messages === 0
+          ? '<span style="color:#c05038;font-weight:600">0 messages · never opened</span>'
+          : '<span style="color:var(--text)">' + q.user_messages + ' msg' + (q.user_messages === 1 ? '' : 's') + ' · ' + q.completions + ' day' + (q.completions === 1 ? '' : 's') + ' done</span>';
+        const lastActive = q.last_message_at
+          ? '<br><span style="font-size:10.5px;color:var(--text-light)">last: ' + new Date(q.last_message_at).toLocaleDateString() + '</span>'
+          : '';
         const cleanPhone = String(q.phone || "").replace(/[^0-9+]/g, "").replace(/^\+/, "");
         const waLink = cleanPhone
           ? '<a href="https://wa.me/' + cleanPhone + '" target="_blank" rel="noopener" style="color:var(--gold);font-weight:600;text-decoration:none">WhatsApp ↗</a>'
           : '';
-        return '<tr style="' + (isRestart ? 'background:rgba(200,130,60,0.06);' : '') + '">' +
+        return '<tr style="background:' + st.bg + '">' +
           '<td style="padding:12px;vertical-align:top">' +
             '<strong style="display:inline;color:var(--text)">' + escapeSopHtml(q.display_name || q.email) + '</strong><br>' +
             '<span style="font-size:11px;color:var(--text-light)">' + escapeSopHtml(q.email) + '</span>' +
+            '<div style="margin-top:6px"><span style="display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:0.06em;padding:2px 7px;border-radius:3px;background:' + st.bg + ';color:' + st.color + ';border:1px solid ' + st.color + '33">' + st.label + '</span></div>' +
           '</td>' +
           '<td style="padding:12px;vertical-align:top;font-family:monospace;font-size:12px;color:var(--text-mid)">' + escapeSopHtml(q.phone) + '</td>' +
           '<td style="padding:12px;vertical-align:top"><span class="tag" style="background:' + geoBg + ';color:' + geoColor + ';border-color:' + geoBg + '">' + q.country + '</span></td>' +
-          '<td style="padding:12px;vertical-align:top;color:var(--text-mid);font-size:12.5px">' + new Date(q.purchased_on).toLocaleDateString() + '</td>' +
-          '<td style="padding:12px;vertical-align:top;text-align:center;font-weight:600">' + q.days_since_purchase + '</td>' +
-          '<td style="padding:12px;vertical-align:top;text-align:center">' + progressHtml + '</td>' +
-          '<td style="padding:12px;vertical-align:top;font-size:12.5px;color:' + (isRestart ? '#c07030' : 'var(--gold-dark)') + ';font-weight:' + (isRestart ? '700' : '600') + '">' + escapeSopHtml(q.next_message) + '</td>' +
+          '<td style="padding:12px;vertical-align:top;color:var(--text-mid);font-size:12.5px">' + new Date(q.purchased_on).toLocaleDateString() + '<br><span style="font-size:10.5px;color:var(--text-light)">' + q.days_since_purchase + 'd ago</span></td>' +
+          '<td style="padding:12px;vertical-align:top;font-size:12.5px">' + activityHtml + lastActive + '</td>' +
+          '<td style="padding:12px;vertical-align:top;font-size:12.5px;color:var(--gold-dark);font-weight:600">' + escapeSopHtml(q.next_message) + '</td>' +
           '<td style="padding:12px;vertical-align:top">' + waLink + '</td>' +
         '</tr>';
       }).join("");
@@ -2040,8 +2050,7 @@
             '<th style="text-align:left;padding:10px 12px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase">Phone</th>' +
             '<th style="text-align:left;padding:10px 12px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase">Region</th>' +
             '<th style="text-align:left;padding:10px 12px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase">Bought</th>' +
-            '<th style="text-align:center;padding:10px 12px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase">Days</th>' +
-            '<th style="text-align:center;padding:10px 12px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase">Progress</th>' +
+            '<th style="text-align:left;padding:10px 12px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase">Field Activity</th>' +
             '<th style="text-align:left;padding:10px 12px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase">Next Message</th>' +
             '<th style="text-align:left;padding:10px 12px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase">Action</th>' +
           '</tr></thead>' +
