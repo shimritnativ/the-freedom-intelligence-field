@@ -2178,7 +2178,100 @@
           syncLaunchTracker();
         }
       }
+      if (tab === "outreach") {
+        loadOutreachQueue();
+      }
     }
+
+    // ===== Manual Outreach queue (US / CAN / UK members) =====
+    // Fetches the live GHL contact list cross-referenced with our Neon
+    // users. Renders a table with days-since-purchase + expected message
+    // so Aira can work through it one by one.
+    let _outreachLoading = false;
+    async function loadOutreachQueue() {
+      if (_outreachLoading) return;
+      _outreachLoading = true;
+      const el = document.getElementById("outreach-content");
+      const metaEl = document.getElementById("outreach-meta");
+      const btn = document.getElementById("outreach-refresh");
+      if (btn) { btn.disabled = true; btn.textContent = "Loading…"; }
+      if (el) el.innerHTML = '<div class="empty-state">Fetching from GHL + matching against members…</div>';
+      try {
+        const token = localStorage.getItem(STORAGE_KEY);
+        if (!token) {
+          el.innerHTML = '<div class="empty-state" style="color: var(--red);">Not authenticated. Log in again.</div>';
+          return;
+        }
+        const res = await fetch("/api/admin/manual-outreach-queue", {
+          headers: { "x-session-token": token },
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          el.innerHTML = '<div class="empty-state" style="color: var(--red);">Error: ' + escapeHtml(body.message || res.statusText) + '</div>';
+          return;
+        }
+        const data = await res.json();
+        if (!data.queue || data.queue.length === 0) {
+          el.innerHTML = '<div class="empty-state">No US/CAN/UK members currently need manual outreach 🎉<br><span style="font-size: 11px; color: var(--text-mute); font-style: italic;">Checked ' + (data.meta?.us_can_ghl_contacts || 0) + ' US/CAN + ' + (data.meta?.uk_ghl_contacts || 0) + ' UK GHL contacts against our members list.</span></div>';
+          if (metaEl) metaEl.textContent = "Fetched " + new Date().toLocaleTimeString();
+          return;
+        }
+        // Render table
+        const rows = data.queue.map(q => {
+          const geoBg = q.country === 'UK' ? 'rgba(122, 174, 94, 0.14)' : 'rgba(59, 130, 200, 0.14)';
+          const geoColor = q.country === 'UK' ? '#4d8f52' : '#3d7db7';
+          const restartBg = q.next_message.startsWith('RESTART') ? 'rgba(200, 130, 60, 0.14)' : 'transparent';
+          const igLink = q.phone ? '<a href="https://wa.me/' + encodeURIComponent(q.phone.replace(/[^0-9+]/g, '')) + '" target="_blank" rel="noopener" style="color: var(--gold); text-decoration: none;">WhatsApp ↗</a>' : '';
+          return `
+            <tr style="background: ${restartBg};">
+              <td style="padding: 12px; vertical-align: top;">
+                <strong>${escapeHtml(q.display_name || q.email)}</strong><br>
+                <span style="font-size: 11px; color: var(--text-mute);">${escapeHtml(q.email)}</span>
+              </td>
+              <td style="padding: 12px; vertical-align: top; font-family: monospace; font-size: 12px;">${escapeHtml(q.phone)}</td>
+              <td style="padding: 12px; vertical-align: top;">
+                <span class="tier-badge" style="background: ${geoBg}; color: ${geoColor}; border-color: ${geoBg}; font-size: 10px;">${q.country}</span>
+              </td>
+              <td style="padding: 12px; vertical-align: top; font-size: 12.5px; color: var(--text-dim);">${new Date(q.purchased_on).toLocaleDateString()}</td>
+              <td style="padding: 12px; vertical-align: top; text-align: center; font-weight: 600;">${q.days_since_purchase}</td>
+              <td style="padding: 12px; vertical-align: top; text-align: center;">${q.last_completed_day > 0 ? '<span style="color: var(--green);">Day ' + q.last_completed_day + ' ✓</span>' : '<span style="color: #c07030;">Never started</span>'}</td>
+              <td style="padding: 12px; vertical-align: top; color: var(--text); font-size: 12.5px;">${escapeHtml(q.next_message)}</td>
+              <td style="padding: 12px; vertical-align: top;">${igLink}</td>
+            </tr>`;
+        }).join('');
+        el.innerHTML = `
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead>
+                <tr style="background: var(--panel); border-bottom: 1px solid var(--border);">
+                  <th style="padding: 10px 12px; text-align: left; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute);">Member</th>
+                  <th style="padding: 10px 12px; text-align: left; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute);">Phone</th>
+                  <th style="padding: 10px 12px; text-align: left; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute);">Region</th>
+                  <th style="padding: 10px 12px; text-align: left; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute);">Bought</th>
+                  <th style="padding: 10px 12px; text-align: center; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute);">Days</th>
+                  <th style="padding: 10px 12px; text-align: center; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute);">Progress</th>
+                  <th style="padding: 10px 12px; text-align: left; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute);">Next Message</th>
+                  <th style="padding: 10px 12px; text-align: left; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute);">Action</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        `;
+        if (metaEl) {
+          const m = data.meta || {};
+          metaEl.textContent = `${data.count} members need outreach · ${m.us_can_ghl_contacts || 0} US/CAN + ${m.uk_ghl_contacts || 0} UK GHL contacts scanned · fetched ${new Date().toLocaleTimeString()}`;
+        }
+      } catch (e) {
+        el.innerHTML = '<div class="empty-state" style="color: var(--red);">Network error: ' + escapeHtml(String(e && e.message || e)) + '</div>';
+      } finally {
+        _outreachLoading = false;
+        if (btn) { btn.disabled = false; btn.textContent = "Refresh"; }
+      }
+    }
+    // Expose so the Refresh button can call it directly (delegated buttons
+    // sometimes lose reference across re-renders).
+    window.loadOutreachQueue = loadOutreachQueue;
 
     // ===== Monthly cost snapshot =====
     // Single source of truth for what each tool costs us per month. Read
@@ -4004,6 +4097,24 @@
           </div>
           <!-- /end Launch tracker tab -->
 
+          <!-- ═══ MANUAL OUTREACH tab — US/CAN/UK members needing manual WhatsApp ═══ -->
+          <div data-tab-content="outreach" style="display: none;">
+            <div class="section" style="padding: 22px 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;">
+                <div>
+                  <h2 style="margin: 0;"><span class="h2-eyebrow">Manual Outreach</span>US / Canada / UK members needing manual WhatsApp</h2>
+                  <p style="font-size: 12.5px; color: var(--text-dim); margin: 6px 0 0; line-height: 1.5; max-width: 720px;">
+                    Live list from GHL. These members have +1 or +44 phone numbers, which means GHL's WhatsApp automation may not have delivered the sequence. Contact them manually via WhatsApp Business, adapted to the next expected message.
+                  </p>
+                </div>
+                <button type="button" onclick="loadOutreachQueue()" id="outreach-refresh" style="background: var(--gold); color: var(--dark); border: 1px solid var(--gold); padding: 8px 16px; border-radius: 8px; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; flex-shrink: 0;">Refresh</button>
+              </div>
+              <div id="outreach-meta" style="font-size: 11.5px; color: var(--text-mute); font-style: italic; margin-bottom: 16px;"></div>
+              <div id="outreach-content"><div class="empty-state">Loading manual outreach queue…</div></div>
+            </div>
+          </div>
+          <!-- /end Manual Outreach tab -->
+
             </div><!-- /.dashboard-main -->
 
             <!-- Left-side tab navigation. Sticky on desktop, horizontal scroll on mobile. -->
@@ -4016,6 +4127,7 @@
               <button class="tab-btn" data-tab="engagement" onclick="switchTab('engagement')">Engagement</button>
               <button class="tab-btn" data-tab="notifications" onclick="switchTab('notifications')">Notifications</button>
               <button class="tab-btn" data-tab="launch" onclick="switchTab('launch')"><span class="tab-label">Launch tracker <span class="tab-sparkle tab-rocket">🚀</span></span></button>
+              <button class="tab-btn" data-tab="outreach" onclick="switchTab('outreach')"><span class="tab-label">Manual Outreach <span class="tab-sparkle">📞</span></span></button>
               <a class="tab-btn" href="/aira" target="_blank" rel="noopener" style="text-decoration: none;" title="Opens Aira's SOPs in a new tab"><span class="tab-label">Aira SOPs <span style="font-size: 11px; color: var(--gold); margin-left: 2px;">↗</span></span></a>
             </nav>
           </div><!-- /.dashboard-body -->
