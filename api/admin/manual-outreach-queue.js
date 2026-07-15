@@ -112,15 +112,21 @@ export default async function handler(req, res) {
     }
 
     // Fetch US/CAN and UK contacts in parallel via V1 search.
-    const [usContacts, ukContacts] = await Promise.all([
-      fetchGhlContactsMatchingPhone({ apiKey, phonePrefix: "+1" }),
+    // GHL's V1 fuzzy query sometimes strips "+" so we search WITHOUT the
+    // plus and rely on the post-filter (phone.startsWith) to make sure
+    // we only keep real matches. Multiple queries widen the net.
+    const [usContacts, ukContacts, ukContactsAlt] = await Promise.all([
+      fetchGhlContactsMatchingPhone({ apiKey, phonePrefix: "1" }),
+      fetchGhlContactsMatchingPhone({ apiKey, phonePrefix: "44" }),
       fetchGhlContactsMatchingPhone({ apiKey, phonePrefix: "+44" }),
     ]);
+    // Merge the two UK queries for downstream logging.
+    const ukContactsMerged = [...ukContacts, ...ukContactsAlt];
 
     // Merge + dedupe by email, post-filter for actual phone prefix match.
     const seen = new Set();
     const contacts = [];
-    for (const c of [...usContacts, ...ukContacts]) {
+    for (const c of [...usContacts, ...ukContactsMerged]) {
       const email = String(c.email || "").toLowerCase();
       const phone = String(c.phone || "").trim();
       if (!email || !phone) continue;
@@ -143,7 +149,7 @@ export default async function handler(req, res) {
         queue: [], count: 0,
         meta: {
           us_can_ghl_contacts: usContacts.length,
-          uk_ghl_contacts: ukContacts.length,
+          uk_ghl_contacts: ukContactsMerged.length,
           matched_members: 0,
           fetched_at: new Date().toISOString(),
         },
@@ -151,6 +157,9 @@ export default async function handler(req, res) {
     }
 
     // Cross-reference with Neon users.
+    // Show ALL matching members — do NOT filter by tier or recency. Geo
+    // wants to see every +1 / +44 member so she can decide who to reach.
+    // Only exclude team accounts.
     const emails = contacts.map(c => c.email);
     const { rows: users } = await sql`
       SELECT
@@ -160,14 +169,11 @@ export default async function handler(req, res) {
         u.tier::text AS tier,
         u.kajabi_entitled,
         COALESCE(u.last_completed_day, 0)::int AS last_completed_day,
-        EXTRACT(DAY FROM (NOW() - u.created_at))::int AS days_since_purchase
+        GREATEST(EXTRACT(DAY FROM (NOW() - u.created_at))::int, 0) AS days_since_purchase
       FROM users u
       WHERE LOWER(u.email) = ANY(${emails})
-        AND u.kajabi_entitled = true
         AND u.email NOT LIKE '%@shimritnativ.com'
         AND u.email NOT LIKE '%@masteryourpath.%'
-        AND (u.tier IS NULL OR u.tier::text != 'full')
-        AND u.created_at > NOW() - INTERVAL '30 days'
     `;
 
     const userMap = new Map();
