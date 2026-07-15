@@ -333,6 +333,61 @@
 
   hr.divider { border: none; border-top: 1px solid var(--cream-dark); margin: 20px 0; }
 
+  /* ── OUTREACH "CONTACTED" CHECKBOX (custom-styled) ── */
+  /* Elegant square check that matches the gold/serif Field aesthetic.
+     Uses appearance:none to disable native rendering, then draws the box
+     and checkmark via ::after. Only targets checkboxes we opt in with
+     data-outreach-check so no other checkboxes on the page are affected. */
+  input[type="checkbox"][data-outreach-check] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 22px;
+    height: 22px;
+    border: 1.5px solid var(--gold-dark);
+    border-radius: 5px;
+    background: var(--white);
+    cursor: pointer;
+    position: relative;
+    display: inline-block;
+    vertical-align: middle;
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+  input[type="checkbox"][data-outreach-check]:hover {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.15);
+  }
+  input[type="checkbox"][data-outreach-check]:focus-visible {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.35);
+  }
+  input[type="checkbox"][data-outreach-check]:active { transform: scale(0.92); }
+  input[type="checkbox"][data-outreach-check]:checked {
+    background: var(--gold);
+    border-color: var(--gold-dark);
+  }
+  input[type="checkbox"][data-outreach-check]:checked::after {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 6px;
+    height: 11px;
+    border: solid var(--black);
+    border-width: 0 2.2px 2.2px 0;
+    transform: rotate(45deg);
+  }
+  /* Faint "just checked" pulse to acknowledge the click. */
+  @keyframes outreach-check-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(201, 168, 76, 0.6); }
+    100% { box-shadow: 0 0 0 8px rgba(201, 168, 76, 0); }
+  }
+  input[type="checkbox"][data-outreach-check]:checked {
+    animation: outreach-check-pulse 0.45s ease-out;
+  }
+
   /* ── HISTORY ── */
   .history-entry { background: var(--white); border: 1px solid var(--cream-dark); border-radius: 10px; margin-bottom: 12px; overflow: hidden; cursor: pointer; transition: box-shadow 0.15s; }
   .history-entry:hover { box-shadow: var(--shadow); }
@@ -2086,12 +2141,11 @@
         // toggle is on). The row is faded when contacted so it's obvious.
         const rowOpacity = isContacted ? 'opacity:0.45;' : '';
         const checkboxCell =
-          '<td style="padding:12px;vertical-align:top;text-align:center">' +
+          '<td style="padding:14px 12px;vertical-align:top;text-align:center">' +
             '<input type="checkbox" data-outreach-check="' + escapeSopHtml(q.email) + '" ' +
               (isContacted ? 'checked ' : '') +
               'onchange="toggleOutreachContacted(this)" ' +
-              'title="Check when you have contacted this member — they will drop from the queue" ' +
-              'style="width:18px;height:18px;cursor:pointer;accent-color:var(--gold-dark)"> ' +
+              'title="Tick when you have contacted this member — they drop from the queue">' +
           '</td>';
         return '<tr style="background:' + st.bg + ';' + rowOpacity + '">' +
           checkboxCell +
