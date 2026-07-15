@@ -7084,6 +7084,13 @@
           const label = "Meta · " + (camp || src || (isAdsProduct ? "ads" : medium || "ads"));
           return `<span title="${tip}" style="color: var(--gold); font-weight: 600;">${escapeHtml(label)}</span>`;
         }
+        // 4. Other tracked — has some UTM data but nothing we recognize
+        if (src || camp) {
+          return `<span title="${tip}" style="color: var(--text);">${escapeHtml(src || camp)}</span>`;
+        }
+        // 5. Organic / Direct — no UTMs at all
+        return `<span style="color: var(--text-mute);">Organic</span>`;
+      };
 
       // Build the hover tooltip body for a member's purchases. Returns
       // an HTML string containing one row per purchase with product +
