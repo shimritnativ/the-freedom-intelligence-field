@@ -2237,6 +2237,7 @@
         // members get the strongest color because they need the most urgent
         // outreach (they paid but never actually opened the Field).
         const statusStyles = {
+          wa_failed:           { bg: 'rgba(220, 50, 50, 0.20)',  label: 'WA FAILED (per GHL)', color: '#b02020' },
           never_started:       { bg: 'rgba(200, 80, 60, 0.16)',  label: 'NEVER OPENED FIELD', color: '#c05038' },
           started_no_complete: { bg: 'rgba(200, 130, 60, 0.14)', label: 'STARTED, NOT COMPLETING', color: '#c07030' },
           behind:              { bg: 'rgba(200, 170, 60, 0.10)', label: 'BEHIND SCHEDULE', color: '#8a7020' },
@@ -2302,6 +2303,69 @@
     // Expose so the Refresh button can call it directly (delegated buttons
     // sometimes lose reference across re-renders).
     window.loadOutreachQueue = loadOutreachQueue;
+
+    // ===== CSV import: GHL WhatsApp failure report =====
+    // Reads either the pasted textarea or the file input, POSTs to
+    // /api/admin/import-wa-failures, shows summary, then refreshes queue
+    // so newly-imported failures show up immediately.
+    async function importWaFailuresCsv() {
+      const btn = document.getElementById("wa-csv-import-btn");
+      const statusEl = document.getElementById("wa-csv-status");
+      const textEl = document.getElementById("wa-csv-input");
+      const fileEl = document.getElementById("wa-csv-file");
+
+      let csv = (textEl?.value || "").trim();
+      if (!csv && fileEl?.files?.[0]) {
+        csv = await fileEl.files[0].text();
+      }
+      if (!csv) {
+        statusEl.textContent = "Paste CSV text or choose a file first.";
+        statusEl.style.color = "var(--red)";
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Importing…";
+      statusEl.textContent = "Uploading and looking up phones in GHL…";
+      statusEl.style.color = "var(--text-mute)";
+
+      try {
+        const token = localStorage.getItem(STORAGE_KEY);
+        const res = await fetch("/api/admin/import-wa-failures", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-session-token": token,
+          },
+          body: JSON.stringify({ csv }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          statusEl.textContent = "Error: " + (data.error || res.statusText);
+          statusEl.style.color = "var(--red)";
+          return;
+        }
+        const parts = [
+          data.imported + " new failures imported",
+          data.matched + " matched to members",
+          data.skipped + " duplicates skipped",
+        ];
+        if (data.unmatched_phones?.length) {
+          parts.push(data.unmatched_phones.length + " phones not found in GHL");
+        }
+        statusEl.textContent = "✓ " + parts.join(" · ");
+        statusEl.style.color = "var(--green, #4d8f52)";
+        // Refresh the queue so newly-flagged members appear.
+        setTimeout(() => loadOutreachQueue(), 400);
+      } catch (e) {
+        statusEl.textContent = "Network error: " + (e.message || e);
+        statusEl.style.color = "var(--red)";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Import CSV";
+      }
+    }
+    window.importWaFailuresCsv = importWaFailuresCsv;
 
     // ===== Monthly cost snapshot =====
     // Single source of truth for what each tool costs us per month. Read
@@ -4132,15 +4196,34 @@
             <div class="section" style="padding: 22px 24px;">
               <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;">
                 <div>
-                  <h2 style="margin: 0;"><span class="h2-eyebrow">Manual Outreach</span>US / Canada / UK members needing manual WhatsApp</h2>
-                  <p style="font-size: 12.5px; color: var(--text-dim); margin: 6px 0 0; line-height: 1.5; max-width: 720px;">
-                    Live list from GHL. These members have +1 or +44 phone numbers, which means GHL's WhatsApp automation may not have delivered the sequence. Contact them manually via WhatsApp Business, adapted to the next expected message.
+                  <h2 style="margin: 0;"><span class="h2-eyebrow">Manual Outreach</span>Members needing manual WhatsApp follow-up</h2>
+                  <p style="font-size: 12.5px; color: var(--text-dim); margin: 6px 0 0; line-height: 1.5; max-width: 780px;">
+                    Combines <strong>confirmed WA failures</strong> (from GHL's WhatsApp Statistics CSV — see upload panel below) with US/CAN/UK members showing engagement gaps in Neon. Red "WA FAILED" badge = GHL says delivery failed. Contact via alternate channel (Email / IG DM).
                   </p>
                 </div>
                 <button type="button" onclick="loadOutreachQueue()" id="outreach-refresh" style="background: var(--gold); color: var(--dark); border: 1px solid var(--gold); padding: 8px 16px; border-radius: 8px; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; flex-shrink: 0;">Refresh</button>
               </div>
               <div id="outreach-meta" style="font-size: 11.5px; color: var(--text-mute); font-style: italic; margin-bottom: 16px;"></div>
               <div id="outreach-content"><div class="empty-state">Loading manual outreach queue…</div></div>
+            </div>
+
+            <!-- ═══ CSV import: GHL WhatsApp failure report ═══ -->
+            <!-- Since GHL's public API doesn't expose message delivery status, we
+                 rely on the CSV export from GHL → Reporting → WhatsApp Statistics
+                 to identify who actually failed. Uploaded rows populate
+                 whatsapp_message_events so the queue can flag them as
+                 "WA FAILED (per GHL)" at the top of the list. -->
+            <div class="section" style="padding: 22px 24px; margin-top: 16px;">
+              <h2 style="margin: 0 0 6px;"><span class="h2-eyebrow">CSV upload</span>Import GHL WhatsApp failure report</h2>
+              <p style="font-size: 12.5px; color: var(--text-dim); margin: 6px 0 14px; line-height: 1.5; max-width: 780px;">
+                In GHL: <strong>Reporting → WhatsApp Statistics → Export CSV</strong>. Paste the CSV contents below (or drag the file in) and hit Import. Rows with status = failed get stored and matched to members via GHL phone lookup. Any member with a recent failure will jump to the top of the outreach queue with a red "WA FAILED" badge.
+              </p>
+              <textarea id="wa-csv-input" placeholder="Paste CSV here (must include columns: name, phone, status, timestamp)" style="width: 100%; min-height: 120px; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text); font-family: monospace; font-size: 12px; resize: vertical; box-sizing: border-box;"></textarea>
+              <div style="display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap;">
+                <button type="button" onclick="importWaFailuresCsv()" id="wa-csv-import-btn" style="background: var(--gold); color: var(--dark); border: 1px solid var(--gold); padding: 8px 18px; border-radius: 8px; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;">Import CSV</button>
+                <input type="file" id="wa-csv-file" accept=".csv,text/csv" style="font-size: 12px; color: var(--text-dim);">
+                <div id="wa-csv-status" style="font-size: 12px; color: var(--text-mute); font-style: italic;"></div>
+              </div>
             </div>
           </div>
           <!-- /end Manual Outreach tab -->
