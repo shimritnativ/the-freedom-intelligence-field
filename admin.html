@@ -2179,7 +2179,12 @@
         }
       }
       if (tab === "outreach") {
-        loadOutreachQueue();
+        console.log("[outreach] switchTab reached outreach branch, calling loadOutreachQueue");
+        if (typeof loadOutreachQueue === "function") {
+          loadOutreachQueue();
+        } else {
+          console.error("[outreach] loadOutreachQueue is not defined!");
+        }
       }
     }
 
@@ -2189,22 +2194,34 @@
     // so Aira can work through it one by one.
     let _outreachLoading = false;
     async function loadOutreachQueue() {
-      if (_outreachLoading) return;
+      console.log("[outreach] loadOutreachQueue called");
+      if (_outreachLoading) { console.log("[outreach] already loading, skip"); return; }
       _outreachLoading = true;
       const el = document.getElementById("outreach-content");
       const metaEl = document.getElementById("outreach-meta");
       const btn = document.getElementById("outreach-refresh");
+      console.log("[outreach] DOM elements:", { el: !!el, metaEl: !!metaEl, btn: !!btn });
+      if (!el) {
+        console.warn("[outreach] outreach-content element missing — aborting");
+        _outreachLoading = false;
+        return;
+      }
       if (btn) { btn.disabled = true; btn.textContent = "Loading…"; }
-      if (el) el.innerHTML = '<div class="empty-state">Fetching from GHL + matching against members…</div>';
+      el.innerHTML = '<div class="empty-state">Fetching from GHL + matching against members…</div>';
       try {
         const token = localStorage.getItem(STORAGE_KEY);
+        console.log("[outreach] token present:", !!token);
         if (!token) {
           el.innerHTML = '<div class="empty-state" style="color: var(--red);">Not authenticated. Log in again.</div>';
           return;
         }
-        const res = await fetch("/api/admin/manual-outreach-queue", {
+        // Cache-bust so browser doesn't serve a stale response.
+        const url = "/api/admin/manual-outreach-queue?t=" + Date.now();
+        console.log("[outreach] fetching", url);
+        const res = await fetch(url, {
           headers: { "x-session-token": token },
         });
+        console.log("[outreach] fetch complete", { ok: res.ok, status: res.status });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           el.innerHTML = '<div class="empty-state" style="color: var(--red);">Error: ' + escapeHtml(body.message || res.statusText) + '</div>';
