@@ -177,12 +177,68 @@ export default async function handler(req, res) {
       });
     }
 
+    // ALSO include any Neon member with a recent WA failure (from CSV
+    // imports), regardless of phone country. Uses the phone that was
+    // stored on the event row so we can display it in the queue without
+    // hitting GHL again. Country is derived from the phone's digits.
+    function deriveCountry(digits) {
+      if (digits.startsWith("44")) return "UK";
+      if (digits.startsWith("1") && digits.length === 11) return "USA/CAN";
+      if (digits.startsWith("49")) return "DE";
+      if (digits.startsWith("31")) return "NL";
+      if (digits.startsWith("46")) return "SE";
+      if (digits.startsWith("55")) return "BR";
+      if (digits.startsWith("353")) return "IE";
+      if (digits.startsWith("351")) return "PT";
+      if (digits.startsWith("47")) return "NO";
+      if (digits.startsWith("45")) return "DK";
+      if (digits.startsWith("39")) return "IT";
+      if (digits.startsWith("33")) return "FR";
+      if (digits.startsWith("34")) return "ES";
+      if (digits.startsWith("41")) return "CH";
+      if (digits.startsWith("43")) return "AT";
+      if (digits.startsWith("32")) return "BE";
+      return "OTHER";
+    }
+
+    const { rows: failureContacts } = await sql`
+      SELECT DISTINCT ON (LOWER(u.email))
+        LOWER(u.email) AS email,
+        u.display_name AS neon_name,
+        wme.contact_name AS csv_name,
+        wme.contact_phone AS phone
+      FROM users u
+      JOIN whatsapp_message_events wme
+        ON LOWER(wme.contact_email) = LOWER(u.email)
+      WHERE wme.status IN ('failed', 'undelivered', 'error')
+        AND wme.event_at > NOW() - INTERVAL '30 days'
+        AND u.email NOT LIKE '%@shimritnativ.com'
+        AND u.email NOT LIKE '%@masteryourpath.%'
+      ORDER BY LOWER(u.email), wme.event_at DESC
+    `;
+
+    for (const fc of failureContacts) {
+      if (seen.has(fc.email)) continue;
+      seen.add(fc.email);
+      const digits = String(fc.phone || "").replace(/[^0-9]/g, "");
+      const rawName = fc.neon_name || fc.csv_name || fc.email;
+      const nameParts = String(rawName).trim().split(/\s+/);
+      contacts.push({
+        email: fc.email,
+        first_name: nameParts[0] || "",
+        last_name: nameParts.slice(1).join(" ") || "",
+        phone: fc.phone || "",
+        country: deriveCountry(digits),
+      });
+    }
+
     if (contacts.length === 0) {
       return res.status(200).json({
         queue: [], count: 0,
         meta: {
           us_can_ghl_contacts: usContacts.length,
           uk_ghl_contacts: ukContactsMerged.length,
+          wa_failure_members: failureContacts.length,
           matched_members: 0,
           fetched_at: new Date().toISOString(),
         },
@@ -281,6 +337,7 @@ export default async function handler(req, res) {
       meta: {
         us_can_ghl_contacts: usContacts.length,
         uk_ghl_contacts: ukContactsMerged.length,
+        wa_failure_members: failureContacts.length,
         contacts_after_filter: contacts.length,
         matched_members: queue.length,
         fetched_at: new Date().toISOString(),
