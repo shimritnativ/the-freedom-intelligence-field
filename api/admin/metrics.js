@@ -79,6 +79,10 @@ const EMAIL_EXCLUDE_PATTERNS = [
   // Kept out of the roster + all member counts so the numbers reflect
   // real Field customers only.
   "shimrit.nativ@gmail.com",
+  // Bruna (comp'd Full Field access, not a real customer). Same treatment
+  // as Shimrit — full Unlimited access in the app, but excluded from
+  // member counts, roster, intelligence segments, and revenue stats.
+  "brunadudas777@gmail.com",
 ];
 
 // Parse a YYYY-MM-DD query param into an ISO timestamp string we can safely
@@ -1013,10 +1017,19 @@ export default async function handler(req, res) {
       sql`
         SELECT
           CASE
+            -- Meta ads: any of five signals — the user's utm_campaign,
+            -- utm_source, utm_medium, or (strongest) their purchase came
+            -- through an "-Ads" ThriveCart product (which lives ONLY on
+            -- the ads landing page). Product-name match wins even when
+            -- UTMs are missing or later overwritten by other campaigns.
             WHEN LOWER(COALESCE(u.utm_campaign, '')) IN ('cold', 'warm')
-              OR LOWER(COALESCE(u.utm_source, '')) IN ('meta', 'facebook', 'instagram', 'fb', 'ig')
-              THEN 'Meta ads'
-            WHEN LOWER(COALESCE(u.utm_source, '')) = 'power-reset'
+              OR LOWER(COALESCE(u.utm_source, '')) IN ('meta', 'facebook', 'instagram', 'fb', 'ig', 'power-reset')
+              OR LOWER(COALESCE(u.utm_medium, '')) IN ('paid_social', 'paidsocial', 'cpc', 'ppc')
+              OR EXISTS (
+                SELECT 1 FROM purchases p
+                WHERE LOWER(p.email) = LOWER(u.email)
+                  AND (p.product_name ILIKE '%- Ads' OR p.product_name ILIKE '%-ads' OR p.product_name ILIKE '% Ads')
+              )
               THEN 'Meta ads'
             WHEN LOWER(COALESCE(u.utm_medium, '')) = 'email'
               OR LOWER(COALESCE(u.utm_source, '')) LIKE '%email%'
@@ -1183,6 +1196,19 @@ async function loadChannelRevenueAttribution() {
           CASE
             WHEN LOWER(COALESCE(u.utm_campaign, '')) = 'cold'    THEN 'cold'
             WHEN LOWER(COALESCE(u.utm_campaign, '')) = 'warm'    THEN 'warm'
+            -- Ads fallback: user has an ads signal (utm_medium=paid_social,
+            -- utm_source=meta/facebook/etc, or bought via an "-Ads" product)
+            -- but no cold/warm campaign tag. Default to 'cold' since it's
+            -- the higher-volume ads channel; alternative is to add an
+            -- 'ads-unknown' bucket if this becomes material.
+            WHEN LOWER(COALESCE(u.utm_medium, '')) IN ('paid_social', 'paidsocial', 'cpc', 'ppc')
+              OR LOWER(COALESCE(u.utm_source, '')) IN ('meta', 'facebook', 'instagram', 'fb', 'ig', 'power-reset')
+              OR EXISTS (
+                SELECT 1 FROM purchases p2
+                WHERE LOWER(p2.email) = LOWER(u.email)
+                  AND (p2.product_name ILIKE '%- Ads' OR p2.product_name ILIKE '%-ads' OR p2.product_name ILIKE '% Ads')
+              )
+              THEN 'cold'
             WHEN LOWER(COALESCE(u.utm_source, ''))   = 'whatsapp' THEN 'whatsapp'
             WHEN COALESCE(u.utm_source, '') = ''
               AND COALESCE(u.utm_campaign, '') = ''              THEN 'whatsapp'
