@@ -963,6 +963,31 @@
         margin-left: auto;
       }
 
+      /* Per-ad card fix: the "Ad" cell holds the name PLUS multiple badges
+         (LP variant, campaign, geo, Meta status). In flex-row mode those
+         badges eat the horizontal space and the ad name breaks letter-by-
+         letter into a vertical stack. Cells with data-label="Ad" get the
+         stacked treatment: label sits ABOVE, name + badges flow below and
+         can wrap. Applies to the per-ad and campaign tables. */
+      .section table > tbody > tr > td[data-label="Ad"],
+      .data-table > tbody > tr > td[data-label="Ad"] {
+        display: block;
+        text-align: left;
+      }
+      .section table > tbody > tr > td[data-label="Ad"]::before,
+      .data-table > tbody > tr > td[data-label="Ad"]::before {
+        display: block;
+        margin-bottom: 6px;
+        min-width: 0;
+      }
+      /* Inside a stacked Ad cell, badges shouldn't push to the right —
+         they flow inline with the name. Reset the margin-left: auto that
+         the general badge rule applies. */
+      .section table > tbody > tr > td[data-label="Ad"] .tier-badge,
+      .data-table > tbody > tr > td[data-label="Ad"] .tier-badge {
+        margin-left: 4px;
+      }
+
       /* Funnel — compact grid */
       .funnel-row {
         grid-template-columns: 14px 78px 1fr 70px;
