@@ -2095,12 +2095,11 @@
         behind:              { bg: 'rgba(200,170,60,0.07)', label: 'BEHIND SCHEDULE',       color: '#8a7020' },
       };
       const statusPriority = { wa_failed: 0, never_started: 1, started_no_complete: 2, behind: 3 };
-      // Local dismissal state — Aira ticks a member as "contacted" and
-      // they drop from the queue until she unchecks "Show contacted".
-      // Stored per-email in localStorage; expires after 30 days so we
-      // don't accidentally hide someone forever.
+      // Server-side dismissal state — synced across all admin users so
+      // Geo sees the same checkmarks Aira applied and vice versa.
+      // Fetched from /api/admin/outreach-contacted (30-day TTL).
       const showContacted = document.getElementById("outreach-show-contacted")?.checked === true;
-      const contactedMap = loadOutreachContacted();
+      const contactedMap = await loadOutreachContacted();
       let hiddenCount = 0;
       const sortedAll = data.queue.slice().sort((a, b) => {
         const p = (statusPriority[a.status] ?? 9) - (statusPriority[b.status] ?? 9);
@@ -2195,38 +2194,57 @@
   }
   window.loadLiveOutreach = loadLiveOutreach;
 
-  // ═══ Contacted checkbox state — persists per-email in localStorage ═══
-  // { "email@example.com": <timestamp when checked> }. Entries older than
-  // 30 days are pruned on load so Aira doesn't lose visibility on members
-  // she checked off weeks ago and never actually reached.
-  const OUTREACH_CONTACTED_KEY = "tfif_outreach_contacted_v1";
-  const CONTACTED_TTL_DAYS = 30;
-  function loadOutreachContacted() {
-    let obj = {};
-    try { obj = JSON.parse(localStorage.getItem(OUTREACH_CONTACTED_KEY) || "{}"); } catch (e) { obj = {}; }
-    // Prune stale entries so members re-appear after ~30 days
-    const cutoff = Date.now() - CONTACTED_TTL_DAYS * 24 * 60 * 60 * 1000;
-    let changed = false;
-    for (const email of Object.keys(obj)) {
-      if (!obj[email] || obj[email] < cutoff) {
-        delete obj[email];
-        changed = true;
-      }
+  // ═══ Contacted checkbox state — SERVER-SIDE via /api/admin/outreach-contacted ═══
+  // Previously localStorage (per-browser). That meant Aira's checkmarks only
+  // lived in Aira's browser — Geo couldn't see them from her own machine.
+  // Now stored in Neon's outreach_contacted table so every admin sees the
+  // same state. Also records who last checked/unchecked (for future audit).
+  //
+  // Client-side cache: we sync with the server on every queue load and
+  // hold the result in memory so the render loop can decide row visibility
+  // without an extra fetch. The cache is refreshed whenever the queue is
+  // refreshed (which already happens after every check/uncheck).
+  let _contactedCache = {};
+  async function loadOutreachContacted() {
+    try {
+      const token = localStorage.getItem(SESSION_TOKEN_KEY);
+      const res = await fetch("/api/admin/outreach-contacted", {
+        headers: { "x-session-token": token },
+      });
+      if (!res.ok) return {};
+      const data = await res.json();
+      _contactedCache = data.contacted || {};
+      return _contactedCache;
+    } catch (e) {
+      console.warn("[outreach-contacted] fetch failed", e);
+      return _contactedCache || {};
     }
-    if (changed) {
-      try { localStorage.setItem(OUTREACH_CONTACTED_KEY, JSON.stringify(obj)); } catch (e) {}
-    }
-    return obj;
   }
-  function toggleOutreachContacted(checkbox) {
+  async function toggleOutreachContacted(checkbox) {
     const email = String(checkbox.dataset.outreachCheck || "").toLowerCase();
     if (!email) return;
-    const map = loadOutreachContacted();
-    if (checkbox.checked) map[email] = Date.now();
-    else delete map[email];
-    try { localStorage.setItem(OUTREACH_CONTACTED_KEY, JSON.stringify(map)); } catch (e) {}
-    // Re-render the queue so the row drops (or reappears) immediately.
-    // Small delay so the checkbox tick animation completes visually.
+    // Optimistic UI: update the local cache immediately so the row hides
+    // without waiting for the server round-trip. If the request fails we
+    // reload from the server to correct it.
+    if (checkbox.checked) _contactedCache[email] = { at: new Date().toISOString(), by: "me" };
+    else delete _contactedCache[email];
+    const method = checkbox.checked ? "POST" : "DELETE";
+    try {
+      const token = localStorage.getItem(SESSION_TOKEN_KEY);
+      const res = await fetch("/api/admin/outreach-contacted", {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          "x-session-token": token,
+        },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) throw new Error("server_" + res.status);
+    } catch (e) {
+      console.warn("[outreach-contacted] toggle failed, refreshing", e);
+    }
+    // Refresh the queue so the row drops (or reappears) — small delay so
+    // the checkbox tick animation completes visually first.
     setTimeout(() => loadLiveOutreach(), 150);
   }
   window.toggleOutreachContacted = toggleOutreachContacted;
