@@ -23,33 +23,75 @@ const ALLOWED_DOMAIN = "@shimritnativ.com";
 const GHL_API_BASE = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "2021-07-28";
 
-// Fetch GHL contacts whose phone contains the given prefix. GHL's search
-// operator is "contains" (not "starts_with"), so we post-filter afterwards
-// to ensure the phone actually STARTS with the prefix, not just contains it.
+// Fetch GHL contacts whose phone contains the given prefix. Tries two
+// endpoint shapes — POST /contacts/search (modern V2) and GET /contacts/
+// (also modern V2 but different query pattern). Some PITs work with one
+// and not the other depending on scopes/version. Falls through with the
+// detailed error on both failures.
 async function searchGhlContactsByPhone({ apiKey, locationId, phonePrefix }) {
-  const url = `${GHL_API_BASE}/contacts/search`;
-  const body = {
-    locationId,
-    pageLimit: 100,
-    filters: [
-      { field: "phone", operator: "contains", value: phonePrefix }
-    ]
+  const authHeaders = {
+    "Authorization": `Bearer ${apiKey}`,
+    "Version": GHL_API_VERSION,
+    "Content-Type": "application/json",
+    "Accept": "application/json",
   };
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Version": GHL_API_VERSION,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`ghl_${res.status}: ${text.slice(0, 300)}`);
+
+  // Attempt 1: POST /contacts/search
+  try {
+    const url = `${GHL_API_BASE}/contacts/search`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({
+        locationId,
+        pageLimit: 100,
+        filters: [
+          { field: "phone", operator: "contains", value: phonePrefix }
+        ],
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.contacts || [];
+    }
+    // Save the error for reporting if attempt 2 also fails
+    const body1 = await res.text().catch(() => "");
+    if (res.status !== 401 && res.status !== 404) {
+      throw new Error(`ghl_${res.status} (POST /contacts/search): ${body1.slice(0, 300)}`);
+    }
+    // Fall through to attempt 2 on 401 or 404
+    var errorAttempt1 = `POST /contacts/search → ${res.status}: ${body1.slice(0, 200)}`;
+  } catch (e) {
+    if (e.message && e.message.startsWith("ghl_")) throw e;
+    var errorAttempt1 = `POST /contacts/search → threw: ${e.message}`;
   }
-  const data = await res.json();
-  return data.contacts || [];
+
+  // Attempt 2: GET /contacts/ with query params
+  try {
+    const params = new URLSearchParams({
+      locationId,
+      limit: "100",
+      query: phonePrefix,
+    });
+    const url = `${GHL_API_BASE}/contacts/?${params.toString()}`;
+    const res = await fetch(url, {
+      method: "GET",
+      headers: authHeaders,
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.contacts || [];
+    }
+    const body2 = await res.text().catch(() => "");
+    throw new Error(
+      `ghl_${res.status}: both endpoints failed. ` +
+      `Attempt 1: ${errorAttempt1} · ` +
+      `Attempt 2 (GET /contacts/): ${body2.slice(0, 200)}`
+    );
+  } catch (e) {
+    if (e.message && e.message.startsWith("ghl_")) throw e;
+    throw new Error(`ghl_network: ${e.message}. Attempt 1: ${errorAttempt1}`);
+  }
 }
 
 // Compute which message a member SHOULD have received by now, based on
