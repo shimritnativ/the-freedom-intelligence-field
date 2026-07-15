@@ -2233,27 +2233,41 @@
           if (metaEl) metaEl.textContent = "Fetched " + new Date().toLocaleTimeString();
           return;
         }
-        // Render table
+        // Render table. Status now drives the row highlight — never-started
+        // members get the strongest color because they need the most urgent
+        // outreach (they paid but never actually opened the Field).
+        const statusStyles = {
+          never_started:       { bg: 'rgba(200, 80, 60, 0.16)',  label: 'NEVER OPENED FIELD', color: '#c05038' },
+          started_no_complete: { bg: 'rgba(200, 130, 60, 0.14)', label: 'STARTED, NOT COMPLETING', color: '#c07030' },
+          behind:              { bg: 'rgba(200, 170, 60, 0.10)', label: 'BEHIND SCHEDULE', color: '#8a7020' },
+        };
         const rows = data.queue.map(q => {
           const geoBg = q.country === 'UK' ? 'rgba(122, 174, 94, 0.14)' : 'rgba(59, 130, 200, 0.14)';
           const geoColor = q.country === 'UK' ? '#4d8f52' : '#3d7db7';
-          const restartBg = q.next_message.startsWith('RESTART') ? 'rgba(200, 130, 60, 0.14)' : 'transparent';
-          const igLink = q.phone ? '<a href="https://wa.me/' + encodeURIComponent(q.phone.replace(/[^0-9+]/g, '')) + '" target="_blank" rel="noopener" style="color: var(--gold); text-decoration: none;">WhatsApp ↗</a>' : '';
+          const st = statusStyles[q.status] || { bg: 'transparent', label: q.status, color: 'var(--text)' };
+          const waLink = q.phone ? '<a href="https://wa.me/' + encodeURIComponent(q.phone.replace(/[^0-9+]/g, '')) + '" target="_blank" rel="noopener" style="color: var(--gold); text-decoration: none;">WhatsApp ↗</a>' : '';
+          // Activity summary: messages sent + completions done inside Field
+          const activityStr = q.user_messages === 0
+            ? '<span style="color: #c05038; font-weight: 600;">0 messages · never opened</span>'
+            : '<span style="color: var(--text);">' + q.user_messages + ' msg' + (q.user_messages === 1 ? '' : 's') + ' · ' + q.completions + ' day' + (q.completions === 1 ? '' : 's') + ' done</span>';
+          const lastActive = q.last_message_at
+            ? '<br><span style="font-size: 10.5px; color: var(--text-mute);">last: ' + new Date(q.last_message_at).toLocaleDateString() + '</span>'
+            : '';
           return `
-            <tr style="background: ${restartBg};">
+            <tr style="background: ${st.bg};">
               <td style="padding: 12px; vertical-align: top;">
                 <strong>${escapeHtml(q.display_name || q.email)}</strong><br>
                 <span style="font-size: 11px; color: var(--text-mute);">${escapeHtml(q.email)}</span>
+                <div style="margin-top: 6px;"><span style="display: inline-block; font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; padding: 2px 7px; border-radius: 3px; background: ${st.bg}; color: ${st.color}; border: 1px solid ${st.color}33;">${st.label}</span></div>
               </td>
               <td style="padding: 12px; vertical-align: top; font-family: monospace; font-size: 12px;">${escapeHtml(q.phone)}</td>
               <td style="padding: 12px; vertical-align: top;">
                 <span class="tier-badge" style="background: ${geoBg}; color: ${geoColor}; border-color: ${geoBg}; font-size: 10px;">${q.country}</span>
               </td>
-              <td style="padding: 12px; vertical-align: top; font-size: 12.5px; color: var(--text-dim);">${new Date(q.purchased_on).toLocaleDateString()}</td>
-              <td style="padding: 12px; vertical-align: top; text-align: center; font-weight: 600;">${q.days_since_purchase}</td>
-              <td style="padding: 12px; vertical-align: top; text-align: center;">${q.last_completed_day > 0 ? '<span style="color: var(--green);">Day ' + q.last_completed_day + ' ✓</span>' : '<span style="color: #c07030;">Never started</span>'}</td>
+              <td style="padding: 12px; vertical-align: top; font-size: 12.5px; color: var(--text-dim);">${new Date(q.purchased_on).toLocaleDateString()}<br><span style="font-size: 10.5px; color: var(--text-mute);">${q.days_since_purchase}d ago</span></td>
+              <td style="padding: 12px; vertical-align: top; font-size: 12.5px;">${activityStr}${lastActive}</td>
               <td style="padding: 12px; vertical-align: top; color: var(--text); font-size: 12.5px;">${escapeHtml(q.next_message)}</td>
-              <td style="padding: 12px; vertical-align: top;">${igLink}</td>
+              <td style="padding: 12px; vertical-align: top;">${waLink}</td>
             </tr>`;
         }).join('');
         el.innerHTML = `
@@ -2265,8 +2279,7 @@
                   <th style="padding: 10px 12px; text-align: left; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute);">Phone</th>
                   <th style="padding: 10px 12px; text-align: left; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute);">Region</th>
                   <th style="padding: 10px 12px; text-align: left; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute);">Bought</th>
-                  <th style="padding: 10px 12px; text-align: center; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute);">Days</th>
-                  <th style="padding: 10px 12px; text-align: center; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute);">Progress</th>
+                  <th style="padding: 10px 12px; text-align: left; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute);">Field Activity</th>
                   <th style="padding: 10px 12px; text-align: left; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute);">Next Message</th>
                   <th style="padding: 10px 12px; text-align: left; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mute);">Action</th>
                 </tr>
