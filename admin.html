@@ -2355,6 +2355,17 @@
         }
         statusEl.textContent = "✓ " + parts.join(" · ");
         statusEl.style.color = "var(--green, #4d8f52)";
+
+        // If nothing imported AND there were errors, surface the first
+        // error message loudly so we can diagnose (most likely: table
+        // doesn't exist because the migration wasn't run yet).
+        if (data.imported === 0 && data.errors && data.errors.length > 0) {
+          const firstErr = data.errors[0];
+          statusEl.innerHTML = '⚠️ 0 imported — ' + data.errors.length + ' errors. First: <code style="background:rgba(200,80,60,0.1); padding:2px 6px; border-radius:4px; font-size:11px;">' + (firstErr.error || 'unknown') + '</code>';
+          statusEl.style.color = "var(--red)";
+          console.error("[wa-import] errors:", data.errors);
+        }
+
         // Refresh the queue so newly-flagged members appear.
         setTimeout(() => loadOutreachQueue(), 400);
       } catch (e) {
