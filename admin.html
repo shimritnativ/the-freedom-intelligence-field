@@ -7037,50 +7037,53 @@
         });
       };
 
-      // Format a member's traffic source from their utm fields. Output is
-      // short and human-readable (e.g., "Meta · cold · reel3", "Email",
-      // "Organic / Direct"). Hover tooltip carries the full breakdown.
+      // Format a member's traffic source from their utm fields. Attribution
+      // hierarchy (first match wins):
+      //   1. Explicit utm_source (whatsapp/email/etc)     → respect it
+      //   2. Explicit ads signals (utm_campaign cold/warm,
+      //      utm_source meta/fb/ig/power-reset)            → Meta ads
+      //   3. Fallback ads signals (utm_medium=paid_social,
+      //      or bought "- Ads" product) — ONLY when
+      //      utm_source is empty                           → Meta ads
+      //   4. Anything else tracked but unrecognized        → the raw source
+      //   5. No UTMs at all                                → Organic
       const formatSource = (u) => {
         const src = (u.utm_source || "").toLowerCase();
         const camp = (u.utm_campaign || "").toLowerCase();
         const medium = (u.utm_medium || "").toLowerCase();
-        const content = u.utm_content || "";
         const isAdsProduct = boughtAdsProduct(u);
-        // Meta ad detection — 4 signals, any one wins:
-        //   1. utm_campaign in cold/warm
-        //   2. utm_source in meta/facebook/instagram/power-reset
-        //   3. utm_medium in paid_social/cpc/ppc (Meta auto-tag)
-        //   4. Bought an "-Ads" ThriveCart product (definitive; survives
-        //      UTM overwrites from later WhatsApp/email clicks)
-        const isMetaAds =
+        const tipParts = [
+          'utm_source=' + (u.utm_source || ''),
+          'utm_campaign=' + (u.utm_campaign || ''),
+          'utm_medium=' + (u.utm_medium || ''),
+          'utm_content=' + (u.utm_content || ''),
+          isAdsProduct ? 'bought "- Ads" product' : ''
+        ].filter(Boolean);
+        const tip = escapeHtml(tipParts.join(', '));
+
+        // 1. Explicit WhatsApp
+        if (src === "whatsapp") {
+          return `<span title="${tip}" style="color: var(--gold); font-weight: 600;">WhatsApp${camp ? ' · ' + escapeHtml(camp) : ''}</span>`;
+        }
+        // 1. Explicit Email
+        if (src.includes("email") || src.includes("newsletter") || src.includes("klaviyo") || src.includes("mailchimp") || src.includes("kajabi") || medium === "email") {
+          return `<span title="${tip}" style="color: var(--text);">Email${camp ? ' · ' + escapeHtml(camp) : ''}</span>`;
+        }
+        // 2. Explicit Meta ads via campaign or source
+        const explicitMetaAds =
           camp === "cold" || camp === "warm" ||
-          src === "power-reset" || src === "meta" || src === "facebook" || src === "instagram" || src === "fb" || src === "ig" ||
+          src === "power-reset" || src === "meta" || src === "facebook" || src === "instagram" || src === "fb" || src === "ig";
+        // 3. Fallback ads — ONLY when utm_source is empty. Prevents overriding
+        //    a legit source (like whatsapp) when Meta happened to also tag
+        //    utm_medium=paid_social or the buyer went through the ads LP.
+        const fallbackAdsSignal = !src && (
           medium === "paid_social" || medium === "paidsocial" || medium === "cpc" || medium === "ppc" ||
-          isAdsProduct;
-        if (isMetaAds) {
-          // Prefer specific campaign label; fall back to source; then
-          // just "Meta · ads" when only medium/product signal fired.
+          isAdsProduct
+        );
+        if (explicitMetaAds || fallbackAdsSignal) {
           const label = "Meta · " + (camp || src || (isAdsProduct ? "ads" : medium || "ads"));
-          const tipParts = [
-            'utm_source=' + (u.utm_source || ''),
-            'utm_campaign=' + (u.utm_campaign || ''),
-            'utm_medium=' + (u.utm_medium || ''),
-            'utm_content=' + (u.utm_content || ''),
-            isAdsProduct ? 'bought "- Ads" product' : ''
-          ].filter(Boolean);
-          return `<span title="${escapeHtml(tipParts.join(', '))}" style="color: var(--gold); font-weight: 600;">${escapeHtml(label)}</span>`;
+          return `<span title="${tip}" style="color: var(--gold); font-weight: 600;">${escapeHtml(label)}</span>`;
         }
-        // Email
-        if (src.includes("email") || src.includes("newsletter") || src.includes("klaviyo") || src.includes("mailchimp") || src.includes("kajabi")) {
-          return `<span title="${escapeHtml('utm_source=' + (u.utm_source || '') + ', utm_campaign=' + (u.utm_campaign || ''))}" style="color: var(--text);">Email${camp ? ' · ' + escapeHtml(camp) : ''}</span>`;
-        }
-        // Other tracked
-        if (src || camp) {
-          return `<span title="${escapeHtml('utm_source=' + (u.utm_source || '') + ', utm_campaign=' + (u.utm_campaign || ''))}" style="color: var(--text);">${escapeHtml(src || camp)}</span>`;
-        }
-        // Organic / Direct
-        return `<span style="color: var(--text-mute);">Organic</span>`;
-      };
 
       // Build the hover tooltip body for a member's purchases. Returns
       // an HTML string containing one row per purchase with product +
