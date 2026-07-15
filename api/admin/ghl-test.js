@@ -13,9 +13,9 @@ const GHL_API_BASE = "https://services.leadconnectorhq.com";
 async function tryEndpoint({ url, method, body, apiKey, version, label }) {
   const headers = {
     "Authorization": `Bearer ${apiKey}`,
-    "Version": version,
     "Accept": "application/json",
   };
+  if (version) headers["Version"] = version;
   if (body) headers["Content-Type"] = "application/json";
   try {
     const res = await fetch(url, {
@@ -97,12 +97,30 @@ export default async function handler(req, res) {
 
   // Test 4: same as test 2 but with older Version header
   tests.push(await tryEndpoint({
-    label: "POST /contacts/search (Version 2021-04-15)",
+    label: "V2: POST /contacts/search (Version 2021-04-15)",
     method: "POST",
     url: `${GHL_API_BASE}/contacts/search`,
     body: { locationId, pageLimit: 1 },
     apiKey,
     version: "2021-04-15",
+  }));
+
+  // Test 5: V1 API endpoint (older, uses simpler location API keys)
+  tests.push(await tryEndpoint({
+    label: "V1: GET /v1/contacts/",
+    method: "GET",
+    url: `https://rest.gohighlevel.com/v1/contacts/?limit=1`,
+    apiKey,
+    version: null, // V1 doesn't use Version header
+  }));
+
+  // Test 6: V1 with location context (some V1 keys need this)
+  tests.push(await tryEndpoint({
+    label: "V1: GET /v1/locations/{id}/contacts",
+    method: "GET",
+    url: `https://rest.gohighlevel.com/v1/locations/${locationId}/contacts?limit=1`,
+    apiKey,
+    version: null,
   }));
 
   return res.status(200).json({
