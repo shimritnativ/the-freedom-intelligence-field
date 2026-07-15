@@ -612,15 +612,28 @@ async function fetchCampaignList({ accessToken, accountId, apiVersion }) {
 //   utm_source   IN ('power-reset', 'meta', 'facebook', 'instagram')
 async function loadTotalAdsSignups(from, to) {
   try {
+    // Ads-attributed = ANY of:
+    //   - utm_campaign in cold/warm
+    //   - utm_source in ads platform names
+    //   - utm_medium in paid_social/cpc/ppc (Meta auto-tags this)
+    //   - purchased via an "-Ads" ThriveCart product (definitive, since
+    //     the ads LP has its own product IDs; catches buyers whose UTMs
+    //     got dropped or overwritten by a later WhatsApp click)
     const { rows } = await sql`
       SELECT COUNT(*)::int AS n
-      FROM users
-      WHERE created_at >= ${from}::date
-        AND created_at < (${to}::date + INTERVAL '1 day')
-        AND email NOT LIKE '%@shimritnativ.com'
+      FROM users u
+      WHERE u.created_at >= ${from}::date
+        AND u.created_at < (${to}::date + INTERVAL '1 day')
+        AND u.email NOT LIKE '%@shimritnativ.com'
         AND (
-          LOWER(COALESCE(utm_campaign, '')) IN ('cold', 'warm')
-          OR LOWER(COALESCE(utm_source, '')) IN ('power-reset', 'meta', 'facebook', 'instagram')
+          LOWER(COALESCE(u.utm_campaign, '')) IN ('cold', 'warm')
+          OR LOWER(COALESCE(u.utm_source, '')) IN ('power-reset', 'meta', 'facebook', 'instagram', 'fb', 'ig')
+          OR LOWER(COALESCE(u.utm_medium, '')) IN ('paid_social', 'paidsocial', 'cpc', 'ppc')
+          OR EXISTS (
+            SELECT 1 FROM purchases p
+            WHERE LOWER(p.email) = LOWER(u.email)
+              AND (p.product_name ILIKE '%- Ads' OR p.product_name ILIKE '%-ads' OR p.product_name ILIKE '% Ads')
+          )
         )
     `;
     return Number(rows?.[0]?.n || 0);
