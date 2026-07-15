@@ -381,6 +381,11 @@ export default async function handler(req, res) {
           u.utm_source,
           u.utm_campaign,
           u.utm_content,
+          -- utm_medium is critical for ads detection: Meta auto-sets it to
+          -- 'paid_social' even when utm_source/utm_campaign are missing.
+          -- Without this the frontend classifier misses buyers whose only
+          -- ads signal is the medium (e.g., Paula Hollis Jul 2026).
+          u.utm_medium,
           -- Total amount each member has paid on the Field (main products +
           -- OTOs + bumps + recurring), excluding refunds and free comps.
           -- The frontend respects the VAT toggle and divides by 1.19 for
