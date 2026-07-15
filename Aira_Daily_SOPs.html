@@ -400,6 +400,22 @@
     <p style="color:var(--text-mid);margin-bottom:12px;font-size:13px">US / Canada / UK members whose GHL WhatsApp automation may not be delivering. Live from GHL, cross-referenced with our members list. Contact each one manually adapted to their next expected message.</p>
     <div id="live-outreach-meta" style="font-size:11px;color:var(--text-light);font-style:italic;margin-bottom:14px"></div>
     <div id="live-outreach-content"><div style="text-align:center;padding:20px;color:var(--text-light);font-style:italic">Loading live queue…</div></div>
+
+    <!-- ═══ CSV import: GHL WhatsApp failure report ═══ -->
+    <details style="margin-top:22px;border-top:1px solid var(--cream-dark);padding-top:16px">
+      <summary style="cursor:pointer;font-weight:600;color:var(--gold-dark);font-size:13px;letter-spacing:0.02em">◈ Import GHL WhatsApp failure CSV <span style="font-weight:400;color:var(--text-light);font-size:12px">(click to expand)</span></summary>
+      <div style="margin-top:14px">
+        <p style="color:var(--text-mid);font-size:12.5px;margin-bottom:12px;max-width:780px">
+          In GHL: <strong style="display:inline">Reporting → WhatsApp Statistics → Export CSV</strong>. Paste below (or upload the file) and hit Import. Failed rows get stored and matched to members via GHL phone lookup — matched members jump to the top of the queue above with a red <strong style="display:inline;color:#b02020">"WA FAILED"</strong> badge.
+        </p>
+        <textarea id="wa-csv-input" placeholder="Paste CSV here (must include columns: name, phone, status, timestamp)" style="width:100%;min-height:110px;padding:10px;border-radius:6px;border:1px solid var(--cream-dark);background:var(--cream);color:var(--text);font-family:monospace;font-size:12px;resize:vertical;box-sizing:border-box"></textarea>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap">
+          <button type="button" onclick="importWaFailuresCsv()" id="wa-csv-import-btn" style="background:var(--gold);color:var(--black);border:1px solid var(--gold);padding:8px 18px;border-radius:6px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px">Import CSV</button>
+          <input type="file" id="wa-csv-file" accept=".csv,text/csv" style="font-size:12px;color:var(--text-mid)">
+          <div id="wa-csv-status" style="font-size:12px;color:var(--text-light);font-style:italic"></div>
+        </div>
+      </div>
+    </details>
   </div>
 
   <!-- ══════════════ OVERVIEW ══════════════ -->
@@ -2068,6 +2084,69 @@
     }
   }
   window.loadLiveOutreach = loadLiveOutreach;
+
+  // ═══ CSV import: GHL WhatsApp failure report ═══
+  // Uploads CSV to /api/admin/import-wa-failures, then refreshes the live
+  // outreach queue so newly-flagged members appear at the top.
+  async function importWaFailuresCsv() {
+    const btn = document.getElementById("wa-csv-import-btn");
+    const statusEl = document.getElementById("wa-csv-status");
+    const textEl = document.getElementById("wa-csv-input");
+    const fileEl = document.getElementById("wa-csv-file");
+    let csv = (textEl?.value || "").trim();
+    if (!csv && fileEl?.files?.[0]) {
+      csv = await fileEl.files[0].text();
+    }
+    if (!csv) {
+      statusEl.textContent = "Paste CSV text or choose a file first.";
+      statusEl.style.color = "#c05038";
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = "Importing…";
+    statusEl.textContent = "Uploading and looking up phones in GHL…";
+    statusEl.style.color = "var(--text-mid)";
+    try {
+      const token = localStorage.getItem(SESSION_TOKEN_KEY);
+      const res = await fetch("/api/admin/import-wa-failures", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-session-token": token },
+        body: JSON.stringify({ csv }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        statusEl.textContent = "Error: " + (data.error || res.statusText);
+        statusEl.style.color = "#c05038";
+        return;
+      }
+      const parts = [
+        data.imported + " new failures imported",
+        data.matched + " matched to members",
+        data.skipped + " duplicates skipped",
+      ];
+      if (data.unmatched_phones?.length) {
+        parts.push(data.unmatched_phones.length + " phones not found in GHL");
+      }
+      statusEl.textContent = "✓ " + parts.join(" · ");
+      statusEl.style.color = "#4d8f52";
+      // Surface first error inline if none imported (e.g., DB schema issue).
+      if (data.imported === 0 && data.errors && data.errors.length > 0) {
+        const firstErr = data.errors[0];
+        statusEl.innerHTML = '⚠️ 0 imported — ' + data.errors.length + ' errors. First: <code style="background:rgba(200,80,60,0.1);padding:2px 6px;border-radius:4px;font-size:11px">' + (firstErr.error || 'unknown') + '</code>';
+        statusEl.style.color = "#c05038";
+        console.error("[wa-import] errors:", data.errors);
+      }
+      // Refresh the queue above so new failures show up.
+      setTimeout(() => loadLiveOutreach(), 400);
+    } catch (e) {
+      statusEl.textContent = "Network error: " + (e.message || e);
+      statusEl.style.color = "#c05038";
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Import CSV";
+    }
+  }
+  window.importWaFailuresCsv = importWaFailuresCsv;
 
   // ── INIT ──
   restoreState();
