@@ -397,6 +397,17 @@
 
 <div class="main">
 
+  <!-- ══════════════ LIVE MANUAL OUTREACH QUEUE (always visible) ══════════════ -->
+  <div id="live-outreach-banner" class="card" style="border: 2px solid var(--gold); position: relative;">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+      <h2 style="margin:0">◆ Today's Manual Outreach Queue</h2>
+      <button type="button" onclick="loadLiveOutreach()" id="live-outreach-refresh" style="background:var(--gold);color:var(--black);border:1px solid var(--gold);padding:6px 14px;border-radius:6px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px">Refresh</button>
+    </div>
+    <p style="color:var(--text-mid);margin-bottom:12px;font-size:13px">US / Canada / UK members whose GHL WhatsApp automation may not be delivering. Live from GHL, cross-referenced with our members list. Contact each one manually adapted to their next expected message.</p>
+    <div id="live-outreach-meta" style="font-size:11px;color:var(--text-light);font-style:italic;margin-bottom:14px"></div>
+    <div id="live-outreach-content"><div style="text-align:center;padding:20px;color:var(--text-light);font-style:italic">Loading live queue…</div></div>
+  </div>
+
   <!-- ══════════════ OVERVIEW ══════════════ -->
   <div class="tab-content active" id="tab-overview">
 
@@ -1932,8 +1943,116 @@
     renderHistory();
   }
 
+  // ── LIVE MANUAL OUTREACH QUEUE ──
+  // Fetches from the admin API using the shared session token stored in
+  // localStorage (same key as admin.html, since both /admin and /aira live
+  // on the same domain). If no token, shows a friendly "log in" message.
+  const SESSION_TOKEN_KEY = "tfif_session_v1";
+
+  function escapeSopHtml(s) {
+    if (s == null) return "";
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  async function loadLiveOutreach() {
+    const contentEl = document.getElementById("live-outreach-content");
+    const metaEl = document.getElementById("live-outreach-meta");
+    const btn = document.getElementById("live-outreach-refresh");
+    if (!contentEl) return;
+    if (btn) { btn.disabled = true; btn.textContent = "Loading…"; }
+
+    try {
+      const token = localStorage.getItem(SESSION_TOKEN_KEY);
+      if (!token) {
+        contentEl.innerHTML = '<div class="alert warn" style="margin:0"><div class="alert-icon">▲</div><div><strong style="display:inline">Please log in first.</strong> Open <a href="/admin" target="_blank" style="color:var(--gold);text-decoration:underline">the admin dashboard</a>, log in with your @shimritnativ.com email, then come back here and hit Refresh.</div></div>';
+        return;
+      }
+      const res = await fetch("/api/admin/manual-outreach-queue", {
+        headers: { "x-session-token": token },
+      });
+      if (res.status === 401) {
+        contentEl.innerHTML = '<div class="alert warn" style="margin:0"><div class="alert-icon">▲</div><div><strong style="display:inline">Session expired.</strong> <a href="/admin" target="_blank" style="color:var(--gold);text-decoration:underline">Log in again</a> and refresh this page.</div></div>';
+        return;
+      }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        contentEl.innerHTML = '<div class="alert warn" style="margin:0"><div class="alert-icon">▲</div><div>Error: ' + escapeSopHtml(body.message || res.statusText) + '</div></div>';
+        return;
+      }
+      const data = await res.json();
+      if (!data.queue || data.queue.length === 0) {
+        contentEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-mid)">No US / Canada / UK members currently need manual outreach 🙏🏻</div>';
+        const m = data.meta || {};
+        if (metaEl) metaEl.textContent = "Scanned " + (m.us_can_ghl_contacts || 0) + " US/CAN + " + (m.uk_ghl_contacts || 0) + " UK GHL contacts · fetched " + new Date().toLocaleTimeString();
+        return;
+      }
+      // Sort: never-started restart candidates first, then most-days first.
+      const sorted = data.queue.slice().sort((a, b) => {
+        const aRestart = a.next_message.startsWith("RESTART") ? 1 : 0;
+        const bRestart = b.next_message.startsWith("RESTART") ? 1 : 0;
+        if (aRestart !== bRestart) return bRestart - aRestart;
+        return b.days_since_purchase - a.days_since_purchase;
+      });
+      const rows = sorted.map(q => {
+        const isRestart = q.next_message.startsWith("RESTART");
+        const geoBg = q.country === "UK" ? "rgba(122,174,94,0.14)" : "rgba(59,130,200,0.14)";
+        const geoColor = q.country === "UK" ? "#4d8f52" : "#3d7db7";
+        const progressHtml = q.last_completed_day > 0
+          ? '<span class="tag" style="background:rgba(122,174,94,0.2);border-color:#6a9b5a;color:#4d8f52">Day ' + q.last_completed_day + ' done</span>'
+          : '<span class="tag" style="background:rgba(200,130,60,0.2);border-color:#c07030;color:#c07030">Never started</span>';
+        const cleanPhone = String(q.phone || "").replace(/[^0-9+]/g, "").replace(/^\+/, "");
+        const waLink = cleanPhone
+          ? '<a href="https://wa.me/' + cleanPhone + '" target="_blank" rel="noopener" style="color:var(--gold);font-weight:600;text-decoration:none">WhatsApp ↗</a>'
+          : '';
+        return '<tr style="' + (isRestart ? 'background:rgba(200,130,60,0.06);' : '') + '">' +
+          '<td style="padding:12px;vertical-align:top">' +
+            '<strong style="display:inline;color:var(--text)">' + escapeSopHtml(q.display_name || q.email) + '</strong><br>' +
+            '<span style="font-size:11px;color:var(--text-light)">' + escapeSopHtml(q.email) + '</span>' +
+          '</td>' +
+          '<td style="padding:12px;vertical-align:top;font-family:monospace;font-size:12px;color:var(--text-mid)">' + escapeSopHtml(q.phone) + '</td>' +
+          '<td style="padding:12px;vertical-align:top"><span class="tag" style="background:' + geoBg + ';color:' + geoColor + ';border-color:' + geoBg + '">' + q.country + '</span></td>' +
+          '<td style="padding:12px;vertical-align:top;color:var(--text-mid);font-size:12.5px">' + new Date(q.purchased_on).toLocaleDateString() + '</td>' +
+          '<td style="padding:12px;vertical-align:top;text-align:center;font-weight:600">' + q.days_since_purchase + '</td>' +
+          '<td style="padding:12px;vertical-align:top;text-align:center">' + progressHtml + '</td>' +
+          '<td style="padding:12px;vertical-align:top;font-size:12.5px;color:' + (isRestart ? '#c07030' : 'var(--gold-dark)') + ';font-weight:' + (isRestart ? '700' : '600') + '">' + escapeSopHtml(q.next_message) + '</td>' +
+          '<td style="padding:12px;vertical-align:top">' + waLink + '</td>' +
+        '</tr>';
+      }).join("");
+      contentEl.innerHTML =
+        '<div style="overflow-x:auto">' +
+        '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
+          '<thead><tr style="background:var(--near-black);color:var(--gold)">' +
+            '<th style="text-align:left;padding:10px 12px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase">Member</th>' +
+            '<th style="text-align:left;padding:10px 12px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase">Phone</th>' +
+            '<th style="text-align:left;padding:10px 12px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase">Region</th>' +
+            '<th style="text-align:left;padding:10px 12px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase">Bought</th>' +
+            '<th style="text-align:center;padding:10px 12px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase">Days</th>' +
+            '<th style="text-align:center;padding:10px 12px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase">Progress</th>' +
+            '<th style="text-align:left;padding:10px 12px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase">Next Message</th>' +
+            '<th style="text-align:left;padding:10px 12px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase">Action</th>' +
+          '</tr></thead>' +
+          '<tbody>' + rows + '</tbody>' +
+        '</table></div>';
+      if (metaEl) {
+        const m = data.meta || {};
+        metaEl.textContent = data.count + ' members need outreach · ' + (m.us_can_ghl_contacts || 0) + ' US/CAN + ' + (m.uk_ghl_contacts || 0) + ' UK GHL contacts scanned · fetched ' + new Date().toLocaleTimeString();
+      }
+    } catch (e) {
+      contentEl.innerHTML = '<div class="alert warn" style="margin:0"><div class="alert-icon">▲</div><div>Network error: ' + escapeSopHtml(String(e && e.message || e)) + '</div></div>';
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = "Refresh"; }
+    }
+  }
+  window.loadLiveOutreach = loadLiveOutreach;
+
   // ── INIT ──
   restoreState();
+  loadLiveOutreach();
 
   // ── NAV SCROLL INDICATORS ──
   // Toggle .can-scroll-left / .can-scroll-right on the nav wrapper based on
