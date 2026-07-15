@@ -5812,6 +5812,9 @@
     let _perAdFilterCampaign = 'all';
     let _perAdFilterGeo = 'all';
     let _perAdFilterStatus = 'all';
+    // LP variant filter — matches the utm_content suffix (_newlp / _ghl / _ads).
+    // 'all' shows every ad regardless of LP variant.
+    let _perAdFilterLp = 'all';
     let _perAdHidePaused = true;
 
     async function loadAdsMetrics() {
@@ -6262,6 +6265,15 @@
           if (v === 'DELETED' || v === 'ARCHIVED') return 'archived';
           return 'other';
         };
+        // Parse the LP suffix directly from utm_content (no need to hoist
+        // parseAdName up here — the suffix check is a simple ends-with).
+        const lpBucket = (adName) => {
+          const n = String(adName || '').toLowerCase();
+          if (n.endsWith('_newlp')) return 'newlp';
+          if (n.endsWith('_ghl'))   return 'ghl';
+          if (n.endsWith('_ads'))   return 'ads';
+          return 'other';
+        };
         const filteredRows = rows.filter(a => {
           if (_perAdFilterCampaign !== 'all') {
             const c = String(a.campaign || '').toLowerCase();
@@ -6269,6 +6281,7 @@
           }
           if (_perAdFilterGeo !== 'all' && geoBucket(a.geo) !== _perAdFilterGeo) return false;
           if (_perAdFilterStatus !== 'all' && statusBucket(a.status) !== _perAdFilterStatus) return false;
+          if (_perAdFilterLp !== 'all' && lpBucket(a.ad_name) !== _perAdFilterLp) return false;
           // Hide paused shortcut: overrides when checked, hides anything
           // in the paused bucket. Applied after the status chip so users
           // can still explicitly select "Paused" chip to see them if needed.
@@ -6404,6 +6417,11 @@
             'geo|europe':      { on: '#4d8f52', onFg: '#ffffff', off: '#4d8f52' },
             'status|active':   { on: '#4d8f52', onFg: '#ffffff', off: '#4d8f52' },
             'status|paused':   { on: '#c07030', onFg: '#ffffff', off: '#c07030' },
+            // LP filter chips match the purple/violet LP badge color used in
+            // the per-ad table so pill and badge visually connect.
+            'lp|newlp':        { on: '#8a6ec0', onFg: '#ffffff', off: '#8a6ec0' },
+            'lp|ghl':          { on: '#8a6ec0', onFg: '#ffffff', off: '#8a6ec0' },
+            'lp|ads':          { on: '#8a6ec0', onFg: '#ffffff', off: '#8a6ec0' },
           };
           return map[`${filterKey}|${value}`] || { on: 'var(--gold)', onFg: '#1a1408', off: 'var(--text-dim)' };
         };
@@ -6421,6 +6439,9 @@
         const geoBuckets = new Set(rows.map(r => geoBucket(r.geo)));
         const statusBuckets = new Set(rows.map(r => statusBucket(r.status)));
         const knownStatus = statusBuckets.has('active') || statusBuckets.has('paused');
+        // LP variant chips only appear when data has that LP suffix
+        const lpBuckets = new Set(rows.map(r => lpBucket(r.ad_name)));
+        const knownLp = lpBuckets.has('newlp') || lpBuckets.has('ghl') || lpBuckets.has('ads');
 
         return `
           <div style="background: var(--bg-warm); border: 1px solid var(--gold-line); border-radius: 12px; padding: 18px 22px; margin-bottom: 22px;">
@@ -6446,6 +6467,14 @@
                 ${geoBuckets.has('europe') ? filterChip('Europe', 'europe', _perAdFilterGeo, 'geo') : ''}
                 ${geoBuckets.has('other') ? filterChip('Other', 'other', _perAdFilterGeo, 'geo') : ''}
               </div>
+              ${knownLp ? `
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-mute); margin-right: 2px;">LP</span>
+                ${filterChip('All', 'all', _perAdFilterLp, 'lp')}
+                ${lpBuckets.has('newlp') ? filterChip('New LP', 'newlp', _perAdFilterLp, 'lp') : ''}
+                ${lpBuckets.has('ghl')   ? filterChip('GHL LP', 'ghl',   _perAdFilterLp, 'lp') : ''}
+                ${lpBuckets.has('ads')   ? filterChip('Ads LP', 'ads',   _perAdFilterLp, 'lp') : ''}
+              </div>` : ''}
               ${knownStatus ? `
               <div style="display: flex; align-items: center; gap: 6px;">
                 <span style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-mute); margin-right: 2px;">Status</span>
@@ -6876,6 +6905,7 @@
         if (key === 'campaign') _perAdFilterCampaign = value;
         else if (key === 'geo') _perAdFilterGeo = value;
         else if (key === 'status') _perAdFilterStatus = value;
+        else if (key === 'lp') _perAdFilterLp = value;
         rerenderAdsContent();
         return;
       }
