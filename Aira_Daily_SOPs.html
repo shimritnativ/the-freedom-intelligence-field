@@ -47,15 +47,22 @@
     text-rendering: optimizeLegibility;
   }
 
+  /* ── HEADER + NAV STICKY CONTAINER ── */
+  /* Wraps the header and nav so they move as one block and stay pinned
+     to the top no matter which tab Aira is on. Individual sticky on each
+     was fragile (top offset had to match header height exactly). */
+  .topbar-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow-lg);
+  }
+
   /* ── HEADER ── */
   .header {
     background: var(--black);
     color: white;
     padding: 28px 40px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: var(--shadow-lg);
     border-bottom: 2px solid var(--gold-dark);
   }
   .header-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
@@ -67,7 +74,7 @@
   .header-date { background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.35); border-radius: 8px; padding: 7px 16px; font-size: 12px; color: var(--gold); font-weight: 600; white-space: nowrap; letter-spacing: 0.3px; }
 
   /* ── NAV ── */
-  .nav-wrap { background: var(--near-black); border-bottom: 1px solid rgba(201,168,76,0.2); position: sticky; top: 82px; z-index: 99; }
+  .nav-wrap { background: var(--near-black); border-bottom: 1px solid rgba(201,168,76,0.2); }
   /* Inner wrapper matches the 1100px content width so the chevrons hug
      the visible tabs rather than sitting way off at the viewport edge. */
   .nav-inner { max-width: 1100px; margin: 0 auto; position: relative; }
@@ -362,7 +369,9 @@
 </head>
 <body>
 
-<!-- HEADER -->
+<!-- HEADER + NAV sticky wrapper — they move as one block so both are
+     always visible while scrolling any tab. -->
+<div class="topbar-sticky">
 <div class="header">
   <div class="header-inner">
     <div class="header-logo">
@@ -388,38 +397,44 @@
   </div>
   </div>
 </div>
+</div><!-- /.topbar-sticky -->
 
 <div class="main">
 
-  <!-- ══════════════ LIVE MANUAL OUTREACH QUEUE (always visible) ══════════════ -->
-  <div id="live-outreach-banner" class="card" style="border: 2px solid var(--gold); position: relative;">
-    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-      <h2 style="margin:0">◆ Today's Manual Outreach Queue</h2>
-      <button type="button" onclick="loadLiveOutreach()" id="live-outreach-refresh" style="background:var(--gold);color:var(--black);border:1px solid var(--gold);padding:6px 14px;border-radius:6px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px">Refresh</button>
-    </div>
-    <p style="color:var(--text-mid);margin-bottom:12px;font-size:13px">Members needing manual WhatsApp follow-up. Combines <strong style="display:inline">confirmed GHL failures</strong> (from the CSV import below — any country) with US / Canada / UK members showing engagement gaps. Red <strong style="display:inline;color:#b02020">"WA FAILED"</strong> badge = GHL says delivery failed; contact via Email or IG DM.</p>
-    <div id="live-outreach-meta" style="font-size:11px;color:var(--text-light);font-style:italic;margin-bottom:14px"></div>
-    <div id="live-outreach-content"><div style="text-align:center;padding:20px;color:var(--text-light);font-style:italic">Loading live queue…</div></div>
-
-    <!-- ═══ CSV import: GHL WhatsApp failure report ═══ -->
-    <details style="margin-top:22px;border-top:1px solid var(--cream-dark);padding-top:16px">
-      <summary style="cursor:pointer;font-weight:600;color:var(--gold-dark);font-size:13px;letter-spacing:0.02em">◈ Import GHL WhatsApp failure CSV <span style="font-weight:400;color:var(--text-light);font-size:12px">(click to expand)</span></summary>
-      <div style="margin-top:14px">
-        <p style="color:var(--text-mid);font-size:12.5px;margin-bottom:12px;max-width:780px">
-          In GHL: <strong style="display:inline">Reporting → WhatsApp Statistics → Export CSV</strong>. Paste below (or upload the file) and hit Import. Failed rows get stored and matched to members via GHL phone lookup — matched members jump to the top of the queue above with a red <strong style="display:inline;color:#b02020">"WA FAILED"</strong> badge.
-        </p>
-        <textarea id="wa-csv-input" placeholder="Paste CSV here (must include columns: name, phone, status, timestamp)" style="width:100%;min-height:110px;padding:10px;border-radius:6px;border:1px solid var(--cream-dark);background:var(--cream);color:var(--text);font-family:monospace;font-size:12px;resize:vertical;box-sizing:border-box"></textarea>
-        <div style="display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap">
-          <button type="button" onclick="importWaFailuresCsv()" id="wa-csv-import-btn" style="background:var(--gold);color:var(--black);border:1px solid var(--gold);padding:8px 18px;border-radius:6px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px">Import CSV</button>
-          <input type="file" id="wa-csv-file" accept=".csv,text/csv" style="font-size:12px;color:var(--text-mid)">
-          <div id="wa-csv-status" style="font-size:12px;color:var(--text-light);font-style:italic"></div>
-        </div>
-      </div>
-    </details>
-  </div>
-
   <!-- ══════════════ OVERVIEW ══════════════ -->
   <div class="tab-content active" id="tab-overview">
+
+    <!-- ═══ LIVE MANUAL OUTREACH QUEUE — only on Daily Overview tab ═══ -->
+    <div id="live-outreach-banner" class="card" style="border: 2px solid var(--gold); position: relative; margin-bottom: 24px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        <h2 style="margin:0">◆ Today's Manual Outreach Queue</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-mid);cursor:pointer">
+            <input type="checkbox" id="outreach-show-contacted" style="cursor:pointer"> Show contacted
+          </label>
+          <button type="button" onclick="loadLiveOutreach()" id="live-outreach-refresh" style="background:var(--gold);color:var(--black);border:1px solid var(--gold);padding:6px 14px;border-radius:6px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px">Refresh</button>
+        </div>
+      </div>
+      <p style="color:var(--text-mid);margin-bottom:12px;font-size:13px">Members needing manual WhatsApp follow-up. Combines <strong style="display:inline">confirmed GHL failures</strong> (from the CSV import below — any country) with US / Canada / UK members showing engagement gaps. Red <strong style="display:inline;color:#b02020">"WA FAILED"</strong> badge = GHL says delivery failed; contact via Email or IG DM. Check the box next to each member once you've reached out — they'll drop from the list.</p>
+      <div id="live-outreach-meta" style="font-size:11px;color:var(--text-light);font-style:italic;margin-bottom:14px"></div>
+      <div id="live-outreach-content"><div style="text-align:center;padding:20px;color:var(--text-light);font-style:italic">Loading live queue…</div></div>
+
+      <!-- ═══ CSV import: GHL WhatsApp failure report ═══ -->
+      <details style="margin-top:22px;border-top:1px solid var(--cream-dark);padding-top:16px">
+        <summary style="cursor:pointer;font-weight:600;color:var(--gold-dark);font-size:13px;letter-spacing:0.02em">◈ Import GHL WhatsApp failure CSV <span style="font-weight:400;color:var(--text-light);font-size:12px">(click to expand)</span></summary>
+        <div style="margin-top:14px">
+          <p style="color:var(--text-mid);font-size:12.5px;margin-bottom:12px;max-width:780px">
+            In GHL: <strong style="display:inline">Reporting → WhatsApp Statistics → Export CSV</strong>. Paste below (or upload the file) and hit Import. Failed rows get stored and matched to members via GHL phone lookup — matched members jump to the top of the queue above with a red <strong style="display:inline;color:#b02020">"WA FAILED"</strong> badge.
+          </p>
+          <textarea id="wa-csv-input" placeholder="Paste CSV here (must include columns: name, phone, status, timestamp)" style="width:100%;min-height:110px;padding:10px;border-radius:6px;border:1px solid var(--cream-dark);background:var(--cream);color:var(--text);font-family:monospace;font-size:12px;resize:vertical;box-sizing:border-box"></textarea>
+          <div style="display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap">
+            <button type="button" onclick="importWaFailuresCsv()" id="wa-csv-import-btn" style="background:var(--gold);color:var(--black);border:1px solid var(--gold);padding:8px 18px;border-radius:6px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px">Import CSV</button>
+            <input type="file" id="wa-csv-file" accept=".csv,text/csv" style="font-size:12px;color:var(--text-mid)">
+            <div id="wa-csv-status" style="font-size:12px;color:var(--text-light);font-style:italic"></div>
+          </div>
+        </div>
+      </details>
+    </div>
 
     <div class="alert dark" style="margin-bottom:20px">
       <div class="alert-icon">◆</div>
@@ -2025,13 +2040,26 @@
         behind:              { bg: 'rgba(200,170,60,0.07)', label: 'BEHIND SCHEDULE',       color: '#8a7020' },
       };
       const statusPriority = { wa_failed: 0, never_started: 1, started_no_complete: 2, behind: 3 };
-      const sorted = data.queue.slice().sort((a, b) => {
+      // Local dismissal state — Aira ticks a member as "contacted" and
+      // they drop from the queue until she unchecks "Show contacted".
+      // Stored per-email in localStorage; expires after 30 days so we
+      // don't accidentally hide someone forever.
+      const showContacted = document.getElementById("outreach-show-contacted")?.checked === true;
+      const contactedMap = loadOutreachContacted();
+      let hiddenCount = 0;
+      const sortedAll = data.queue.slice().sort((a, b) => {
         const p = (statusPriority[a.status] ?? 9) - (statusPriority[b.status] ?? 9);
         if (p !== 0) return p;
         return b.days_since_purchase - a.days_since_purchase;
       });
+      const sorted = sortedAll.filter(q => {
+        const isContacted = !!contactedMap[q.email];
+        if (isContacted && !showContacted) { hiddenCount++; return false; }
+        return true;
+      });
       const rows = sorted.map(q => {
         const st = statusStyles[q.status] || { bg: 'transparent', label: q.status, color: 'var(--text)' };
+        const isContacted = !!contactedMap[q.email];
         // Region badge — different colors for the buckets Aira actually
         // cares about (UK, USA/CAN) vs "OTHER" fallback for European /
         // international members flagged via CSV import.
@@ -2053,7 +2081,20 @@
         const waLink = cleanPhone
           ? '<a href="https://wa.me/' + cleanPhone + '" target="_blank" rel="noopener" style="color:var(--gold);font-weight:600;text-decoration:none">WhatsApp ↗</a>'
           : '';
-        return '<tr style="background:' + st.bg + '">' +
+        // "Contacted" checkbox — persists per-email in localStorage.
+        // When ticked, the row drops from the queue (unless "Show contacted"
+        // toggle is on). The row is faded when contacted so it's obvious.
+        const rowOpacity = isContacted ? 'opacity:0.45;' : '';
+        const checkboxCell =
+          '<td style="padding:12px;vertical-align:top;text-align:center">' +
+            '<input type="checkbox" data-outreach-check="' + escapeSopHtml(q.email) + '" ' +
+              (isContacted ? 'checked ' : '') +
+              'onchange="toggleOutreachContacted(this)" ' +
+              'title="Check when you have contacted this member — they will drop from the queue" ' +
+              'style="width:18px;height:18px;cursor:pointer;accent-color:var(--gold-dark)"> ' +
+          '</td>';
+        return '<tr style="background:' + st.bg + ';' + rowOpacity + '">' +
+          checkboxCell +
           '<td style="padding:12px;vertical-align:top">' +
             '<strong style="display:inline;color:var(--text)">' + escapeSopHtml(q.display_name || q.email) + '</strong><br>' +
             '<span style="font-size:11px;color:var(--text-light)">' + escapeSopHtml(q.email) + '</span>' +
@@ -2071,6 +2112,7 @@
         '<div style="overflow-x:auto">' +
         '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
           '<thead><tr style="background:var(--near-black);color:var(--gold)">' +
+            '<th style="text-align:center;padding:10px 12px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase" title="Tick when you have contacted this member">✓</th>' +
             '<th style="text-align:left;padding:10px 12px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase">Member</th>' +
             '<th style="text-align:left;padding:10px 12px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase">Phone</th>' +
             '<th style="text-align:left;padding:10px 12px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase">Region</th>' +
@@ -2083,7 +2125,13 @@
         '</table></div>';
       if (metaEl) {
         const m = data.meta || {};
-        metaEl.textContent = data.count + ' members need outreach · ' + (m.wa_failure_members || 0) + ' with confirmed WA failures · ' + (m.us_can_ghl_contacts || 0) + ' US/CAN + ' + (m.uk_ghl_contacts || 0) + ' UK GHL contacts scanned · fetched ' + new Date().toLocaleTimeString();
+        const parts = [
+          sorted.length + ' shown',
+          (m.wa_failure_members || 0) + ' with confirmed WA failures',
+        ];
+        if (hiddenCount > 0) parts.push(hiddenCount + ' contacted (hidden)');
+        parts.push('fetched ' + new Date().toLocaleTimeString());
+        metaEl.textContent = parts.join(' · ');
       }
     } catch (e) {
       contentEl.innerHTML = '<div class="alert warn" style="margin:0"><div class="alert-icon">▲</div><div>Network error: ' + escapeSopHtml(String(e && e.message || e)) + '</div></div>';
@@ -2092,6 +2140,50 @@
     }
   }
   window.loadLiveOutreach = loadLiveOutreach;
+
+  // ═══ Contacted checkbox state — persists per-email in localStorage ═══
+  // { "email@example.com": <timestamp when checked> }. Entries older than
+  // 30 days are pruned on load so Aira doesn't lose visibility on members
+  // she checked off weeks ago and never actually reached.
+  const OUTREACH_CONTACTED_KEY = "tfif_outreach_contacted_v1";
+  const CONTACTED_TTL_DAYS = 30;
+  function loadOutreachContacted() {
+    let obj = {};
+    try { obj = JSON.parse(localStorage.getItem(OUTREACH_CONTACTED_KEY) || "{}"); } catch (e) { obj = {}; }
+    // Prune stale entries so members re-appear after ~30 days
+    const cutoff = Date.now() - CONTACTED_TTL_DAYS * 24 * 60 * 60 * 1000;
+    let changed = false;
+    for (const email of Object.keys(obj)) {
+      if (!obj[email] || obj[email] < cutoff) {
+        delete obj[email];
+        changed = true;
+      }
+    }
+    if (changed) {
+      try { localStorage.setItem(OUTREACH_CONTACTED_KEY, JSON.stringify(obj)); } catch (e) {}
+    }
+    return obj;
+  }
+  function toggleOutreachContacted(checkbox) {
+    const email = String(checkbox.dataset.outreachCheck || "").toLowerCase();
+    if (!email) return;
+    const map = loadOutreachContacted();
+    if (checkbox.checked) map[email] = Date.now();
+    else delete map[email];
+    try { localStorage.setItem(OUTREACH_CONTACTED_KEY, JSON.stringify(map)); } catch (e) {}
+    // Re-render the queue so the row drops (or reappears) immediately.
+    // Small delay so the checkbox tick animation completes visually.
+    setTimeout(() => loadLiveOutreach(), 150);
+  }
+  window.toggleOutreachContacted = toggleOutreachContacted;
+
+  // Wire the "Show contacted" toggle to re-render on change.
+  document.addEventListener("DOMContentLoaded", () => {
+    const showContactedEl = document.getElementById("outreach-show-contacted");
+    if (showContactedEl) {
+      showContactedEl.addEventListener("change", () => loadLiveOutreach());
+    }
+  });
 
   // ═══ CSV import: GHL WhatsApp failure report ═══
   // Uploads CSV to /api/admin/import-wa-failures, then refreshes the live
@@ -2129,11 +2221,16 @@
       }
       const parts = [
         data.imported + " new failures imported",
-        data.matched + " matched to members",
-        data.skipped + " duplicates skipped",
       ];
+      if (data.backfilled) {
+        parts.push(data.backfilled + " existing rows updated with email");
+      }
+      parts.push(
+        data.matched + " matched to members",
+        data.skipped + " already complete",
+      );
       if (data.unmatched_phones?.length) {
-        parts.push(data.unmatched_phones.length + " phones not found in GHL");
+        parts.push(data.unmatched_phones.length + " phones still not found in GHL");
       }
       statusEl.textContent = "✓ " + parts.join(" · ");
       statusEl.style.color = "#4d8f52";
