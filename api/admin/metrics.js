@@ -1022,20 +1022,16 @@ export default async function handler(req, res) {
       sql`
         SELECT
           CASE
-            -- Meta ads: any of five signals — the user's utm_campaign,
-            -- utm_source, utm_medium, or (strongest) their purchase came
-            -- through an "-Ads" ThriveCart product (which lives ONLY on
-            -- the ads landing page). Product-name match wins even when
-            -- UTMs are missing or later overwritten by other campaigns.
-            WHEN LOWER(COALESCE(u.utm_campaign, '')) IN ('cold', 'warm')
-              OR LOWER(COALESCE(u.utm_source, '')) IN ('meta', 'facebook', 'instagram', 'fb', 'ig', 'power-reset')
-              OR LOWER(COALESCE(u.utm_medium, '')) IN ('paid_social', 'paidsocial', 'cpc', 'ppc')
-              OR EXISTS (
-                SELECT 1 FROM purchases p
-                WHERE LOWER(p.email) = LOWER(u.email)
-                  AND (p.product_name ILIKE '%- Ads' OR p.product_name ILIKE '%-ads' OR p.product_name ILIKE '% Ads')
-              )
-              THEN 'Meta ads'
+            -- Attribution hierarchy (first match wins):
+            --   1. Explicit non-ads utm_source (whatsapp / email) — beats
+            --      ads fallback signals like utm_medium=paid_social
+            --   2. Explicit ads UTMs (utm_campaign cold/warm, utm_source
+            --      meta/fb/ig/power-reset)
+            --   3. Fallback ads (utm_medium=paid_social OR bought "- Ads"
+            --      product) — ONLY when utm_source is empty
+            --   4. Other tracked / Organic
+            WHEN LOWER(COALESCE(u.utm_source, '')) = 'whatsapp'
+              THEN 'WhatsApp'
             WHEN LOWER(COALESCE(u.utm_medium, '')) = 'email'
               OR LOWER(COALESCE(u.utm_source, '')) LIKE '%email%'
               OR LOWER(COALESCE(u.utm_source, '')) LIKE '%newsletter%'
@@ -1043,6 +1039,21 @@ export default async function handler(req, res) {
               OR LOWER(COALESCE(u.utm_source, '')) LIKE '%mailchimp%'
               OR LOWER(COALESCE(u.utm_source, '')) LIKE '%kajabi%'
               THEN 'Email'
+            WHEN LOWER(COALESCE(u.utm_campaign, '')) IN ('cold', 'warm')
+              OR LOWER(COALESCE(u.utm_source, '')) IN ('meta', 'facebook', 'instagram', 'fb', 'ig', 'power-reset')
+              THEN 'Meta ads'
+            -- Fallback ads signals only fire when utm_source is empty;
+            -- otherwise a legit source like "whatsapp" would be overridden.
+            WHEN COALESCE(u.utm_source, '') = ''
+              AND (
+                LOWER(COALESCE(u.utm_medium, '')) IN ('paid_social', 'paidsocial', 'cpc', 'ppc')
+                OR EXISTS (
+                  SELECT 1 FROM purchases p
+                  WHERE LOWER(p.email) = LOWER(u.email)
+                    AND (p.product_name ILIKE '%- Ads' OR p.product_name ILIKE '%-ads' OR p.product_name ILIKE '% Ads')
+                )
+              )
+              THEN 'Meta ads'
             WHEN u.utm_source IS NOT NULL OR u.utm_campaign IS NOT NULL
               THEN 'Other tracked'
             ELSE 'Organic / Direct'
@@ -1199,22 +1210,26 @@ async function loadChannelRevenueAttribution() {
           u.id,
           LOWER(u.email) AS email_lc,
           CASE
-            WHEN LOWER(COALESCE(u.utm_campaign, '')) = 'cold'    THEN 'cold'
-            WHEN LOWER(COALESCE(u.utm_campaign, '')) = 'warm'    THEN 'warm'
-            -- Ads fallback: user has an ads signal (utm_medium=paid_social,
-            -- utm_source=meta/facebook/etc, or bought via an "-Ads" product)
-            -- but no cold/warm campaign tag. Default to 'cold' since it's
-            -- the higher-volume ads channel; alternative is to add an
-            -- 'ads-unknown' bucket if this becomes material.
-            WHEN LOWER(COALESCE(u.utm_medium, '')) IN ('paid_social', 'paidsocial', 'cpc', 'ppc')
-              OR LOWER(COALESCE(u.utm_source, '')) IN ('meta', 'facebook', 'instagram', 'fb', 'ig', 'power-reset')
-              OR EXISTS (
-                SELECT 1 FROM purchases p2
-                WHERE LOWER(p2.email) = LOWER(u.email)
-                  AND (p2.product_name ILIKE '%- Ads' OR p2.product_name ILIKE '%-ads' OR p2.product_name ILIKE '% Ads')
+            -- Explicit utm_source wins over utm_medium/product fallbacks
+            -- so buyers who came from WhatsApp aren't miscounted as ads
+            -- just because Meta tagged utm_medium=paid_social somewhere.
+            WHEN LOWER(COALESCE(u.utm_source, '')) = 'whatsapp'   THEN 'whatsapp'
+            WHEN LOWER(COALESCE(u.utm_campaign, '')) = 'cold'     THEN 'cold'
+            WHEN LOWER(COALESCE(u.utm_campaign, '')) = 'warm'     THEN 'warm'
+            WHEN LOWER(COALESCE(u.utm_source, '')) IN ('meta', 'facebook', 'instagram', 'fb', 'ig', 'power-reset')
+              THEN 'cold'
+            -- Fallback ads only when utm_source is empty. Defaults to
+            -- 'cold' bucket since that's the higher-volume ads channel.
+            WHEN COALESCE(u.utm_source, '') = ''
+              AND (
+                LOWER(COALESCE(u.utm_medium, '')) IN ('paid_social', 'paidsocial', 'cpc', 'ppc')
+                OR EXISTS (
+                  SELECT 1 FROM purchases p2
+                  WHERE LOWER(p2.email) = LOWER(u.email)
+                    AND (p2.product_name ILIKE '%- Ads' OR p2.product_name ILIKE '%-ads' OR p2.product_name ILIKE '% Ads')
+                )
               )
               THEN 'cold'
-            WHEN LOWER(COALESCE(u.utm_source, ''))   = 'whatsapp' THEN 'whatsapp'
             WHEN COALESCE(u.utm_source, '') = ''
               AND COALESCE(u.utm_campaign, '') = ''              THEN 'whatsapp'
             ELSE 'other'
