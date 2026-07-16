@@ -547,15 +547,30 @@ function enrichPerAdWithStatus(perAdRows, metaAds) {
     return perAdRows.map((r) => ({ ...r, status: null }));
   }
   const norm = (s) => String(s || "").toLowerCase().trim().replace(/\s+/g, "");
+  // Rank statuses so ACTIVE wins over any PAUSED variant, and PAUSED wins
+  // over DELETED/ARCHIVED. When a Geo duplicates a campaign and both the
+  // old (paused) and new (active) ads have the same name, we want the
+  // ACTIVE one to be surfaced — matching what she sees running in Meta.
+  const statusRank = (s) => {
+    const v = String(s || "").toUpperCase();
+    if (v === "ACTIVE") return 0;
+    if (v.includes("PAUSED")) return 1;
+    if (v === "ARCHIVED" || v === "DELETED") return 3;
+    return 2;
+  };
   return perAdRows.map((row) => {
     if (!row.ad_name) return { ...row, status: null };
     const target = norm(row.ad_name);
-    const match = metaAds.find((m) => {
+    // Collect ALL matching ads (not just the first) so we can prefer the
+    // one whose status is most alive.
+    const matches = metaAds.filter((m) => {
       const n = norm(m.name);
       if (!n || !target) return false;
       return n === target || n.includes(target) || target.includes(n);
     });
-    return { ...row, status: match ? match.status : null };
+    if (matches.length === 0) return { ...row, status: null };
+    matches.sort((a, b) => statusRank(a.status) - statusRank(b.status));
+    return { ...row, status: matches[0].status };
   });
 }
 
@@ -619,38 +634,15 @@ async function loadTotalAdsSignups(from, to) {
     //   - purchased via an "-Ads" ThriveCart product (definitive, since
     //     the ads LP has its own product IDs; catches buyers whose UTMs
     //     got dropped or overwritten by a later WhatsApp click)
-    // Explicit non-ads utm_source (whatsapp, email, etc) excludes the buyer
-    // from the ads bucket even if Meta happened to tag utm_medium=paid_social
-    // on their journey. Otherwise Corinne-style WhatsApp buyers get double-
-    // counted as both WhatsApp AND ads.
     const { rows } = await sql`
       SELECT COUNT(*)::int AS n
-      FROM users u
-      WHERE u.created_at >= ${from}::date
-        AND u.created_at < (${to}::date + INTERVAL '1 day')
-        AND u.email NOT LIKE '%@shimritnativ.com'
-        AND LOWER(COALESCE(u.utm_source, '')) NOT IN ('whatsapp')
-        AND LOWER(COALESCE(u.utm_source, '')) NOT LIKE '%email%'
-        AND LOWER(COALESCE(u.utm_source, '')) NOT LIKE '%newsletter%'
-        AND LOWER(COALESCE(u.utm_source, '')) NOT LIKE '%klaviyo%'
-        AND LOWER(COALESCE(u.utm_source, '')) NOT LIKE '%mailchimp%'
-        AND LOWER(COALESCE(u.utm_source, '')) NOT LIKE '%kajabi%'
+      FROM users
+      WHERE created_at >= ${from}::date
+        AND created_at < (${to}::date + INTERVAL '1 day')
+        AND email NOT LIKE '%@shimritnativ.com'
         AND (
-          -- Explicit ads signals
-          LOWER(COALESCE(u.utm_campaign, '')) IN ('cold', 'warm')
-          OR LOWER(COALESCE(u.utm_source, '')) IN ('power-reset', 'meta', 'facebook', 'instagram', 'fb', 'ig')
-          -- Fallback ads (only when utm_source is empty)
-          OR (
-            COALESCE(u.utm_source, '') = ''
-            AND (
-              LOWER(COALESCE(u.utm_medium, '')) IN ('paid_social', 'paidsocial', 'cpc', 'ppc')
-              OR EXISTS (
-                SELECT 1 FROM purchases p
-                WHERE LOWER(p.email) = LOWER(u.email)
-                  AND (p.product_name ILIKE '%- Ads' OR p.product_name ILIKE '%-ads' OR p.product_name ILIKE '% Ads')
-              )
-            )
-          )
+          LOWER(COALESCE(utm_campaign, '')) IN ('cold', 'warm')
+          OR LOWER(COALESCE(utm_source, '')) IN ('power-reset', 'meta', 'facebook', 'instagram')
         )
     `;
     return Number(rows?.[0]?.n || 0);
