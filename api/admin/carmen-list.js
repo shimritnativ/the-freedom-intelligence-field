@@ -86,8 +86,9 @@ export default async function handler(req, res) {
         AND u.email NOT ILIKE 'airabueno.va@%'      -- Aira
         AND u.email NOT ILIKE 'rejikaa@%'           -- Rejane
         AND u.email NOT ILIKE 'tomer32i@%'          -- Tomer
-        AND u.email NOT ILIKE 'ido@%'               -- Ido
-        AND u.email NOT ILIKE 'ido.%'               -- Ido (firstname.lastname pattern)
+        AND u.email NOT ILIKE 'ido@%'               -- Ido (bare handle)
+        AND u.email NOT ILIKE 'ido.%'               -- Ido (firstname.lastname)
+        AND u.email NOT ILIKE 'idobukelman@%'       -- Ido (his real gmail)
         AND u.email NOT ILIKE 'shimrit.nativ@%'     -- Shimrit (personal gmail)
         AND u.email NOT ILIKE 'brunadudas777@%'     -- Bruna (per Geo's request 2026-07-20)
         AND u.email NOT ILIKE 'jerome.feinberg@%'   -- Jerome (per Geo's request 2026-07-20)
