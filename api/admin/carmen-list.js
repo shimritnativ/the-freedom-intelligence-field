@@ -100,7 +100,11 @@ export default async function handler(req, res) {
           )
           OR COALESCE(mpo.is_certification, false)
         ) AS is_certification,
-        mgt.updated_at AS tags_synced_at
+        mgt.updated_at AS tags_synced_at,
+        -- Cheat sheet flags. has_cheat_sheet=true iff EITHER the auto-
+        -- generated tag_summary or Aira's manual notes have content.
+        (cs.tag_summary IS NOT NULL AND LENGTH(TRIM(cs.tag_summary)) > 0) AS has_tag_summary,
+        (cs.notes       IS NOT NULL AND LENGTH(TRIM(cs.notes))       > 0) AS has_notes
       FROM users u
       LEFT JOIN LATERAL (
         SELECT contact_phone, contact_name, ghl_contact_id
@@ -123,6 +127,8 @@ export default async function handler(req, res) {
         ON LOWER(mgt.email) = LOWER(u.email)
       LEFT JOIN member_program_overrides mpo
         ON LOWER(mpo.email) = LOWER(u.email)
+      LEFT JOIN member_cheat_sheets cs
+        ON LOWER(cs.email) = LOWER(u.email)
       WHERE u.kajabi_entitled = true
         -- Staff / test accounts — never surface to Carmen. Emails collected
         -- explicitly rather than by domain because most staff use gmail.
@@ -169,6 +175,9 @@ export default async function handler(req, res) {
       is_rise_past: !!r.is_rise_past,
       is_certification: !!r.is_certification,
       tags_synced_at: r.tags_synced_at || null,
+      has_tag_summary: !!r.has_tag_summary,
+      has_notes: !!r.has_notes,
+      has_cheat_sheet: !!r.has_tag_summary || !!r.has_notes,
     }));
 
     return res.status(200).json({
