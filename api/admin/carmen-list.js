@@ -69,22 +69,36 @@ export default async function handler(req, res) {
           SELECT 1 FROM jsonb_array_elements_text(COALESCE(mgt.tags, '[]'::jsonb)) t(tag)
           WHERE LOWER(t.tag) LIKE '%newly engaged%'
         ) AS is_newly_engaged,
-        -- Rise program membership. Any of these tags counts:
-        --   "rise client" · "rise graduate" · "rise past client" · "rise paused"
-        -- The single '%rise%' LIKE match is intentional because every current
-        -- Rise-related tag has "rise " as a prefix. If a totally unrelated
-        -- tag ever contains the word "rise" we'll tighten this — for now
-        -- one broad check is simpler than four narrow ones.
-        EXISTS (
-          SELECT 1 FROM jsonb_array_elements_text(COALESCE(mgt.tags, '[]'::jsonb)) t(tag)
-          WHERE LOWER(t.tag) LIKE 'rise %' OR LOWER(t.tag) = 'rise'
-        ) AS is_rise,
-        -- MYP Certification program.
-        EXISTS (
-          SELECT 1 FROM jsonb_array_elements_text(COALESCE(mgt.tags, '[]'::jsonb)) t(tag)
-          WHERE LOWER(t.tag) LIKE '%myp certificate%'
-             OR LOWER(t.tag) LIKE '%myp cert%'
-             OR LOWER(t.tag) LIKE '%coaching certification%'
+        -- Rise program — split into CURRENT vs PAST.
+        --   Current tags:  "rise client", "rise paused", bare "rise"
+        --   Past tags:     "rise past client", "past rise client", "rise graduate"
+        -- OR'd with the manual override table so Geo can flag members whose
+        -- GHL tags don't reflect reality yet.
+        (
+          EXISTS (
+            SELECT 1 FROM jsonb_array_elements_text(COALESCE(mgt.tags, '[]'::jsonb)) t(tag)
+            WHERE LOWER(t.tag) IN ('rise client', 'rise paused', 'rise')
+          )
+          OR COALESCE(mpo.is_rise_current, false)
+        ) AS is_rise_current,
+        (
+          EXISTS (
+            SELECT 1 FROM jsonb_array_elements_text(COALESCE(mgt.tags, '[]'::jsonb)) t(tag)
+            WHERE LOWER(t.tag) LIKE '%past rise client%'
+               OR LOWER(t.tag) LIKE 'rise past%'
+               OR LOWER(t.tag) LIKE '%rise graduate%'
+          )
+          OR COALESCE(mpo.is_rise_past, false)
+        ) AS is_rise_past,
+        -- MYP Certification program — tag OR manual override.
+        (
+          EXISTS (
+            SELECT 1 FROM jsonb_array_elements_text(COALESCE(mgt.tags, '[]'::jsonb)) t(tag)
+            WHERE LOWER(t.tag) LIKE '%myp certificate%'
+               OR LOWER(t.tag) LIKE '%myp cert%'
+               OR LOWER(t.tag) LIKE '%coaching certification%'
+          )
+          OR COALESCE(mpo.is_certification, false)
         ) AS is_certification,
         mgt.updated_at AS tags_synced_at
       FROM users u
@@ -107,6 +121,8 @@ export default async function handler(req, res) {
        AND cc.contacted_at > NOW() - (${CONTACTED_TTL_DAYS}::text || ' days')::interval
       LEFT JOIN member_ghl_tags mgt
         ON LOWER(mgt.email) = LOWER(u.email)
+      LEFT JOIN member_program_overrides mpo
+        ON LOWER(mpo.email) = LOWER(u.email)
       WHERE u.kajabi_entitled = true
         -- Staff / test accounts — never surface to Carmen. Emails collected
         -- explicitly rather than by domain because most staff use gmail.
@@ -149,7 +165,8 @@ export default async function handler(req, res) {
       contacted_at: r.contacted_at || null,
       contacted_by: r.contacted_by || null,
       is_newly_engaged: !!r.is_newly_engaged,
-      is_rise: !!r.is_rise,
+      is_rise_current: !!r.is_rise_current,
+      is_rise_past: !!r.is_rise_past,
       is_certification: !!r.is_certification,
       tags_synced_at: r.tags_synced_at || null,
     }));
