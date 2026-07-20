@@ -255,6 +255,34 @@
       background: var(--danger-soft);
       color: var(--danger);
     }
+    /* Tag-derived pills: newly-engaged badge + client status badge. */
+    .flag-pill {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .flag-yes {
+      background: rgba(46, 125, 50, 0.12);
+      color: var(--success);
+    }
+    .flag-no {
+      color: var(--text-mute);
+      opacity: 0.5;
+      font-style: italic;
+    }
+    .flag-client-current {
+      background: rgba(185, 154, 92, 0.14);
+      color: #8A6D2E;
+    }
+    .flag-client-past {
+      background: var(--bg-warm);
+      color: var(--text-dim);
+    }
     .day-badge {
       display: inline-block;
       min-width: 22px;
@@ -424,6 +452,9 @@
       <button class="filter-chip" data-filter="uncontacted" type="button">Not called yet</button>
       <button class="filter-chip" data-filter="tier_reset" type="button">Reset</button>
       <button class="filter-chip" data-filter="tier_unlimited" type="button">Unlimited</button>
+      <button class="filter-chip" data-filter="newly_engaged" type="button">Newly engaged</button>
+      <button class="filter-chip" data-filter="client_current" type="button">Current client</button>
+      <button class="filter-chip" data-filter="client_past" type="button">Past client</button>
       <button class="filter-chip" data-filter="never_logged_in" type="button">Never logged in</button>
       <button class="filter-chip" data-filter="stuck_day_0" type="button">Stalled Day 0</button>
       <button class="filter-chip" data-filter="stuck_day_1" type="button">Stalled Day 1</button>
@@ -442,6 +473,8 @@
             <th>Member</th>
             <th>WhatsApp</th>
             <th>Tier</th>
+            <th>Engaged</th>
+            <th>Client</th>
             <th>Joined</th>
             <th>1st login</th>
             <th>Day</th>
@@ -451,7 +484,7 @@
           </tr>
         </thead>
         <tbody id="tbody">
-          <tr><td colspan="9" class="empty-state">Loading…</td></tr>
+          <tr><td colspan="11" class="empty-state">Loading…</td></tr>
         </tbody>
       </table>
     </div>
@@ -522,7 +555,7 @@
       if (!token) {
         document.getElementById("auth-alert").style.display = "block";
         document.getElementById("tbody").innerHTML =
-          '<tr><td colspan="9" class="empty-state">Not signed in.</td></tr>';
+          '<tr><td colspan="11" class="empty-state">Not signed in.</td></tr>';
         return;
       }
       document.getElementById("auth-alert").style.display = "none";
@@ -534,7 +567,7 @@
         if (res.status === 401) {
           document.getElementById("auth-alert").style.display = "block";
           document.getElementById("tbody").innerHTML =
-            '<tr><td colspan="9" class="empty-state">Session expired.</td></tr>';
+            '<tr><td colspan="11" class="empty-state">Session expired.</td></tr>';
           return;
         }
         if (!res.ok) throw new Error("HTTP " + res.status);
@@ -544,7 +577,7 @@
         renderTable();
       } catch (e) {
         document.getElementById("tbody").innerHTML =
-          '<tr><td colspan="9" class="empty-state">Failed to load: ' + esc(e.message) + '</td></tr>';
+          '<tr><td colspan="11" class="empty-state">Failed to load: ' + esc(e.message) + '</td></tr>';
       }
     }
 
@@ -558,6 +591,9 @@
         case "uncontacted":       return !m.contacted;
         case "tier_reset":        return m.tier === "preview";
         case "tier_unlimited":    return m.tier === "full";
+        case "newly_engaged":     return !!m.is_newly_engaged;
+        case "client_current":    return m.client_status === "current";
+        case "client_past":       return m.client_status === "past";
         case "never_logged_in":   return isNeverLoggedIn(m);
         case "stuck_day_0":       return isStalledDay(m, 0);
         case "stuck_day_1":       return isStalledDay(m, 1);
@@ -617,7 +653,7 @@
       const filtered = sortMembers(allMembers.filter(m => passesFilter(m) && passesSearch(m)));
 
       if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No members match this view.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="empty-state">No members match this view.</td></tr>';
         return;
       }
 
@@ -629,6 +665,14 @@
         const tierBadge = m.tier === "full"
           ? '<span class="tier-badge tier-full">Unlimited</span>'
           : '<span class="tier-badge tier-preview">Reset</span>';
+        const engagedBadge = m.is_newly_engaged
+          ? '<span class="flag-pill flag-yes" title="Has &quot;newly engaged reset&quot; tag in GHL">Yes</span>'
+          : '<span class="flag-no">—</span>';
+        const clientBadge = m.client_status === "current"
+          ? '<span class="flag-pill flag-client-current" title="Has &quot;rise client&quot; tag in GHL">Current</span>'
+          : m.client_status === "past"
+            ? '<span class="flag-pill flag-client-past" title="Has &quot;past rise client&quot; tag in GHL">Past</span>'
+            : '<span class="flag-no">—</span>';
         const ghlUrl = m.ghl_contact_id
           ? `https://app.gohighlevel.com/v2/location/${GHL_LOCATION_ID}/contacts/detail/${encodeURIComponent(m.ghl_contact_id)}`
           : null;
@@ -649,6 +693,8 @@
               }
             </td>
             <td>${tierBadge}</td>
+            <td>${engagedBadge}</td>
+            <td>${clientBadge}</td>
             <td>${fmtDate(m.created_at)}</td>
             <td>${firstLogin}</td>
             <td><span class="day-badge ${dayCls}">${m.last_completed_day || 0}</span></td>
