@@ -52,15 +52,15 @@ export default async function handler(req, res) {
         u.first_login_at,
         u.preview_ends_at,
         u.last_completed_day,
-        wa.contact_phone AS phone,
-        wa.contact_name  AS wa_name,
+        wa.contact_phone   AS phone,
+        wa.contact_name    AS wa_name,
+        wa.ghl_contact_id  AS ghl_contact_id,
         msg.last_user_message_at,
-        cc.contacted_at  AS contacted_at,
-        cc.contacted_by  AS contacted_by,
-        (cs.notes IS NOT NULL AND LENGTH(TRIM(cs.notes)) > 0) AS has_cheat_sheet
+        cc.contacted_at    AS contacted_at,
+        cc.contacted_by    AS contacted_by
       FROM users u
       LEFT JOIN LATERAL (
-        SELECT contact_phone, contact_name
+        SELECT contact_phone, contact_name, ghl_contact_id
         FROM whatsapp_message_events
         WHERE LOWER(contact_email) = LOWER(u.email)
           AND contact_phone IS NOT NULL
@@ -76,11 +76,23 @@ export default async function handler(req, res) {
       LEFT JOIN carmen_contacted cc
         ON LOWER(cc.email) = LOWER(u.email)
        AND cc.contacted_at > NOW() - (${CONTACTED_TTL_DAYS}::text || ' days')::interval
-      LEFT JOIN member_cheat_sheets cs
-        ON LOWER(cs.email) = LOWER(u.email)
       WHERE u.kajabi_entitled = true
+        -- Staff / test accounts — never surface to Carmen. Emails collected
+        -- explicitly rather than by domain because most staff use gmail.
         AND u.email NOT ILIKE '%@shimritnativ.com'
         AND u.email NOT ILIKE '%@masteryourpath.%'
+        AND u.email NOT ILIKE '%ge.amaral%'         -- Geo
+        AND u.email NOT ILIKE '%geoamaral%'         -- Geo (alt spelling)
+        AND u.email NOT ILIKE 'airabueno.va@%'      -- Aira
+        AND u.email NOT ILIKE 'rejikaa@%'           -- Rejane
+        AND u.email NOT ILIKE 'tomer32i@%'          -- Tomer
+        AND u.email NOT ILIKE 'ido@%'               -- Ido
+        AND u.email NOT ILIKE 'ido.%'               -- Ido (firstname.lastname pattern)
+        AND u.email NOT ILIKE 'carmen.faunback@%'   -- Carmen herself
+        AND u.email NOT ILIKE 'nobody@%'            -- test placeholder
+        AND u.email NOT ILIKE '%+test%'             -- plus-addressed test emails
+        AND u.email NOT ILIKE '%+tctest%'
+        AND u.email NOT ILIKE '%+power50test%'
       ORDER BY u.created_at DESC
     `;
 
@@ -94,11 +106,11 @@ export default async function handler(req, res) {
       preview_ends_at: r.preview_ends_at,
       last_completed_day: r.last_completed_day || 0,
       phone: r.phone || null,
+      ghl_contact_id: r.ghl_contact_id || null,
       last_user_message_at: r.last_user_message_at || null,
       contacted: !!r.contacted_at,
       contacted_at: r.contacted_at || null,
       contacted_by: r.contacted_by || null,
-      has_cheat_sheet: !!r.has_cheat_sheet,
     }));
 
     return res.status(200).json({
