@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="facebook-domain-verification" content="qnvdy6k60fvdf2tfzpsodifmfni7g9" />
 <title>The Freedom Intelligence Field</title>
 
 <!-- Open Graph (WhatsApp, iMessage, LinkedIn, Slack, Facebook) -->
@@ -3638,6 +3639,155 @@
     .entry-title { font-size: 20px; }
     .entry-sub { font-size: 12px; }
     textarea, .entry-input { font-size: 16px; }
+  }
+
+  /* ─── Coach Carmen intercom popup ─────────────────────────────────
+     A floating card in the bottom-right that greets members and invites
+     them to book a free coaching session with Carmen. Shows once per
+     member (localStorage-gated), appears 6 seconds after page load so
+     it doesn't disrupt the entry moment, plays a soft chime.
+     Palette matches the warm cream tone the Field just moved to. */
+  .cp-popup {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 340px;
+    max-width: calc(100vw - 32px);
+    background: var(--panel);
+    border: 1px solid var(--gold-line);
+    border-radius: 16px;
+    box-shadow: 0 24px 64px rgba(43, 35, 24, 0.20),
+                0 2px 8px rgba(43, 35, 24, 0.06);
+    padding: 18px 20px 16px;
+    z-index: 9000;
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+    transition: opacity 320ms ease, transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .cp-popup.show {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+  html[data-theme="dark"] .cp-popup {
+    background: #1a140e;
+    border-color: rgba(239, 198, 112, 0.25);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  }
+  .cp-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    background: transparent;
+    color: var(--text-mute);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 160ms ease, color 160ms ease;
+    font-family: inherit;
+  }
+  .cp-close:hover {
+    background: var(--gold-soft);
+    color: var(--text);
+  }
+  .cp-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .cp-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--gold);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+    object-fit: cover;
+    border: 2px solid var(--panel);
+    box-shadow: 0 0 0 1px var(--gold-line);
+  }
+  .cp-name {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text);
+    letter-spacing: 0.01em;
+  }
+  .cp-role {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 1px;
+    letter-spacing: 0.02em;
+  }
+  .cp-msg {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--text);
+    margin: 0 0 8px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .cp-msg strong { font-weight: 700; color: var(--text); }
+  .cp-cta-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .cp-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    text-decoration: none;
+    border: 1.5px solid transparent;
+    transition: background 160ms ease, border-color 160ms ease, transform 100ms ease;
+  }
+  .cp-cta.primary {
+    background: var(--gold);
+    color: #fff;
+    border-color: var(--gold);
+  }
+  .cp-cta.primary:hover {
+    background: #a68a52;
+    border-color: #a68a52;
+  }
+  .cp-cta.primary:active { transform: scale(0.97); }
+  .cp-cta.secondary {
+    background: transparent;
+    color: var(--text-dim);
+    border-color: transparent;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+  .cp-cta.secondary:hover {
+    color: var(--text);
+  }
+  @media (max-width: 480px) {
+    .cp-popup {
+      right: 12px;
+      left: 12px;
+      bottom: 12px;
+      width: auto;
+    }
   }
 </style>
 
@@ -10039,6 +10189,139 @@ Begin.` },
       e.preventDefault();
       alert("WhatsApp support is not configured yet. Please email support@shimritnativ.com.");
     }
+  });
+})();
+</script>
+
+<!-- ─── Coach Carmen intercom popup ───────────────────────────────── -->
+<div id="cp-popup" class="cp-popup" role="dialog" aria-label="Message from Coach Carmen">
+  <button class="cp-close" type="button" data-cp-action="dismiss" aria-label="Close">×</button>
+  <div class="cp-head">
+    <!-- Uses an initials avatar by default. Swap the src on the <img>
+         below to Carmen's real photo when Geo has one. -->
+    <div class="cp-avatar" id="cp-avatar">C</div>
+    <div>
+      <div class="cp-name">Coach Carmen</div>
+      <div class="cp-role">Shimrit's team</div>
+    </div>
+  </div>
+  <p class="cp-msg">Hey, this is coach Carmen from Shimrit's team — I'd love to know how your experience with the Power Reset has been so far.</p>
+  <p class="cp-msg">Do you have some time this week for a quick and <strong>free coaching session</strong> with me?</p>
+  <div class="cp-cta-row">
+    <a class="cp-cta primary" href="https://api.leadconnectorhq.com/widget/bookings/connectcall-masteryourpath" target="_blank" rel="noopener noreferrer" data-cp-action="book">Book a free session ✨</a>
+    <button class="cp-cta secondary" type="button" data-cp-action="dismiss">Maybe later</button>
+  </div>
+</div>
+
+<script>
+(function initCarmenPopup() {
+  // Show once per member per browser. localStorage is enough for MVP;
+  // if someone clears their browser they'll see it again — acceptable
+  // since a repeated invitation to a free session isn't harmful.
+  const SEEN_KEY = "myp_carmen_popup_v1";
+  // Small helper — bump this to _v2 later if we want everyone who
+  // dismissed to see a refreshed version.
+
+  // Skip staff / test accounts. Read the current member's email from
+  // the same localStorage key used elsewhere in app.html if available.
+  function currentEmail() {
+    try {
+      const cached = localStorage.getItem("tfif_member_email_v1")
+                 || localStorage.getItem("tfif_member_email")
+                 || "";
+      return cached.toLowerCase();
+    } catch { return ""; }
+  }
+  function isStaff(email) {
+    if (!email) return false;
+    return email.endsWith("@shimritnativ.com")
+        || email.endsWith("@masteryourpath.com")
+        || email.includes("+test")
+        || email.startsWith("ge.amaral")
+        || email.startsWith("geoamaral")
+        || email.startsWith("airabueno.va")
+        || email.startsWith("carmen.faunback");
+  }
+
+  function playChime() {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const now = ctx.currentTime;
+      // Soft two-note ping: C6 → E6, short decay.
+      const notes = [1046.5, 1318.5];
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        const start = now + i * 0.09;
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(0.06, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.35);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + 0.4);
+      });
+    } catch { /* silent */ }
+  }
+
+  function showPopup() {
+    const popup = document.getElementById("cp-popup");
+    if (!popup) return;
+    popup.classList.add("show");
+    playChime();
+    try {
+      localStorage.setItem(SEEN_KEY, JSON.stringify({ shown_at: new Date().toISOString() }));
+    } catch { /* ignore quota errors */ }
+  }
+
+  function markInteraction(action) {
+    try {
+      const prev = JSON.parse(localStorage.getItem(SEEN_KEY) || "{}");
+      prev[action + "_at"] = new Date().toISOString();
+      localStorage.setItem(SEEN_KEY, JSON.stringify(prev));
+    } catch {}
+  }
+
+  function dismissPopup() {
+    const popup = document.getElementById("cp-popup");
+    if (popup) popup.classList.remove("show");
+    markInteraction("dismissed");
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const popup = document.getElementById("cp-popup");
+    if (!popup) return;
+
+    // Delegated click handler for buttons inside the popup.
+    popup.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-cp-action]");
+      if (!btn) return;
+      const action = btn.dataset.cpAction;
+      if (action === "dismiss") {
+        dismissPopup();
+      } else if (action === "book") {
+        markInteraction("booked");
+        // Also close so the popup doesn't hover over the booking widget.
+        setTimeout(() => {
+          const p = document.getElementById("cp-popup");
+          if (p) p.classList.remove("show");
+        }, 250);
+      }
+    });
+
+    // Gating logic
+    let existing = null;
+    try { existing = JSON.parse(localStorage.getItem(SEEN_KEY) || "null"); } catch {}
+    if (existing) return; // already shown — respect the "once per member" rule
+    if (isStaff(currentEmail())) return;
+
+    // Delay entrance so the member sees the Field first and the pop-in
+    // feels intentional rather than pushy.
+    setTimeout(showPopup, 6000);
   });
 })();
 </script>
