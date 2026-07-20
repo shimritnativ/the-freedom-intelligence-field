@@ -694,6 +694,9 @@
         <div class="cs-tag-summary" id="cs-tag-summary">Loading…</div>
         <p class="cs-section-label">Your notes (Aira / Carmen)</p>
         <textarea class="cs-notes-input" id="cs-notes-input" placeholder="Anything else worth knowing before the call — what they said in DMs, family context, prior offer they saw, etc."></textarea>
+        <p style="font-size: 11px; color: var(--text-dim); margin: 6px 2px 0; font-style: italic;">
+          Auto-synced to the member's Notes tab in GoHighLevel when you save.
+        </p>
       </div>
       <div class="cs-modal-footer">
         <span class="cs-modal-meta" id="cs-modal-meta"></span>
@@ -1018,6 +1021,7 @@
           body: JSON.stringify({ email: cheatEditingEmail, notes }),
         });
         if (!res.ok) throw new Error("HTTP " + res.status);
+        const payload = await res.json().catch(() => ({}));
         // Reflect new has_cheat_sheet state locally so the icon flips.
         const m = allMembers.find((x) => x.email === cheatEditingEmail);
         if (m) {
@@ -1025,7 +1029,17 @@
           m.has_cheat_sheet = m.has_tag_summary || m.has_notes;
         }
         renderTable();
-        toast(notes.trim() ? "Notes saved ✓" : "Notes cleared");
+        // Toast reflects both the local save AND whether GHL sync succeeded.
+        const ghl = payload && payload.ghl;
+        if (!notes.trim()) {
+          if (ghl && ghl.synced) toast("Notes cleared · Removed from GHL ✓");
+          else if (ghl && !ghl.synced) toast("Notes cleared locally · GHL delete failed");
+          else toast("Notes cleared");
+        } else {
+          if (ghl && ghl.synced) toast("Notes saved · Synced to GHL ✓");
+          else if (ghl && !ghl.synced) toast("Notes saved locally · GHL sync failed (" + (ghl.error || "unknown") + ")");
+          else toast("Notes saved");
+        }
         closeCheatSheet();
       } catch (e) {
         toast("Save failed: " + e.message);
