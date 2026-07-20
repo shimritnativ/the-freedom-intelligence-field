@@ -101,6 +101,15 @@ export default async function handler(req, res) {
           OR COALESCE(mpo.is_certification, false)
         ) AS is_certification,
         mgt.updated_at AS tags_synced_at,
+        -- Last DM date pulled from the GHL custom field named "last dm date"
+        -- (case-insensitive). If Shimrit renames it we broaden the match here.
+        (
+          SELECT value
+          FROM jsonb_each_text(COALESCE(mgt.custom_fields, '{}'::jsonb))
+          WHERE LOWER(key) LIKE '%last dm%'
+             OR LOWER(key) LIKE '%last%direct message%'
+          LIMIT 1
+        ) AS last_dm_date_raw,
         -- Cheat sheet flags. has_cheat_sheet=true iff EITHER the auto-
         -- generated tag_summary or Aira's manual notes have content.
         (cs.tag_summary IS NOT NULL AND LENGTH(TRIM(cs.tag_summary)) > 0) AS has_tag_summary,
@@ -178,6 +187,7 @@ export default async function handler(req, res) {
       has_tag_summary: !!r.has_tag_summary,
       has_notes: !!r.has_notes,
       has_cheat_sheet: !!r.has_tag_summary || !!r.has_notes,
+      last_dm_date: r.last_dm_date_raw || null,
     }));
 
     return res.status(200).json({
