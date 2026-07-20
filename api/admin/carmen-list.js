@@ -62,9 +62,12 @@ export default async function handler(req, res) {
         -- tags array. Uses EXISTS + jsonb_array_elements_text so a tag
         -- like "Newly Engaged Reset" matches whether Aira typed it in
         -- caps, mixed case, or lower.
+        -- "Newly engaged" flag catches any variant: "newly engaged",
+        -- "reset newly engaged", "newly engaged reset", "reset - newly
+        -- engaged", etc. A single '%newly engaged%' match covers them all.
         EXISTS (
           SELECT 1 FROM jsonb_array_elements_text(COALESCE(mgt.tags, '[]'::jsonb)) t(tag)
-          WHERE LOWER(t.tag) LIKE '%newly engaged reset%'
+          WHERE LOWER(t.tag) LIKE '%newly engaged%'
         ) AS is_newly_engaged,
         -- Rise program membership. Any of these tags counts:
         --   "rise client" · "rise graduate" · "rise past client" · "rise paused"
