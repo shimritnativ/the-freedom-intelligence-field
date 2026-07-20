@@ -220,12 +220,13 @@
       text-transform: uppercase;
       color: var(--text-dim);
       white-space: nowrap;
-      /* Sticky column headers — stay glued below the topbar when Carmen
-         scrolls the queue. The topbar is position:sticky at top:0 with
-         z-index:50; this header sticks at 72px (topbar height) with a
-         lower z-index so the topbar covers it if they visually overlap. */
+      /* Sticky column headers — glued below the topbar when Carmen scrolls
+         the queue. --topbar-h is set by JS on load / resize so the offset
+         is always exact regardless of the topbar's actual height (fallback
+         64px). Lower z-index than the topbar so the topbar always covers
+         this row visually. */
       position: sticky;
-      top: 72px;
+      top: var(--topbar-h, 64px);
       z-index: 20;
       box-shadow: 0 1px 0 var(--border);
     }
@@ -1036,8 +1037,20 @@
       document.getElementById("cs-modal").classList.remove("open");
     }
 
+    // Measure the topbar so the sticky column headers pin exactly beneath
+    // it. Recomputed on window resize so the layout stays correct if the
+    // brand row ever wraps to two lines on a narrow screen.
+    function syncTopbarHeight() {
+      const topbar = document.querySelector(".topbar");
+      if (!topbar) return;
+      const h = topbar.getBoundingClientRect().height;
+      document.documentElement.style.setProperty("--topbar-h", h + "px");
+    }
+    window.addEventListener("resize", syncTopbarHeight);
+
     // ── Wire up ──────────────────────────────────────────────────────────
     document.addEventListener("DOMContentLoaded", () => {
+      syncTopbarHeight();
       // Filter chips
       document.querySelectorAll(".filter-chip").forEach(chip => {
         chip.addEventListener("click", () => {
