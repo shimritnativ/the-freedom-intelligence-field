@@ -39,6 +39,10 @@
     {
       "source": "/aira",
       "destination": "/Aira_Daily_SOPs.html"
+    },
+    {
+      "source": "/carmen",
+      "destination": "/Carmen_Outreach.html"
     }
   ],
   "crons": [
