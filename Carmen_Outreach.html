@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Carmen · Outreach Queue · The Field</title>
+  <link rel="icon" type="image/png" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" />
   <style>
     :root {
       --bg: #FAF6EE;
@@ -421,6 +422,8 @@
       <input class="filter-search" type="search" id="search" placeholder="Search by name, email, or phone…" />
       <button class="filter-chip active" data-filter="all" type="button">All</button>
       <button class="filter-chip" data-filter="uncontacted" type="button">Not called yet</button>
+      <button class="filter-chip" data-filter="tier_reset" type="button">Reset</button>
+      <button class="filter-chip" data-filter="tier_unlimited" type="button">Unlimited</button>
       <button class="filter-chip" data-filter="never_logged_in" type="button">Never logged in</button>
       <button class="filter-chip" data-filter="stuck_day_0" type="button">Stalled Day 0</button>
       <button class="filter-chip" data-filter="stuck_day_1" type="button">Stalled Day 1</button>
@@ -553,6 +556,8 @@
     function passesFilter(m) {
       switch (currentFilter) {
         case "uncontacted":       return !m.contacted;
+        case "tier_reset":        return m.tier === "preview";
+        case "tier_unlimited":    return m.tier === "full";
         case "never_logged_in":   return isNeverLoggedIn(m);
         case "stuck_day_0":       return isStalledDay(m, 0);
         case "stuck_day_1":       return isStalledDay(m, 1);
