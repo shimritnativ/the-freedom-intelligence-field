@@ -29,7 +29,28 @@ const V1_BASE = "https://rest.gohighlevel.com/v1";
 const CONCURRENCY = 5;    // parallel GHL requests
 const REQUEST_TIMEOUT_MS = 8000;
 
-async function fetchContactTags(ghlContactId, apiKey) {
+// Fetches all custom-field definitions for the location so we can map
+// the opaque field IDs returned per contact to human-readable names.
+// Called ONCE per sync run and cached in memory for the duration.
+async function fetchCustomFieldMap(apiKey) {
+  try {
+    const res = await fetch(`${V1_BASE}/custom-fields/`, {
+      headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
+    });
+    if (!res.ok) return {};
+    const data = await res.json();
+    const list = data && data.customFields ? data.customFields : (Array.isArray(data) ? data : []);
+    const map = {};
+    for (const f of list) {
+      if (f && f.id) map[f.id] = f.name || f.fieldKey || f.id;
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
+
+async function fetchContactTags(ghlContactId, apiKey, fieldNameById) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
@@ -48,7 +69,27 @@ async function fetchContactTags(ghlContactId, apiKey) {
     const data = await res.json();
     const contact = data && data.contact ? data.contact : data;
     const tags = Array.isArray(contact?.tags) ? contact.tags : [];
-    return { ok: true, tags, source: contact?.source || null };
+
+    // Custom fields come back as an array of {id, value} pairs. We keyed
+    // the map by ID at start of run — convert to {name: value} here so
+    // downstream code can just look up by human-readable name.
+    const cfByName = {};
+    const rawFields = contact?.customField || contact?.customFields || [];
+    if (Array.isArray(rawFields)) {
+      for (const f of rawFields) {
+        if (!f) continue;
+        const name = (fieldNameById && fieldNameById[f.id]) || f.id;
+        if (name && f.value !== undefined) cfByName[name] = f.value;
+      }
+    } else if (rawFields && typeof rawFields === "object") {
+      // Some GHL responses return an object keyed by field id.
+      for (const [id, value] of Object.entries(rawFields)) {
+        const name = (fieldNameById && fieldNameById[id]) || id;
+        cfByName[name] = value;
+      }
+    }
+
+    return { ok: true, tags, source: contact?.source || null, customFields: cfByName };
   } catch (e) {
     clearTimeout(timer);
     return { ok: false, status: 0, error: e.name === "AbortError" ? "timeout" : e.message };
@@ -91,6 +132,10 @@ export default async function handler(req, res) {
 
   const startedAt = Date.now();
 
+  // Fetch the custom-field ID→name map once at the start. Every contact
+  // fetch reuses this to convert opaque IDs into names like "Last DM Date".
+  const fieldNameById = await fetchCustomFieldMap(apiKey);
+
   // Fetch the roster: every active member who has a GHL contact ID we
   // can look up. The LATERAL matches the pattern carmen-list uses, so we
   // sync exactly the set of contacts Carmen sees.
@@ -125,19 +170,31 @@ export default async function handler(req, res) {
   const results = await runWithConcurrency(
     members,
     async (m) => {
-      const r = await fetchContactTags(m.ghl_contact_id, apiKey);
+      const r = await fetchContactTags(m.ghl_contact_id, apiKey, fieldNameById);
       if (!r.ok) return { email: m.email, ok: false, status: r.status, error: r.error };
-      // Upsert the tags into Neon.
+      // Upsert the tags + custom fields into Neon.
       try {
         await sql`
-          INSERT INTO member_ghl_tags (email, tags, source, updated_at)
-          VALUES (${m.email}, ${JSON.stringify(r.tags)}::jsonb, ${r.source}, NOW())
+          INSERT INTO member_ghl_tags (email, tags, source, custom_fields, updated_at)
+          VALUES (
+            ${m.email},
+            ${JSON.stringify(r.tags)}::jsonb,
+            ${r.source},
+            ${JSON.stringify(r.customFields || {})}::jsonb,
+            NOW()
+          )
           ON CONFLICT (email) DO UPDATE SET
-            tags       = EXCLUDED.tags,
-            source     = EXCLUDED.source,
-            updated_at = NOW()
+            tags          = EXCLUDED.tags,
+            source        = EXCLUDED.source,
+            custom_fields = EXCLUDED.custom_fields,
+            updated_at    = NOW()
         `;
-        return { email: m.email, ok: true, tag_count: r.tags.length };
+        return {
+          email: m.email,
+          ok: true,
+          tag_count: r.tags.length,
+          custom_field_count: Object.keys(r.customFields || {}).length,
+        };
       } catch (e) {
         return { email: m.email, ok: false, error: "db_write_failed: " + e.message };
       }
@@ -154,6 +211,8 @@ export default async function handler(req, res) {
     synced,
     failed_count: failed.length,
     failed: failed.slice(0, 20), // cap for readability
+    custom_fields_discovered: Object.keys(fieldNameById).length,
+    custom_field_names: Object.values(fieldNameById).slice(0, 40), // helpful for debugging
     elapsed_ms: Date.now() - startedAt,
   });
 }
@@ -165,11 +224,17 @@ Idempotent — safe to re-run.
 ==============================================================================
 
 CREATE TABLE IF NOT EXISTS member_ghl_tags (
-  email      TEXT PRIMARY KEY,
-  tags       JSONB NOT NULL DEFAULT '[]'::jsonb,
-  source     TEXT,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  email         TEXT PRIMARY KEY,
+  tags          JSONB NOT NULL DEFAULT '[]'::jsonb,
+  source        TEXT,
+  custom_fields JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- If the table already exists from an earlier sync, add the custom_fields
+-- column non-destructively:
+ALTER TABLE member_ghl_tags
+  ADD COLUMN IF NOT EXISTS custom_fields JSONB NOT NULL DEFAULT '{}'::jsonb;
 
 CREATE INDEX IF NOT EXISTS idx_member_ghl_tags_updated
   ON member_ghl_tags (updated_at DESC);
