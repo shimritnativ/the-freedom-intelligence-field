@@ -66,17 +66,23 @@ export default async function handler(req, res) {
           SELECT 1 FROM jsonb_array_elements_text(COALESCE(mgt.tags, '[]'::jsonb)) t(tag)
           WHERE LOWER(t.tag) LIKE '%newly engaged reset%'
         ) AS is_newly_engaged,
-        CASE
-          WHEN EXISTS (
-            SELECT 1 FROM jsonb_array_elements_text(COALESCE(mgt.tags, '[]'::jsonb)) t(tag)
-            WHERE LOWER(t.tag) LIKE '%past rise client%'
-          ) THEN 'past'
-          WHEN EXISTS (
-            SELECT 1 FROM jsonb_array_elements_text(COALESCE(mgt.tags, '[]'::jsonb)) t(tag)
-            WHERE LOWER(t.tag) LIKE '%rise client%'
-          ) THEN 'current'
-          ELSE NULL
-        END AS client_status,
+        -- Rise program membership. Any of these tags counts:
+        --   "rise client" · "rise graduate" · "rise past client" · "rise paused"
+        -- The single '%rise%' LIKE match is intentional because every current
+        -- Rise-related tag has "rise " as a prefix. If a totally unrelated
+        -- tag ever contains the word "rise" we'll tighten this — for now
+        -- one broad check is simpler than four narrow ones.
+        EXISTS (
+          SELECT 1 FROM jsonb_array_elements_text(COALESCE(mgt.tags, '[]'::jsonb)) t(tag)
+          WHERE LOWER(t.tag) LIKE 'rise %' OR LOWER(t.tag) = 'rise'
+        ) AS is_rise,
+        -- MYP Certification program.
+        EXISTS (
+          SELECT 1 FROM jsonb_array_elements_text(COALESCE(mgt.tags, '[]'::jsonb)) t(tag)
+          WHERE LOWER(t.tag) LIKE '%myp certificate%'
+             OR LOWER(t.tag) LIKE '%myp cert%'
+             OR LOWER(t.tag) LIKE '%coaching certification%'
+        ) AS is_certification,
         mgt.updated_at AS tags_synced_at
       FROM users u
       LEFT JOIN LATERAL (
@@ -140,7 +146,8 @@ export default async function handler(req, res) {
       contacted_at: r.contacted_at || null,
       contacted_by: r.contacted_by || null,
       is_newly_engaged: !!r.is_newly_engaged,
-      client_status: r.client_status || null, // 'current' | 'past' | null
+      is_rise: !!r.is_rise,
+      is_certification: !!r.is_certification,
       tags_synced_at: r.tags_synced_at || null,
     }));
 
