@@ -316,20 +316,35 @@
       font-size: 14px;
       font-weight: 900;
     }
-    .cheat-btn {
-      background: transparent;
+    .ghl-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
       border: 1px solid var(--gold-line);
-      border-radius: 6px;
-      padding: 4px 10px;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 15px;
-      line-height: 1;
-      transition: background 0.15s, border-color 0.15s;
+      border-radius: 8px;
+      color: var(--text-mid);
+      background: transparent;
+      text-decoration: none;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
     }
-    .cheat-btn:hover { background: var(--gold-soft); border-color: var(--gold); }
-    .cheat-btn.has-notes { background: var(--gold-soft); border-color: var(--gold); }
-    .cheat-btn .cheat-icon-empty { opacity: 0.35; }
+    .ghl-btn:hover {
+      background: var(--gold-soft);
+      border-color: var(--gold);
+      color: var(--text);
+    }
+    .ghl-btn svg { width: 15px; height: 15px; display: block; }
+    .ghl-none {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      color: var(--text-mute);
+      opacity: 0.35;
+      text-align: center;
+      line-height: 30px;
+      font-size: 14px;
+    }
     .empty-state {
       text-align: center;
       padding: 40px 20px;
@@ -366,82 +381,6 @@
       opacity: 1;
       transform: translateY(0);
     }
-    /* Modal for cheat sheet editor */
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.35);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 500;
-      padding: 20px;
-    }
-    .modal-backdrop.show { display: flex; }
-    .modal {
-      background: var(--bg-card);
-      border-radius: 12px;
-      max-width: 640px;
-      width: 100%;
-      max-height: 90vh;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    }
-    .modal-header {
-      padding: 20px 22px 12px;
-      border-bottom: 1px solid var(--border);
-    }
-    .modal-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--text);
-      margin: 0 0 4px;
-    }
-    .modal-subtitle {
-      font-size: 12px;
-      color: var(--text-dim);
-      margin: 0;
-    }
-    .modal-body {
-      padding: 16px 22px;
-      overflow-y: auto;
-      flex: 1;
-    }
-    .modal-textarea {
-      width: 100%;
-      min-height: 220px;
-      padding: 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-family: inherit;
-      font-size: 13px;
-      line-height: 1.5;
-      color: var(--text);
-      background: var(--bg-warm);
-      resize: vertical;
-    }
-    .modal-textarea:focus { outline: none; border-color: var(--gold); background: #fff; }
-    .modal-hint {
-      font-size: 11px;
-      color: var(--text-dim);
-      margin-top: 6px;
-      font-style: italic;
-    }
-    .modal-footer {
-      padding: 14px 22px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      align-items: center;
-    }
-    .modal-meta {
-      flex: 1;
-      font-size: 11px;
-      color: var(--text-dim);
-      font-style: italic;
-    }
     @media (max-width: 720px) {
       .topbar-inner { flex-direction: column; align-items: flex-start; gap: 10px; }
       main { padding: 14px; }
@@ -472,7 +411,7 @@
     <div class="intro">
       <p class="intro-title">Your list</p>
       <p class="intro-body">
-        Every active Reset buyer, freshest first. Click the WhatsApp button to open the chat with them in WhatsApp Web (log in once at <a href="https://web.whatsapp.com" target="_blank" style="color:var(--gold)">web.whatsapp.com</a>). Tick the checkbox after a call — solid, no answer, whatever — and they drop off your queue for 30 days. Click 📄 to read Aira's cheat sheet before you dial, or write one after the call.
+        Every active Reset buyer, freshest first. Click the green WhatsApp icon to open the chat with them in WhatsApp Web (log in once at <a href="https://web.whatsapp.com" target="_blank" style="color:var(--gold)">web.whatsapp.com</a>). Click the GHL icon to open their contact in GoHighLevel — that's where you add call notes. Tick the checkbox after a call and they drop off your queue for 30 days.
       </p>
     </div>
 
@@ -485,7 +424,6 @@
       <button class="filter-chip" data-filter="never_logged_in" type="button">Never logged in</button>
       <button class="filter-chip" data-filter="stuck_day_0" type="button">Stalled Day 0</button>
       <button class="filter-chip" data-filter="stuck_day_1" type="button">Stalled Day 1</button>
-      <button class="filter-chip" data-filter="has_cheat" type="button">Has cheat sheet</button>
       <button class="filter-chip" data-filter="has_phone" type="button">Phone available</button>
       <select class="filter-sort" id="sort">
         <option value="newest">Newest first</option>
@@ -505,7 +443,7 @@
             <th>1st login</th>
             <th>Day</th>
             <th>Last active</th>
-            <th style="text-align:center">Cheat sheet</th>
+            <th style="text-align:center">GHL</th>
             <th style="text-align:center">Called</th>
           </tr>
         </thead>
@@ -516,36 +454,19 @@
     </div>
   </main>
 
-  <!-- Cheat sheet modal -->
-  <div class="modal-backdrop" id="modal-backdrop">
-    <div class="modal" role="dialog" aria-labelledby="modal-title">
-      <div class="modal-header">
-        <p class="modal-title" id="modal-title">Cheat sheet</p>
-        <p class="modal-subtitle" id="modal-subtitle">Everything Aira knows about this member</p>
-      </div>
-      <div class="modal-body">
-        <textarea class="modal-textarea" id="modal-textarea" placeholder="Notes for this member — what they filled out, what they mentioned, family context, prior offers seen, anything Carmen should know before dialing."></textarea>
-        <p class="modal-hint">Empty this field and save to clear the cheat sheet.</p>
-      </div>
-      <div class="modal-footer">
-        <span class="modal-meta" id="modal-meta"></span>
-        <button class="btn" type="button" id="modal-cancel">Cancel</button>
-        <button class="btn btn-primary" type="button" id="modal-save">Save</button>
-      </div>
-    </div>
-  </div>
-
   <div class="toast" id="toast"></div>
 
   <script>
     const SESSION_TOKEN_KEY = "tfif_session_v1";
 
     // ── State ────────────────────────────────────────────────────────────
+    // GHL location ID is a fixed constant for the MYP account — every
+    // member's contact URL is built from it plus their ghl_contact_id.
+    const GHL_LOCATION_ID = "eo4N6ugBtPJTQE4clj7A";
     let allMembers = [];
     let currentFilter = "all";
     let currentSort = "newest";
     let currentSearch = "";
-    let editingEmail = null;
 
     // ── Utilities ────────────────────────────────────────────────────────
     function esc(s) {
@@ -635,7 +556,6 @@
         case "never_logged_in":   return isNeverLoggedIn(m);
         case "stuck_day_0":       return isStalledDay(m, 0);
         case "stuck_day_1":       return isStalledDay(m, 1);
-        case "has_cheat":         return m.has_cheat_sheet;
         case "has_phone":         return !!m.phone;
         case "all":
         default:                  return true;
@@ -672,13 +592,11 @@
       const total = allMembers.length;
       const uncontacted = allMembers.filter(m => !m.contacted).length;
       const neverLoggedIn = allMembers.filter(isNeverLoggedIn).length;
-      const withCheat = allMembers.filter(m => m.has_cheat_sheet).length;
       const withPhone = allMembers.filter(m => m.phone).length;
       const html = [
         { label: "Total active", value: total },
         { label: "Not called yet", value: uncontacted },
         { label: "Never logged in", value: neverLoggedIn },
-        { label: "Has cheat sheet", value: withCheat },
         { label: "Phone available", value: withPhone },
       ].map(s => `
         <div class="stat-card">
@@ -706,9 +624,12 @@
         const tierBadge = m.tier === "full"
           ? '<span class="tier-badge tier-full">Unlimited</span>'
           : '<span class="tier-badge tier-preview">Reset</span>';
-        const cheatIcon = m.has_cheat_sheet
-          ? '<span title="Has cheat sheet">📄</span>'
-          : '<span class="cheat-icon-empty" title="No cheat sheet — click to add">📝</span>';
+        const ghlUrl = m.ghl_contact_id
+          ? `https://app.gohighlevel.com/v2/location/${GHL_LOCATION_ID}/contacts/detail/${encodeURIComponent(m.ghl_contact_id)}`
+          : null;
+        const ghlCell = ghlUrl
+          ? `<a class="ghl-btn" href="${esc(ghlUrl)}" target="_blank" rel="noopener noreferrer" title="Open ${esc(nameForDisplay(m))} in GoHighLevel" aria-label="Open in GHL"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></a>`
+          : `<span class="ghl-none" title="No GHL contact linked">—</span>`;
 
         return `
           <tr class="${m.contacted ? 'contacted' : ''}" data-email="${esc(m.email)}">
@@ -727,9 +648,7 @@
             <td>${firstLogin}</td>
             <td><span class="day-badge ${dayCls}">${m.last_completed_day || 0}</span></td>
             <td>${lastActive}</td>
-            <td class="cheat-cell" style="text-align:center">
-              <button class="cheat-btn ${m.has_cheat_sheet ? 'has-notes' : ''}" data-action="cheat" data-email="${esc(m.email)}" data-name="${esc(nameForDisplay(m))}" type="button">${cheatIcon}</button>
-            </td>
+            <td class="ghl-cell" style="text-align:center">${ghlCell}</td>
             <td class="actions-cell" style="text-align:center">
               <input class="contacted-check" type="checkbox" data-action="contacted" data-email="${esc(m.email)}" ${m.contacted ? 'checked' : ''} title="${m.contacted ? 'Uncheck to put them back in the queue' : 'Tick after you called them'}" />
             </td>
@@ -764,76 +683,6 @@
       }
     }
 
-    async function openCheatSheet(email, name) {
-      editingEmail = email;
-      const token = localStorage.getItem(SESSION_TOKEN_KEY);
-      if (!token) { toast("Not signed in."); return; }
-      document.getElementById("modal-title").textContent = `Cheat sheet · ${name}`;
-      document.getElementById("modal-subtitle").textContent = email;
-      const ta = document.getElementById("modal-textarea");
-      const meta = document.getElementById("modal-meta");
-      ta.value = "Loading…";
-      ta.disabled = true;
-      meta.textContent = "";
-      document.getElementById("modal-backdrop").classList.add("show");
-
-      try {
-        const res = await fetch(
-          "/api/admin/member-cheat-sheet?email=" + encodeURIComponent(email),
-          { headers: { "x-session-token": token } }
-        );
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const data = await res.json();
-        ta.value = data.notes || "";
-        ta.disabled = false;
-        ta.focus();
-        if (data.updated_by && data.updated_at) {
-          meta.textContent = `Last updated by ${data.updated_by} · ${new Date(data.updated_at).toLocaleString()}`;
-        } else {
-          meta.textContent = "No previous notes for this member.";
-        }
-      } catch (e) {
-        ta.value = "";
-        ta.disabled = false;
-        meta.textContent = "Could not load — start fresh.";
-      }
-    }
-
-    async function saveCheatSheet() {
-      if (!editingEmail) return;
-      const token = localStorage.getItem(SESSION_TOKEN_KEY);
-      if (!token) { toast("Not signed in."); return; }
-      const notes = document.getElementById("modal-textarea").value;
-      const saveBtn = document.getElementById("modal-save");
-      saveBtn.disabled = true;
-      saveBtn.textContent = "Saving…";
-      try {
-        const res = await fetch("/api/admin/member-cheat-sheet", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-session-token": token },
-          body: JSON.stringify({ email: editingEmail, notes }),
-        });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        // Update local flag so the icon flips immediately
-        const m = allMembers.find(x => x.email === editingEmail);
-        if (m) m.has_cheat_sheet = notes.trim().length > 0;
-        renderStats();
-        renderTable();
-        toast("Cheat sheet saved ✓");
-        closeCheatSheet();
-      } catch (e) {
-        toast("Save failed: " + e.message);
-      } finally {
-        saveBtn.disabled = false;
-        saveBtn.textContent = "Save";
-      }
-    }
-
-    function closeCheatSheet() {
-      editingEmail = null;
-      document.getElementById("modal-backdrop").classList.remove("show");
-    }
-
     // ── Wire up ──────────────────────────────────────────────────────────
     document.addEventListener("DOMContentLoaded", () => {
       // Filter chips
@@ -861,28 +710,12 @@
       // Refresh
       document.getElementById("refresh-btn").addEventListener("click", () => loadList());
 
-      // Delegated table events (contacted checkbox, cheat sheet button)
-      document.getElementById("tbody").addEventListener("click", (e) => {
-        const btn = e.target.closest("[data-action='cheat']");
-        if (btn) {
-          openCheatSheet(btn.dataset.email, btn.dataset.name);
-        }
-      });
+      // Delegated change handler for the contacted checkboxes.
       document.getElementById("tbody").addEventListener("change", (e) => {
         const chk = e.target.closest("[data-action='contacted']");
         if (chk) {
           toggleContacted(chk.dataset.email, chk.checked);
         }
-      });
-
-      // Modal
-      document.getElementById("modal-cancel").addEventListener("click", closeCheatSheet);
-      document.getElementById("modal-save").addEventListener("click", saveCheatSheet);
-      document.getElementById("modal-backdrop").addEventListener("click", (e) => {
-        if (e.target.id === "modal-backdrop") closeCheatSheet();
-      });
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") closeCheatSheet();
       });
 
       loadList();
