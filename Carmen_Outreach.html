@@ -642,7 +642,6 @@
       <button class="filter-chip" data-filter="never_logged_in" type="button">Never logged in</button>
       <button class="filter-chip" data-filter="stuck_day_0" type="button">Stalled Day 0</button>
       <button class="filter-chip" data-filter="stuck_day_1" type="button">Stalled Day 1</button>
-      <button class="filter-chip" data-filter="has_phone" type="button">Phone available</button>
       <select class="filter-sort" id="sort">
         <option value="newest">Newest first</option>
         <option value="oldest">Oldest first</option>
@@ -806,7 +805,6 @@
         case "never_logged_in":   return isNeverLoggedIn(m);
         case "stuck_day_0":       return isStalledDay(m, 0);
         case "stuck_day_1":       return isStalledDay(m, 1);
-        case "has_phone":         return !!m.phone;
         case "all":
         default:                  return true;
       }
@@ -842,12 +840,10 @@
       const total = allMembers.length;
       const uncontacted = allMembers.filter(m => !m.contacted).length;
       const neverLoggedIn = allMembers.filter(isNeverLoggedIn).length;
-      const withPhone = allMembers.filter(m => m.phone).length;
       const html = [
         { label: "Total active", value: total },
         { label: "Not called yet", value: uncontacted },
         { label: "Never logged in", value: neverLoggedIn },
-        { label: "Phone available", value: withPhone },
       ].map(s => `
         <div class="stat-card">
           <div class="stat-label">${esc(s.label)}</div>
