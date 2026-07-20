@@ -93,6 +93,7 @@ export default async function handler(req, res) {
         AND u.email NOT ILIKE 'rachelnativ@%'       -- Rachel Nativ (family)
         AND u.email NOT ILIKE 'brunadudas777@%'     -- Bruna (per Geo's request 2026-07-20)
         AND u.email NOT ILIKE 'jerome.feinberg@%'   -- Jerome (per Geo's request 2026-07-20)
+        AND u.email NOT ILIKE 'giorgia.goldberg@%'  -- Giorgia — refunded ("didn't like it")
         AND u.email NOT ILIKE 'carmen.faunback@%'   -- Carmen herself
         AND u.email NOT ILIKE 'nobody@%'            -- test placeholder
         AND u.email NOT ILIKE '%+test%'             -- plus-addressed test emails
