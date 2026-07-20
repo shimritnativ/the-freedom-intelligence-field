@@ -1,175 +1,322 @@
 // api/admin/generate-tag-cheat-sheets.js
 //
-// Builds a compact, human-readable "cheat sheet" for every Field member
-// out of the GHL tags we've already synced into member_ghl_tags. Since
-// GHL's V2 conversation API isn't available to us (scopes not granted at
-// our plan tier), tags are our best source of pre-call context.
+// Turns each member's GHL tags into a plain-English cheat sheet Carmen can
+// read in 5 seconds before dialing. Optimized for a non-technical reader:
+//   - Sentence-case section labels (no ALL CAPS)
+//   - Cleaned workshop names (Workshop 7 — The Prosperity Code, not
+//     "workshop 7 the prosperity code")
+//   - Combines the 3 Reset completion tags into one line ("Completed all
+//     3 days ✓")
+//   - Distinguishes workshops she ATTENDED from workshop-lead SOURCE tags
+//   - Drops meaningless noise ("org", "email list", generic tags)
+//   - No monospace, no bracketed IDs, no field names Carmen won't recognize
 //
-// The categorizer sorts each tag into one of these buckets:
-//   Programs         · MYP Business Club, RISE, Certification
-//   Purchases        · Reset, Now Shift, Book Launch Team, coupons used
-//   Consultation     · had a consultation call
-//   Workshops        · every "workshop N …" tag, counted + dated
-//   Engagement       · newly engaged, engaging, WA paused
-//   Source           · ads, Ignite, etc.
-//   Attendance       · attended live / zoom / replay
-// then writes a formatted summary into member_cheat_sheets.tag_summary
-// (a new column — the existing `notes` field stays untouched so Aira's
-// manual additions are preserved across re-generations).
-//
-// Trigger: manual for now (from the admin console). If we later want a
-// cron, add it to vercel.json — the generation is idempotent.
-//
-// Auth: @shimritnativ.com session, same as every admin endpoint.
+// Output is a multi-line string written to member_cheat_sheets.tag_summary.
+// Aira's manual notes column stays untouched.
 
 import { sql } from "@vercel/postgres";
 import { getUserBySessionToken } from "../../lib/db.js";
 
 const ALLOWED_DOMAIN = "@shimritnativ.com";
 
-// ─── Categorization rules ─────────────────────────────────────────────
-// Each entry has a lowercase test predicate + a friendly label used in
-// the summary. Order matters within each category — first match wins so
-// more specific rules go first.
+// ─── Helpers ────────────────────────────────────────────────────────
+
+// Title-case with intelligent handling of small words + acronyms.
+function titleCase(s) {
+  if (!s) return s;
+  const small = new Set(["a", "an", "and", "as", "at", "but", "by", "for", "in", "of", "on", "or", "the", "to", "with"]);
+  const acronyms = new Set(["myp", "wa", "rise", "atwt", "sms", "dm"]);
+  return String(s)
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word, i) => {
+      const clean = word.replace(/[^\w]/g, "");
+      if (acronyms.has(clean)) return word.toUpperCase();
+      if (i > 0 && small.has(clean)) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
+}
+
+// Turn shorthand month tokens into readable form: "may-24" → "May 2024",
+// "aug24" → "Aug 2024", "oct24" → "Oct 2024".
+function humanizeDate(tail) {
+  const MONTHS = { jan:"Jan", feb:"Feb", mar:"Mar", apr:"Apr", may:"May", jun:"Jun",
+                   jul:"Jul", aug:"Aug", sep:"Sep", oct:"Oct", nov:"Nov", dec:"Dec" };
+  const m = String(tail).toLowerCase().match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[-\s]?(\d{2,4})/);
+  if (!m) return null;
+  const month = MONTHS[m[1]];
+  const yearRaw = m[2];
+  const year = yearRaw.length === 2 ? "20" + yearRaw : yearRaw;
+  return `${month} ${year}`;
+}
+
+// Clean a "workshop N …" tag into a readable label.
+function cleanWorkshopName(raw) {
+  const lc = String(raw || "").toLowerCase().trim();
+  if (!lc.startsWith("workshop")) return titleCase(raw);
+
+  // Extract workshop number if present ("workshop 12 …", "workshop 1h-…").
+  const numMatch = lc.match(/^workshop\s+(\d+[a-z]?[-:]?)\s*[:—-]?\s*(.*)$/);
+  // Also handles "workshop: some name" (no number).
+  const noNumMatch = lc.match(/^workshop\s*:\s*(.*)$/);
+  let num = null;
+  let rest = null;
+  if (numMatch && numMatch[1] && /\d/.test(numMatch[1])) {
+    num = numMatch[1].replace(/[-:]$/, "").toUpperCase();
+    rest = numMatch[2] || "";
+  } else if (noNumMatch) {
+    rest = noNumMatch[1] || "";
+  } else {
+    // Fallback: strip the "workshop" prefix and title-case what's left.
+    rest = lc.replace(/^workshop\b/i, "").trim();
+  }
+
+  // Pull off a trailing date suffix like "may 24" / "-may24" / "sep-24".
+  const dateInTail = humanizeDate(rest);
+  if (dateInTail) {
+    rest = rest.replace(/(?:[-\s]+)?(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[-\s]?\d{2,4}\s*$/i, "").trim();
+  }
+
+  // Also strip an "- ads" suffix (means it was an ads-sourced workshop
+  // announcement, not part of the workshop title).
+  rest = rest.replace(/[-\s]+ads\s*$/i, "").trim();
+
+  // Prettify the name portion.
+  let name = titleCase(rest.replace(/[-_]/g, " ").replace(/\s+/g, " ").trim());
+  // Small tidy-up: replace ":" with " —" for "workshop N: name" style tags.
+  name = name.replace(/^:\s*/, "");
+
+  const parts = [];
+  if (num) parts.push(`Workshop ${num}`);
+  if (name) parts.push(name);
+  let label = parts.join(" — ");
+  if (dateInTail) label += ` (${dateInTail})`;
+  return label || titleCase(raw);
+}
+
+// Simple pretty-printer for anything else.
+function prettyTag(raw) {
+  return titleCase(String(raw || "").replace(/[-_]/g, " ").replace(/\s+/g, " ").trim());
+}
+
+// ─── Categorization ────────────────────────────────────────────────
 
 function classify(tags) {
-  const t = (tags || []).map((x) => String(x || "").toLowerCase().trim());
-  const has = (needle) => t.some((tag) => tag.includes(needle));
-  const startsWith = (prefix) => t.filter((tag) => tag.startsWith(prefix));
+  const raw = tags || [];
+  const lower = raw.map((x) => String(x || "").toLowerCase().trim());
+  const has = (needle) => lower.some((tag) => tag.includes(needle));
+  const eq = (needle) => lower.includes(needle);
+  const used = new Set();
+  const mark = (i) => used.add(i);
 
+  // ── Programs & client status
   const programs = [];
-  if (has("myp business club") || has("business club")) programs.push("Business Club");
-  if (t.some((x) => x === "rise client" || x === "rise paused" || x === "rise")) {
-    programs.push("RISE (current)");
-  } else if (has("past rise client") || has("rise past client") || has("rise graduate")) {
-    programs.push("RISE (past / graduate)");
-  }
-  if (has("myp certificate") || has("myp cert") || has("coaching certification")) {
-    programs.push("Certification");
-  }
+  if (has("myp business club") || has("business club")) programs.push("MYP Business Club");
+  if (eq("rise client") || eq("rise paused")) programs.push("RISE client (current)");
+  if (has("past rise client") || has("rise past client") || has("rise graduate")) programs.push("Past RISE client");
+  if (has("myp certificate") || has("myp cert") || has("coaching certification")) programs.push("MYP Certification");
+  const isBookLaunchTeam = has("book launch team") || has("official book launch team");
+  if (isBookLaunchTeam) programs.push("Book launch team");
 
+  const isClient = eq("client") && !eq("workshop lead");
+  const hadConsultation = has("consultation");
+
+  // ── Purchases + Reset progression
   const purchases = [];
   if (has("power reset - purchased") || has("72-hour power reset - purchased") || has("the 72-hour power reset")) {
     purchases.push("72-Hour Power Reset");
   }
-  if (has("power reset - student pre-launch")) purchases.push("Power Reset — student pre-launch");
+  if (has("power reset - student pre-launch")) {
+    purchases.push("Power Reset (student pre-launch)");
+  }
   if (has("the now shift - purchased") || has("now shift - purchased")) purchases.push("The Now Shift");
-  if (has("book launch team") || has("official book launch team")) purchases.push("Book Launch Team");
-  if (has("used power50 code") || has("used power50 coupon")) purchases.push("Used POWER50 coupon");
-  if (has("used launchteamunlimited") || has("launchteamunlimited")) purchases.push("Used LAUNCHTEAMUNLIMITED coupon");
-  if (has("unlimited - purchased")) purchases.push("Unlimited");
+  if (has("unlimited - purchased")) purchases.push("The Field Unlimited");
 
-  const consultation = has("consultation");
-  const isClient = has("client") && !has("workshop lead") /* avoid false-positive on 'workshop client' */;
+  const coupons = [];
+  if (has("used power50 code") || has("used power50 coupon")) coupons.push("POWER50");
+  if (has("used launchteamunlimited") || has("launchteamunlimited")) coupons.push("LAUNCHTEAMUNLIMITED");
 
-  // Workshops — every tag beginning "workshop " counts. Preserve original
-  // casing when we surface them in the summary by looking up the raw tag.
-  const rawTags = tags || [];
-  const workshops = rawTags.filter((raw) =>
-    typeof raw === "string" && raw.toLowerCase().startsWith("workshop ")
+  // Count Power Reset day completions.
+  const completedDays = [1, 2, 3].filter((d) =>
+    lower.some((t) => t.includes(`72-hour power reset - completed day ${d}`))
   );
 
-  const engagement = [];
-  if (has("newly engaged")) engagement.push("Newly engaged");
-  if (has("reset newly engaged")) engagement.push("Reset newly engaged");
-  if (has("second engaging tag") || has("engaging")) engagement.push("Engaging");
-  if (has("wa-paused-by-reply")) engagement.push("WhatsApp paused by reply");
-  if (has("hot lead")) engagement.push("Hot lead");
-  if (has("high intent")) engagement.push("High intent");
+  // ── Workshops attended (numbered ones)
+  // A "workshop lead" tag = source. A tag like "workshop N …" or
+  // "workshop: some name" means attended (usually). Tags ending in
+  // "- ads" are workshop-shaped LEAD SOURCE (someone saw a workshop ad),
+  // not attendance — bucket those into source instead.
+  const attendedWorkshops = [];
+  const workshopLeadSources = [];
+  for (const t of raw) {
+    const lc = String(t || "").toLowerCase();
+    if (!lc.startsWith("workshop")) continue;
+    if (lc === "workshop lead") { workshopLeadSources.push("Workshop lead"); continue; }
+    if (lc === "workshop form" || lc.startsWith("workshop form")) { workshopLeadSources.push("Workshop form"); continue; }
+    if (/-\s*ads\s*$/.test(lc) || /\bads\b/.test(lc.replace(/\band\b/g, ""))) {
+      // Workshop-shaped ad audience tag → source, not attendance.
+      workshopLeadSources.push(cleanWorkshopName(t) + " (ad audience)");
+      continue;
+    }
+    attendedWorkshops.push(cleanWorkshopName(t));
+  }
+  // Dedupe.
+  const uniq = (arr) => Array.from(new Set(arr));
 
+  // ── Live attendance (webinars, zoom, etc.)
+  const liveAttendance = [];
+  for (const t of raw) {
+    const lc = String(t || "").toLowerCase();
+    if (lc.includes("attended") && (lc.includes("live") || lc.includes("zoom"))) {
+      liveAttendance.push(prettyTag(t.replace(/[-]/g, " ")));
+    }
+  }
+
+  // ── Engagement signals
+  const engagement = [];
+  if (has("reset newly engaged")) engagement.push("Reset newly engaged");
+  else if (has("newly engaged")) engagement.push("Newly engaged");
+  if (has("engaging") || has("second engaging tag")) engagement.push("Engaging");
+  if (has("high intent")) engagement.push("High intent");
+  if (has("hot lead")) engagement.push("Hot lead");
+  if (has("wa-paused-by-reply")) engagement.push("WhatsApp paused (they replied)");
+
+  // ── Source / attribution
   const source = [];
   if (has("ads") || has("source - ads")) source.push("Ads");
   if (has("organic") || has("source - organic")) source.push("Organic");
-  if (has("source - manychat") || has("manychat")) source.push("ManyChat");
+  if (has("manychat") || has("source - manychat")) source.push("ManyChat");
   if (has("ignite 2025")) source.push("Ignite 2025");
-  if (has("book launch")) source.push("Book launch");
+  if (has("in-person event") || has("email list - in person event form")) source.push("In-person event");
 
-  const attendance = [];
-  // Match tags like "may 18 - attended zoom live", "may 4 (attended live)",
-  // "shift april 20 - attended live", etc. — anything with "attended" and
-  // either "live" or "zoom".
-  const attendedLive = rawTags.filter((raw) => {
-    const lc = String(raw || "").toLowerCase();
-    return lc.includes("attended") && (lc.includes("live") || lc.includes("zoom"));
-  });
-  attendance.push(...attendedLive);
-
-  // Anything we didn't classify. Drop generic noise ("org", "email list", …)
-  // so the "Other" bucket stays meaningful. Also drop workshop-specific
-  // tags (already surfaced) and anything used above.
-  const usedLc = new Set();
-  const drop = (raw) => usedLc.add(String(raw || "").toLowerCase());
-  workshops.forEach(drop);
-  attendedLive.forEach(drop);
+  // ── Other worth noting — everything left over that isn't noise
   const NOISE = new Set([
     "org", "email list - in person event form", "created account themselves",
-    "workshop lead", "ads", "client", "consultation",
+    "client", "consultation",
     "myp business club", "business club",
     "rise client", "rise paused", "rise", "past rise client", "rise past client", "rise graduate",
     "myp certificate", "myp cert", "coaching certification",
     "newly engaged", "reset newly engaged", "engaging", "second engaging tag",
     "wa-paused-by-reply", "hot lead", "high intent",
-    "organic", "source - ads", "source - organic", "source - manychat", "manychat",
-    "ignite 2025", "book launch", "book launch team", "official book launch team",
+    "ads", "organic", "source - ads", "source - organic", "source - manychat", "manychat",
+    "ignite 2025",
+    "book launch team", "official book launch team", "book launch",
     "used power50 code", "used power50 coupon (the power reset)", "used power50 coupon",
-    "used launchteamunlimited", "launchteamunlimited", "unlimited - purchased",
+    "used launchteamunlimited", "launchteamunlimited",
     "power reset - purchased", "72-hour power reset - purchased", "the 72-hour power reset",
-    "power reset - student pre-launch", "the now shift - purchased", "now shift - purchased",
-    "72-hour power reset",
+    "power reset - student pre-launch",
+    "the now shift - purchased", "now shift - purchased",
+    "unlimited - purchased",
+    "workshop lead", "workshop form",
+    "the 72-hour power reset - completed day 1",
+    "the 72-hour power reset - completed day 2",
+    "the 72-hour power reset - completed day 3",
+    "72-hour power reset - completed day 1",
+    "72-hour power reset - completed day 2",
+    "72-hour power reset - completed day 3",
   ]);
-  const other = rawTags.filter((raw) => {
-    const lc = String(raw || "").toLowerCase().trim();
-    return lc && !usedLc.has(lc) && !NOISE.has(lc) && !lc.startsWith("workshop ")
-      && !(lc.includes("attended") && (lc.includes("live") || lc.includes("zoom")));
-  });
+  const other = [];
+  for (const t of raw) {
+    const lc = String(t || "").toLowerCase().trim();
+    if (!lc) continue;
+    if (NOISE.has(lc)) continue;
+    // Already surfaced elsewhere:
+    if (lc.startsWith("workshop")) continue;
+    if (lc.includes("attended") && (lc.includes("live") || lc.includes("zoom"))) continue;
+    other.push(prettyTag(t));
+  }
 
-  return { programs, purchases, consultation, isClient, workshops, engagement, source, attendance, other };
+  return {
+    programs: uniq(programs),
+    isClient,
+    hadConsultation,
+    purchases: uniq(purchases),
+    coupons: uniq(coupons),
+    completedDays,
+    attendedWorkshops: uniq(attendedWorkshops),
+    workshopLeadSources: uniq(workshopLeadSources),
+    liveAttendance: uniq(liveAttendance),
+    engagement: uniq(engagement),
+    source: uniq(source),
+    other: uniq(other),
+  };
 }
 
-function formatSummary(classified, source) {
-  const lines = [];
-  const status = [];
-  if (classified.isClient) status.push("Client");
-  if (classified.consultation) status.push("Had a consultation call");
-  if (status.length) lines.push("STATUS · " + status.join(" · "));
+// ─── Formatter — plain English, no jargon ─────────────────────────
 
-  if (classified.programs.length) {
-    lines.push("PROGRAMS · " + classified.programs.join(" · "));
+function formatSummary(c, sourceHint) {
+  const sections = [];
+
+  // Product & progress
+  const productLines = [];
+  if (c.purchases.length) {
+    for (const p of c.purchases) productLines.push(`• Bought ${p}`);
+  } else {
+    productLines.push("• No purchase on file (lead only)");
   }
-  if (classified.purchases.length) {
-    lines.push("PURCHASES · " + classified.purchases.join(" · "));
+  if (c.coupons.length) {
+    productLines.push(`• Used coupon: ${c.coupons.join(", ")}`);
   }
-  if (classified.workshops.length) {
-    // Show most recent 3 workshops, note total.
-    const recent = classified.workshops.slice(0, 3);
-    let line = `WORKSHOPS · ${classified.workshops.length} attended`;
-    if (recent.length) line += ": " + recent.join(", ");
-    if (classified.workshops.length > 3) line += ", …";
-    lines.push(line);
+  if (c.completedDays.length === 3) {
+    productLines.push("• Completed all 3 days of the Power Reset ✓");
+  } else if (c.completedDays.length > 0) {
+    productLines.push(`• Completed Day ${c.completedDays.join(" + Day ")} of the Power Reset`);
   }
-  if (classified.attendance.length) {
-    lines.push("LIVE ATTENDANCE · " + classified.attendance.slice(0, 4).join(" · "));
-  }
-  if (classified.engagement.length) {
-    lines.push("ENGAGEMENT · " + classified.engagement.join(" · "));
-  }
-  if (classified.source.length || source) {
-    const parts = [...classified.source];
-    if (source && !parts.some((p) => p.toLowerCase() === String(source).toLowerCase())) {
-      parts.push(source);
-    }
-    if (parts.length) lines.push("SOURCE · " + parts.join(" · "));
-  }
-  if (classified.other.length) {
-    // Cap to keep the summary compact.
-    const shown = classified.other.slice(0, 6);
-    let line = "OTHER TAGS · " + shown.join(", ");
-    if (classified.other.length > 6) line += `, … (+${classified.other.length - 6} more)`;
-    lines.push(line);
+  if (c.isClient) productLines.push("• Active client");
+  if (c.hadConsultation) productLines.push("• Had a consultation call");
+  if (productLines.length) {
+    sections.push("Product & progress\n" + productLines.join("\n"));
   }
 
-  return lines.join("\n");
+  // Programs
+  if (c.programs.length) {
+    sections.push("Programs\n" + c.programs.map((p) => `• ${p}`).join("\n"));
+  }
+
+  // Workshops attended
+  if (c.attendedWorkshops.length) {
+    const header = c.attendedWorkshops.length === 1
+      ? "Workshop attended"
+      : `Workshops attended (${c.attendedWorkshops.length})`;
+    sections.push(header + "\n" + c.attendedWorkshops.map((w) => `• ${w}`).join("\n"));
+  }
+
+  // Live attendance
+  if (c.liveAttendance.length) {
+    sections.push("Attended live\n" + c.liveAttendance.map((a) => `• ${a}`).join("\n"));
+  }
+
+  // Engagement
+  if (c.engagement.length) {
+    sections.push("Engagement signals\n" + c.engagement.map((e) => `• ${e}`).join("\n"));
+  }
+
+  // How they came in
+  const sourceParts = c.source.slice();
+  if (c.workshopLeadSources.length) {
+    for (const s of c.workshopLeadSources) sourceParts.push(s);
+  }
+  if (sourceHint && !sourceParts.some((s) => s.toLowerCase() === String(sourceHint).toLowerCase())) {
+    sourceParts.push(sourceHint);
+  }
+  if (sourceParts.length) {
+    sections.push("How they came in\n" + sourceParts.map((s) => `• ${s}`).join("\n"));
+  }
+
+  // Anything else — cap so the sheet stays readable
+  if (c.other.length) {
+    const shown = c.other.slice(0, 8);
+    const overflow = c.other.length - 8;
+    const lines = shown.map((o) => `• ${o}`);
+    if (overflow > 0) lines.push(`• …and ${overflow} more`);
+    sections.push("Other context\n" + lines.join("\n"));
+  }
+
+  return sections.join("\n\n");
 }
+
+// ─── Handler ────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
@@ -235,7 +382,6 @@ export default async function handler(req, res) {
 /*
 ==============================================================================
 ONE-TIME SQL MIGRATION — run in Neon SQL editor before hitting this endpoint.
-Adds the tag_summary column to the existing member_cheat_sheets table.
 Idempotent — safe to re-run.
 ==============================================================================
 
