@@ -84,13 +84,15 @@ export default async function handler(req, res) {
   const v1Headers = v1Key
     ? { Authorization: `Bearer ${v1Key}`, Accept: "application/json" }
     : null;
-  // GHL's V2 API is versioned by an explicit header. 2021-07-28 is the
-  // current stable Private Integration Token version — the older 2021-04-15
-  // I originally sent is retired.
+  // GHL now uses "v3" as the Version header for the current API surface
+  // (previously they used date strings like 2021-07-28 and 2021-04-15,
+  // both retired). Scopes are namespaced by version, so sending the wrong
+  // Version can mask a token that IS authorized as "The token is not
+  // authorized for this scope" — that's what we saw on the first attempts.
   const v2Headers = v2Token
     ? {
         Authorization: `Bearer ${v2Token}`,
-        Version: "2021-07-28",
+        Version: "v3",
         Accept: "application/json",
       }
     : null;
