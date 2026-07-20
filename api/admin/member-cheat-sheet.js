@@ -33,7 +33,7 @@ export default async function handler(req, res) {
       const email = String(req.query.email || "").toLowerCase().trim();
       if (!email) return res.status(400).json({ error: "email_required" });
       const { rows } = await sql`
-        SELECT email, notes, updated_by, updated_at
+        SELECT email, notes, tag_summary, updated_by, updated_at
         FROM member_cheat_sheets
         WHERE LOWER(email) = ${email}
         LIMIT 1
@@ -43,6 +43,7 @@ export default async function handler(req, res) {
           ok: true,
           email,
           notes: "",
+          tag_summary: "",
           updated_by: null,
           updated_at: null,
           exists: false,
@@ -53,6 +54,7 @@ export default async function handler(req, res) {
         ok: true,
         email: r.email,
         notes: r.notes || "",
+        tag_summary: r.tag_summary || "",
         updated_by: r.updated_by,
         updated_at: r.updated_at,
         exists: true,
@@ -66,8 +68,22 @@ export default async function handler(req, res) {
       if (!email) return res.status(400).json({ error: "email_required" });
 
       if (notes.trim() === "") {
-        // Empty notes = clear the row so has_cheat_sheet reads false again.
-        await sql`DELETE FROM member_cheat_sheets WHERE LOWER(email) = ${email}`;
+        // Empty notes = clear Aira's manual notes ONLY. The auto-generated
+        // tag_summary column stays intact so re-generation isn't wiped.
+        await sql`
+          UPDATE member_cheat_sheets
+          SET notes = '', updated_at = NOW()
+          WHERE LOWER(email) = ${email}
+        `;
+        // If the row is now completely empty (no notes AND no tag_summary),
+        // delete it so has_cheat_sheet reads false and the row doesn't sit
+        // there as a ghost.
+        await sql`
+          DELETE FROM member_cheat_sheets
+          WHERE LOWER(email) = ${email}
+            AND (notes IS NULL OR notes = '')
+            AND (tag_summary IS NULL OR tag_summary = '')
+        `;
         return res.status(200).json({ ok: true, email, cleared: true });
       }
 
