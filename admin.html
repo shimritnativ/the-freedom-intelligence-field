@@ -1547,6 +1547,188 @@
       opacity: 1;
       transform: translateX(-50%) translateY(0);
     }
+
+    /* ── In-brand modal dialogs — replaces window.prompt / confirm / alert
+       so member actions (Extend, Transfer email, etc.) match the Field's
+       gold-on-warm palette. Fade + gentle scale in, backdrop blur, keyboard
+       (Escape closes, Enter submits). No layout shift because the whole
+       thing is position:fixed. */
+    .admin-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(20, 15, 8, 0.42);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 2000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 220ms cubic-bezier(0.4, 0.0, 0.2, 1);
+    }
+    .admin-modal-backdrop.is-open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .admin-modal {
+      background: var(--bg-card);
+      border: 1px solid var(--gold-line);
+      border-radius: 16px;
+      max-width: 520px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 64px rgba(20, 15, 8, 0.28),
+                  0 2px 8px rgba(20, 15, 8, 0.06);
+      transform: translateY(12px) scale(0.97);
+      opacity: 0;
+      transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
+                  opacity 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .admin-modal-backdrop.is-open .admin-modal {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+    .admin-modal-header {
+      padding: 22px 26px 4px;
+    }
+    .admin-modal-eyebrow {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 8px;
+    }
+    .admin-modal-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0;
+      letter-spacing: -0.01em;
+      line-height: 1.35;
+    }
+    .admin-modal-body {
+      padding: 12px 26px 6px;
+      font-size: 13.5px;
+      line-height: 1.55;
+      color: var(--text-mid, var(--text-dim));
+    }
+    .admin-modal-body p { margin: 0 0 8px; }
+    .admin-modal-body p:last-child { margin-bottom: 0; }
+    .admin-modal-body .stat-list {
+      background: var(--bg-warm);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 12px 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+    }
+    .admin-modal-body .stat-list-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 3px 0;
+      color: var(--text);
+    }
+    .admin-modal-body .stat-list-key { color: var(--text-dim); }
+    .admin-modal-body .stat-list-val { font-weight: 700; }
+    .admin-modal-body strong { color: var(--text); font-weight: 700; }
+    .admin-modal-body code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12.5px;
+      background: var(--gold-soft);
+      padding: 1px 6px;
+      border-radius: 4px;
+      color: var(--text);
+    }
+    .admin-modal-input-wrap {
+      padding: 8px 26px 4px;
+    }
+    .admin-modal-input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--gold-line);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--text);
+      background: var(--bg-warm);
+      transition: border-color 160ms ease, background 160ms ease;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .admin-modal-input:focus {
+      outline: none;
+      border-color: var(--gold);
+      background: var(--bg-card);
+      box-shadow: 0 0 0 3px var(--gold-soft);
+    }
+    .admin-modal-error {
+      padding: 4px 26px 0;
+      color: #B22222;
+      font-size: 12px;
+      font-weight: 600;
+      min-height: 18px;
+    }
+    .admin-modal-footer {
+      padding: 18px 26px 22px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .admin-modal-btn {
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: background 160ms ease, border-color 160ms ease, transform 100ms ease;
+      border: 1.5px solid transparent;
+    }
+    .admin-modal-btn:active { transform: scale(0.97); }
+    .admin-modal-btn.cancel {
+      background: var(--gold-soft);
+      color: var(--text);
+      border-color: transparent;
+    }
+    .admin-modal-btn.cancel:hover {
+      background: var(--gold-line);
+    }
+    .admin-modal-btn.confirm {
+      background: var(--text);
+      color: var(--bg-card);
+      border-color: var(--text);
+    }
+    .admin-modal-btn.confirm:hover {
+      background: var(--gold);
+      color: var(--text);
+      border-color: var(--gold);
+    }
+    .admin-modal-btn.confirm.danger {
+      background: #B22222;
+      color: #FFF;
+      border-color: #B22222;
+    }
+    .admin-modal-btn.confirm.danger:hover {
+      background: #8F1B1B;
+      border-color: #8F1B1B;
+    }
+    .admin-modal-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .admin-modal-backdrop,
+      .admin-modal { transition-duration: 60ms; }
+    }
     /* "X dismissed (show)" toggle under each segment header. */
     .intel-dismissed-toggle {
       display: inline-block;
@@ -3029,6 +3211,195 @@
     }
     window.restoreIntelMember = restoreIntelMember;
 
+    // ─── In-brand modal dialogs ────────────────────────────────────────
+    // Drop-in replacements for window.prompt / window.confirm / window.alert
+    // that match the Field's palette and animate softly instead of the OS
+    // hard-snap dialogs. All three return Promises so calling code stays
+    // linear (const val = await adminPrompt({...})).
+    //
+    // Options for all three:
+    //   title, body (string or HTML), eyebrow (small label above title)
+    //   confirmLabel, cancelLabel, danger (bool — red confirm button)
+    // adminPrompt also accepts:
+    //   defaultValue, placeholder, inputType, validate(val) → error|null
+    //
+    // Escape closes (returns null / false). Enter in a prompt input submits.
+    // Backdrop click closes. First interactive element is auto-focused.
+
+    function _adminModalOpen(config) {
+      return new Promise((resolve) => {
+        const backdrop = document.createElement("div");
+        backdrop.className = "admin-modal-backdrop";
+        backdrop.setAttribute("role", "dialog");
+        backdrop.setAttribute("aria-modal", "true");
+
+        const modal = document.createElement("div");
+        modal.className = "admin-modal";
+        backdrop.appendChild(modal);
+
+        // Header
+        const header = document.createElement("div");
+        header.className = "admin-modal-header";
+        if (config.eyebrow) {
+          const eb = document.createElement("span");
+          eb.className = "admin-modal-eyebrow";
+          eb.textContent = config.eyebrow;
+          header.appendChild(eb);
+        }
+        const title = document.createElement("h3");
+        title.className = "admin-modal-title";
+        title.textContent = config.title || "";
+        header.appendChild(title);
+        modal.appendChild(header);
+
+        // Body — accepts string, HTML string, or DOM node
+        if (config.body != null) {
+          const body = document.createElement("div");
+          body.className = "admin-modal-body";
+          if (config.body instanceof Node) {
+            body.appendChild(config.body);
+          } else if (config.bodyIsHtml) {
+            body.innerHTML = String(config.body);
+          } else {
+            // Convert plain-text newlines to paragraphs so multi-line
+            // messages get proper spacing.
+            const parts = String(config.body).split(/\n\s*\n/);
+            for (const p of parts) {
+              const el = document.createElement("p");
+              el.textContent = p;
+              body.appendChild(el);
+            }
+          }
+          modal.appendChild(body);
+        }
+
+        // Input (prompt only)
+        let input = null;
+        let errorEl = null;
+        if (config.withInput) {
+          const wrap = document.createElement("div");
+          wrap.className = "admin-modal-input-wrap";
+          input = document.createElement("input");
+          input.className = "admin-modal-input";
+          input.type = config.inputType || "text";
+          input.placeholder = config.placeholder || "";
+          input.value = config.defaultValue != null ? String(config.defaultValue) : "";
+          if (config.inputMin != null) input.min = config.inputMin;
+          if (config.inputMax != null) input.max = config.inputMax;
+          if (config.inputStep != null) input.step = config.inputStep;
+          wrap.appendChild(input);
+          modal.appendChild(wrap);
+
+          errorEl = document.createElement("div");
+          errorEl.className = "admin-modal-error";
+          modal.appendChild(errorEl);
+        }
+
+        // Footer
+        const footer = document.createElement("div");
+        footer.className = "admin-modal-footer";
+        modal.appendChild(footer);
+
+        const showCancel = config.showCancel !== false;
+        let cancelBtn = null;
+        if (showCancel) {
+          cancelBtn = document.createElement("button");
+          cancelBtn.type = "button";
+          cancelBtn.className = "admin-modal-btn cancel";
+          cancelBtn.textContent = config.cancelLabel || "Cancel";
+          footer.appendChild(cancelBtn);
+        }
+
+        const confirmBtn = document.createElement("button");
+        confirmBtn.type = "button";
+        confirmBtn.className = "admin-modal-btn confirm" + (config.danger ? " danger" : "");
+        confirmBtn.textContent = config.confirmLabel || "OK";
+        footer.appendChild(confirmBtn);
+
+        // Close animation + cleanup
+        let settled = false;
+        function close(result) {
+          if (settled) return;
+          settled = true;
+          backdrop.classList.remove("is-open");
+          document.removeEventListener("keydown", onKey);
+          setTimeout(() => {
+            if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+          }, 260);
+          resolve(result);
+        }
+
+        function submit() {
+          if (input && typeof config.validate === "function") {
+            const err = config.validate(input.value);
+            if (err) {
+              if (errorEl) errorEl.textContent = err;
+              input.focus();
+              input.select();
+              return;
+            }
+          }
+          close(input ? input.value : true);
+        }
+
+        function onKey(e) {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            close(input ? null : false);
+          } else if (e.key === "Enter" && input && document.activeElement === input) {
+            e.preventDefault();
+            submit();
+          }
+        }
+
+        if (cancelBtn) {
+          cancelBtn.addEventListener("click", () => close(input ? null : false));
+        }
+        confirmBtn.addEventListener("click", submit);
+        backdrop.addEventListener("click", (e) => {
+          if (e.target === backdrop) close(input ? null : false);
+        });
+        document.addEventListener("keydown", onKey);
+
+        document.body.appendChild(backdrop);
+        // Force reflow then trigger the fade-in.
+        // eslint-disable-next-line no-unused-expressions
+        backdrop.offsetHeight;
+        requestAnimationFrame(() => backdrop.classList.add("is-open"));
+
+        // Auto-focus after the entrance animation feels natural.
+        setTimeout(() => {
+          if (input) { input.focus(); input.select(); }
+          else confirmBtn.focus();
+        }, 180);
+      });
+    }
+
+    // Public helpers.
+    function adminPrompt(cfg) {
+      return _adminModalOpen({
+        ...cfg,
+        withInput: true,
+      });
+    }
+    function adminConfirm(cfg) {
+      return _adminModalOpen({
+        ...cfg,
+        withInput: false,
+      });
+    }
+    function adminAlert(cfg) {
+      return _adminModalOpen({
+        ...cfg,
+        withInput: false,
+        showCancel: false,
+        confirmLabel: cfg && cfg.confirmLabel || "OK",
+      });
+    }
+    window.adminPrompt = adminPrompt;
+    window.adminConfirm = adminConfirm;
+    window.adminAlert = adminAlert;
+
     // Extend a member's Reset preview window. Called by the "Extend"
     // button in the roster Actions column. Prompts for a number of days,
     // POSTs to the extend-preview endpoint (which runs the same UPDATE
@@ -3037,23 +3408,38 @@
     // surface the actual error so it's diagnosable.
     async function extendPreviewFromRoster(email, displayName) {
       if (!email) return;
-      const raw = window.prompt(
-        `Extend Reset preview for ${displayName || email}?\n\n` +
-        `Enter how many days to add. The extension always starts FROM RIGHT NOW.\n` +
-        `If their preview already expired, they get a fresh window.\n` +
-        `If it's still open, the new time is added on top.\n\n` +
-        `Common values: 3 (standard), 7 (generous), 30 (special case).`,
-        "4"
-      );
+      const raw = await adminPrompt({
+        eyebrow: "Reset preview",
+        title: `Extend ${displayName || email}`,
+        body:
+          "How many days to add? The extension always starts FROM RIGHT NOW. " +
+          "If their preview already expired, they get a fresh window. " +
+          "If it's still open, the new time is added on top.\n\n" +
+          "Common values: 3 (standard), 7 (generous), 30 (special case).",
+        defaultValue: "4",
+        placeholder: "Days",
+        inputType: "number",
+        inputMin: 1,
+        inputMax: 60,
+        inputStep: 1,
+        confirmLabel: "Extend",
+        validate: (val) => {
+          const n = parseInt(String(val).trim(), 10);
+          if (!Number.isFinite(n) || n < 1 || n > 60) {
+            return "Enter a whole number of days between 1 and 60.";
+          }
+          return null;
+        },
+      });
       if (raw === null) return;
       const days = parseInt(String(raw).trim(), 10);
-      if (!Number.isFinite(days) || days < 1 || days > 60) {
-        window.alert("Please enter a whole number of days between 1 and 60.");
-        return;
-      }
       const token = localStorage.getItem(STORAGE_KEY);
       if (!token) {
-        window.alert("Session expired. Refresh the page and sign in again.");
+        await adminAlert({
+          eyebrow: "Session expired",
+          title: "Please sign in again",
+          body: "Refresh the page and sign in with your @shimritnativ.com email, then try again.",
+        });
         return;
       }
       const btn = document.querySelector(`.roster-action-btn[data-email="${email}"]`);
@@ -3170,28 +3556,32 @@
     async function transferEmailFromRoster(currentEmail, displayName) {
       if (!currentEmail) return;
       const label = displayName || currentEmail;
-      const raw = window.prompt(
-        `Transfer account for ${label}\n\n` +
-        `Current email: ${currentEmail}\n\n` +
-        `Enter the NEW email this account should live under. All history\n` +
-        `(purchases, conversations, day completions) moves with it.\n\n` +
-        `Refuses to run if the destination email already belongs to a\n` +
-        `different account.`,
-        ""
-      );
+      const raw = await adminPrompt({
+        eyebrow: "Transfer account",
+        title: `Move ${label} to a new email`,
+        body:
+          `Current email: ${currentEmail}\n\n` +
+          "All history (purchases, conversations, day completions) moves with it. " +
+          "The transfer refuses to run if the destination email already belongs to a different account.",
+        placeholder: "new.email@example.com",
+        inputType: "email",
+        confirmLabel: "Preview transfer",
+        validate: (val) => {
+          const to = String(val).trim().toLowerCase();
+          if (!to || !to.includes("@")) return "Enter a valid email address.";
+          if (to === currentEmail.toLowerCase()) return "Same as the current email.";
+          return null;
+        },
+      });
       if (raw === null) return;
       const toEmail = String(raw).trim().toLowerCase();
-      if (!toEmail || !toEmail.includes("@")) {
-        window.alert("Please enter a valid email address.");
-        return;
-      }
-      if (toEmail === currentEmail.toLowerCase()) {
-        window.alert("Destination email is the same as the current one.");
-        return;
-      }
       const token = localStorage.getItem(STORAGE_KEY);
       if (!token) {
-        window.alert("Session expired. Refresh the page and sign in again.");
+        await adminAlert({
+          eyebrow: "Session expired",
+          title: "Please sign in again",
+          body: "Refresh the page and sign in with your @shimritnativ.com email, then try again.",
+        });
         return;
       }
 
@@ -3210,33 +3600,51 @@
         if (!r.ok) {
           const reason = payload && payload.error ? payload.error : `HTTP ${r.status}`;
           const extra = payload && payload.message ? `\n\n${payload.message}` : "";
-          window.alert(`Transfer preview failed: ${reason}${extra}`);
+          await adminAlert({
+            eyebrow: "Preview failed",
+            title: reason,
+            body: extra ? extra.trim() : "The server refused to run the preview. Check the details and try again.",
+          });
           return;
         }
         preview = payload && payload.preview;
       } catch (e) {
-        window.alert("Transfer preview failed: network error");
+        await adminAlert({
+          eyebrow: "Preview failed",
+          title: "Network error",
+          body: "Couldn't reach the server. Try again in a moment.",
+        });
         return;
       }
       if (!preview || !preview.would_update) {
-        window.alert("Transfer preview returned no data.");
+        await adminAlert({
+          eyebrow: "Preview failed",
+          title: "No data returned",
+          body: "The server responded but returned nothing. Try again.",
+        });
         return;
       }
 
       // Step 2: confirm with the counts.
       const w = preview.would_update;
-      const confirmMsg =
-        `Confirm transfer for ${label}\n\n` +
-        `From: ${currentEmail}\n` +
-        `  To: ${toEmail}\n\n` +
-        `Rows that will be updated:\n` +
-        `  • users:                    ${w.users}\n` +
-        `  • purchases:                ${w.purchases}\n` +
-        `  • whatsapp_message_events:  ${w.whatsapp_message_events}\n` +
-        `  • outreach_contacted:       ${w.outreach_contacted}\n` +
-        `  • login_codes:              ${w.login_codes}\n\n` +
-        `Proceed?`;
-      if (!window.confirm(confirmMsg)) return;
+      const confirmBody =
+        `<p>Move <strong>${escapeHtml(label)}</strong> and all their history from <code>${escapeHtml(currentEmail)}</code> to <code>${escapeHtml(toEmail)}</code>.</p>` +
+        `<div class="stat-list">` +
+        `<div class="stat-list-row"><span class="stat-list-key">users</span><span class="stat-list-val">${w.users}</span></div>` +
+        `<div class="stat-list-row"><span class="stat-list-key">purchases</span><span class="stat-list-val">${w.purchases}</span></div>` +
+        `<div class="stat-list-row"><span class="stat-list-key">whatsapp_message_events</span><span class="stat-list-val">${w.whatsapp_message_events}</span></div>` +
+        `<div class="stat-list-row"><span class="stat-list-key">outreach_contacted</span><span class="stat-list-val">${w.outreach_contacted}</span></div>` +
+        `<div class="stat-list-row"><span class="stat-list-key">login_codes</span><span class="stat-list-val">${w.login_codes}</span></div>` +
+        `</div>` +
+        `<p style="color: var(--text-dim); font-size: 12.5px;">Sessions, messages and day completions follow automatically because they are keyed by user id, not email.</p>`;
+      const proceed = await adminConfirm({
+        eyebrow: "Confirm transfer",
+        title: `Rows that will be updated`,
+        body: confirmBody,
+        bodyIsHtml: true,
+        confirmLabel: "Transfer now",
+      });
+      if (!proceed) return;
 
       // Step 3: commit.
       try {
@@ -3252,7 +3660,11 @@
         if (!r.ok) {
           const reason = payload && payload.error ? payload.error : `HTTP ${r.status}`;
           const extra = payload && payload.message ? `\n\n${payload.message}` : "";
-          window.alert(`Transfer failed: ${reason}${extra}`);
+          await adminAlert({
+            eyebrow: "Transfer failed",
+            title: reason,
+            body: extra ? extra.trim() : "The server refused to run the transfer.",
+          });
           return;
         }
         // Success — patch every in-memory reference so the next
@@ -3278,7 +3690,11 @@
           try { renderRoster(); } catch {}
         }
       } catch (e) {
-        window.alert("Transfer failed: network error");
+        await adminAlert({
+          eyebrow: "Transfer failed",
+          title: "Network error",
+          body: "Couldn't reach the server. Try again in a moment.",
+        });
       }
     }
     window.transferEmailFromRoster = transferEmailFromRoster;
