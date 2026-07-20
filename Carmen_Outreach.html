@@ -732,7 +732,7 @@
               <button class="cheat-btn ${m.has_cheat_sheet ? 'has-notes' : ''}" data-action="cheat" data-email="${esc(m.email)}" data-name="${esc(nameForDisplay(m))}" type="button">${cheatIcon}</button>
             </td>
             <td class="actions-cell" style="text-align:center">
-              <input class="contacted-check" type="checkbox" data-action="contacted" data-email="${esc(m.email)}" ${m.contacted ? 'checked' : ''} title="${m.contacted ? 'Uncheck to remove from calls-done list' : 'Tick when you\\'ve called them'}" />
+              <input class="contacted-check" type="checkbox" data-action="contacted" data-email="${esc(m.email)}" ${m.contacted ? 'checked' : ''} title="${m.contacted ? 'Uncheck to put them back in the queue' : 'Tick after you called them'}" />
             </td>
           </tr>
         `;
