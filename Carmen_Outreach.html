@@ -276,8 +276,13 @@
       font-style: italic;
     }
     .flag-rise {
-      background: rgba(185, 154, 92, 0.14);
+      background: rgba(185, 154, 92, 0.18);
       color: #8A6D2E;
+    }
+    .flag-rise-past {
+      background: var(--bg-warm);
+      color: var(--text-dim);
+      border: 1px solid var(--gold-line);
     }
     .flag-cert {
       background: rgba(46, 125, 50, 0.14);
@@ -458,7 +463,8 @@
       <button class="filter-chip" data-filter="tier_reset" type="button">Reset</button>
       <button class="filter-chip" data-filter="tier_unlimited" type="button">Unlimited</button>
       <button class="filter-chip" data-filter="newly_engaged" type="button">Newly engaged</button>
-      <button class="filter-chip" data-filter="is_rise" type="button">RISE</button>
+      <button class="filter-chip" data-filter="is_rise_current" type="button">RISE</button>
+      <button class="filter-chip" data-filter="is_rise_past" type="button">Past RISE</button>
       <button class="filter-chip" data-filter="is_certification" type="button">Certification</button>
       <button class="filter-chip" data-filter="never_logged_in" type="button">Never logged in</button>
       <button class="filter-chip" data-filter="stuck_day_0" type="button">Stalled Day 0</button>
@@ -597,7 +603,8 @@
         case "tier_reset":        return m.tier === "preview";
         case "tier_unlimited":    return m.tier === "full";
         case "newly_engaged":     return !!m.is_newly_engaged;
-        case "is_rise":           return !!m.is_rise;
+        case "is_rise_current":   return !!m.is_rise_current;
+        case "is_rise_past":      return !!m.is_rise_past;
         case "is_certification":  return !!m.is_certification;
         case "never_logged_in":   return isNeverLoggedIn(m);
         case "stuck_day_0":       return isStalledDay(m, 0);
@@ -674,8 +681,9 @@
           ? '<span class="flag-pill flag-yes" title="Has &quot;newly engaged reset&quot; tag in GHL">Yes</span>'
           : '<span class="flag-no">—</span>';
         const programPills = [];
-        if (m.is_rise) programPills.push('<span class="flag-pill flag-rise" title="Has a Rise tag in GHL">RISE</span>');
-        if (m.is_certification) programPills.push('<span class="flag-pill flag-cert" title="Has an MYP Certification tag in GHL">Certification</span>');
+        if (m.is_rise_current) programPills.push('<span class="flag-pill flag-rise" title="Current Rise client">RISE</span>');
+        if (m.is_rise_past) programPills.push('<span class="flag-pill flag-rise-past" title="Past Rise client / graduate">Past RISE</span>');
+        if (m.is_certification) programPills.push('<span class="flag-pill flag-cert" title="MYP Certification client">Certification</span>');
         const programBadge = programPills.length
           ? `<span class="flag-program-stack">${programPills.join("")}</span>`
           : '<span class="flag-no">—</span>';
