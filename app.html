@@ -10197,15 +10197,13 @@ Begin.` },
 <div id="cp-popup" class="cp-popup" role="dialog" aria-label="Message from Coach Carmen">
   <button class="cp-close" type="button" data-cp-action="dismiss" aria-label="Close">×</button>
   <div class="cp-head">
-    <!-- Uses an initials avatar by default. Swap the src on the <img>
-         below to Carmen's real photo when Geo has one. -->
-    <div class="cp-avatar" id="cp-avatar">C</div>
+    <img class="cp-avatar" id="cp-avatar" src="/coach%20carmen.jpg" alt="Coach Carmen" />
     <div>
       <div class="cp-name">Coach Carmen</div>
       <div class="cp-role">Shimrit's team</div>
     </div>
   </div>
-  <p class="cp-msg">Hey, this is coach Carmen from Shimrit's team — I'd love to know how your experience with the Power Reset has been so far.</p>
+  <p class="cp-msg">Hey, this is coach Carmen from Shimrit's team. I'd love to know how your experience with the Power Reset has been so far.</p>
   <p class="cp-msg">Do you have some time this week for a quick and <strong>free coaching session</strong> with me?</p>
   <div class="cp-cta-row">
     <a class="cp-cta primary" href="https://api.leadconnectorhq.com/widget/bookings/connectcall-masteryourpath" target="_blank" rel="noopener noreferrer" data-cp-action="book">Book a free session ✨</a>
@@ -10292,6 +10290,14 @@ Begin.` },
     markInteraction("dismissed");
   }
 
+  // Session-token key used by the Field to remember a logged-in member.
+  // Same constant as the top of app.html (STORAGE_KEY = "tfif_session_v1").
+  const MEMBER_SESSION_KEY = "tfif_session_v1";
+
+  function isLoggedIn() {
+    try { return !!localStorage.getItem(MEMBER_SESSION_KEY); } catch { return false; }
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     const popup = document.getElementById("cp-popup");
     if (!popup) return;
@@ -10313,15 +10319,25 @@ Begin.` },
       }
     });
 
-    // Gating logic
+    // ── Gating logic ──────────────────────────────────────────────
+    // Only show when the member is signed in. The sign-in screen and
+    // the Field share the same HTML page — without this check, the
+    // popup pops up on the sign-in screen too.
+    if (!isLoggedIn()) return;
+    // Already seen once — respect the "once per member" rule.
     let existing = null;
     try { existing = JSON.parse(localStorage.getItem(SEEN_KEY) || "null"); } catch {}
-    if (existing) return; // already shown — respect the "once per member" rule
+    if (existing) return;
     if (isStaff(currentEmail())) return;
 
     // Delay entrance so the member sees the Field first and the pop-in
     // feels intentional rather than pushy.
-    setTimeout(showPopup, 6000);
+    setTimeout(() => {
+      // Re-check login state in case the session was cleared mid-delay
+      // (e.g. by the auto-logout flow).
+      if (!isLoggedIn()) return;
+      showPopup();
+    }, 6000);
   });
 })();
 </script>
