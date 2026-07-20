@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carmen · Outreach Queue · The Field</title>
+  <style>
+    :root {
+      --bg: #FAF6EE;
+      --bg-card: #FFFFFF;
+      --bg-warm: #F5EFE0;
+      --text: #2B2318;
+      --text-mid: #6B5D48;
+      --text-dim: #8B7E66;
+      --text-mute: #B8AC96;
+      --gold: #B99A5C;
+      --gold-soft: rgba(185, 154, 92, 0.10);
+      --gold-line: rgba(185, 154, 92, 0.28);
+      --border: #E8DFC8;
+      --success: #2E7D32;
+      --success-soft: rgba(46, 125, 50, 0.10);
+      --danger: #B22222;
+      --danger-soft: rgba(178, 34, 34, 0.08);
+      --wa-green: #25D366;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      font-size: 14px;
+    }
+    .topbar {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    }
+    .topbar-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .brand-eyebrow {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .brand-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    .topbar-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .btn {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--gold-line);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      font-family: inherit;
+      letter-spacing: 0.04em;
+    }
+    .btn:hover:not(:disabled) { background: var(--gold-soft); border-color: var(--gold); }
+    .btn:disabled { opacity: 0.55; cursor: wait; }
+    .btn-primary {
+      background: var(--gold);
+      color: #fff;
+      border-color: var(--gold);
+    }
+    .btn-primary:hover:not(:disabled) { background: #a68a52; border-color: #a68a52; }
+    main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .intro {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin-bottom: 16px;
+    }
+    .intro-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0 0 6px;
+    }
+    .intro-body {
+      font-size: 13px;
+      color: var(--text-mid);
+      margin: 0;
+    }
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .stat-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .stat-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      margin-top: 2px;
+      letter-spacing: -0.02em;
+    }
+    .filters {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+    .filter-chip {
+      background: transparent;
+      color: var(--text-mid);
+      border: 1px solid var(--gold-line);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      font-family: inherit;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .filter-chip:hover { background: var(--gold-soft); color: var(--text); }
+    .filter-chip.active { background: var(--gold); color: #fff; border-color: var(--gold); }
+    .filter-search {
+      flex: 1;
+      min-width: 200px;
+      padding: 6px 12px;
+      border: 1px solid var(--gold-line);
+      border-radius: 999px;
+      font-size: 12px;
+      font-family: inherit;
+      background: var(--bg-warm);
+      color: var(--text);
+    }
+    .filter-search:focus { outline: none; border-color: var(--gold); background: #fff; }
+    .filter-sort {
+      padding: 6px 10px;
+      border: 1px solid var(--gold-line);
+      border-radius: 999px;
+      font-size: 11px;
+      font-family: inherit;
+      background: var(--bg-warm);
+      color: var(--text);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .table-wrap {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+    }
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    th {
+      background: var(--bg-warm);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+    tr:last-child td { border-bottom: 0; }
+    tr.contacted td { opacity: 0.5; }
+    tr.contacted td.actions-cell,
+    tr.contacted td.cheat-cell { opacity: 1; }
+    .row-name {
+      font-weight: 600;
+      color: var(--text);
+    }
+    .row-email {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 2px;
+      word-break: break-all;
+    }
+    .tier-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      border-radius: 4px;
+    }
+    .tier-preview { background: var(--gold-soft); color: #a68a52; }
+    .tier-full    { background: var(--success-soft); color: var(--success); }
+    .never-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-radius: 4px;
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+    .day-badge {
+      display: inline-block;
+      min-width: 22px;
+      text-align: center;
+      padding: 2px 6px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 4px;
+      background: var(--bg-warm);
+      color: var(--text-mid);
+    }
+    .day-badge.day-3 { background: var(--success-soft); color: var(--success); }
+    .day-badge.day-0 { background: var(--danger-soft); color: var(--danger); }
+    .wa-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--wa-green);
+      color: #fff;
+      border: 0;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-decoration: none;
+      font-family: inherit;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+    }
+    .wa-btn:hover { background: #1FBE58; }
+    .wa-btn .phone-num { font-weight: 500; opacity: 0.9; }
+    .no-phone {
+      font-size: 11px;
+      color: var(--text-mute);
+      font-style: italic;
+    }
+    .contacted-check {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--gold-line);
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .contacted-check:hover { border-color: var(--gold); }
+    .contacted-check:checked {
+      background: var(--success);
+      border-color: var(--success);
+    }
+    .contacted-check:checked::after {
+      content: "✓";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 900;
+    }
+    .cheat-btn {
+      background: transparent;
+      border: 1px solid var(--gold-line);
+      border-radius: 6px;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 15px;
+      line-height: 1;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .cheat-btn:hover { background: var(--gold-soft); border-color: var(--gold); }
+    .cheat-btn.has-notes { background: var(--gold-soft); border-color: var(--gold); }
+    .cheat-btn .cheat-icon-empty { opacity: 0.35; }
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-dim);
+      font-style: italic;
+    }
+    .alert {
+      background: var(--danger-soft);
+      border: 1px solid var(--danger);
+      color: var(--danger);
+      padding: 14px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+    .alert a { color: var(--danger); font-weight: 700; }
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--text);
+      color: #fff;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 300;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    /* Modal for cheat sheet editor */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+      padding: 20px;
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal {
+      background: var(--bg-card);
+      border-radius: 12px;
+      max-width: 640px;
+      width: 100%;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    .modal-header {
+      padding: 20px 22px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0 0 4px;
+    }
+    .modal-subtitle {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin: 0;
+    }
+    .modal-body {
+      padding: 16px 22px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .modal-textarea {
+      width: 100%;
+      min-height: 220px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text);
+      background: var(--bg-warm);
+      resize: vertical;
+    }
+    .modal-textarea:focus { outline: none; border-color: var(--gold); background: #fff; }
+    .modal-hint {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 6px;
+      font-style: italic;
+    }
+    .modal-footer {
+      padding: 14px 22px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      align-items: center;
+    }
+    .modal-meta {
+      flex: 1;
+      font-size: 11px;
+      color: var(--text-dim);
+      font-style: italic;
+    }
+    @media (max-width: 720px) {
+      .topbar-inner { flex-direction: column; align-items: flex-start; gap: 10px; }
+      main { padding: 14px; }
+      table { font-size: 11.5px; }
+      th, td { padding: 8px 6px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-eyebrow">The Field · Outreach</span>
+        <span class="brand-title">Carmen's Warm-Call Queue</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn" id="refresh-btn" type="button">Refresh</button>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <div id="auth-alert" class="alert" style="display:none">
+      Please <a href="/admin" target="_blank">log in to the admin dashboard</a> with your @shimritnativ.com email, then return here and hit Refresh.
+    </div>
+
+    <div class="intro">
+      <p class="intro-title">Your list</p>
+      <p class="intro-body">
+        Every active Reset buyer, freshest first. Click the WhatsApp button to open the chat with them in WhatsApp Web (log in once at <a href="https://web.whatsapp.com" target="_blank" style="color:var(--gold)">web.whatsapp.com</a>). Tick the checkbox after a call — solid, no answer, whatever — and they drop off your queue for 30 days. Click 📄 to read Aira's cheat sheet before you dial, or write one after the call.
+      </p>
+    </div>
+
+    <div class="stats-row" id="stats-row"></div>
+
+    <div class="filters">
+      <input class="filter-search" type="search" id="search" placeholder="Search by name, email, or phone…" />
+      <button class="filter-chip active" data-filter="all" type="button">All</button>
+      <button class="filter-chip" data-filter="uncontacted" type="button">Not called yet</button>
+      <button class="filter-chip" data-filter="never_logged_in" type="button">Never logged in</button>
+      <button class="filter-chip" data-filter="stuck_day_0" type="button">Stalled Day 0</button>
+      <button class="filter-chip" data-filter="stuck_day_1" type="button">Stalled Day 1</button>
+      <button class="filter-chip" data-filter="has_cheat" type="button">Has cheat sheet</button>
+      <button class="filter-chip" data-filter="has_phone" type="button">Phone available</button>
+      <select class="filter-sort" id="sort">
+        <option value="newest">Newest first</option>
+        <option value="oldest">Oldest first</option>
+        <option value="stalest">Stalest (no activity)</option>
+      </select>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Member</th>
+            <th>WhatsApp</th>
+            <th>Tier</th>
+            <th>Joined</th>
+            <th>1st login</th>
+            <th>Day</th>
+            <th>Last active</th>
+            <th style="text-align:center">Cheat sheet</th>
+            <th style="text-align:center">Called</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="9" class="empty-state">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Cheat sheet modal -->
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal" role="dialog" aria-labelledby="modal-title">
+      <div class="modal-header">
+        <p class="modal-title" id="modal-title">Cheat sheet</p>
+        <p class="modal-subtitle" id="modal-subtitle">Everything Aira knows about this member</p>
+      </div>
+      <div class="modal-body">
+        <textarea class="modal-textarea" id="modal-textarea" placeholder="Notes for this member — what they filled out, what they mentioned, family context, prior offers seen, anything Carmen should know before dialing."></textarea>
+        <p class="modal-hint">Empty this field and save to clear the cheat sheet.</p>
+      </div>
+      <div class="modal-footer">
+        <span class="modal-meta" id="modal-meta"></span>
+        <button class="btn" type="button" id="modal-cancel">Cancel</button>
+        <button class="btn btn-primary" type="button" id="modal-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const SESSION_TOKEN_KEY = "tfif_session_v1";
+
+    // ── State ────────────────────────────────────────────────────────────
+    let allMembers = [];
+    let currentFilter = "all";
+    let currentSort = "newest";
+    let currentSearch = "";
+    let editingEmail = null;
+
+    // ── Utilities ────────────────────────────────────────────────────────
+    function esc(s) {
+      if (s == null) return "";
+      return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+    function fmtDate(iso) {
+      if (!iso) return "—";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "—";
+      return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    }
+    function fmtRelative(iso) {
+      if (!iso) return "—";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "—";
+      const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+      if (days === 0) return "today";
+      if (days === 1) return "1d ago";
+      if (days < 30) return days + "d ago";
+      if (days < 365) return Math.floor(days / 30) + "mo ago";
+      return Math.floor(days / 365) + "y ago";
+    }
+    function digitsOnly(phone) {
+      return String(phone || "").replace(/\D/g, "");
+    }
+    function waUrl(phone) {
+      const digits = digitsOnly(phone);
+      return digits ? "https://wa.me/" + digits : null;
+    }
+    function toast(msg) {
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 2400);
+    }
+    function firstNameOf(m) {
+      const raw = (m.display_name || "").trim();
+      if (!raw) return m.email.split("@")[0];
+      return raw.split(/\s+/)[0];
+    }
+    function nameForDisplay(m) {
+      return (m.display_name && m.display_name.trim()) || m.email.split("@")[0];
+    }
+
+    // ── Fetch ────────────────────────────────────────────────────────────
+    async function loadList() {
+      const token = localStorage.getItem(SESSION_TOKEN_KEY);
+      if (!token) {
+        document.getElementById("auth-alert").style.display = "block";
+        document.getElementById("tbody").innerHTML =
+          '<tr><td colspan="9" class="empty-state">Not signed in.</td></tr>';
+        return;
+      }
+      document.getElementById("auth-alert").style.display = "none";
+
+      try {
+        const res = await fetch("/api/admin/carmen-list", {
+          headers: { "x-session-token": token },
+        });
+        if (res.status === 401) {
+          document.getElementById("auth-alert").style.display = "block";
+          document.getElementById("tbody").innerHTML =
+            '<tr><td colspan="9" class="empty-state">Session expired.</td></tr>';
+          return;
+        }
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        allMembers = data.members || [];
+        renderStats();
+        renderTable();
+      } catch (e) {
+        document.getElementById("tbody").innerHTML =
+          '<tr><td colspan="9" class="empty-state">Failed to load: ' + esc(e.message) + '</td></tr>';
+      }
+    }
+
+    // ── Filters + sorting ───────────────────────────────────────────────
+    function isNeverLoggedIn(m) { return !m.first_login_at; }
+    function isStalledDay(m, day) {
+      return !!m.first_login_at && (m.last_completed_day || 0) === day;
+    }
+    function passesFilter(m) {
+      switch (currentFilter) {
+        case "uncontacted":       return !m.contacted;
+        case "never_logged_in":   return isNeverLoggedIn(m);
+        case "stuck_day_0":       return isStalledDay(m, 0);
+        case "stuck_day_1":       return isStalledDay(m, 1);
+        case "has_cheat":         return m.has_cheat_sheet;
+        case "has_phone":         return !!m.phone;
+        case "all":
+        default:                  return true;
+      }
+    }
+    function passesSearch(m) {
+      if (!currentSearch) return true;
+      const q = currentSearch.toLowerCase();
+      const hay = [
+        m.email || "",
+        m.display_name || "",
+        m.phone || "",
+      ].join(" ").toLowerCase();
+      return hay.includes(q);
+    }
+    function sortMembers(list) {
+      const copy = list.slice();
+      if (currentSort === "newest") {
+        copy.sort((a, b) => (new Date(b.created_at || 0)) - (new Date(a.created_at || 0)));
+      } else if (currentSort === "oldest") {
+        copy.sort((a, b) => (new Date(a.created_at || 0)) - (new Date(b.created_at || 0)));
+      } else if (currentSort === "stalest") {
+        // Stalest = longest time since last user message. Never active = infinite.
+        const timeSince = (m) => m.last_user_message_at
+          ? Date.now() - new Date(m.last_user_message_at).getTime()
+          : Number.POSITIVE_INFINITY;
+        copy.sort((a, b) => timeSince(b) - timeSince(a));
+      }
+      return copy;
+    }
+
+    // ── Render ───────────────────────────────────────────────────────────
+    function renderStats() {
+      const total = allMembers.length;
+      const uncontacted = allMembers.filter(m => !m.contacted).length;
+      const neverLoggedIn = allMembers.filter(isNeverLoggedIn).length;
+      const withCheat = allMembers.filter(m => m.has_cheat_sheet).length;
+      const withPhone = allMembers.filter(m => m.phone).length;
+      const html = [
+        { label: "Total active", value: total },
+        { label: "Not called yet", value: uncontacted },
+        { label: "Never logged in", value: neverLoggedIn },
+        { label: "Has cheat sheet", value: withCheat },
+        { label: "Phone available", value: withPhone },
+      ].map(s => `
+        <div class="stat-card">
+          <div class="stat-label">${esc(s.label)}</div>
+          <div class="stat-value">${s.value}</div>
+        </div>
+      `).join("");
+      document.getElementById("stats-row").innerHTML = html;
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById("tbody");
+      const filtered = sortMembers(allMembers.filter(m => passesFilter(m) && passesSearch(m)));
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No members match this view.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(m => {
+        const wa = waUrl(m.phone);
+        const dayCls = m.last_completed_day === 3 ? "day-3" : (m.last_completed_day === 0 ? "day-0" : "");
+        const firstLogin = m.first_login_at ? fmtDate(m.first_login_at) : '<span class="never-tag">Never</span>';
+        const lastActive = m.last_user_message_at ? fmtRelative(m.last_user_message_at) : '<span class="never-tag">Never</span>';
+        const tierBadge = m.tier === "full"
+          ? '<span class="tier-badge tier-full">Unlimited</span>'
+          : '<span class="tier-badge tier-preview">Reset</span>';
+        const cheatIcon = m.has_cheat_sheet
+          ? '<span title="Has cheat sheet">📄</span>'
+          : '<span class="cheat-icon-empty" title="No cheat sheet — click to add">📝</span>';
+
+        return `
+          <tr class="${m.contacted ? 'contacted' : ''}" data-email="${esc(m.email)}">
+            <td>
+              <div class="row-name">${esc(nameForDisplay(m))}</div>
+              <div class="row-email">${esc(m.email)}</div>
+            </td>
+            <td>
+              ${wa
+                ? `<a class="wa-btn" href="${esc(wa)}" target="_blank" rel="noopener noreferrer" title="Open in WhatsApp Web">📱 <span class="phone-num">${esc(m.phone)}</span></a>`
+                : '<span class="no-phone">No phone on file</span>'
+              }
+            </td>
+            <td>${tierBadge}</td>
+            <td>${fmtDate(m.created_at)}</td>
+            <td>${firstLogin}</td>
+            <td><span class="day-badge ${dayCls}">${m.last_completed_day || 0}</span></td>
+            <td>${lastActive}</td>
+            <td class="cheat-cell" style="text-align:center">
+              <button class="cheat-btn ${m.has_cheat_sheet ? 'has-notes' : ''}" data-action="cheat" data-email="${esc(m.email)}" data-name="${esc(nameForDisplay(m))}" type="button">${cheatIcon}</button>
+            </td>
+            <td class="actions-cell" style="text-align:center">
+              <input class="contacted-check" type="checkbox" data-action="contacted" data-email="${esc(m.email)}" ${m.contacted ? 'checked' : ''} title="${m.contacted ? 'Uncheck to remove from calls-done list' : 'Tick when you\\'ve called them'}" />
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    // ── Actions: contacted toggle, cheat sheet modal ────────────────────
+    async function toggleContacted(email, checked) {
+      const token = localStorage.getItem(SESSION_TOKEN_KEY);
+      if (!token) { toast("Not signed in."); return; }
+      // Optimistic local update
+      const m = allMembers.find(x => x.email === email);
+      if (m) m.contacted = checked;
+      renderTable();
+      renderStats();
+      try {
+        const res = await fetch("/api/admin/carmen-contacted", {
+          method: checked ? "POST" : "DELETE",
+          headers: { "Content-Type": "application/json", "x-session-token": token },
+          body: JSON.stringify({ email }),
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        toast(checked ? "Marked as called ✓" : "Unmarked");
+      } catch (e) {
+        // Revert on failure
+        if (m) m.contacted = !checked;
+        renderTable();
+        renderStats();
+        toast("Save failed — reverted");
+      }
+    }
+
+    async function openCheatSheet(email, name) {
+      editingEmail = email;
+      const token = localStorage.getItem(SESSION_TOKEN_KEY);
+      if (!token) { toast("Not signed in."); return; }
+      document.getElementById("modal-title").textContent = `Cheat sheet · ${name}`;
+      document.getElementById("modal-subtitle").textContent = email;
+      const ta = document.getElementById("modal-textarea");
+      const meta = document.getElementById("modal-meta");
+      ta.value = "Loading…";
+      ta.disabled = true;
+      meta.textContent = "";
+      document.getElementById("modal-backdrop").classList.add("show");
+
+      try {
+        const res = await fetch(
+          "/api/admin/member-cheat-sheet?email=" + encodeURIComponent(email),
+          { headers: { "x-session-token": token } }
+        );
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        ta.value = data.notes || "";
+        ta.disabled = false;
+        ta.focus();
+        if (data.updated_by && data.updated_at) {
+          meta.textContent = `Last updated by ${data.updated_by} · ${new Date(data.updated_at).toLocaleString()}`;
+        } else {
+          meta.textContent = "No previous notes for this member.";
+        }
+      } catch (e) {
+        ta.value = "";
+        ta.disabled = false;
+        meta.textContent = "Could not load — start fresh.";
+      }
+    }
+
+    async function saveCheatSheet() {
+      if (!editingEmail) return;
+      const token = localStorage.getItem(SESSION_TOKEN_KEY);
+      if (!token) { toast("Not signed in."); return; }
+      const notes = document.getElementById("modal-textarea").value;
+      const saveBtn = document.getElementById("modal-save");
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Saving…";
+      try {
+        const res = await fetch("/api/admin/member-cheat-sheet", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-session-token": token },
+          body: JSON.stringify({ email: editingEmail, notes }),
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        // Update local flag so the icon flips immediately
+        const m = allMembers.find(x => x.email === editingEmail);
+        if (m) m.has_cheat_sheet = notes.trim().length > 0;
+        renderStats();
+        renderTable();
+        toast("Cheat sheet saved ✓");
+        closeCheatSheet();
+      } catch (e) {
+        toast("Save failed: " + e.message);
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save";
+      }
+    }
+
+    function closeCheatSheet() {
+      editingEmail = null;
+      document.getElementById("modal-backdrop").classList.remove("show");
+    }
+
+    // ── Wire up ──────────────────────────────────────────────────────────
+    document.addEventListener("DOMContentLoaded", () => {
+      // Filter chips
+      document.querySelectorAll(".filter-chip").forEach(chip => {
+        chip.addEventListener("click", () => {
+          document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
+          chip.classList.add("active");
+          currentFilter = chip.dataset.filter || "all";
+          renderTable();
+        });
+      });
+
+      // Sort dropdown
+      document.getElementById("sort").addEventListener("change", (e) => {
+        currentSort = e.target.value;
+        renderTable();
+      });
+
+      // Search
+      document.getElementById("search").addEventListener("input", (e) => {
+        currentSearch = e.target.value.trim();
+        renderTable();
+      });
+
+      // Refresh
+      document.getElementById("refresh-btn").addEventListener("click", () => loadList());
+
+      // Delegated table events (contacted checkbox, cheat sheet button)
+      document.getElementById("tbody").addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-action='cheat']");
+        if (btn) {
+          openCheatSheet(btn.dataset.email, btn.dataset.name);
+        }
+      });
+      document.getElementById("tbody").addEventListener("change", (e) => {
+        const chk = e.target.closest("[data-action='contacted']");
+        if (chk) {
+          toggleContacted(chk.dataset.email, chk.checked);
+        }
+      });
+
+      // Modal
+      document.getElementById("modal-cancel").addEventListener("click", closeCheatSheet);
+      document.getElementById("modal-save").addEventListener("click", saveCheatSheet);
+      document.getElementById("modal-backdrop").addEventListener("click", (e) => {
+        if (e.target.id === "modal-backdrop") closeCheatSheet();
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeCheatSheet();
+      });
+
+      loadList();
+    });
+  </script>
+
+</body>
+</html>
