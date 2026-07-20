@@ -84,10 +84,13 @@ export default async function handler(req, res) {
   const v1Headers = v1Key
     ? { Authorization: `Bearer ${v1Key}`, Accept: "application/json" }
     : null;
+  // GHL's V2 API is versioned by an explicit header. 2021-07-28 is the
+  // current stable Private Integration Token version — the older 2021-04-15
+  // I originally sent is retired.
   const v2Headers = v2Token
     ? {
         Authorization: `Bearer ${v2Token}`,
-        Version: "2021-04-15",
+        Version: "2021-07-28",
         Accept: "application/json",
       }
     : null;
@@ -125,6 +128,15 @@ export default async function handler(req, res) {
   // ── V2 attempts ────────────────────────────────────────────────────
   if (v2Headers) {
     tests.push(
+      // Basic sanity: does the token authenticate at all? This endpoint
+      // should work with almost any scope granted. If it 401s, the
+      // problem is the token itself, not the scopes on individual
+      // resources.
+      tryEndpoint({
+        label: "V2 · GET /locations/{locationId}",
+        url: `${V2_BASE}/locations/${encodeURIComponent(locationId)}`,
+        headers: v2Headers,
+      }),
       tryEndpoint({
         label: "V2 · GET /conversations/search",
         url: `${V2_BASE}/conversations/search?locationId=${encodeURIComponent(locationId)}&contactId=${encodeURIComponent(contactId)}`,
