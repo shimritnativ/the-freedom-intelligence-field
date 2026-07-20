@@ -487,12 +487,15 @@
       background: var(--bg-warm);
       border: 1px solid var(--border);
       border-radius: 10px;
-      padding: 12px 14px;
-      font-size: 12.5px;
-      line-height: 1.7;
+      padding: 14px 16px;
+      font-size: 13.5px;
+      line-height: 1.6;
       color: var(--text);
       white-space: pre-wrap;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      /* Use the page's default sans-serif — the previous monospace made
+         it feel like a code dump. This reads like a colleague's briefing
+         note now. */
+      font-family: inherit;
     }
     .cs-tag-summary.empty {
       font-family: inherit;
