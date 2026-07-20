@@ -1068,6 +1068,76 @@
       cursor: wait;
       opacity: 0.6;
     }
+    /* Kebab (3-dot) menu button in the Actions column. Same visual weight
+       as .roster-action-btn so the roster stays scannable; opens a small
+       dropdown of per-member actions below/left of the button. */
+    .roster-kebab-btn {
+      background: transparent;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 14px;
+      line-height: 1;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      letter-spacing: 0.1em;
+    }
+    .roster-kebab-btn:hover,
+    .roster-kebab-btn[aria-expanded="true"] {
+      background: var(--gold-soft);
+      color: var(--text);
+      border-color: var(--gold);
+    }
+    /* The dropdown itself. Positioned absolutely under the kebab; the
+       parent .roster-kebab-wrap gets position:relative so this anchors
+       correctly. Hidden by default; shown when the parent has the
+       .open class. */
+    .roster-kebab-wrap {
+      position: relative;
+      display: inline-block;
+    }
+    .roster-kebab-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px);
+      right: 0;
+      min-width: 180px;
+      background: var(--bg-card, #fff);
+      border: 1px solid var(--gold-line);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      z-index: 200;
+      padding: 4px 0;
+      text-align: left;
+    }
+    .roster-kebab-wrap.open .roster-kebab-menu {
+      display: block;
+    }
+    .roster-kebab-item {
+      display: block;
+      width: 100%;
+      padding: 8px 14px;
+      background: transparent;
+      border: 0;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 500;
+      text-align: left;
+      cursor: pointer;
+      white-space: nowrap;
+      font-family: inherit;
+    }
+    .roster-kebab-item:hover {
+      background: var(--gold-soft);
+    }
+    .roster-kebab-item.danger {
+      color: #b22222;
+    }
+    .roster-kebab-item.danger:hover {
+      background: rgba(178, 34, 34, 0.08);
+    }
     /* Inline name editor. The Name cell in the Members roster is
        contenteditable so clicking it puts the caret in place and typing
        replaces the value. Enter saves. Esc reverts. Fallback names
@@ -3039,6 +3109,180 @@
       }
     });
 
+    // ─── Kebab menu + transfer-email action ────────────────────────────────
+    // The Actions column now shows a 3-dot kebab that opens a small
+    // dropdown per row. Menu items reuse the .roster-kebab-item class.
+    // Only one menu open at a time; outside-click and Escape close it.
+
+    function closeAllKebabs() {
+      document.querySelectorAll('.roster-kebab-wrap.open').forEach(w => {
+        w.classList.remove('open');
+        const trigger = w.querySelector('.roster-kebab-btn');
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+      });
+    }
+    window.closeAllKebabs = closeAllKebabs;
+
+    document.body.addEventListener("click", (e) => {
+      const kebabBtn = e.target && e.target.closest && e.target.closest('.roster-kebab-btn');
+      if (kebabBtn) {
+        // Toggle THIS row's menu; close every other one.
+        const wrap = kebabBtn.closest('.roster-kebab-wrap');
+        const wasOpen = wrap && wrap.classList.contains('open');
+        closeAllKebabs();
+        if (wrap && !wasOpen) {
+          wrap.classList.add('open');
+          kebabBtn.setAttribute('aria-expanded', 'true');
+        }
+        e.stopPropagation();
+        return;
+      }
+      const menuItem = e.target && e.target.closest && e.target.closest('.roster-kebab-item');
+      if (menuItem) {
+        const action = menuItem.dataset.action;
+        const email = menuItem.dataset.email;
+        const name = menuItem.dataset.name;
+        closeAllKebabs();
+        if (action === 'extend-preview') {
+          extendPreviewFromRoster(email, name);
+        } else if (action === 'transfer-email') {
+          transferEmailFromRoster(email, name);
+        }
+        return;
+      }
+      // Any click outside a menu closes them all.
+      if (!e.target.closest('.roster-kebab-wrap')) {
+        closeAllKebabs();
+      }
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeAllKebabs();
+    });
+
+    // Transfer a member's canonical email — moves users, purchases, WA
+    // events, outreach flag, and login codes from the current address to
+    // a new one. Runs the same /api/admin/transfer-account endpoint we
+    // use for one-off Neon fixes, but with a two-step confirm-first flow:
+    // dry_run to preview the counts, then the operator confirms before
+    // we commit. sessions/messages/day_completions follow automatically
+    // because they're keyed by user_id (UUID), not email.
+    async function transferEmailFromRoster(currentEmail, displayName) {
+      if (!currentEmail) return;
+      const label = displayName || currentEmail;
+      const raw = window.prompt(
+        `Transfer account for ${label}\n\n` +
+        `Current email: ${currentEmail}\n\n` +
+        `Enter the NEW email this account should live under. All history\n` +
+        `(purchases, conversations, day completions) moves with it.\n\n` +
+        `Refuses to run if the destination email already belongs to a\n` +
+        `different account.`,
+        ""
+      );
+      if (raw === null) return;
+      const toEmail = String(raw).trim().toLowerCase();
+      if (!toEmail || !toEmail.includes("@")) {
+        window.alert("Please enter a valid email address.");
+        return;
+      }
+      if (toEmail === currentEmail.toLowerCase()) {
+        window.alert("Destination email is the same as the current one.");
+        return;
+      }
+      const token = localStorage.getItem(STORAGE_KEY);
+      if (!token) {
+        window.alert("Session expired. Refresh the page and sign in again.");
+        return;
+      }
+
+      // Step 1: dry_run to preview what will change.
+      let preview;
+      try {
+        const r = await fetch("/api/admin/transfer-account", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-session-token": token,
+          },
+          body: JSON.stringify({ from_email: currentEmail, to_email: toEmail, dry_run: true }),
+        });
+        const payload = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          const reason = payload && payload.error ? payload.error : `HTTP ${r.status}`;
+          const extra = payload && payload.message ? `\n\n${payload.message}` : "";
+          window.alert(`Transfer preview failed: ${reason}${extra}`);
+          return;
+        }
+        preview = payload && payload.preview;
+      } catch (e) {
+        window.alert("Transfer preview failed: network error");
+        return;
+      }
+      if (!preview || !preview.would_update) {
+        window.alert("Transfer preview returned no data.");
+        return;
+      }
+
+      // Step 2: confirm with the counts.
+      const w = preview.would_update;
+      const confirmMsg =
+        `Confirm transfer for ${label}\n\n` +
+        `From: ${currentEmail}\n` +
+        `  To: ${toEmail}\n\n` +
+        `Rows that will be updated:\n` +
+        `  • users:                    ${w.users}\n` +
+        `  • purchases:                ${w.purchases}\n` +
+        `  • whatsapp_message_events:  ${w.whatsapp_message_events}\n` +
+        `  • outreach_contacted:       ${w.outreach_contacted}\n` +
+        `  • login_codes:              ${w.login_codes}\n\n` +
+        `Proceed?`;
+      if (!window.confirm(confirmMsg)) return;
+
+      // Step 3: commit.
+      try {
+        const r = await fetch("/api/admin/transfer-account", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-session-token": token,
+          },
+          body: JSON.stringify({ from_email: currentEmail, to_email: toEmail, dry_run: false }),
+        });
+        const payload = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          const reason = payload && payload.error ? payload.error : `HTTP ${r.status}`;
+          const extra = payload && payload.message ? `\n\n${payload.message}` : "";
+          window.alert(`Transfer failed: ${reason}${extra}`);
+          return;
+        }
+        // Success — patch every in-memory reference so the next
+        // renderDashboard reflects the new email without a page reload.
+        const fromLc = currentEmail.toLowerCase();
+        const patch = (list) => {
+          if (!Array.isArray(list)) return;
+          for (const u of list) {
+            if (u && (u.email || "").toLowerCase() === fromLc) {
+              u.email = toEmail;
+            }
+          }
+        };
+        if (state && state.data) {
+          patch(state.data.recentSignups);
+          patch(state.data.members);
+          patch(state.data.allMembers);
+        }
+        showIntelToast(`Transferred ${label} → ${toEmail}`);
+        // Re-render the roster so the row's data-email + action buttons
+        // point at the new email for subsequent actions.
+        if (typeof renderRoster === "function") {
+          try { renderRoster(); } catch {}
+        }
+      } catch (e) {
+        window.alert("Transfer failed: network error");
+      }
+    }
+    window.transferEmailFromRoster = transferEmailFromRoster;
+
     // Inline member-name editor. The Name cell is contenteditable; click
     // it, type the correct name, hit Enter to save (or blur to save on
     // desktop). Esc reverts. Uses fetch against the admin endpoint and
@@ -3682,38 +3926,6 @@
                 </div>
                 <div id="memory-backfill-status" style="margin-top: 10px; font-size: 12px; color: var(--text-dim); font-style: italic;">Click Preview first to see how much it'll process without spending anything.</div>
               </div>
-              <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);">
-                <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px;">
-                  <strong style="color: var(--text);">Reconcile against ThriveCart</strong> — Download a transactions CSV from ThriveCart (Dashboard → Transactions → Export), paste it here, and we'll surface every paid order that didn't reach our DB. One click to backfill each missing row.
-                </div>
-                <textarea id="rec-csv" placeholder="Paste ThriveCart CSV here (whole file including header row)" style="width: 100%; height: 100px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 11px; font-family: monospace;"></textarea>
-                <div style="margin-top: 6px;">
-                  <button class="preset-btn" onclick="runReconcile()" id="rec-btn" style="background: var(--gold); color: var(--dark); border-color: var(--gold);">Find missing purchases</button>
-                </div>
-                <div id="rec-status" style="margin-top: 10px; font-size: 12px; color: var(--text-dim); font-style: italic;">Pulls every ThriveCart order from the CSV, diffs against our table, lists what's missing.</div>
-                <div id="rec-results" style="margin-top: 10px;"></div>
-              </div>
-              <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);">
-                <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px;">
-                  <strong style="color: var(--text);">Log a manual purchase</strong> — Use when a real ThriveCart payment didn't reach our webhook (rare but happens). Paste the invoice ID, customer email, amount, and click Save. Idempotent — re-submitting the same invoice is safe.
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
-                  <input type="text" id="mp-thrivecart-id" placeholder="Invoice ID (e.g. MYP-000100586)" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;" />
-                  <input type="email" id="mp-email" placeholder="Customer email" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;" />
-                  <input type="text" id="mp-product" placeholder="Product name (e.g. The Power Reset)" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;" />
-                  <input type="number" id="mp-amount" placeholder="Amount in EUR (e.g. 4.50)" step="0.01" min="0" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;" />
-                  <input type="text" id="mp-coupon" placeholder="Coupon code (optional, e.g. POWER50)" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;" />
-                  <select id="mp-event-type" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;">
-                    <option value="order.success">order.success (new purchase / first sub payment)</option>
-                    <option value="order.subscription_payment">order.subscription_payment (recurring)</option>
-                    <option value="order.refund">order.refund</option>
-                  </select>
-                </div>
-                <div style="margin-top: 6px;">
-                  <button class="preset-btn" onclick="runManualPurchase()" id="mp-btn" style="background: var(--gold); color: var(--dark); border-color: var(--gold);">Save purchase</button>
-                </div>
-                <div id="mp-status" style="margin-top: 10px; font-size: 12px; color: var(--text-dim); font-style: italic;">Amount is the gross price the customer paid (including VAT). System converts to net automatically per VAT toggle.</div>
-              </div>
             </div>
             <div class="section" id="panel-tier-mix">
               <h2><span class="h2-eyebrow">Tier mix</span>Members by tier &amp; plan</h2>
@@ -3827,8 +4039,8 @@
                     )}</th>
                     <th class="has-help" style="text-align: right;">Actions${help(
                       'Actions',
-                      "Per-member quick actions. Currently: Extend the Reset preview window for Reset-tier members. Prompts you for how many days to add.",
-                      "Useful when someone email supports asking for extra time on their €9 program."
+                      "Per-member quick actions. Click the ⋯ to open the menu. Available: Extend preview (Reset-tier only) — add days to the 72-hour window; Transfer email — move the account's history to a new address (used when Kajabi/GHL and Neon disagree on the canonical email).",
+                      "Extend when someone asks for more time on their €9 program. Transfer when a member wants to switch the account to a different email they now use."
                     )}</th>
                   </tr>
                 </thead>
@@ -7231,10 +7443,16 @@
             <td class="date-cell" data-label="1st login">${u.first_login_at ? fmtDate(u.first_login_at) : "—"}</td>
             <td class="num" data-label="Day">${u.last_completed_day || 0}</td>
             <td class="roster-actions-cell" data-label="Actions" style="text-align: right; white-space: nowrap;">
-              ${u.tier === 'preview'
-                ? `<button type="button" class="roster-action-btn" title="Extend Reset preview window" data-action="extend-preview" data-email="${escapeHtml(u.email || '')}" data-name="${escapeHtml(nameOrFallback(u) || '')}">Extend</button>`
-                : '<span style="color: var(--text-mute); font-size: 11px;">—</span>'
-              }
+              <span class="roster-kebab-wrap" data-kebab-email="${escapeHtml(u.email || '')}">
+                <button type="button" class="roster-kebab-btn" data-action="toggle-kebab" title="Actions" aria-haspopup="true" aria-expanded="false" data-email="${escapeHtml(u.email || '')}">⋯</button>
+                <div class="roster-kebab-menu" role="menu">
+                  ${u.tier === 'preview'
+                    ? `<button type="button" class="roster-kebab-item" role="menuitem" data-action="extend-preview" data-email="${escapeHtml(u.email || '')}" data-name="${escapeHtml(nameOrFallback(u) || '')}">Extend preview</button>`
+                    : ''
+                  }
+                  <button type="button" class="roster-kebab-item" role="menuitem" data-action="transfer-email" data-email="${escapeHtml(u.email || '')}" data-name="${escapeHtml(nameOrFallback(u) || '')}">Transfer email…</button>
+                </div>
+              </span>
             </td>
           </tr>
         `;
