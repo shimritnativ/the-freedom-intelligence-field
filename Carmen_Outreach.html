@@ -197,7 +197,9 @@
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: 10px;
-      overflow: hidden;
+      /* Was overflow:hidden — that clips the sticky header. Use visible
+         so the header can pin to the viewport while scrolling. */
+      overflow: visible;
     }
     table {
       width: 100%;
@@ -218,6 +220,14 @@
       text-transform: uppercase;
       color: var(--text-dim);
       white-space: nowrap;
+      /* Sticky column headers — stay glued below the topbar when Carmen
+         scrolls the queue. The topbar is position:sticky at top:0 with
+         z-index:50; this header sticks at 72px (topbar height) with a
+         lower z-index so the topbar covers it if they visually overlap. */
+      position: sticky;
+      top: 72px;
+      z-index: 20;
+      box-shadow: 0 1px 0 var(--border);
     }
     tr:last-child td { border-bottom: 0; }
     tr.contacted td { opacity: 0.5; }
@@ -653,13 +663,14 @@
             <th>1st login</th>
             <th>Day</th>
             <th>Last active</th>
+            <th>Last DM</th>
             <th style="text-align:center">Cheat sheet</th>
             <th style="text-align:center">GHL</th>
             <th style="text-align:center">Called</th>
           </tr>
         </thead>
         <tbody id="tbody">
-          <tr><td colspan="12" class="empty-state">Loading…</td></tr>
+          <tr><td colspan="13" class="empty-state">Loading…</td></tr>
         </tbody>
       </table>
     </div>
@@ -752,7 +763,7 @@
       if (!token) {
         document.getElementById("auth-alert").style.display = "block";
         document.getElementById("tbody").innerHTML =
-          '<tr><td colspan="12" class="empty-state">Not signed in.</td></tr>';
+          '<tr><td colspan="13" class="empty-state">Not signed in.</td></tr>';
         return;
       }
       document.getElementById("auth-alert").style.display = "none";
@@ -764,7 +775,7 @@
         if (res.status === 401) {
           document.getElementById("auth-alert").style.display = "block";
           document.getElementById("tbody").innerHTML =
-            '<tr><td colspan="12" class="empty-state">Session expired.</td></tr>';
+            '<tr><td colspan="13" class="empty-state">Session expired.</td></tr>';
           return;
         }
         if (!res.ok) throw new Error("HTTP " + res.status);
@@ -774,7 +785,7 @@
         renderTable();
       } catch (e) {
         document.getElementById("tbody").innerHTML =
-          '<tr><td colspan="12" class="empty-state">Failed to load: ' + esc(e.message) + '</td></tr>';
+          '<tr><td colspan="13" class="empty-state">Failed to load: ' + esc(e.message) + '</td></tr>';
       }
     }
 
@@ -851,7 +862,7 @@
       const filtered = sortMembers(allMembers.filter(m => passesFilter(m) && passesSearch(m)));
 
       if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="12" class="empty-state">No members match this view.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="13" class="empty-state">No members match this view.</td></tr>';
         return;
       }
 
@@ -899,6 +910,7 @@
             <td>${firstLogin}</td>
             <td><span class="day-badge ${dayCls}">${m.last_completed_day || 0}</span></td>
             <td>${lastActive}</td>
+            <td>${m.last_dm_date ? fmtDate(m.last_dm_date) : '<span class="never-tag">Never</span>'}</td>
             <td class="cheat-cell" style="text-align:center">
               <button class="cheat-btn ${m.has_cheat_sheet ? 'has-content' : ''}" data-action="cheat" data-email="${esc(m.email)}" data-name="${esc(nameForDisplay(m))}" title="${m.has_cheat_sheet ? 'View cheat sheet' : 'No cheat sheet yet — click to view / add notes'}" type="button">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
