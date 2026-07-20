@@ -183,16 +183,25 @@ function classify(tags) {
   if (has("wa-paused-by-reply")) engagement.push("WhatsApp paused (they replied)");
 
   // ── Source / attribution
+  // NOTE: "email list - in person event form" is NOT a source — it's the
+  // segment we email when there's an in-person event coming up. Don't
+  // add it here (Geo confirmed nobody actually came in via that path).
   const source = [];
   if (has("ads") || has("source - ads")) source.push("Ads");
   if (has("organic") || has("source - organic")) source.push("Organic");
   if (has("manychat") || has("source - manychat")) source.push("ManyChat");
   if (has("ignite 2025")) source.push("Ignite 2025");
-  if (has("in-person event") || has("email list - in person event form")) source.push("In-person event");
 
   // ── Other worth noting — everything left over that isn't noise
   const NOISE = new Set([
-    "org", "email list - in person event form", "created account themselves",
+    "org", "created account themselves",
+    // In-person-event mailing-list segment tags. These aren't a source
+    // or a meaningful signal for Carmen — just how the mailing list is
+    // organised. Drop from every bucket.
+    "email list - in person event form",
+    "in person event email list",
+    "in-person event email list",
+    "in person event - email list",
     "client", "consultation",
     "myp business club", "business club",
     "rise client", "rise paused", "rise", "past rise client", "rise past client", "rise graduate",
