@@ -275,13 +275,18 @@
       opacity: 0.5;
       font-style: italic;
     }
-    .flag-client-current {
+    .flag-rise {
       background: rgba(185, 154, 92, 0.14);
       color: #8A6D2E;
     }
-    .flag-client-past {
-      background: var(--bg-warm);
-      color: var(--text-dim);
+    .flag-cert {
+      background: rgba(46, 125, 50, 0.14);
+      color: var(--success);
+    }
+    .flag-program-stack {
+      display: inline-flex;
+      gap: 4px;
+      flex-wrap: wrap;
     }
     .day-badge {
       display: inline-block;
@@ -453,8 +458,8 @@
       <button class="filter-chip" data-filter="tier_reset" type="button">Reset</button>
       <button class="filter-chip" data-filter="tier_unlimited" type="button">Unlimited</button>
       <button class="filter-chip" data-filter="newly_engaged" type="button">Newly engaged</button>
-      <button class="filter-chip" data-filter="client_current" type="button">Current client</button>
-      <button class="filter-chip" data-filter="client_past" type="button">Past client</button>
+      <button class="filter-chip" data-filter="is_rise" type="button">RISE</button>
+      <button class="filter-chip" data-filter="is_certification" type="button">Certification</button>
       <button class="filter-chip" data-filter="never_logged_in" type="button">Never logged in</button>
       <button class="filter-chip" data-filter="stuck_day_0" type="button">Stalled Day 0</button>
       <button class="filter-chip" data-filter="stuck_day_1" type="button">Stalled Day 1</button>
@@ -474,7 +479,7 @@
             <th>WhatsApp</th>
             <th>Tier</th>
             <th>Engaged</th>
-            <th>Client</th>
+            <th>Program</th>
             <th>Joined</th>
             <th>1st login</th>
             <th>Day</th>
@@ -592,8 +597,8 @@
         case "tier_reset":        return m.tier === "preview";
         case "tier_unlimited":    return m.tier === "full";
         case "newly_engaged":     return !!m.is_newly_engaged;
-        case "client_current":    return m.client_status === "current";
-        case "client_past":       return m.client_status === "past";
+        case "is_rise":           return !!m.is_rise;
+        case "is_certification":  return !!m.is_certification;
         case "never_logged_in":   return isNeverLoggedIn(m);
         case "stuck_day_0":       return isStalledDay(m, 0);
         case "stuck_day_1":       return isStalledDay(m, 1);
@@ -668,11 +673,12 @@
         const engagedBadge = m.is_newly_engaged
           ? '<span class="flag-pill flag-yes" title="Has &quot;newly engaged reset&quot; tag in GHL">Yes</span>'
           : '<span class="flag-no">—</span>';
-        const clientBadge = m.client_status === "current"
-          ? '<span class="flag-pill flag-client-current" title="Has &quot;rise client&quot; tag in GHL">Current</span>'
-          : m.client_status === "past"
-            ? '<span class="flag-pill flag-client-past" title="Has &quot;past rise client&quot; tag in GHL">Past</span>'
-            : '<span class="flag-no">—</span>';
+        const programPills = [];
+        if (m.is_rise) programPills.push('<span class="flag-pill flag-rise" title="Has a Rise tag in GHL">RISE</span>');
+        if (m.is_certification) programPills.push('<span class="flag-pill flag-cert" title="Has an MYP Certification tag in GHL">Certification</span>');
+        const programBadge = programPills.length
+          ? `<span class="flag-program-stack">${programPills.join("")}</span>`
+          : '<span class="flag-no">—</span>';
         const ghlUrl = m.ghl_contact_id
           ? `https://app.gohighlevel.com/v2/location/${GHL_LOCATION_ID}/contacts/detail/${encodeURIComponent(m.ghl_contact_id)}`
           : null;
@@ -694,7 +700,7 @@
             </td>
             <td>${tierBadge}</td>
             <td>${engagedBadge}</td>
-            <td>${clientBadge}</td>
+            <td>${programBadge}</td>
             <td>${fmtDate(m.created_at)}</td>
             <td>${firstLogin}</td>
             <td><span class="day-badge ${dayCls}">${m.last_completed_day || 0}</span></td>
