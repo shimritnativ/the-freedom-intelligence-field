@@ -102,13 +102,11 @@ function prettyTag(raw) {
 
 // ─── Categorization ────────────────────────────────────────────────
 
-function classify(tags) {
+function classify(tags, neonState) {
   const raw = tags || [];
   const lower = raw.map((x) => String(x || "").toLowerCase().trim());
   const has = (needle) => lower.some((tag) => tag.includes(needle));
   const eq = (needle) => lower.includes(needle);
-  const used = new Set();
-  const mark = (i) => used.add(i);
 
   // ── Programs & client status
   const programs = [];
@@ -137,10 +135,13 @@ function classify(tags) {
   if (has("used power50 code") || has("used power50 coupon")) coupons.push("POWER50");
   if (has("used launchteamunlimited") || has("launchteamunlimited")) coupons.push("LAUNCHTEAMUNLIMITED");
 
-  // Count Power Reset day completions.
-  const completedDays = [1, 2, 3].filter((d) =>
-    lower.some((t) => t.includes(`72-hour power reset - completed day ${d}`))
-  );
+  // Power Reset progress — Neon is the source of truth, NOT GHL tags.
+  // The GHL "completed day X" tags fire from Kajabi lesson clicks
+  // (someone opened the Kajabi page) so they show as false positives
+  // for members who never actually logged into the Field.
+  const firstLogin = neonState && neonState.first_login_at ? new Date(neonState.first_login_at) : null;
+  const neverLoggedIn = !firstLogin;
+  const daysCompleted = Math.max(0, Math.min(3, Number(neonState && neonState.last_completed_day) || 0));
 
   // ── Workshops attended (numbered ones)
   // A "workshop lead" tag = source. A tag like "workshop N …" or
@@ -242,7 +243,9 @@ function classify(tags) {
     hadConsultation,
     purchases: uniq(purchases),
     coupons: uniq(coupons),
-    completedDays,
+    neverLoggedIn,
+    firstLogin,
+    daysCompleted,
     attendedWorkshops: uniq(attendedWorkshops),
     workshopLeadSources: uniq(workshopLeadSources),
     liveAttendance: uniq(liveAttendance),
@@ -257,7 +260,10 @@ function classify(tags) {
 function formatSummary(c, sourceHint) {
   const sections = [];
 
-  // Product & progress
+  // Product & progress. Progress is derived from the Neon `users` row,
+  // NOT GHL tags — because "completed day X" tags in GHL fire from
+  // Kajabi lesson clicks even when the member never actually logged
+  // into the Field.
   const productLines = [];
   if (c.purchases.length) {
     for (const p of c.purchases) productLines.push(`• Bought ${p}`);
@@ -267,10 +273,18 @@ function formatSummary(c, sourceHint) {
   if (c.coupons.length) {
     productLines.push(`• Used coupon: ${c.coupons.join(", ")}`);
   }
-  if (c.completedDays.length === 3) {
-    productLines.push("• Completed all 3 days of the Power Reset ✓");
-  } else if (c.completedDays.length > 0) {
-    productLines.push(`• Completed Day ${c.completedDays.join(" + Day ")} of the Power Reset`);
+  // Field usage — honest state
+  if (c.purchases.length) {
+    if (c.neverLoggedIn) {
+      productLines.push("• Bought but has never logged into the Field ⚠️");
+    } else if (c.daysCompleted === 3) {
+      productLines.push("• Completed all 3 days of the Power Reset ✓");
+    } else if (c.daysCompleted > 0) {
+      productLines.push(`• Completed Day ${c.daysCompleted} in the Field (stalled after that)`);
+    } else if (c.firstLogin) {
+      const daysAgo = Math.max(0, Math.floor((Date.now() - c.firstLogin.getTime()) / 86400000));
+      productLines.push(`• Logged in ${daysAgo === 0 ? "today" : daysAgo + " day(s) ago"} but hasn't completed Day 1 yet`);
+    }
   }
   if (c.isClient) productLines.push("• Active client");
   if (c.hadConsultation) productLines.push("• Had a consultation call");
@@ -340,9 +354,20 @@ export default async function handler(req, res) {
 
   const startedAt = Date.now();
 
+  // Join with the users table so we can derive real Field progress from
+  // Neon (first_login_at, last_completed_day) instead of trusting GHL's
+  // "completed day X" tags — which are triggered by Kajabi lesson clicks
+  // and produce false positives for members who never actually logged in.
   const { rows } = await sql`
-    SELECT LOWER(email) AS email, tags, source
-    FROM member_ghl_tags
+    SELECT
+      LOWER(mgt.email)    AS email,
+      mgt.tags            AS tags,
+      mgt.source          AS source,
+      u.first_login_at    AS first_login_at,
+      u.last_completed_day AS neon_last_completed_day,
+      u.kajabi_entitled   AS kajabi_entitled
+    FROM member_ghl_tags mgt
+    LEFT JOIN users u ON LOWER(u.email) = LOWER(mgt.email)
   `;
 
   if (rows.length === 0) {
@@ -359,7 +384,11 @@ export default async function handler(req, res) {
   for (const row of rows) {
     try {
       const tags = Array.isArray(row.tags) ? row.tags : [];
-      const classified = classify(tags);
+      const neonState = {
+        first_login_at: row.first_login_at,
+        last_completed_day: row.neon_last_completed_day,
+      };
+      const classified = classify(tags, neonState);
       const summary = formatSummary(classified, row.source);
       if (!summary.trim()) {
         skipped.push({ email: row.email, reason: "no_meaningful_tags" });
