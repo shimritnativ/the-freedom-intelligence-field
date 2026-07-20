@@ -374,6 +374,169 @@
       color: var(--text);
     }
     .ghl-btn svg { width: 15px; height: 15px; display: block; }
+    /* Cheat sheet button — small info icon next to the row. Gold if the
+       member has an auto-generated tag summary or Aira's notes, muted
+       when there's nothing to show. */
+    .cheat-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border: 1px solid var(--gold-line);
+      border-radius: 8px;
+      color: var(--text-mid);
+      background: transparent;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      line-height: 1;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .cheat-btn:hover {
+      background: var(--gold-soft);
+      border-color: var(--gold);
+      color: var(--text);
+    }
+    .cheat-btn.has-content {
+      background: var(--gold-soft);
+      border-color: var(--gold);
+      color: #8A6D2E;
+    }
+    .cheat-btn svg { width: 14px; height: 14px; display: block; }
+    /* Modal */
+    .cs-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(30, 22, 12, 0.4);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 500;
+      opacity: 0;
+      transition: opacity 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .cs-modal-backdrop.open {
+      display: flex;
+      opacity: 1;
+    }
+    .cs-modal {
+      background: var(--bg-card);
+      border: 1px solid var(--gold-line);
+      border-radius: 14px;
+      max-width: 620px;
+      width: 100%;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 24px 64px rgba(30, 22, 12, 0.28);
+      transform: translateY(8px) scale(0.98);
+      transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .cs-modal-backdrop.open .cs-modal { transform: translateY(0) scale(1); }
+    .cs-modal-header {
+      padding: 18px 22px 6px;
+    }
+    .cs-modal-eyebrow {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+    .cs-modal-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 4px 0 0;
+    }
+    .cs-modal-subtitle {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin: 2px 0 0;
+    }
+    .cs-modal-body {
+      padding: 12px 22px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .cs-section-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin: 14px 0 6px;
+    }
+    .cs-section-label:first-child { margin-top: 0; }
+    .cs-tag-summary {
+      background: var(--bg-warm);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 12.5px;
+      line-height: 1.7;
+      color: var(--text);
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .cs-tag-summary.empty {
+      font-family: inherit;
+      font-style: italic;
+      color: var(--text-mute);
+    }
+    .cs-notes-input {
+      width: 100%;
+      min-height: 120px;
+      padding: 12px;
+      border: 1.5px solid var(--gold-line);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text);
+      background: var(--bg-card);
+      resize: vertical;
+      transition: border-color 160ms ease;
+    }
+    .cs-notes-input:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px var(--gold-soft);
+    }
+    .cs-modal-footer {
+      padding: 14px 22px 18px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      align-items: center;
+      border-top: 1px solid var(--border);
+    }
+    .cs-modal-meta {
+      flex: 1;
+      font-size: 11px;
+      color: var(--text-dim);
+      font-style: italic;
+    }
+    .cs-btn {
+      padding: 9px 16px;
+      border-radius: 999px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: background 160ms ease, border-color 160ms ease;
+      border: 1.5px solid transparent;
+    }
+    .cs-btn.cancel { background: var(--gold-soft); color: var(--text); }
+    .cs-btn.cancel:hover { background: var(--gold-line); }
+    .cs-btn.save { background: var(--gold); color: #fff; border-color: var(--gold); }
+    .cs-btn.save:hover { background: #a68a52; border-color: #a68a52; }
+    .cs-btn:disabled { opacity: 0.55; cursor: wait; }
     .ghl-none {
       display: inline-block;
       width: 30px;
@@ -490,18 +653,41 @@
             <th>1st login</th>
             <th>Day</th>
             <th>Last active</th>
+            <th style="text-align:center">Cheat sheet</th>
             <th style="text-align:center">GHL</th>
             <th style="text-align:center">Called</th>
           </tr>
         </thead>
         <tbody id="tbody">
-          <tr><td colspan="11" class="empty-state">Loading…</td></tr>
+          <tr><td colspan="12" class="empty-state">Loading…</td></tr>
         </tbody>
       </table>
     </div>
   </main>
 
   <div class="toast" id="toast"></div>
+
+  <!-- Cheat sheet modal — read-only auto-generated tag summary + editable notes area -->
+  <div class="cs-modal-backdrop" id="cs-modal" role="dialog" aria-modal="true">
+    <div class="cs-modal">
+      <div class="cs-modal-header">
+        <span class="cs-modal-eyebrow">Cheat sheet</span>
+        <h3 class="cs-modal-title" id="cs-modal-title">—</h3>
+        <p class="cs-modal-subtitle" id="cs-modal-subtitle">—</p>
+      </div>
+      <div class="cs-modal-body">
+        <p class="cs-section-label">Auto-generated from GHL tags</p>
+        <div class="cs-tag-summary" id="cs-tag-summary">Loading…</div>
+        <p class="cs-section-label">Your notes (Aira / Carmen)</p>
+        <textarea class="cs-notes-input" id="cs-notes-input" placeholder="Anything else worth knowing before the call — what they said in DMs, family context, prior offer they saw, etc."></textarea>
+      </div>
+      <div class="cs-modal-footer">
+        <span class="cs-modal-meta" id="cs-modal-meta"></span>
+        <button class="cs-btn cancel" type="button" id="cs-cancel">Close</button>
+        <button class="cs-btn save" type="button" id="cs-save">Save notes</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     const SESSION_TOKEN_KEY = "tfif_session_v1";
@@ -566,7 +752,7 @@
       if (!token) {
         document.getElementById("auth-alert").style.display = "block";
         document.getElementById("tbody").innerHTML =
-          '<tr><td colspan="11" class="empty-state">Not signed in.</td></tr>';
+          '<tr><td colspan="12" class="empty-state">Not signed in.</td></tr>';
         return;
       }
       document.getElementById("auth-alert").style.display = "none";
@@ -578,7 +764,7 @@
         if (res.status === 401) {
           document.getElementById("auth-alert").style.display = "block";
           document.getElementById("tbody").innerHTML =
-            '<tr><td colspan="11" class="empty-state">Session expired.</td></tr>';
+            '<tr><td colspan="12" class="empty-state">Session expired.</td></tr>';
           return;
         }
         if (!res.ok) throw new Error("HTTP " + res.status);
@@ -588,7 +774,7 @@
         renderTable();
       } catch (e) {
         document.getElementById("tbody").innerHTML =
-          '<tr><td colspan="11" class="empty-state">Failed to load: ' + esc(e.message) + '</td></tr>';
+          '<tr><td colspan="12" class="empty-state">Failed to load: ' + esc(e.message) + '</td></tr>';
       }
     }
 
@@ -665,7 +851,7 @@
       const filtered = sortMembers(allMembers.filter(m => passesFilter(m) && passesSearch(m)));
 
       if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" class="empty-state">No members match this view.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="empty-state">No members match this view.</td></tr>';
         return;
       }
 
@@ -713,6 +899,11 @@
             <td>${firstLogin}</td>
             <td><span class="day-badge ${dayCls}">${m.last_completed_day || 0}</span></td>
             <td>${lastActive}</td>
+            <td class="cheat-cell" style="text-align:center">
+              <button class="cheat-btn ${m.has_cheat_sheet ? 'has-content' : ''}" data-action="cheat" data-email="${esc(m.email)}" data-name="${esc(nameForDisplay(m))}" title="${m.has_cheat_sheet ? 'View cheat sheet' : 'No cheat sheet yet — click to view / add notes'}" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+              </button>
+            </td>
             <td class="ghl-cell" style="text-align:center">${ghlCell}</td>
             <td class="actions-cell" style="text-align:center">
               <input class="contacted-check" type="checkbox" data-action="contacted" data-email="${esc(m.email)}" ${m.contacted ? 'checked' : ''} title="${m.contacted ? 'Uncheck to put them back in the queue' : 'Tick after you called them'}" />
@@ -748,6 +939,95 @@
       }
     }
 
+    // ── Cheat sheet modal ───────────────────────────────────────────────
+    let cheatEditingEmail = null;
+
+    async function openCheatSheet(email, name) {
+      cheatEditingEmail = email;
+      const token = localStorage.getItem(SESSION_TOKEN_KEY);
+      if (!token) { toast("Not signed in."); return; }
+      const modal = document.getElementById("cs-modal");
+      const titleEl = document.getElementById("cs-modal-title");
+      const subEl = document.getElementById("cs-modal-subtitle");
+      const summaryEl = document.getElementById("cs-tag-summary");
+      const notesEl = document.getElementById("cs-notes-input");
+      const metaEl = document.getElementById("cs-modal-meta");
+
+      titleEl.textContent = name;
+      subEl.textContent = email;
+      summaryEl.textContent = "Loading…";
+      summaryEl.classList.remove("empty");
+      notesEl.value = "";
+      notesEl.disabled = true;
+      metaEl.textContent = "";
+      modal.classList.add("open");
+
+      try {
+        const res = await fetch(
+          "/api/admin/member-cheat-sheet?email=" + encodeURIComponent(email),
+          { headers: { "x-session-token": token } }
+        );
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        if (data.tag_summary && data.tag_summary.trim()) {
+          summaryEl.textContent = data.tag_summary;
+          summaryEl.classList.remove("empty");
+        } else {
+          summaryEl.textContent = "No auto-generated summary yet. Run the tag-cheat-sheet generator to populate this.";
+          summaryEl.classList.add("empty");
+        }
+        notesEl.value = data.notes || "";
+        notesEl.disabled = false;
+        notesEl.focus();
+        if (data.updated_by && data.updated_at) {
+          metaEl.textContent = `Notes last updated by ${data.updated_by} · ${new Date(data.updated_at).toLocaleString()}`;
+        } else {
+          metaEl.textContent = "";
+        }
+      } catch (e) {
+        summaryEl.textContent = "Could not load cheat sheet: " + e.message;
+        summaryEl.classList.add("empty");
+        notesEl.disabled = false;
+      }
+    }
+
+    async function saveCheatSheetNotes() {
+      if (!cheatEditingEmail) return;
+      const token = localStorage.getItem(SESSION_TOKEN_KEY);
+      if (!token) { toast("Not signed in."); return; }
+      const saveBtn = document.getElementById("cs-save");
+      const notes = document.getElementById("cs-notes-input").value;
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Saving…";
+      try {
+        const res = await fetch("/api/admin/member-cheat-sheet", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-session-token": token },
+          body: JSON.stringify({ email: cheatEditingEmail, notes }),
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        // Reflect new has_cheat_sheet state locally so the icon flips.
+        const m = allMembers.find((x) => x.email === cheatEditingEmail);
+        if (m) {
+          m.has_notes = notes.trim().length > 0;
+          m.has_cheat_sheet = m.has_tag_summary || m.has_notes;
+        }
+        renderTable();
+        toast(notes.trim() ? "Notes saved ✓" : "Notes cleared");
+        closeCheatSheet();
+      } catch (e) {
+        toast("Save failed: " + e.message);
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save notes";
+      }
+    }
+
+    function closeCheatSheet() {
+      cheatEditingEmail = null;
+      document.getElementById("cs-modal").classList.remove("open");
+    }
+
     // ── Wire up ──────────────────────────────────────────────────────────
     document.addEventListener("DOMContentLoaded", () => {
       // Filter chips
@@ -781,6 +1061,24 @@
         if (chk) {
           toggleContacted(chk.dataset.email, chk.checked);
         }
+      });
+
+      // Delegated click handler for cheat sheet buttons.
+      document.getElementById("tbody").addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-action='cheat']");
+        if (btn) {
+          openCheatSheet(btn.dataset.email, btn.dataset.name);
+        }
+      });
+
+      // Cheat sheet modal buttons + backdrop click + Escape.
+      document.getElementById("cs-cancel").addEventListener("click", closeCheatSheet);
+      document.getElementById("cs-save").addEventListener("click", saveCheatSheetNotes);
+      document.getElementById("cs-modal").addEventListener("click", (e) => {
+        if (e.target.id === "cs-modal") closeCheatSheet();
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeCheatSheet();
       });
 
       loadList();
