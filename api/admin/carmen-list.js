@@ -57,7 +57,27 @@ export default async function handler(req, res) {
         wa.ghl_contact_id  AS ghl_contact_id,
         msg.last_user_message_at,
         cc.contacted_at    AS contacted_at,
-        cc.contacted_by    AS contacted_by
+        cc.contacted_by    AS contacted_by,
+        -- GHL tag flags. We match case-insensitively against the JSONB
+        -- tags array. Uses EXISTS + jsonb_array_elements_text so a tag
+        -- like "Newly Engaged Reset" matches whether Aira typed it in
+        -- caps, mixed case, or lower.
+        EXISTS (
+          SELECT 1 FROM jsonb_array_elements_text(COALESCE(mgt.tags, '[]'::jsonb)) t(tag)
+          WHERE LOWER(t.tag) LIKE '%newly engaged reset%'
+        ) AS is_newly_engaged,
+        CASE
+          WHEN EXISTS (
+            SELECT 1 FROM jsonb_array_elements_text(COALESCE(mgt.tags, '[]'::jsonb)) t(tag)
+            WHERE LOWER(t.tag) LIKE '%past rise client%'
+          ) THEN 'past'
+          WHEN EXISTS (
+            SELECT 1 FROM jsonb_array_elements_text(COALESCE(mgt.tags, '[]'::jsonb)) t(tag)
+            WHERE LOWER(t.tag) LIKE '%rise client%'
+          ) THEN 'current'
+          ELSE NULL
+        END AS client_status,
+        mgt.updated_at AS tags_synced_at
       FROM users u
       LEFT JOIN LATERAL (
         SELECT contact_phone, contact_name, ghl_contact_id
@@ -76,6 +96,8 @@ export default async function handler(req, res) {
       LEFT JOIN carmen_contacted cc
         ON LOWER(cc.email) = LOWER(u.email)
        AND cc.contacted_at > NOW() - (${CONTACTED_TTL_DAYS}::text || ' days')::interval
+      LEFT JOIN member_ghl_tags mgt
+        ON LOWER(mgt.email) = LOWER(u.email)
       WHERE u.kajabi_entitled = true
         -- Staff / test accounts — never surface to Carmen. Emails collected
         -- explicitly rather than by domain because most staff use gmail.
@@ -117,6 +139,9 @@ export default async function handler(req, res) {
       contacted: !!r.contacted_at,
       contacted_at: r.contacted_at || null,
       contacted_by: r.contacted_by || null,
+      is_newly_engaged: !!r.is_newly_engaged,
+      client_status: r.client_status || null, // 'current' | 'past' | null
+      tags_synced_at: r.tags_synced_at || null,
     }));
 
     return res.status(200).json({
