@@ -595,12 +595,15 @@
      Desktop: 3 columns side by side. Mobile: stacked.
      ═════════════════════════════════════════════════════════════ */
   .chat-support-row {
-    max-width: 920px;
-    margin: 24px auto 0;
+    max-width: 980px;
+    margin: 0 auto;
     display: grid;
     grid-template-columns: 1.35fr 1fr;
-    gap: 16px;
-    align-items: stretch;
+    gap: 20px;
+    /* align-items: start so testimonials don't stretch to match the
+       Reset card's height — they should just take the space their
+       content needs. */
+    align-items: start;
   }
   @media (max-width: 780px) {
     .chat-support-row { grid-template-columns: 1fr; }
@@ -750,12 +753,11 @@
     border: 1px solid var(--border);
     border-left: 3px solid var(--gold);
     border-radius: var(--radius-md);
-    padding: 18px 20px;
+    padding: 20px 22px;
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    flex: 1;
+    gap: 14px;
   }
   .side-quote-body {
     font-family: Georgia, "Times New Roman", serif;
@@ -1464,8 +1466,15 @@
      out of the hero so it doesn't feel cramped. Light cream bg so
      the dark Reset card + white testimonial cards visually pop.
      ═══════════════════════════════════════════════════════════════ -->
-<section class="lp-section" style="padding-top: clamp(50px, 6vw, 80px); padding-bottom: clamp(50px, 6vw, 80px);">
+<section class="lp-section" style="padding-top: clamp(60px, 7vw, 100px); padding-bottom: clamp(60px, 7vw, 100px);">
   <div class="lp-container reveal">
+    <div style="text-align: center; max-width: 720px; margin: 0 auto 44px;">
+      <p class="lp-eyebrow">If the preview lands</p>
+      <h2 class="lp-h2">Take the real walk-through.</h2>
+      <p class="lp-lead" style="margin: 0 auto;">
+        The five-minute preview shows you the doorway. The 72-Hour Power Reset is the actual crossing. Three days, held with a real human group, guided by the Field the whole way.
+      </p>
+    </div>
     <div class="chat-support-row">
       <div class="side-cta-card primary">
         <p class="side-cta-eyebrow">Your next step</p>
@@ -1502,7 +1511,7 @@
           <span class="side-instant">Instant access</span>
         </div>
 
-        <a class="side-cta-btn" href="/reset" target="_blank">Join the Reset for €9</a>
+        <a class="side-cta-btn" href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank">Join the Reset for €9</a>
       </div>
 
       <div class="side-testimonials">
@@ -1782,7 +1791,7 @@
       </div>
     </div>
     <div style="text-align:center; margin-top: 28px;">
-      <a class="value-cta" href="/reset">Yes, start my reset for €9</a>
+      <a class="value-cta" href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank">Yes, start my reset for €9</a>
       <p style="font-size: 12px; color: var(--text-mute); margin: 12px 0 0;">Instant access · secure checkout</p>
     </div>
   </div>
@@ -1866,7 +1875,7 @@
       <p class="p-final">Take the free 5-minute preview at the top of this page. Then decide if the full Reset is your next step.</p>
       <a href="#top" class="final-cta-btn">Take the free preview ↑</a>
       <p style="font-size: 12.5px; color: var(--text-dim); margin-top: 24px;">
-        Ready to skip the preview? <a href="/reset" style="color: var(--text); border-bottom: 1px solid var(--gold); font-weight: 500;">Enter the full Reset for €9 →</a>
+        Ready to skip the preview? <a href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank" style="color: var(--text); border-bottom: 1px solid var(--gold); font-weight: 500;">Enter the full Reset for €9 →</a>
       </p>
     </div>
   </div>
@@ -1891,7 +1900,9 @@
   ];
 
   const MAX_EXCHANGES = 6;
-  const RESET_LINK = "/reset";
+  // Send all "buy the Reset" CTAs straight to the ads-funnel ThriveCart
+  // checkout so attribution stays clean and there's no LP hop.
+  const RESET_LINK = "https://masteryourpath.thrivecart.com/power-reset-ads";
   const COOKIE_KEY = "tfif_try_cookie_v1";
 
   function getCookieId() {
@@ -1944,12 +1955,23 @@
     }
   }
 
+  // Escape HTML first, THEN convert markdown-style bold. This order
+  // matters — if we bold first, user-injected < or > would render.
+  function renderRich(text) {
+    const escaped = String(text || "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    return escaped
+      .replace(/\*\*([^*\n]+?)\*\*/g, "<strong>$1</strong>")   // **bold**
+      .replace(/\*([^*\n]+?)\*/g, "<strong>$1</strong>");       // *bold*
+  }
+
   // ── Bubble helpers
   function addBubble(role, content, opts) {
     const body = $("cw-body");
     const el = document.createElement("div");
     el.className = "bubble " + role + (opts && opts.final ? " final" : "");
-    el.textContent = content;
+    el.innerHTML = renderRich(content);
     body.appendChild(el);
     scrollChatToBottom();
     return el;
