@@ -1,69 +1,129 @@
-// api/start.js
-// Bootstrap endpoint: creates (or returns) a preview-tier user and issues
-// a session token. v1 only — until the ThriveCart purchase.completed webhook
-// is wired up, the Kajabi page calls this directly with the member's email
-// to establish identity.
+// api/free-trial/start.js
 //
-// SECURITY NOTE: this endpoint trusts the email the client sends. That is
-// acceptable in the short term because:
-//   1. CORS is locked to Kajabi origins.
-//   2. The Kajabi page only renders for paying members.
-//   3. Worst case, an attacker who fakes an email burns Anthropic credits
-//      on their own conversation, capped by per-user rate limits.
-// Once Kajabi exposes signed member identity, replace email-trust with that.
+// Begins a "5-Minute Preview" session. Captures the visitor's email +
+// chosen scenario, checks for prior use (email / IP / cookie in the
+// last 30 days), and returns a trial_id + the scenario's opening line
+// from the Field.
+//
+// Dedup rules — one free trial per person per 30 days:
+//   - Email match (case-insensitive, exact after normalisation)
+//   - IP match (best-effort — behind Cloudflare/Vercel edge this is the
+//     origin IP, not perfect for shared networks but good enough)
+//   - Cookie ID match (client-supplied; primary signal on the same device)
+//
+// Test-mode bypass: any @shimritnativ.com or @masteryourpath.com email
+// skips dedup so Shimrit can test the flow repeatedly.
+//
+// POST /api/free-trial/start
+// Body: { email, scenario, cookie_id? }
+// Returns: { trial_id, opening, exchanges_remaining, expires_at }
 
-import { createPreviewUser, issueSessionToken, getOrCreateSession, timeRemainingMs, resolveActiveDay } from "../lib/db.js";
+import { sql } from "@vercel/postgres";
+import { FREE_TRIAL_SCENARIOS, FREE_TRIAL_MAX_EXCHANGES } from "../../lib/prompts/free-trial.js";
 
-function applyCors(req, res) {
-  const allowed = (process.env.ALLOWED_ORIGINS || "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const origin = req.headers.origin;
-  if (origin && allowed.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Vary", "Origin");
-  } else if (!origin && process.env.NODE_ENV !== "production") {
-    res.setHeader("Access-Control-Allow-Origin", "*");
+const DEDUP_WINDOW_DAYS = 30;
+const SESSION_MINUTES = 15;
+const STAFF_DOMAINS = ["@shimritnativ.com", "@masteryourpath.com"];
+
+function getClientIp(req) {
+  // Vercel-provided headers
+  const xff = req.headers["x-forwarded-for"];
+  if (typeof xff === "string" && xff.length > 0) {
+    return xff.split(",")[0].trim();
   }
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  return req.headers["x-real-ip"] || req.socket?.remoteAddress || null;
+}
+
+function isStaffEmail(email) {
+  const lc = String(email || "").toLowerCase();
+  return STAFF_DOMAINS.some((d) => lc.endsWith(d));
 }
 
 export default async function handler(req, res) {
-  applyCors(req, res);
+  res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "method_not_allowed" });
+  if (req.method !== "POST") return res.status(405).json({ error: "method_not_allowed" });
+
+  const body = (req.body && typeof req.body === "object") ? req.body : {};
+  const emailRaw = String(body.email || "").trim();
+  const email = emailRaw.toLowerCase();
+  const scenarioId = String(body.scenario || "").trim().toLowerCase();
+  const cookieId = String(body.cookie_id || "").trim().slice(0, 128) || null;
+
+  if (!email || !email.includes("@") || email.length > 320) {
+    return res.status(400).json({ error: "invalid_email" });
+  }
+  const scenario = FREE_TRIAL_SCENARIOS[scenarioId];
+  if (!scenario) {
+    return res.status(400).json({ error: "invalid_scenario", valid: Object.keys(FREE_TRIAL_SCENARIOS) });
   }
 
-  try {
-    const { email, displayName, kajabiMemberId, thrivecartCustomerId } = req.body || {};
+  const staff = isStaffEmail(email);
+  const ip = getClientIp(req);
 
-    if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ error: "invalid_email" });
+  try {
+    // Dedup check (skipped for staff emails so Shimrit can test).
+    if (!staff) {
+      const { rows: existing } = await sql`
+        SELECT id, scenario, started_at
+        FROM free_trials
+        WHERE (
+              LOWER(email) = ${email}
+              ${cookieId ? sql`OR cookie_id = ${cookieId}` : sql``}
+              ${ip ? sql`OR ip = ${ip}` : sql``}
+            )
+          AND started_at > NOW() - (${DEDUP_WINDOW_DAYS}::text || ' days')::interval
+        ORDER BY started_at DESC
+        LIMIT 1
+      `;
+      if (existing.length > 0) {
+        return res.status(200).json({
+          ok: false,
+          reason: "already_used",
+          message: "You've already taken the 5-Minute Preview. The next step is the full 72-Hour Reset — that's where the real work begins.",
+          reset_link: "https://thefieldai.app/reset",
+        });
+      }
     }
 
-    const user = await createPreviewUser({
-      email: email.toLowerCase().trim(),
-      displayName,
-      kajabiMemberId,
-      thrivecartCustomerId,
-    });
+    // Create the trial. exchange_count starts at 0 (the opening from the
+    // Field isn't counted as one of the 6 — the first exchange is the
+    // person's FIRST reply after seeing the opening).
+    const expiresAt = new Date(Date.now() + SESSION_MINUTES * 60 * 1000).toISOString();
+    const { rows: created } = await sql`
+      INSERT INTO free_trials (
+        email, ip, cookie_id, scenario,
+        exchange_count, max_exchanges, expires_at,
+        is_staff_test
+      ) VALUES (
+        ${email}, ${ip}, ${cookieId}, ${scenarioId},
+        0, ${FREE_TRIAL_MAX_EXCHANGES}, ${expiresAt}::timestamptz,
+        ${staff}
+      )
+      RETURNING id, expires_at
+    `;
+    const trial = created[0];
 
-    // Make sure a session row exists so /api/chat can find one.
-    await getOrCreateSession(user.id);
-
-    const sessionToken = issueSessionToken(user.id);
+    // Log the opening as an assistant message so the transcript is complete.
+    await sql`
+      INSERT INTO free_trial_messages (trial_id, role, content, exchange_number)
+      VALUES (${trial.id}, 'assistant', ${scenario.opening}, 0)
+    `;
 
     return res.status(200).json({
-      sessionToken,
-      currentDay: resolveActiveDay(user),
-      timeRemainingMs: timeRemainingMs(user),
-      tier: user.tier,
+      ok: true,
+      trial_id: trial.id,
+      scenario: scenario.id,
+      scenario_label: scenario.label,
+      opening: scenario.opening,
+      exchanges_remaining: FREE_TRIAL_MAX_EXCHANGES,
+      expires_at: trial.expires_at,
+      is_staff_test: staff,
     });
-  } catch (err) {
-    console.error("start_error", { message: err?.message });
-    return res.status(500).json({ error: "internal_error" });
+  } catch (e) {
+    console.error("free_trial_start_failed", e);
+    return res.status(500).json({ error: "internal_error", message: e.message });
   }
 }
