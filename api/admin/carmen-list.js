@@ -58,6 +58,7 @@ export default async function handler(req, res) {
         msg.last_user_message_at,
         cc.contacted_at    AS contacted_at,
         cc.contacted_by    AS contacted_by,
+        cc.outcome         AS call_outcome,
         -- GHL tag flags. We match case-insensitively against the JSONB
         -- tags array. Uses EXISTS + jsonb_array_elements_text so a tag
         -- like "Newly Engaged Reset" matches whether Aira typed it in
@@ -179,6 +180,7 @@ export default async function handler(req, res) {
       contacted: !!r.contacted_at,
       contacted_at: r.contacted_at || null,
       contacted_by: r.contacted_by || null,
+      call_outcome: r.call_outcome || null,
       is_newly_engaged: !!r.is_newly_engaged,
       is_rise_current: !!r.is_rise_current,
       is_rise_past: !!r.is_rise_past,
