@@ -170,6 +170,73 @@
     }
     .filter-chip:hover { background: var(--gold-soft); color: var(--text); }
     .filter-chip.active { background: var(--gold); color: #fff; border-color: var(--gold); }
+
+    /* "More filters" popover — collapses secondary filters (Tier / Program
+       / Activity) so the primary filter row stays calm. Same pill styling
+       as the regular chips, but with a dashed accent so it reads as a
+       "reveal more" affordance rather than a filter in itself.
+       When a filter is active INSIDE the popover, the pill turns solid
+       gold and shows the active label so the current state is visible. */
+    .more-filters { position: relative; display: inline-block; }
+    .more-filters-btn {
+      background: transparent;
+      color: var(--gold);
+      border: 1px dashed var(--gold);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .more-filters-btn:hover { background: var(--gold-soft); }
+    .more-filters-btn svg {
+      width: 10px; height: 10px;
+      transition: transform 0.15s;
+    }
+    .more-filters.open .more-filters-btn svg { transform: rotate(180deg); }
+    /* When a hidden filter is selected, the button lights up gold */
+    .more-filters-btn.has-active {
+      background: var(--gold);
+      color: #fff;
+      border-style: solid;
+      border-color: var(--gold);
+    }
+    .more-filters-popover {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      min-width: 300px;
+      background: var(--bg-warm, #FAF6EE);
+      border: 1px solid var(--gold-line);
+      border-radius: 14px;
+      box-shadow: 0 14px 34px rgba(43,35,24,0.16), 0 3px 10px rgba(43,35,24,0.06);
+      padding: 16px 18px 14px;
+      z-index: 200;
+      display: none;
+      animation: mf-in 0.14s ease-out;
+    }
+    @keyframes mf-in {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .more-filters.open .more-filters-popover { display: block; }
+    .mf-group { margin-bottom: 12px; }
+    .mf-group:last-child { margin-bottom: 0; }
+    .mf-group-label {
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      color: var(--gold-warm, #8A6D2E);
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .mf-group-chips { display: flex; flex-wrap: wrap; gap: 6px; }
     .filter-search {
       flex: 1;
       min-width: 200px;
@@ -745,17 +812,51 @@
 
     <div class="filters">
       <input class="filter-search" type="search" id="search" placeholder="Search by name, email, or phone…" />
+      <!-- Primary filters: Carmen's most-used. Everything else lives
+           behind the "More filters" popover to keep the row calm. -->
       <button class="filter-chip active" data-filter="all" type="button">All</button>
       <button class="filter-chip" data-filter="uncontacted" type="button">Not called yet</button>
-      <button class="filter-chip" data-filter="tier_reset" type="button">Reset</button>
-      <button class="filter-chip" data-filter="tier_unlimited" type="button">Unlimited</button>
       <button class="filter-chip" data-filter="newly_engaged" type="button">Newly engaged</button>
-      <button class="filter-chip" data-filter="is_rise_current" type="button">RISE</button>
-      <button class="filter-chip" data-filter="is_rise_past" type="button">Past RISE</button>
-      <button class="filter-chip" data-filter="is_certification" type="button">Certification</button>
-      <button class="filter-chip" data-filter="never_logged_in" type="button">Never logged in</button>
-      <button class="filter-chip" data-filter="stuck_day_0" type="button">Stalled Day 0</button>
-      <button class="filter-chip" data-filter="stuck_day_1" type="button">Stalled Day 1</button>
+      <div class="more-filters" id="more-filters" data-more-filters>
+        <button class="more-filters-btn" id="more-filters-btn" type="button" aria-haspopup="dialog" aria-expanded="false">
+          <span id="more-filters-label">More filters</span>
+          <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 4l3 3 3-3"/></svg>
+        </button>
+        <div class="more-filters-popover" role="dialog" aria-label="More filters">
+          <div class="mf-group">
+            <div class="mf-group-label">By tier</div>
+            <div class="mf-group-chips">
+              <button class="filter-chip" data-filter="tier_reset" type="button">Reset</button>
+              <button class="filter-chip" data-filter="tier_unlimited" type="button">Unlimited</button>
+            </div>
+          </div>
+          <div class="mf-group">
+            <div class="mf-group-label">By program</div>
+            <div class="mf-group-chips">
+              <button class="filter-chip" data-filter="is_rise_current" type="button">RISE</button>
+              <button class="filter-chip" data-filter="is_rise_past" type="button">Past RISE</button>
+              <button class="filter-chip" data-filter="is_certification" type="button">Certification</button>
+            </div>
+          </div>
+          <div class="mf-group">
+            <div class="mf-group-label">By activity</div>
+            <div class="mf-group-chips">
+              <button class="filter-chip" data-filter="never_logged_in" type="button">Never logged in</button>
+              <button class="filter-chip" data-filter="stuck_day_0" type="button">Stalled Day 0</button>
+              <button class="filter-chip" data-filter="stuck_day_1" type="button">Stalled Day 1</button>
+            </div>
+          </div>
+          <div class="mf-group">
+            <div class="mf-group-label">By call outcome</div>
+            <div class="mf-group-chips">
+              <button class="filter-chip" data-filter="outcome_reached" type="button">Call held</button>
+              <button class="filter-chip" data-filter="outcome_no_answer" type="button">Attempted</button>
+              <button class="filter-chip" data-filter="outcome_declined" type="button">Declined</button>
+              <button class="filter-chip" data-filter="outcome_callback" type="button">Callback</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <select class="filter-sort" id="sort">
         <option value="newest">Newest first</option>
         <option value="oldest">Oldest first</option>
@@ -922,6 +1023,13 @@
         case "never_logged_in":   return isNeverLoggedIn(m);
         case "stuck_day_0":       return isStalledDay(m, 0);
         case "stuck_day_1":       return isStalledDay(m, 1);
+        // Outcome filters — match the outcome column values written by
+        // the outcome dropdown. "outcome_reached" for a legacy contacted
+        // row without an outcome (e.g. old checkbox ticks) also counts.
+        case "outcome_reached":   return m.call_outcome === "reached" || (m.contacted && !m.call_outcome);
+        case "outcome_no_answer": return m.call_outcome === "no_answer";
+        case "outcome_declined":  return m.call_outcome === "declined";
+        case "outcome_callback":  return m.call_outcome === "callback";
         case "all":
         default:                  return true;
       }
@@ -1220,17 +1328,68 @@
     window.addEventListener("resize", syncTopbarHeight);
 
     // ── Wire up ──────────────────────────────────────────────────────────
+    // Which filter values live INSIDE the "More filters" popover — used
+     // to decide when the trigger pill lights up gold and shows the
+     // selected label instead of the default "More filters" text.
+    const HIDDEN_FILTERS = {
+      tier_reset: "Reset",
+      tier_unlimited: "Unlimited",
+      is_rise_current: "RISE",
+      is_rise_past: "Past RISE",
+      is_certification: "Certification",
+      never_logged_in: "Never logged in",
+      stuck_day_0: "Stalled Day 0",
+      stuck_day_1: "Stalled Day 1",
+      outcome_reached: "Call held",
+      outcome_no_answer: "Attempted",
+      outcome_declined: "Declined",
+      outcome_callback: "Callback",
+    };
+    function updateMoreFiltersLabel() {
+      const btn = document.getElementById("more-filters-btn");
+      const labelEl = document.getElementById("more-filters-label");
+      if (!btn || !labelEl) return;
+      const hiddenLabel = HIDDEN_FILTERS[currentFilter];
+      if (hiddenLabel) {
+        labelEl.textContent = hiddenLabel;
+        btn.classList.add("has-active");
+      } else {
+        labelEl.textContent = "More filters";
+        btn.classList.remove("has-active");
+      }
+    }
     document.addEventListener("DOMContentLoaded", () => {
       syncTopbarHeight();
-      // Filter chips
+      // Filter chips (both primary row and popover chips)
       document.querySelectorAll(".filter-chip").forEach(chip => {
         chip.addEventListener("click", () => {
           document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
           chip.classList.add("active");
           currentFilter = chip.dataset.filter || "all";
           renderTable();
+          updateMoreFiltersLabel();
+          // Selecting a filter from inside the popover closes it
+          const mf = document.getElementById("more-filters");
+          if (mf) mf.classList.remove("open");
         });
       });
+
+      // "More filters" popover: toggle on button click, close on outside click
+      const mfBtn = document.getElementById("more-filters-btn");
+      const mf = document.getElementById("more-filters");
+      if (mfBtn && mf) {
+        mfBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const wasOpen = mf.classList.contains("open");
+          mf.classList.toggle("open", !wasOpen);
+          mfBtn.setAttribute("aria-expanded", String(!wasOpen));
+        });
+        document.addEventListener("click", (e) => {
+          if (e.target.closest("#more-filters")) return;
+          mf.classList.remove("open");
+          mfBtn.setAttribute("aria-expanded", "false");
+        });
+      }
 
       // Sort dropdown
       document.getElementById("sort").addEventListener("change", (e) => {
