@@ -594,20 +594,22 @@
      SUPPORT CARDS ROW — sits below the chat inside the hero
      Desktop: 3 columns side by side. Mobile: stacked.
      ═════════════════════════════════════════════════════════════ */
-  /* Container that holds the black Reset card centered with 3
-     testimonials absolutely-positioned around it. Extra vertical
-     padding lets the top+bottom testimonials extend past the card
-     without getting clipped. */
+  /* Reset showcase: 3-column grid.
+     Left column = Maria (1 testimonial, centered vertically).
+     Middle column = the black Reset card.
+     Right column = Anne + Lisa stacked.
+     No overlaps, no rotation, no arrows — testimonials just sit
+     cleanly beside the box. */
   .chat-support-row {
-    max-width: 900px;
+    max-width: 1080px;
     margin: 0 auto;
-    position: relative;
-    padding: 50px 0 70px;
+    display: grid;
+    grid-template-columns: 1fr 380px 1fr;
+    gap: 28px;
+    align-items: center;
   }
   .reset-showcase-inner {
-    max-width: 480px;
-    margin: 0 auto;
-    position: relative;
+    display: contents;
   }
   .side-cta-card {
     background: var(--bg-card);
@@ -616,8 +618,7 @@
     padding: 24px 26px;
     display: flex;
     flex-direction: column;
-    position: relative;
-    z-index: 2;
+    grid-column: 2;
   }
   .side-cta-card.primary {
     /* True black — subtle warm-gold vignette from the top-left corner
@@ -629,24 +630,22 @@
     color: var(--text-inverse);
   }
 
-  /* Floating testimonials — sit mostly outside the card, only kissing
-     the corner. Each has a slight tilt so they read as pinned notes. */
+  /* Flanking testimonials — upright, no shadow-heavy floating look,
+     just clean cards that mirror the main testimonials-grid style. */
   .floating-testi {
-    position: absolute;
-    background: #FFFDF6;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
     border-left: 3px solid var(--gold);
-    border-radius: 0 var(--radius-md) var(--radius-md) 0;
-    padding: 16px 18px;
+    border-radius: var(--radius-md);
+    padding: 20px 22px;
     margin: 0;
-    box-shadow: 0 14px 34px rgba(43, 35, 24, 0.18),
-                0 3px 10px rgba(43, 35, 24, 0.08);
-    z-index: 3;
     font-family: Georgia, "Times New Roman", serif;
+    max-width: 260px;
   }
   .floating-testi p {
     font-style: italic;
     font-size: 14px;
-    line-height: 1.5;
+    line-height: 1.55;
     color: var(--text);
     margin: 0;
   }
@@ -665,33 +664,29 @@
     color: #8A6D2E;
     letter-spacing: 0.05em;
   }
-  /* Maria (top-left) — pulled well outside so only the tip meets the card. */
-  .floating-testi--1 {
-    top: -20px; left: -230px; width: 210px;
-    transform: rotate(-2deg);
-  }
-  /* Anne (mid-right) */
-  .floating-testi--2 {
-    top: 120px; right: -190px; width: 220px;
-    transform: rotate(2deg);
-  }
-  /* Lisa (bottom-left, slight overlap onto the CTA area) */
-  .floating-testi--3 {
-    bottom: -50px; left: -80px; width: 240px;
-    transform: rotate(1.5deg);
-  }
+  /* Left column: Maria — placed at the right edge of the left column
+     so she sits close to the box. */
+  .floating-testi--1 { grid-column: 1; justify-self: end; }
+  /* Right column: Anne on top */
+  .floating-testi--2 { grid-column: 3; justify-self: start; align-self: start; margin-top: 12px; }
+  /* Right column: Lisa below Anne */
+  .floating-testi--3 { grid-column: 3; justify-self: start; align-self: end; margin-bottom: 12px; }
 
-  /* Mobile / narrow: absolute positioning stops making sense — stack
-     testimonials below the box instead. */
+  /* Mobile / narrow: collapse to a single column. Box first, then
+     testimonials stacked below. */
   @media (max-width: 900px) {
-    .chat-support-row { padding: 20px 0 40px; }
-    .reset-showcase-inner { max-width: 100%; }
+    .chat-support-row {
+      grid-template-columns: 1fr;
+      gap: 16px;
+      max-width: 520px;
+    }
+    .side-cta-card { grid-column: 1; }
     .floating-testi {
-      position: static;
-      width: auto;
-      max-width: 480px;
-      margin: 14px auto 0;
-      transform: none !important;
+      grid-column: 1;
+      max-width: none;
+      justify-self: stretch;
+      align-self: auto;
+      margin: 0;
     }
   }
   .side-cta-eyebrow {
@@ -1200,14 +1195,14 @@
   .quote-card--wide .quote-body { text-align: center; }
   @media (max-width: 640px) {
     /* On mobile, the wide card sits in a single-column stack, so match
-       the rest of the cards visually: left-gold, left-aligned. */
+       the rest of the cards visually: left-gold border, and keep the
+       inherited text-align: center from the section wrapper so Katti's
+       name is centered like Anne / Maria / Antonella / Lisa. */
     .quote-card--wide {
       max-width: none; margin: 0;
-      text-align: left; align-items: stretch;
       border-left: 3px solid var(--gold);
       border-top: 1px solid var(--border);
     }
-    .quote-card--wide .quote-body { text-align: left; }
   }
 
   /* FAQ */
