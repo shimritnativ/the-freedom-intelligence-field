@@ -594,23 +594,21 @@
      SUPPORT CARDS ROW — sits below the chat inside the hero
      Desktop: 3 columns side by side. Mobile: stacked.
      ═════════════════════════════════════════════════════════════ */
+  /* Container that holds the black Reset card centered with 3
+     testimonials absolutely-positioned around it. Extra vertical
+     padding lets the top+bottom testimonials extend past the card
+     without getting clipped. */
   .chat-support-row {
-    max-width: 980px;
+    max-width: 900px;
     margin: 0 auto;
-    display: grid;
-    grid-template-columns: 1.35fr 1fr;
-    gap: 20px;
-    /* align-items: start so testimonials don't stretch to match the
-       Reset card's height — they should just take the space their
-       content needs. */
-    align-items: start;
+    position: relative;
+    padding: 50px 0 70px;
   }
-  @media (max-width: 780px) {
-    .chat-support-row { grid-template-columns: 1fr; }
+  .reset-showcase-inner {
+    max-width: 480px;
+    margin: 0 auto;
+    position: relative;
   }
-  /* Support cards below the chat — RICH design.
-     Left: full Reset breakdown (3 days + outcomes + value + CTA).
-     Right: stack of 2 real testimonials with initials avatars. */
   .side-cta-card {
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -618,13 +616,83 @@
     padding: 24px 26px;
     display: flex;
     flex-direction: column;
+    position: relative;
+    z-index: 2;
   }
   .side-cta-card.primary {
+    /* True black — subtle warm-gold vignette from the top-left corner
+       keeps the card from feeling harsh against the cream section. */
     background:
-      radial-gradient(ellipse 400px 300px at 20% 0%, rgba(201, 168, 76, 0.10), transparent 60%),
-      var(--text);
-    border-color: var(--text);
+      radial-gradient(ellipse 400px 300px at 20% 0%, rgba(201, 168, 76, 0.12), transparent 60%),
+      #0e0b08;
+    border-color: #0e0b08;
     color: var(--text-inverse);
+  }
+
+  /* Floating testimonials — sit mostly outside the card, only kissing
+     the corner. Each has a slight tilt so they read as pinned notes. */
+  .floating-testi {
+    position: absolute;
+    background: #FFFDF6;
+    border-left: 3px solid var(--gold);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    padding: 16px 18px;
+    margin: 0;
+    box-shadow: 0 14px 34px rgba(43, 35, 24, 0.18),
+                0 3px 10px rgba(43, 35, 24, 0.08);
+    z-index: 3;
+    font-family: Georgia, "Times New Roman", serif;
+  }
+  .floating-testi p {
+    font-style: italic;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+    margin: 0;
+  }
+  .floating-testi p strong {
+    font-style: normal;
+    font-weight: 600;
+    color: #8A6D2E;
+  }
+  .floating-testi cite {
+    display: block;
+    margin-top: 10px;
+    font-family: var(--font-sans);
+    font-style: normal;
+    font-size: 12px;
+    font-weight: 600;
+    color: #8A6D2E;
+    letter-spacing: 0.05em;
+  }
+  /* Maria (top-left) — pulled well outside so only the tip meets the card. */
+  .floating-testi--1 {
+    top: -20px; left: -230px; width: 210px;
+    transform: rotate(-2deg);
+  }
+  /* Anne (mid-right) */
+  .floating-testi--2 {
+    top: 120px; right: -190px; width: 220px;
+    transform: rotate(2deg);
+  }
+  /* Lisa (bottom-left, slight overlap onto the CTA area) */
+  .floating-testi--3 {
+    bottom: -50px; left: -80px; width: 240px;
+    transform: rotate(1.5deg);
+  }
+
+  /* Mobile / narrow: absolute positioning stops making sense — stack
+     testimonials below the box instead. */
+  @media (max-width: 900px) {
+    .chat-support-row { padding: 20px 0 40px; }
+    .reset-showcase-inner { max-width: 100%; }
+    .floating-testi {
+      position: static;
+      width: auto;
+      max-width: 480px;
+      margin: 14px auto 0;
+      transform: none !important;
+    }
   }
   .side-cta-eyebrow {
     font-size: 10px;
@@ -1538,58 +1606,59 @@
       </p>
     </div>
     <div class="chat-support-row">
-      <div class="side-cta-card primary">
-        <p class="side-cta-eyebrow">Your next step</p>
-        <p class="side-cta-title">The 72-Hour Power Reset</p>
-        <p class="side-cta-sub">Three days that move you from the state that keeps recreating the loop, back into power. Instant access, no waitlist.</p>
+      <div class="reset-showcase-inner">
+        <div class="side-cta-card primary">
+          <p class="side-cta-eyebrow">Your next step</p>
+          <p class="side-cta-title">The 72-Hour Power Reset</p>
+          <p class="side-cta-sub">Three days that move you from the state that keeps recreating the loop, back into power. Instant access, no waitlist.</p>
 
-        <div class="side-days-detailed">
-          <div class="side-day-detailed">
-            <div class="side-day-header">
-              <span class="side-day-num">01</span>
-              <span class="side-day-title">State Reset</span>
+          <div class="side-days-detailed">
+            <div class="side-day-detailed">
+              <div class="side-day-header">
+                <span class="side-day-num">01</span>
+                <span class="side-day-title">State Reset</span>
+              </div>
+              <p class="side-day-body">Interrupt the loop. Locate the pattern under the pattern that is actually running you.</p>
             </div>
-            <p class="side-day-body">Interrupt the loop. Locate the pattern under the pattern that is actually running you.</p>
-          </div>
-          <div class="side-day-detailed">
-            <div class="side-day-header">
-              <span class="side-day-num">02</span>
-              <span class="side-day-title">Decision &amp; Action</span>
+            <div class="side-day-detailed">
+              <div class="side-day-header">
+                <span class="side-day-num">02</span>
+                <span class="side-day-title">Decision &amp; Action</span>
+              </div>
+              <p class="side-day-body">One aligned decision. One grounded move you actually make in your real life today.</p>
             </div>
-            <p class="side-day-body">One aligned decision. One grounded move you actually make in your real life today.</p>
-          </div>
-          <div class="side-day-detailed">
-            <div class="side-day-header">
-              <span class="side-day-num">03</span>
-              <span class="side-day-title">Power Calibration</span>
+            <div class="side-day-detailed">
+              <div class="side-day-header">
+                <span class="side-day-num">03</span>
+                <span class="side-day-title">Power Calibration</span>
+              </div>
+              <p class="side-day-body">Calibrate to the new state so the shift becomes your baseline, not a peak you fall away from.</p>
             </div>
-            <p class="side-day-body">Calibrate to the new state so the shift becomes your baseline, not a peak you fall away from.</p>
           </div>
+
+          <div class="side-price-row">
+            <span class="side-price"><strong>€9</strong></span>
+            <span class="side-value-strike">€882 value</span>
+            <span class="side-instant">Instant access</span>
+          </div>
+
+          <a class="side-cta-btn" href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank">Join the Reset for €9</a>
         </div>
 
-        <div class="side-price-row">
-          <span class="side-price"><strong>€9</strong></span>
-          <span class="side-value-strike">€882 value</span>
-          <span class="side-instant">Instant access</span>
-        </div>
-
-        <a class="side-cta-btn" href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank">Join the Reset for €9</a>
-      </div>
-
-      <div class="side-testimonials">
-        <blockquote class="side-testimonial">
-          <p class="side-quote-body">"I have done 2 days in the Field. No words to describe it. It is so simple and so powerful."</p>
-          <div class="side-quote-meta">
-            <div class="side-quote-avatar">M</div>
-            <div class="side-quote-name">M.</div>
-          </div>
+        <!-- Floating testimonials — sit around the black card so the box
+             stays fully visible but the social proof pops on top. On
+             mobile these stack below the card. -->
+        <blockquote class="floating-testi floating-testi--1">
+          <p>"I have done 2 days in the Field. <strong>No words to describe it.</strong> It is so simple and so powerful."</p>
+          <cite>Maria</cite>
         </blockquote>
-        <blockquote class="side-testimonial">
-          <p class="side-quote-body">"This is truly, truly amazing. I am not a big fan of AI, and this one, I am on cloud nine."</p>
-          <div class="side-quote-meta">
-            <div class="side-quote-avatar">M</div>
-            <div class="side-quote-name">M.</div>
-          </div>
+        <blockquote class="floating-testi floating-testi--2">
+          <p>"It is very <strong>scary accurate and thus powerful.</strong> Made me reflect deeper during the days."</p>
+          <cite>Anne</cite>
+        </blockquote>
+        <blockquote class="floating-testi floating-testi--3">
+          <p>"I am not a big fan of AI, and this one, <strong>I am on cloud nine.</strong>"</p>
+          <cite>Lisa</cite>
         </blockquote>
       </div>
     </div>
