@@ -600,12 +600,12 @@
      display: contents on the wrapper flattens the DOM so grid can
      target the card + testimonials directly. */
   .chat-support-row {
-    max-width: 1080px;
+    max-width: 1200px;
     margin: 0 auto;
     display: grid;
-    grid-template-columns: 1fr 380px 1fr;
+    grid-template-columns: 1fr 480px 1fr;
     grid-template-rows: 1fr 1fr;
-    gap: 20px 28px;
+    gap: 20px 32px;
     align-items: center;
     justify-items: center;
   }
@@ -746,22 +746,23 @@
     font-style: italic;
     font-weight: 500;
     color: var(--gold);
-    font-size: 15px;
+    font-size: 18px;
     letter-spacing: 0.04em;
-    min-width: 26px;
+    min-width: 30px;
   }
   .side-day-title {
     font-family: var(--font-serif);
     font-style: italic;
     font-weight: 500;
     color: var(--text-inverse);
-    font-size: 15px;
+    font-size: 20px;
+    letter-spacing: -0.005em;
   }
   .side-day-body {
-    font-size: 12.5px;
-    color: rgba(247, 241, 225, 0.68);
-    line-height: 1.5;
-    margin: 0 0 0 36px;
+    font-size: 13.5px;
+    color: rgba(247, 241, 225, 0.72);
+    line-height: 1.55;
+    margin: 4px 0 0 40px;
   }
 
   /* Price row with strikethrough value + instant-access chip */
@@ -1643,7 +1644,6 @@
 
           <div class="side-price-row">
             <span class="side-price"><strong>€9</strong></span>
-            <span class="side-value-strike">€882 value</span>
             <span class="side-instant">Instant access</span>
           </div>
 
