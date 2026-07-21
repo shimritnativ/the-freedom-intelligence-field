@@ -20,7 +20,9 @@ const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const MODEL = "claude-sonnet-4-6";
 const MAX_TOKENS = 800;         // preview replies stay short — one insight per turn
 const MAX_USER_LEN = 3000;
-const RESET_LINK = "https://thefieldai.app/reset";
+// Ads-funnel ThriveCart URL — sends preview visitors straight to checkout
+// so attribution stays clean and there's no extra LP hop.
+const RESET_LINK = "https://masteryourpath.thrivecart.com/power-reset-ads";
 const MAX_RETRY = 3;
 
 export default async function handler(req, res) {
