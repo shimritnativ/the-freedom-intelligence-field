@@ -10213,12 +10213,14 @@ Begin.` },
 
 <script>
 (function initCarmenPopup() {
-  // Show once per member per browser. localStorage is enough for MVP;
-  // if someone clears their browser they'll see it again — acceptable
-  // since a repeated invitation to a free session isn't harmful.
+  // Popup re-appears on a weekly cadence. If the member saw it more
+  // than COOLDOWN_MS ago (7 days), show again next time they open the
+  // Field. Any interaction (dismiss / book) updates the timestamp so
+  // the clock restarts from that moment.
   const SEEN_KEY = "myp_carmen_popup_v1";
-  // Small helper — bump this to _v2 later if we want everyone who
-  // dismissed to see a refreshed version.
+  const COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+  // Bump SEEN_KEY to _v2 if we want to force everyone to see a refreshed
+  // version immediately regardless of their cooldown state.
 
   // Skip staff / test accounts. Read the current member's email from
   // the same localStorage key used elsewhere in app.html if available.
@@ -10298,6 +10300,26 @@ Begin.` },
     try { return !!localStorage.getItem(MEMBER_SESSION_KEY); } catch { return false; }
   }
 
+  // Server-side check: does this member already have the GHL tag
+  // that fires when they book a connect call? If yes, we permanently
+  // suppress the popup. Returns true when we should proceed with
+  // showing, false when we should skip. Fails-open (defaults to true)
+  // if the endpoint errors so a Neon blip doesn't kill outreach.
+  async function isEligibleServerSide() {
+    try {
+      const token = localStorage.getItem(MEMBER_SESSION_KEY);
+      if (!token) return false;
+      const res = await fetch("/api/carmen-popup-status", {
+        headers: { "x-session-token": token },
+      });
+      if (!res.ok) return true; // fail-open
+      const data = await res.json();
+      return data && data.should_show !== false;
+    } catch {
+      return true; // fail-open
+    }
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     const popup = document.getElementById("cp-popup");
     if (!popup) return;
@@ -10322,20 +10344,31 @@ Begin.` },
     // ── Gating logic ──────────────────────────────────────────────
     // Only show when the member is signed in. The sign-in screen and
     // the Field share the same HTML page — without this check, the
-    // popup pops up on the sign-in screen too.
+    // popup would fire on the sign-in screen too.
     if (!isLoggedIn()) return;
-    // Already seen once — respect the "once per member" rule.
+    if (isStaff(currentEmail())) return;
+    // Weekly cadence — respect the cooldown from the last time we
+    // showed or the last time they interacted.
     let existing = null;
     try { existing = JSON.parse(localStorage.getItem(SEEN_KEY) || "null"); } catch {}
-    if (existing) return;
-    if (isStaff(currentEmail())) return;
+    if (existing) {
+      const lastTouch = existing.shown_at || existing.dismissed_at || existing.booked_at;
+      if (lastTouch) {
+        const ago = Date.now() - new Date(lastTouch).getTime();
+        if (Number.isFinite(ago) && ago < COOLDOWN_MS) return; // still in cooldown
+      }
+    }
 
     // Delay entrance so the member sees the Field first and the pop-in
     // feels intentional rather than pushy.
-    setTimeout(() => {
+    setTimeout(async () => {
       // Re-check login state in case the session was cleared mid-delay
       // (e.g. by the auto-logout flow).
       if (!isLoggedIn()) return;
+      // Server-side check: skip if this member already booked a call
+      // (tag "connect call - new form" fires automatically on booking).
+      const eligible = await isEligibleServerSide();
+      if (!eligible) return;
       showPopup();
     }, 6000);
   });
