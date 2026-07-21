@@ -83,7 +83,7 @@ export default async function handler(req, res) {
           ok: false,
           reason: "already_used",
           message: "You've already taken the 5-Minute Preview. The next step is the full 72-Hour Reset — that's where the real work begins.",
-          reset_link: "https://thefieldai.app/reset",
+          reset_link: "https://masteryourpath.thrivecart.com/power-reset-ads",
         });
       }
     }
