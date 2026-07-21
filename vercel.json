@@ -9,6 +9,9 @@
     "api/unlimited/chat.js": {
       "maxDuration": 60
     },
+    "api/free-trial/message.js": {
+      "maxDuration": 30
+    },
     "api/export-pdf.js": {
       "maxDuration": 30
     }
@@ -43,6 +46,10 @@
     {
       "source": "/carmen",
       "destination": "/Carmen_Outreach.html"
+    },
+    {
+      "source": "/try",
+      "destination": "/try.html"
     }
   ],
   "crons": [
@@ -100,7 +107,7 @@
   ],
   "headers": [
     {
-      "source": "/(app|admin|demo|embed|launch-tracker|the-field-website|reset)\\.html",
+      "source": "/(app|admin|demo|embed|launch-tracker|the-field-website|reset|try)\\.html",
       "headers": [
         {
           "key": "Cache-Control",
