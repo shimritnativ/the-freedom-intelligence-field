@@ -594,19 +594,20 @@
      SUPPORT CARDS ROW — sits below the chat inside the hero
      Desktop: 3 columns side by side. Mobile: stacked.
      ═════════════════════════════════════════════════════════════ */
-  /* Reset showcase: 3-column grid.
-     Left column = Maria (1 testimonial, centered vertically).
-     Middle column = the black Reset card.
-     Right column = Anne + Lisa stacked.
-     No overlaps, no rotation, no arrows — testimonials just sit
-     cleanly beside the box. */
+  /* Reset showcase — explicit 3×2 grid so everything flanks the box.
+     Row 1 = Maria (left) | Box (center, spans both rows) | Anne (right).
+     Row 2 = Maria (continues) | Box (continues) | Lisa (right).
+     display: contents on the wrapper flattens the DOM so grid can
+     target the card + testimonials directly. */
   .chat-support-row {
     max-width: 1080px;
     margin: 0 auto;
     display: grid;
     grid-template-columns: 1fr 380px 1fr;
-    gap: 28px;
+    grid-template-rows: 1fr 1fr;
+    gap: 20px 28px;
     align-items: center;
+    justify-items: center;
   }
   .reset-showcase-inner {
     display: contents;
@@ -619,6 +620,8 @@
     display: flex;
     flex-direction: column;
     grid-column: 2;
+    grid-row: 1 / span 2;    /* box spans both rows */
+    width: 100%;
   }
   .side-cta-card.primary {
     /* True black — subtle warm-gold vignette from the top-left corner
@@ -630,8 +633,8 @@
     color: var(--text-inverse);
   }
 
-  /* Flanking testimonials — upright, no shadow-heavy floating look,
-     just clean cards that mirror the main testimonials-grid style. */
+  /* Flanking testimonials — clean cards matching the main
+     testimonials-grid style. Upright, subtle border, no drop shadow. */
   .floating-testi {
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -641,6 +644,7 @@
     margin: 0;
     font-family: Georgia, "Times New Roman", serif;
     max-width: 260px;
+    width: 100%;
   }
   .floating-testi p {
     font-style: italic;
@@ -664,29 +668,35 @@
     color: #8A6D2E;
     letter-spacing: 0.05em;
   }
-  /* Left column: Maria — placed at the right edge of the left column
-     so she sits close to the box. */
-  .floating-testi--1 { grid-column: 1; justify-self: end; }
-  /* Right column: Anne on top */
-  .floating-testi--2 { grid-column: 3; justify-self: start; align-self: start; margin-top: 12px; }
-  /* Right column: Lisa below Anne */
-  .floating-testi--3 { grid-column: 3; justify-self: start; align-self: end; margin-bottom: 12px; }
+  /* Maria — left column, spans both rows so she sits vertically centered. */
+  .floating-testi--1 { grid-column: 1; grid-row: 1 / span 2; justify-self: end; }
+  /* Anne — right column, top row */
+  .floating-testi--2 { grid-column: 3; grid-row: 1; justify-self: start; align-self: end; }
+  /* Lisa — right column, bottom row */
+  .floating-testi--3 { grid-column: 3; grid-row: 2; justify-self: start; align-self: start; }
 
-  /* Mobile / narrow: collapse to a single column. Box first, then
-     testimonials stacked below. */
+  /* Mobile: collapse everything into one column, box first then
+     testimonials stacked below in reading order. */
   @media (max-width: 900px) {
     .chat-support-row {
       grid-template-columns: 1fr;
+      grid-template-rows: auto;
       gap: 16px;
       max-width: 520px;
+      justify-items: stretch;
     }
-    .side-cta-card { grid-column: 1; }
+    .side-cta-card {
+      grid-column: 1;
+      grid-row: auto;
+      order: 1;
+    }
     .floating-testi {
       grid-column: 1;
+      grid-row: auto;
       max-width: none;
       justify-self: stretch;
       align-self: auto;
-      margin: 0;
+      order: 2;
     }
   }
   .side-cta-eyebrow {
