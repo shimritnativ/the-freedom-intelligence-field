@@ -354,32 +354,29 @@
     background: var(--bg-warm);
     border: 1.5px solid var(--gold-line);
     color: var(--text);
-    padding: 20px 18px 18px;
+    padding: 20px 20px 18px;
     border-radius: var(--radius-md);
     text-align: left;
-    /* Sans-serif at a comfortable size — matches the button/label
-       typography used across the reset LP and hello.thefieldai.app.
-       The gold number stays in italic serif for the accent. */
-    font-family: var(--font-sans);
-    font-style: normal;
-    font-size: 15.5px;
-    font-weight: 500;
-    line-height: 1.4;
-    letter-spacing: -0.005em;
     cursor: pointer;
     transition: background 180ms ease, border-color 180ms ease, transform 100ms ease, box-shadow 180ms ease;
-    min-height: 140px;
     display: flex;
     flex-direction: column;
+    gap: 8px;
     position: relative;
   }
   .chip-label {
     display: block;
     color: var(--text);
-    font-family: var(--font-sans);
-    font-size: 15.5px;
+    /* Cormorant Garamond italic at a heavier weight + slightly larger
+       size than the previous 17px. This matches the display treatment
+       used across the reset LP and hello.thefieldai.app headings while
+       staying properly legible at chip size. */
+    font-family: var(--font-serif);
+    font-style: italic;
     font-weight: 500;
-    line-height: 1.4;
+    font-size: 20px;
+    line-height: 1.2;
+    letter-spacing: -0.005em;
   }
   .chip:hover {
     background: var(--gold-soft);
@@ -395,8 +392,8 @@
     font-size: 14px;
     font-weight: 500;
     letter-spacing: 0.08em;
-    margin-bottom: 8px;
     font-style: italic;
+    margin-bottom: 2px;
   }
   .chip-hint {
     display: block;
@@ -405,9 +402,8 @@
     font-weight: 400;
     font-size: 12.5px;
     color: var(--text-dim);
-    margin-top: auto;
-    padding-top: 10px;
-    line-height: 1.45;
+    line-height: 1.5;
+    margin-top: 4px;
   }
 
   /* Small "change doorway" reset link, shown only during email step */
