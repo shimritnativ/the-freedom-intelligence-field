@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="facebook-domain-verification" content="qnvdy6k60fvdf2tfzpsodifmfni7g9" />
+<title>The Field · 5-Minute Preview</title>
+<meta name="description" content="Feel the difference in five minutes. A precision-guided AI conversation built on Shimrit Nativ's Human Instrument method — free preview." />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="The Field · 5-Minute Preview" />
+<meta property="og:description" content="A five-minute taste of the Field. One conversation. No fluff. Just precision." />
+<meta property="og:url" content="https://thefieldai.app/try" />
+<link rel="icon" type="image/png" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #0E0B07;
+    --bg-cream: #FAF6EE;
+    --bg-card: #FFFFFF;
+    --bg-warm: #F5EFE0;
+    --text: #2B2318;
+    --text-dim: #6B5D48;
+    --text-mute: #8B7E66;
+    --text-inverse: #F7F1E1;
+    --text-inverse-dim: rgba(247, 241, 225, 0.72);
+    --gold: #C9A84C;
+    --gold-warm: #B99A5C;
+    --gold-soft: rgba(201, 168, 76, 0.12);
+    --gold-line: rgba(201, 168, 76, 0.28);
+    --gold-strong: rgba(201, 168, 76, 0.5);
+    --border: rgba(43, 35, 24, 0.10);
+    --border-dark: rgba(247, 241, 225, 0.14);
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 24px;
+    --radius-pill: 999px;
+    --font-serif: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    color: var(--text);
+    background: var(--bg-cream);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: 0; }
+
+  /* ── Section chrome ── */
+  .brand-strip {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    z-index: 10;
+    font-family: var(--font-sans);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--text-inverse-dim);
+  }
+
+  .stage {
+    display: none;
+  }
+  .stage.active { display: block; }
+
+  /* ═════════════════════════════════════════════════════════════
+     STAGE 1 — HERO
+     Dark canvas with floating gold particles.
+     Serif eyebrow + display headline + 3 scenario orbit cards.
+     ═════════════════════════════════════════════════════════════ */
+
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: radial-gradient(ellipse 1400px 900px at 50% 20%, rgba(201, 168, 76, 0.06), transparent 60%),
+                var(--bg-dark);
+    color: var(--text-inverse);
+    padding: 60px 24px 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  /* Floating gold particles — pure CSS, absolute-positioned dots
+     that drift and pulse. Layered above the gradient. */
+  .particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .particle {
+    position: absolute;
+    width: var(--sz, 4px);
+    height: var(--sz, 4px);
+    border-radius: 50%;
+    background: var(--gold);
+    opacity: var(--op, 0.5);
+    box-shadow: 0 0 12px rgba(201, 168, 76, 0.5);
+    animation: drift var(--dur, 18s) ease-in-out infinite;
+    animation-delay: var(--del, 0s);
+  }
+  @keyframes drift {
+    0%, 100% { transform: translate(0, 0); }
+    25%      { transform: translate(30px, -40px); }
+    50%      { transform: translate(-20px, -70px); }
+    75%      { transform: translate(-40px, -30px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .particle { animation: none; }
+  }
+
+  .hero-inner {
+    position: relative;
+    z-index: 2;
+    max-width: 900px;
+    width: 100%;
+    text-align: center;
+  }
+  .hero-eyebrow {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 0 0 24px;
+  }
+  .hero-title {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-style: italic;
+    font-size: clamp(40px, 7vw, 84px);
+    line-height: 1.02;
+    letter-spacing: -0.015em;
+    margin: 0 0 20px;
+    color: var(--text-inverse);
+  }
+  .hero-lead {
+    font-family: var(--font-sans);
+    font-size: clamp(15px, 1.8vw, 18px);
+    line-height: 1.65;
+    color: var(--text-inverse-dim);
+    max-width: 620px;
+    margin: 0 auto 8px;
+    font-weight: 300;
+  }
+  .hero-lead strong { color: var(--text-inverse); font-weight: 500; }
+
+  .hero-cta-hint {
+    margin-top: 44px;
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 600;
+  }
+
+  /* Scenario orbit — three cards in a soft triangle formation on
+     desktop, stacked on mobile. Each card floats gently. */
+  .scenarios {
+    margin-top: 48px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    max-width: 940px;
+    width: 100%;
+  }
+  @media (max-width: 780px) {
+    .scenarios { grid-template-columns: 1fr; gap: 14px; }
+  }
+  .scenario {
+    position: relative;
+    background: rgba(247, 241, 225, 0.04);
+    border: 1px solid var(--border-dark);
+    border-radius: var(--radius-md);
+    padding: 24px 22px 22px;
+    text-align: left;
+    color: var(--text-inverse);
+    cursor: pointer;
+    transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 300ms ease,
+                background 300ms ease;
+    animation: card-float 9s ease-in-out infinite;
+  }
+  .scenario:nth-child(1) { animation-delay: 0s; }
+  .scenario:nth-child(2) { animation-delay: -3s; }
+  .scenario:nth-child(3) { animation-delay: -6s; }
+  @keyframes card-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-6px); }
+  }
+  .scenario:hover {
+    transform: translateY(-8px);
+    border-color: var(--gold-strong);
+    background: rgba(201, 168, 76, 0.06);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .scenario { animation: none; }
+    .scenario:hover { transform: none; }
+  }
+  .scenario-num {
+    font-family: var(--font-serif);
+    font-size: 34px;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--gold);
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+  .scenario-label {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    font-weight: 500;
+    font-style: italic;
+    line-height: 1.25;
+    color: var(--text-inverse);
+    margin: 0 0 8px;
+  }
+  .scenario-hint {
+    font-size: 13px;
+    color: var(--text-inverse-dim);
+    margin: 0;
+    line-height: 1.5;
+  }
+  .scenario-cta {
+    margin-top: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold);
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity 200ms ease, transform 200ms ease;
+  }
+  .scenario:hover .scenario-cta {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .hero-footnote {
+    margin-top: 60px;
+    font-size: 11.5px;
+    color: var(--text-inverse-mute);
+    letter-spacing: 0.04em;
+  }
+  .hero-footnote a { color: var(--gold); border-bottom: 1px solid var(--gold-line); }
+  .hero-footnote a:hover { color: var(--gold-warm); }
+
+  /* ═════════════════════════════════════════════════════════════
+     STAGE 2 — EMAIL GATE
+     Cream card in the center after scenario click.
+     ═════════════════════════════════════════════════════════════ */
+
+  .gate {
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: var(--bg-cream);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+  .gate-card {
+    max-width: 520px;
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 40px 36px 32px;
+    text-align: center;
+    box-shadow: 0 24px 80px rgba(43, 35, 24, 0.08);
+  }
+  .gate-eyebrow {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--gold-warm);
+    margin: 0 0 20px;
+  }
+  .gate-title {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-style: italic;
+    font-size: clamp(28px, 4vw, 38px);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin: 0 0 12px;
+    color: var(--text);
+  }
+  .gate-sub {
+    color: var(--text-dim);
+    font-size: 15px;
+    line-height: 1.55;
+    margin: 0 auto 28px;
+    max-width: 420px;
+  }
+  .gate-chosen {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 17px;
+    color: var(--text);
+    background: var(--bg-warm);
+    border: 1px solid var(--gold-line);
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    margin: 0 0 24px;
+  }
+  .gate-input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    color: var(--text);
+    background: var(--bg-warm);
+    transition: border-color 180ms ease, background 180ms ease;
+  }
+  .gate-input:focus {
+    outline: 0;
+    border-color: var(--gold);
+    background: var(--bg-card);
+    box-shadow: 0 0 0 3px var(--gold-soft);
+  }
+  .gate-submit {
+    margin-top: 14px;
+    width: 100%;
+    padding: 14px 20px;
+    background: var(--text);
+    color: var(--text-inverse);
+    border-radius: var(--radius-pill);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    transition: background 180ms ease, transform 100ms ease;
+  }
+  .gate-submit:hover:not(:disabled) { background: var(--gold-warm); color: #fff; }
+  .gate-submit:active { transform: scale(0.98); }
+  .gate-submit:disabled { opacity: 0.55; cursor: wait; }
+  .gate-back {
+    display: inline-block;
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--text-dim);
+    background: transparent;
+    border-bottom: 1px dotted var(--gold-line);
+    padding: 0;
+  }
+  .gate-back:hover { color: var(--text); }
+  .gate-fineprint {
+    margin-top: 20px;
+    font-size: 11px;
+    color: var(--text-mute);
+    line-height: 1.55;
+  }
+  .gate-error {
+    background: rgba(178, 34, 34, 0.08);
+    color: #b22222;
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 13px;
+    margin-top: 12px;
+    text-align: left;
+  }
+
+  /* ═════════════════════════════════════════════════════════════
+     STAGE 3 — CHAT
+     ═════════════════════════════════════════════════════════════ */
+
+  .chat {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-cream);
+  }
+  .chat-topbar {
+    padding: 14px 20px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .chat-progress-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .chat-progress-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-mute);
+    white-space: nowrap;
+  }
+  .chat-progress-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--bg-warm);
+    border-radius: 999px;
+    overflow: hidden;
+    max-width: 240px;
+  }
+  .chat-progress-fill {
+    height: 100%;
+    background: var(--gold);
+    width: 0%;
+    transition: width 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .chat-progress-count {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .chat-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 20px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .chat-thread {
+    width: 100%;
+    max-width: 640px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .bubble {
+    max-width: 100%;
+    padding: 14px 18px;
+    border-radius: var(--radius-md);
+    font-size: 15px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    animation: msg-in 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes msg-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .bubble.assistant {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-serif);
+    font-size: 17px;
+    line-height: 1.6;
+  }
+  .bubble.assistant.final {
+    border-color: var(--gold-line);
+    background: var(--bg-warm);
+  }
+  .bubble.user {
+    background: var(--text);
+    color: var(--text-inverse);
+    align-self: flex-end;
+    max-width: 82%;
+    font-family: var(--font-sans);
+  }
+  .typing {
+    display: inline-flex;
+    gap: 4px;
+    padding: 2px 0;
+  }
+  .typing span {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--gold-warm);
+    opacity: 0.6;
+    animation: typing 1.2s ease-in-out infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typing {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.6; }
+    30%           { transform: translateY(-3px); opacity: 1; }
+  }
+
+  .chat-input-bar {
+    padding: 14px 20px 24px;
+    background: var(--bg-cream);
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: center;
+  }
+  .chat-input-inner {
+    width: 100%;
+    max-width: 640px;
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .chat-input {
+    flex: 1;
+    padding: 12px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    color: var(--text);
+    background: var(--bg-card);
+    resize: none;
+    line-height: 1.5;
+    max-height: 160px;
+    min-height: 48px;
+  }
+  .chat-input:focus {
+    outline: 0;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px var(--gold-soft);
+  }
+  .chat-send {
+    padding: 12px 20px;
+    background: var(--text);
+    color: var(--text-inverse);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    transition: background 180ms ease, transform 100ms ease;
+    min-height: 48px;
+  }
+  .chat-send:hover:not(:disabled) { background: var(--gold-warm); }
+  .chat-send:active:not(:disabled) { transform: scale(0.97); }
+  .chat-send:disabled { opacity: 0.5; cursor: wait; }
+
+  /* Closing card once trial is complete */
+  .closing-card {
+    max-width: 520px;
+    background: var(--bg-card);
+    border: 1px solid var(--gold-line);
+    border-radius: var(--radius-lg);
+    padding: 36px 32px 32px;
+    margin: 24px auto 0;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(43, 35, 24, 0.10);
+  }
+  .closing-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--gold-warm);
+    margin-bottom: 12px;
+  }
+  .closing-title {
+    font-family: var(--font-serif);
+    font-size: 28px;
+    font-style: italic;
+    font-weight: 400;
+    line-height: 1.2;
+    color: var(--text);
+    margin: 0 0 12px;
+  }
+  .closing-body {
+    color: var(--text-dim);
+    font-size: 15px;
+    line-height: 1.6;
+    margin: 0 0 24px;
+  }
+  .closing-cta {
+    display: inline-block;
+    padding: 14px 30px;
+    background: var(--gold);
+    color: var(--text-inverse);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-radius: var(--radius-pill);
+    transition: background 180ms ease, transform 100ms ease;
+  }
+  .closing-cta:hover { background: var(--gold-warm); }
+  .closing-cta:active { transform: scale(0.98); }
+  .closing-note {
+    margin-top: 16px;
+    font-size: 11.5px;
+    color: var(--text-mute);
+  }
+
+  .already-used {
+    max-width: 480px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    margin: auto;
+    text-align: center;
+  }
+</style>
+</head>
+
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     STAGE 1: HERO / SCENARIO SELECTION
+     ═══════════════════════════════════════════════════════════════ -->
+<section class="stage active" id="stage-hero">
+  <span class="brand-strip">The Freedom Intelligence Field</span>
+  <div class="hero">
+    <div class="particles" id="particles" aria-hidden="true"></div>
+    <div class="hero-inner">
+      <p class="hero-eyebrow">A 5-Minute Preview</p>
+      <h1 class="hero-title">Five minutes. One conversation.<br/>See the difference.</h1>
+      <p class="hero-lead">
+        The Field isn't a chatbot. It's a precision calibration guide, built on Shimrit Nativ's Human Instrument® method. This is <strong>a real taste</strong> — a bounded conversation designed to give you one moment of being genuinely seen.
+      </p>
+      <p class="hero-cta-hint">Choose the doorway ↓</p>
+
+      <div class="scenarios" id="scenarios">
+        <!-- populated by JS from FREE_TRIAL_SCENARIOS -->
+      </div>
+
+      <p class="hero-footnote">
+        Already have the full experience? <a href="/reset">The 72-Hour Power Reset →</a>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     STAGE 2: EMAIL GATE
+     ═══════════════════════════════════════════════════════════════ -->
+<section class="stage" id="stage-email">
+  <div class="gate">
+    <div class="gate-card">
+      <p class="gate-eyebrow">Step 2 of 2</p>
+      <h2 class="gate-title">Where should we begin?</h2>
+      <p class="gate-sub">One email so we can hold your space. No password. No account. Just a container.</p>
+
+      <div class="gate-chosen" id="chosen-label"></div>
+
+      <form id="email-form" autocomplete="on">
+        <input
+          class="gate-input"
+          id="email-input"
+          type="email"
+          name="email"
+          placeholder="your@email.com"
+          required
+          autofocus
+        />
+        <button class="gate-submit" id="email-submit" type="submit">Enter the Field →</button>
+      </form>
+
+      <div id="email-error" class="gate-error" style="display:none;"></div>
+
+      <button class="gate-back" id="gate-back" type="button">← Choose a different doorway</button>
+
+      <p class="gate-fineprint">
+        You'll get six exchanges. Fifteen minutes. One free preview per person. We never share your email.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     STAGE 3: CHAT
+     ═══════════════════════════════════════════════════════════════ -->
+<section class="stage" id="stage-chat">
+  <div class="chat">
+    <header class="chat-topbar">
+      <div class="chat-progress-wrap">
+        <span class="chat-progress-label">The Field · Preview</span>
+        <div class="chat-progress-bar"><div class="chat-progress-fill" id="progress-fill"></div></div>
+      </div>
+      <span class="chat-progress-count" id="progress-count">0 / 6</span>
+    </header>
+    <main class="chat-body" id="chat-body">
+      <div class="chat-thread" id="chat-thread"></div>
+    </main>
+    <footer class="chat-input-bar" id="chat-input-bar">
+      <div class="chat-input-inner">
+        <textarea
+          class="chat-input"
+          id="chat-input"
+          placeholder="Take a breath. Then answer."
+          rows="1"
+        ></textarea>
+        <button class="chat-send" id="chat-send" type="button">Send</button>
+      </div>
+    </footer>
+  </div>
+</section>
+
+<script>
+  // ═══════════════════════════════════════════════════════════════
+  // Config kept in sync with lib/prompts/free-trial.js server-side.
+  // If we ever rename scenario IDs there, mirror them here.
+  // ═══════════════════════════════════════════════════════════════
+  const SCENARIOS = [
+    {
+      id: "pattern",
+      label: "I know the pattern but I still do it",
+      hint: "When you can see yourself repeating something and still can't stop."
+    },
+    {
+      id: "message",
+      label: "One message throws my whole day off",
+      hint: "When something tiny lands wrong and it takes hours to come back."
+    },
+    {
+      id: "reacting",
+      label: "I keep reacting the same way",
+      hint: "In relationships, at work, or anywhere the same loop keeps showing up."
+    }
+  ];
+
+  const MAX_EXCHANGES = 6;
+  const RESET_LINK = "/reset";
+
+  // Small cookie-lite ID we generate + persist so dedup can spot the
+  // same device across sessions even if the email differs.
+  const COOKIE_KEY = "tfif_try_cookie_v1";
+  function getCookieId() {
+    try {
+      let c = localStorage.getItem(COOKIE_KEY);
+      if (!c) {
+        c = "c_" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+        localStorage.setItem(COOKIE_KEY, c);
+      }
+      return c;
+    } catch { return null; }
+  }
+
+  // Session state
+  const state = {
+    scenario: null,
+    email: null,
+    trialId: null,
+    exchangeCount: 0,
+    isFinal: false,
+    lastReplyReceived: null,
+  };
+
+  // ── Utils ──────────────────────────────────────────────────
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  }
+  function showStage(id) {
+    document.querySelectorAll(".stage").forEach(el => el.classList.remove("active"));
+    $(id).classList.add("active");
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
+  // ── Particles: sprinkle 24 gold dots with random position + delay ──
+  function seedParticles() {
+    const wrap = $("particles");
+    if (!wrap) return;
+    const count = window.innerWidth < 720 ? 14 : 24;
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement("div");
+      p.className = "particle";
+      const size = (2 + Math.random() * 5).toFixed(1);
+      p.style.setProperty("--sz", size + "px");
+      p.style.setProperty("--op", (0.25 + Math.random() * 0.55).toFixed(2));
+      p.style.setProperty("--dur", (14 + Math.random() * 12).toFixed(1) + "s");
+      p.style.setProperty("--del", (-Math.random() * 12).toFixed(1) + "s");
+      p.style.top = (Math.random() * 100) + "%";
+      p.style.left = (Math.random() * 100) + "%";
+      wrap.appendChild(p);
+    }
+  }
+
+  // ── Render scenario cards ──
+  function renderScenarios() {
+    const host = $("scenarios");
+    host.innerHTML = SCENARIOS.map((s, i) => `
+      <button class="scenario" data-scenario="${esc(s.id)}" type="button">
+        <div class="scenario-num">${(i + 1).toString().padStart(2, "0")}</div>
+        <p class="scenario-label">${esc(s.label)}</p>
+        <p class="scenario-hint">${esc(s.hint)}</p>
+        <span class="scenario-cta">Choose →</span>
+      </button>
+    `).join("");
+    host.querySelectorAll(".scenario").forEach(btn => {
+      btn.addEventListener("click", () => chooseScenario(btn.dataset.scenario));
+    });
+  }
+
+  // ── Scenario chosen → go to email gate ──
+  function chooseScenario(id) {
+    const s = SCENARIOS.find(x => x.id === id);
+    if (!s) return;
+    state.scenario = id;
+    $("chosen-label").textContent = "“" + s.label + ".”";
+    $("email-error").style.display = "none";
+    showStage("stage-email");
+    setTimeout(() => { $("email-input").focus(); }, 60);
+  }
+
+  // ── Email submit → POST /api/free-trial/start ──
+  async function submitEmail(e) {
+    if (e) e.preventDefault();
+    const input = $("email-input");
+    const submit = $("email-submit");
+    const errBox = $("email-error");
+    errBox.style.display = "none";
+    const email = (input.value || "").trim();
+    if (!email || !email.includes("@")) {
+      errBox.textContent = "Please enter a valid email.";
+      errBox.style.display = "block";
+      return;
+    }
+    submit.disabled = true;
+    submit.textContent = "Opening the doorway…";
+    try {
+      const res = await fetch("/api/free-trial/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          scenario: state.scenario,
+          cookie_id: getCookieId(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        errBox.textContent = data.message || "Something didn't land. Try again in a moment.";
+        errBox.style.display = "block";
+        submit.disabled = false;
+        submit.textContent = "Enter the Field →";
+        return;
+      }
+      if (data.ok === false && data.reason === "already_used") {
+        renderAlreadyUsed(data.message, data.reset_link || RESET_LINK);
+        return;
+      }
+      state.trialId = data.trial_id;
+      state.email = email;
+      state.exchangeCount = 0;
+      startChat(data.opening);
+    } catch (err) {
+      errBox.textContent = "Network hiccup. Try again in a moment.";
+      errBox.style.display = "block";
+      submit.disabled = false;
+      submit.textContent = "Enter the Field →";
+    }
+  }
+
+  function renderAlreadyUsed(message, resetLink) {
+    // Replace the gate card with a friendly "you're past the preview" panel.
+    const gate = document.querySelector(".gate");
+    gate.innerHTML = `
+      <div class="already-used">
+        <p class="closing-eyebrow" style="text-align:center; margin-bottom: 12px;">You've already tasted the Field</p>
+        <p style="font-family: var(--font-serif); font-size: 22px; font-style: italic; line-height: 1.35; color: var(--text); margin: 0 0 16px;">
+          ${esc(message || "The preview is one per person. The full walk-through is the 72-Hour Reset.")}
+        </p>
+        <a class="closing-cta" href="${esc(resetLink)}">Enter the full Reset →</a>
+      </div>
+    `;
+  }
+
+  // ── Start chat: show opening + wait for user reply ──
+  function startChat(opening) {
+    showStage("stage-chat");
+    const thread = $("chat-thread");
+    thread.innerHTML = "";
+    appendMessage("assistant", opening);
+    updateProgress();
+    setTimeout(() => { $("chat-input").focus(); }, 60);
+  }
+
+  function appendMessage(role, content, opts) {
+    const thread = $("chat-thread");
+    const el = document.createElement("div");
+    el.className = "bubble " + role + (opts && opts.final ? " final" : "");
+    el.textContent = content;
+    thread.appendChild(el);
+    // scroll to newest
+    setTimeout(() => {
+      const body = $("chat-body");
+      body.scrollTop = body.scrollHeight;
+    }, 30);
+    return el;
+  }
+
+  function appendTyping() {
+    const thread = $("chat-thread");
+    const el = document.createElement("div");
+    el.className = "bubble assistant";
+    el.id = "typing-bubble";
+    el.innerHTML = '<span class="typing"><span></span><span></span><span></span></span>';
+    thread.appendChild(el);
+    const body = $("chat-body");
+    body.scrollTop = body.scrollHeight;
+    return el;
+  }
+  function removeTyping() {
+    const el = document.getElementById("typing-bubble");
+    if (el) el.remove();
+  }
+
+  function updateProgress() {
+    const used = state.exchangeCount;
+    const pct = Math.min(100, Math.round((used / MAX_EXCHANGES) * 100));
+    $("progress-fill").style.width = pct + "%";
+    $("progress-count").textContent = used + " / " + MAX_EXCHANGES;
+  }
+
+  // Auto-grow textarea
+  function autoGrow(el) {
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 160) + "px";
+  }
+
+  async function sendMessage() {
+    const input = $("chat-input");
+    const send = $("chat-send");
+    const content = (input.value || "").trim();
+    if (!content || !state.trialId || state.isFinal) return;
+    // Optimistically show the user's bubble
+    appendMessage("user", content);
+    input.value = "";
+    autoGrow(input);
+    send.disabled = true;
+    send.textContent = "…";
+    const typingEl = appendTyping();
+    try {
+      const res = await fetch("/api/free-trial/message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trial_id: state.trialId, content }),
+      });
+      const data = await res.json();
+      removeTyping();
+      if (!res.ok) {
+        appendMessage("assistant", data.message || "The Field went quiet for a moment. Try again.");
+        send.disabled = false;
+        send.textContent = "Send";
+        return;
+      }
+      state.exchangeCount = data.exchange_number || (state.exchangeCount + 1);
+      state.isFinal = !!data.is_final;
+      appendMessage("assistant", data.reply, { final: state.isFinal });
+      updateProgress();
+      if (state.isFinal) {
+        renderClosingCard(data.reset_link || RESET_LINK);
+      } else {
+        send.disabled = false;
+        send.textContent = "Send";
+        setTimeout(() => input.focus(), 30);
+      }
+    } catch (err) {
+      removeTyping();
+      appendMessage("assistant", "That didn't send. Try once more.");
+      send.disabled = false;
+      send.textContent = "Send";
+    }
+  }
+
+  function renderClosingCard(resetLink) {
+    // Replace input bar with a big Reset CTA.
+    $("chat-input-bar").style.display = "none";
+    const card = document.createElement("div");
+    card.className = "closing-card";
+    card.innerHTML = `
+      <p class="closing-eyebrow">The preview closed</p>
+      <h2 class="closing-title">What just opened is the doorway.</h2>
+      <p class="closing-body">The five-minute preview ends here. The 72-Hour Power Reset is where this actually goes — three days, in your body, with the full method.</p>
+      <a class="closing-cta" href="${esc(resetLink)}" id="closing-cta-link">Enter the full Reset · €9 →</a>
+      <p class="closing-note">Take what just happened with you. It stays yours.</p>
+    `;
+    $("chat-body").appendChild(card);
+    setTimeout(() => {
+      const body = $("chat-body");
+      body.scrollTop = body.scrollHeight;
+    }, 60);
+    // Track outcome
+    $("closing-cta-link").addEventListener("click", () => {
+      closeTrial("clicked_upgrade");
+    });
+  }
+
+  function closeTrial(outcome) {
+    if (!state.trialId) return;
+    // Fire-and-forget — don't block navigation
+    try {
+      fetch("/api/free-trial/close", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trial_id: state.trialId, outcome: outcome || "dismissed" }),
+        keepalive: true,
+      });
+    } catch {}
+  }
+
+  // ── Wire up ──
+  document.addEventListener("DOMContentLoaded", () => {
+    seedParticles();
+    renderScenarios();
+    $("email-form").addEventListener("submit", submitEmail);
+    $("gate-back").addEventListener("click", () => showStage("stage-hero"));
+
+    const input = $("chat-input");
+    if (input) {
+      input.addEventListener("input", () => autoGrow(input));
+      input.addEventListener("keydown", (e) => {
+        // Enter to send (Shift+Enter for newline). Matches ChatGPT convention.
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+    }
+    $("chat-send").addEventListener("click", sendMessage);
+
+    // Track a soft "dismissed" if they close the tab mid-chat.
+    window.addEventListener("beforeunload", () => {
+      if (state.trialId && !state.isFinal) closeTrial("dismissed");
+    });
+  });
+</script>
+
+</body>
+</html>
