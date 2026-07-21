@@ -956,6 +956,60 @@
     font-size: 24px; fill: var(--gold);
   }
 
+  /* Mobile-only vertical stacked version. Desktop uses the SVG arc,
+     mobile gets big readable circles instead of a shrunken SVG. */
+  .reset-arc-mobile { display: none; }
+  @media (max-width: 780px) {
+    .reset-arc { display: none; }
+    .reset-arc-mobile {
+      display: block;
+      margin: 32px auto 8px;
+      max-width: 340px;
+      position: relative;
+    }
+    .arc-m-row {
+      display: grid;
+      grid-template-columns: 72px 1fr;
+      gap: 18px;
+      align-items: center;
+      padding: 6px 0;
+      position: relative;
+    }
+    .arc-m-circle {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: var(--bg-cream);
+      border: 2px solid var(--gold);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-serif); font-style: italic;
+      font-size: 34px; color: var(--gold);
+      position: relative; z-index: 2;
+    }
+    .arc-m-body { text-align: left; }
+    .arc-m-title {
+      font-family: var(--font-serif); font-style: italic;
+      font-size: 20px; color: var(--text); margin: 0 0 4px;
+      line-height: 1.2;
+    }
+    .arc-m-hint {
+      font-family: var(--font-sans); font-size: 11px;
+      color: var(--text-dim); letter-spacing: 0.1em;
+      text-transform: uppercase; margin: 0;
+    }
+    /* Vertical dashed line connecting the three circles */
+    .arc-m-row:not(:last-child)::before {
+      content: "";
+      position: absolute;
+      left: 35px;                              /* centered under 72px circle */
+      top: calc(50% + 36px);                   /* below the circle */
+      width: 2px;
+      height: calc(100% - 36px);
+      background-image: linear-gradient(to bottom, var(--gold) 50%, transparent 50%);
+      background-size: 2px 8px;
+      opacity: 0.5;
+    }
+  }
+
   /* Bio */
   .bio-grid {
     display: grid; grid-template-columns: 260px 1fr; gap: 44px;
@@ -1077,7 +1131,15 @@
   }
   .quote-card--wide .quote-body { text-align: center; }
   @media (max-width: 640px) {
-    .quote-card--wide { max-width: none; margin: 0; }
+    /* On mobile, the wide card sits in a single-column stack, so match
+       the rest of the cards visually: left-gold, left-aligned. */
+    .quote-card--wide {
+      max-width: none; margin: 0;
+      text-align: left; align-items: stretch;
+      border-left: 3px solid var(--gold);
+      border-top: 1px solid var(--border);
+    }
+    .quote-card--wide .quote-body { text-align: left; }
   }
 
   /* FAQ */
@@ -1746,6 +1808,31 @@
       <text class="arc-label" x="680" y="160" text-anchor="middle">Power calibration</text>
       <text class="arc-label-hint" x="680" y="180" text-anchor="middle">CARRY IT OUT</text>
     </svg>
+    <!-- Mobile stacked equivalent: shown only under 780px so the arc
+         stays legible instead of collapsing into a shrunken SVG. -->
+    <div class="reset-arc-mobile" aria-hidden="true">
+      <div class="arc-m-row">
+        <div class="arc-m-circle">1</div>
+        <div class="arc-m-body">
+          <p class="arc-m-title">State reset</p>
+          <p class="arc-m-hint">Interrupt the loop</p>
+        </div>
+      </div>
+      <div class="arc-m-row">
+        <div class="arc-m-circle">2</div>
+        <div class="arc-m-body">
+          <p class="arc-m-title">Decision &amp; Action</p>
+          <p class="arc-m-hint">One aligned move</p>
+        </div>
+      </div>
+      <div class="arc-m-row">
+        <div class="arc-m-circle">3</div>
+        <div class="arc-m-body">
+          <p class="arc-m-title">Power calibration</p>
+          <p class="arc-m-hint">Carry it out</p>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -1756,9 +1843,9 @@
     <h2 class="lp-h2">Created by Shimrit Nativ.</h2>
     <div class="bio-grid">
       <div class="bio-photo">
-        <!-- To swap in Shimrit's headshot: drop the file into public/
-             and set <img src="/shimrit.jpg" alt="Shimrit Nativ" /> -->
-        <span style="opacity: 0.55;">Shimrit photo</span>
+        <img src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/shimrit.jpg"
+             alt="Shimrit Nativ"
+             style="width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit;" />
       </div>
       <div>
         <h3 class="bio-name">Shimrit Nativ</h3>
