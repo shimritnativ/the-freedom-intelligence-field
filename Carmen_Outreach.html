@@ -366,6 +366,41 @@
       font-size: 14px;
       font-weight: 900;
     }
+    /* Outcome dropdown — replaces the plain checkbox so Carmen can record
+       what actually happened on the call: dialed but no answer vs. call
+       held vs. declined vs. asked-for-callback. The visible pill colour
+       changes per outcome so the state is scannable across the whole
+       queue at a glance. */
+    .outcome-select {
+      appearance: none;
+      -webkit-appearance: none;
+      border: 1px solid var(--gold-line);
+      border-radius: 999px;
+      padding: 6px 24px 6px 10px;
+      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10' fill='none' stroke='%23a48a3c' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 4l3 3 3-3'/%3E%3C/svg%3E") no-repeat right 8px center;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: border-color 0.15s, background-color 0.15s, color 0.15s;
+      min-width: 108px;
+    }
+    .outcome-select:hover { border-color: var(--gold); }
+    .outcome-select:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.15); }
+    .outcome-select[data-value="reached"] {
+      background-color: #E8F5EC; border-color: #77B58A; color: #2E6A44;
+    }
+    .outcome-select[data-value="no_answer"] {
+      background-color: #FFF4E1; border-color: #E4B672; color: #8A5A11;
+    }
+    .outcome-select[data-value="declined"] {
+      background-color: #FBE9E9; border-color: #D89A9A; color: #8A2E2E;
+    }
+    .outcome-select[data-value="callback"] {
+      background-color: #EEF0FB; border-color: #9BA6D6; color: #40498A;
+    }
     .ghl-btn {
       display: inline-flex;
       align-items: center;
@@ -627,7 +662,7 @@
     <div class="intro">
       <p class="intro-title">Your list</p>
       <p class="intro-body">
-        Every active Reset buyer, freshest first. Click the green WhatsApp icon to open the chat with them in WhatsApp Web (log in once at <a href="https://web.whatsapp.com" target="_blank" style="color:var(--gold)">web.whatsapp.com</a>). Click the GHL icon to open their contact in GoHighLevel — that's where you add call notes. Tick the checkbox after a call and they drop off your queue for 30 days.
+        Every active Reset buyer, freshest first. Click the green WhatsApp icon to open the chat with them in WhatsApp Web (log in once at <a href="https://web.whatsapp.com" target="_blank" style="color:var(--gold)">web.whatsapp.com</a>). Click the GHL icon to open their contact in GoHighLevel — that's where you add call notes. After each call, pick the outcome (<em>Attempted</em> = dialed but no answer · <em>Call held</em> = you actually spoke · <em>Declined</em> or <em>Callback</em>) and they drop off your queue for 30 days.
       </p>
     </div>
 
@@ -669,7 +704,7 @@
             <th>Last DM</th>
             <th style="text-align:center">Cheat sheet</th>
             <th style="text-align:center">GHL</th>
-            <th style="text-align:center">Called</th>
+            <th style="text-align:center">Outcome</th>
           </tr>
         </thead>
         <tbody id="tbody">
@@ -921,33 +956,67 @@
             </td>
             <td class="ghl-cell" style="text-align:center">${ghlCell}</td>
             <td class="actions-cell" style="text-align:center">
-              <input class="contacted-check" type="checkbox" data-action="contacted" data-email="${esc(m.email)}" ${m.contacted ? 'checked' : ''} title="${m.contacted ? 'Uncheck to put them back in the queue' : 'Tick after you called them'}" />
+              ${(function () {
+                // Outcome selector — replaces the plain called/uncalled
+                // checkbox. Selecting any outcome marks the member as
+                // contacted (drops them from the queue for 30d); selecting
+                // "Not yet" clears the flag and puts them back on the list.
+                const current = m.call_outcome || (m.contacted ? "reached" : "");
+                const opts = [
+                  ["", "Not yet"],
+                  ["no_answer", "Attempted"],
+                  ["reached", "Call held"],
+                  ["declined", "Declined"],
+                  ["callback", "Callback"],
+                ];
+                const optHtml = opts.map(([v, label]) =>
+                  `<option value="${v}"${v === current ? ' selected' : ''}>${label}</option>`
+                ).join("");
+                return `<select class="outcome-select" data-action="outcome" data-email="${esc(m.email)}" data-value="${esc(current)}" title="Record the outcome of the call">${optHtml}</select>`;
+              })()}
             </td>
           </tr>
         `;
       }).join("");
     }
 
-    // ── Actions: contacted toggle, cheat sheet modal ────────────────────
-    async function toggleContacted(email, checked) {
+    // ── Actions: outcome selector, cheat sheet modal ────────────────────
+    // Setting an outcome (anything except "") marks the member as contacted
+    // — same 30-day queue-drop rule as before. Choosing "Not yet" clears
+    // the row and puts them back on the outreach list.
+    async function setOutcome(email, outcome) {
       const token = localStorage.getItem(SESSION_TOKEN_KEY);
       if (!token) { toast("Not signed in."); return; }
-      // Optimistic local update
       const m = allMembers.find(x => x.email === email);
-      if (m) m.contacted = checked;
+      const prev = { contacted: m ? m.contacted : false, outcome: m ? (m.call_outcome || null) : null };
+      // Optimistic local update
+      if (m) {
+        m.contacted = !!outcome;
+        m.call_outcome = outcome || null;
+      }
       renderTable();
       renderStats();
       try {
-        const res = await fetch("/api/admin/carmen-contacted", {
-          method: checked ? "POST" : "DELETE",
-          headers: { "Content-Type": "application/json", "x-session-token": token },
-          body: JSON.stringify({ email }),
-        });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        toast(checked ? "Marked as called ✓" : "Unmarked");
+        const label = { reached: "Call held ✓", no_answer: "Attempted ✓", declined: "Declined ✓", callback: "Callback ✓" }[outcome] || "Unmarked";
+        if (!outcome) {
+          const res = await fetch("/api/admin/carmen-contacted", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json", "x-session-token": token },
+            body: JSON.stringify({ email }),
+          });
+          if (!res.ok) throw new Error("HTTP " + res.status);
+        } else {
+          const res = await fetch("/api/admin/carmen-contacted", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-session-token": token },
+            body: JSON.stringify({ email, outcome }),
+          });
+          if (!res.ok) throw new Error("HTTP " + res.status);
+        }
+        toast(label);
       } catch (e) {
         // Revert on failure
-        if (m) m.contacted = !checked;
+        if (m) { m.contacted = prev.contacted; m.call_outcome = prev.outcome; }
         renderTable();
         renderStats();
         toast("Save failed — reverted");
@@ -1093,11 +1162,11 @@
       // Refresh
       document.getElementById("refresh-btn").addEventListener("click", () => loadList());
 
-      // Delegated change handler for the contacted checkboxes.
+      // Delegated change handler for the outcome dropdowns.
       document.getElementById("tbody").addEventListener("change", (e) => {
-        const chk = e.target.closest("[data-action='contacted']");
-        if (chk) {
-          toggleContacted(chk.dataset.email, chk.checked);
+        const sel = e.target.closest("[data-action='outcome']");
+        if (sel) {
+          setOutcome(sel.dataset.email, sel.value);
         }
       });
 
