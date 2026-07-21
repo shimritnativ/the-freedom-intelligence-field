@@ -366,41 +366,116 @@
       font-size: 14px;
       font-weight: 900;
     }
-    /* Outcome dropdown — replaces the plain checkbox so Carmen can record
-       what actually happened on the call: dialed but no answer vs. call
-       held vs. declined vs. asked-for-callback. The visible pill colour
-       changes per outcome so the state is scannable across the whole
-       queue at a glance. */
-    .outcome-select {
+    /* Custom outcome dropdown — replaces the native <select> so we can
+       fully brand the menu (native <option> lists are OS-styled and the
+       checkmark position is uncontrollable). The trigger is a pill that
+       reflects the current outcome via colour; the menu is a small
+       popover with a clean check-icon next to the selected option. */
+    .outcome-dd { position: relative; display: inline-block; }
+    .outcome-trigger {
       appearance: none;
-      -webkit-appearance: none;
       border: 1px solid var(--gold-line);
       border-radius: 999px;
-      padding: 6px 24px 6px 10px;
-      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10' fill='none' stroke='%23a48a3c' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 4l3 3 3-3'/%3E%3C/svg%3E") no-repeat right 8px center;
+      padding: 6px 26px 6px 12px;
+      background: #fff;
       font-family: inherit;
       font-size: 11px;
       font-weight: 600;
       letter-spacing: 0.04em;
       color: var(--text-dim);
       cursor: pointer;
-      transition: border-color 0.15s, background-color 0.15s, color 0.15s;
+      transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
       min-width: 108px;
+      text-align: left;
+      position: relative;
+      line-height: 1.2;
     }
-    .outcome-select:hover { border-color: var(--gold); }
-    .outcome-select:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.15); }
-    .outcome-select[data-value="reached"] {
-      background-color: #E8F5EC; border-color: #77B58A; color: #2E6A44;
+    .outcome-trigger::after {
+      content: "";
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      width: 8px; height: 8px;
+      border-right: 1.6px solid currentColor;
+      border-bottom: 1.6px solid currentColor;
+      transform: translateY(-70%) rotate(45deg);
+      opacity: 0.55;
+      transition: transform 0.15s;
     }
-    .outcome-select[data-value="no_answer"] {
-      background-color: #FFF4E1; border-color: #E4B672; color: #8A5A11;
+    .outcome-dd.open .outcome-trigger::after {
+      transform: translateY(-30%) rotate(-135deg);
     }
-    .outcome-select[data-value="declined"] {
-      background-color: #FBE9E9; border-color: #D89A9A; color: #8A2E2E;
+    .outcome-trigger:hover { border-color: var(--gold); }
+    .outcome-trigger:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.15); }
+    .outcome-trigger[data-value="reached"] {
+      background-color: #EAF3E1; border-color: #A3C58A; color: #4A6B2E;
     }
-    .outcome-select[data-value="callback"] {
-      background-color: #EEF0FB; border-color: #9BA6D6; color: #40498A;
+    .outcome-trigger[data-value="no_answer"] {
+      background-color: #F7E8D0; border-color: #D9B27C; color: #7A5210;
     }
+    .outcome-trigger[data-value="declined"] {
+      background-color: #F4DCDC; border-color: #C99494; color: #7C2A2A;
+    }
+    .outcome-trigger[data-value="callback"] {
+      background-color: #E8E4F3; border-color: #A69AC6; color: #4B4187;
+    }
+    .outcome-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 168px;
+      background: var(--bg-warm, #FAF6EE);
+      border: 1px solid var(--gold-line);
+      border-radius: 12px;
+      box-shadow: 0 12px 32px rgba(43,35,24,0.15), 0 3px 10px rgba(43,35,24,0.06);
+      padding: 6px;
+      z-index: 100;
+      display: none;
+      animation: outcome-menu-in 0.12s ease-out;
+    }
+    @keyframes outcome-menu-in {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .outcome-dd.open .outcome-menu { display: block; }
+    .outcome-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px 9px 10px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text, #2B2318);
+      cursor: pointer;
+      transition: background 0.12s;
+      user-select: none;
+    }
+    .outcome-item:hover { background: rgba(201,168,76,0.14); }
+    .outcome-item[data-selected="1"] { color: var(--gold, #a48a3c); font-weight: 600; }
+    .outcome-item-check {
+      width: 16px; height: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--gold, #a48a3c);
+      opacity: 0;
+    }
+    .outcome-item[data-selected="1"] .outcome-item-check { opacity: 1; }
+    .outcome-item-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-left: auto;
+    }
+    .outcome-item[data-outcome="reached"]   .outcome-item-dot { background: #6B9C4E; }
+    .outcome-item[data-outcome="no_answer"] .outcome-item-dot { background: #C99450; }
+    .outcome-item[data-outcome="declined"]  .outcome-item-dot { background: #B45F5F; }
+    .outcome-item[data-outcome="callback"]  .outcome-item-dot { background: #7A6EB5; }
+    .outcome-item[data-outcome=""] .outcome-item-dot { background: transparent; border: 1.5px dashed rgba(0,0,0,0.15); }
     .ghl-btn {
       display: inline-flex;
       align-items: center;
@@ -957,10 +1032,9 @@
             <td class="ghl-cell" style="text-align:center">${ghlCell}</td>
             <td class="actions-cell" style="text-align:center">
               ${(function () {
-                // Outcome selector — replaces the plain called/uncalled
-                // checkbox. Selecting any outcome marks the member as
-                // contacted (drops them from the queue for 30d); selecting
-                // "Not yet" clears the flag and puts them back on the list.
+                // Custom in-brand outcome dropdown. Fully controlled markup
+                // so the menu styling (colour, checkmark, padding) is
+                // consistent instead of falling back to native OS controls.
                 const current = m.call_outcome || (m.contacted ? "reached" : "");
                 const opts = [
                   ["", "Not yet"],
@@ -969,10 +1043,21 @@
                   ["declined", "Declined"],
                   ["callback", "Callback"],
                 ];
-                const optHtml = opts.map(([v, label]) =>
-                  `<option value="${v}"${v === current ? ' selected' : ''}>${label}</option>`
-                ).join("");
-                return `<select class="outcome-select" data-action="outcome" data-email="${esc(m.email)}" data-value="${esc(current)}" title="Record the outcome of the call">${optHtml}</select>`;
+                const currentLabel = (opts.find(([v]) => v === current) || ["", "Not yet"])[1];
+                const items = opts.map(([v, label]) => `
+                  <div class="outcome-item" data-outcome="${v}" data-selected="${v === current ? '1' : '0'}" role="option">
+                    <span class="outcome-item-check" aria-hidden="true">
+                      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 8 7 12 13 4"/></svg>
+                    </span>
+                    <span>${label}</span>
+                    <span class="outcome-item-dot" aria-hidden="true"></span>
+                  </div>`).join("");
+                return `
+                  <div class="outcome-dd" data-outcome-dd data-email="${esc(m.email)}">
+                    <button type="button" class="outcome-trigger" data-value="${esc(current)}" aria-haspopup="listbox" aria-expanded="false" title="Record the outcome of the call">${esc(currentLabel)}</button>
+                    <div class="outcome-menu" role="listbox">${items}</div>
+                  </div>
+                `;
               })()}
             </td>
           </tr>
@@ -1162,12 +1247,37 @@
       // Refresh
       document.getElementById("refresh-btn").addEventListener("click", () => loadList());
 
-      // Delegated change handler for the outcome dropdowns.
-      document.getElementById("tbody").addEventListener("change", (e) => {
-        const sel = e.target.closest("[data-action='outcome']");
-        if (sel) {
-          setOutcome(sel.dataset.email, sel.value);
+      // Custom outcome dropdown wiring (replaces the native <select>).
+      // Click the pill to toggle the menu; click an item to select and
+      // close; click outside to close any open menu.
+      document.getElementById("tbody").addEventListener("click", (e) => {
+        const trigger = e.target.closest(".outcome-trigger");
+        const item = e.target.closest(".outcome-item");
+        if (trigger) {
+          e.stopPropagation();
+          const dd = trigger.closest("[data-outcome-dd]");
+          const wasOpen = dd.classList.contains("open");
+          // Close all other open dropdowns first
+          document.querySelectorAll("[data-outcome-dd].open").forEach(el => {
+            if (el !== dd) el.classList.remove("open");
+          });
+          dd.classList.toggle("open", !wasOpen);
+          trigger.setAttribute("aria-expanded", String(!wasOpen));
+        } else if (item) {
+          e.stopPropagation();
+          const dd = item.closest("[data-outcome-dd]");
+          const email = dd.dataset.email;
+          const outcome = item.dataset.outcome || "";
+          dd.classList.remove("open");
+          const trig = dd.querySelector(".outcome-trigger");
+          if (trig) trig.setAttribute("aria-expanded", "false");
+          setOutcome(email, outcome);
         }
+      });
+      // Close any open outcome dropdown when clicking outside
+      document.addEventListener("click", (e) => {
+        if (e.target.closest("[data-outcome-dd]")) return;
+        document.querySelectorAll("[data-outcome-dd].open").forEach(el => el.classList.remove("open"));
       });
 
       // Delegated click handler for cheat sheet buttons.
