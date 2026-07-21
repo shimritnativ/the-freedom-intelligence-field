@@ -1468,6 +1468,70 @@
   }
   .composer:focus-within { border-color: var(--gold-line); }
 
+  /* Fast-track tip — appears when a member opened Day 2 or Day 3 before
+     the natural 24h clock unlocked it (via the Complete Day button).
+     Quiet cream card with a soft gold left-accent, no aggressive colours.
+     Dismissable per-day via a small × so it doesn't nag. */
+  .fasttrack-tip {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 12px 0 0;
+    padding: 12px 16px;
+    background: rgba(201, 168, 76, 0.06);
+    border: 1px solid rgba(201, 168, 76, 0.22);
+    border-left: 3px solid var(--gold-line, rgba(201, 168, 76, 0.5));
+    border-radius: 10px;
+    font-size: 13px;
+    color: var(--text, #1A1612);
+  }
+  .fasttrack-tip-body { flex: 1; min-width: 0; line-height: 1.5; }
+  .fasttrack-tip-body strong { font-weight: 600; }
+  .fasttrack-tip-body span { color: var(--text-dim, #6B6258); display: block; margin-top: 2px; font-size: 12.5px; }
+  .fasttrack-tip-close {
+    flex-shrink: 0;
+    background: transparent; border: none;
+    color: var(--text-mute, #8A8378);
+    font-size: 18px; line-height: 1;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 6px;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+  .fasttrack-tip-close:hover { color: var(--text); background: rgba(0,0,0,0.05); }
+
+  /* Reset-window countdown chip — always-visible "Xh Ym left in your
+     72-hour window" so members don't have to hunt inside Account. Same
+     silhouette as the day-chip but neutral colour so it recedes visually. */
+  .window-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-left: 8px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: transparent;
+    border: 1px solid var(--border);
+    font-size: 10px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    vertical-align: middle;
+  }
+  .window-chip-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--gold, #C9A84C);
+  }
+  .sidebar-window-line {
+    font-size: 11px;
+    color: var(--text-dim);
+    padding: 4px 4px 10px;
+    letter-spacing: 0.02em;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  .sidebar-window-line strong { color: var(--gold); font-weight: 700; }
+
   /* Complete Day bar — appears below the composer on Reset days. Lets
      participants opt out of waiting 24h for the next day if they're
      ready to move forward. Quiet gold-tinted card, button on the right. */
@@ -5289,6 +5353,16 @@ Begin.` },
           }
           return `<div class="sidebar-label">The 72-Hour Power Reset</div>`;
         })()}
+        ${(function () {
+          // Show a "Xh Ym left in your Reset window" line under the label so
+          // preview members always see how much time they have. Skips for
+          // full-tier members (they have permanent access) and for members
+          // whose window hasn't started yet (no first_login_at).
+          if (state.tier === "full") return "";
+          if (!state.previewEndsAt) return "";
+          const ms = Math.max(0, new Date(state.previewEndsAt).getTime() - Date.now());
+          return `<div class="sidebar-window-line">Reset window: <strong data-window-countdown>${escapeHtml(formatTimeRemaining(ms))}</strong> left</div>`;
+        })()}
         <div class="day-list" ${state.tier === "full" && !state.resetSectionExpanded ? 'style="display:none"' : ""}>
           ${DAY_META.map((d, i) => {
             const dayNum = i + 1;
@@ -6023,7 +6097,12 @@ Begin.` },
     const lastCompleted = Number(state.lastCompletedDay || 0);
     if (lastCompleted >= day) return ""; // already done
     const labels = { 1: "State Reset", 2: "Decision & Action", 3: "Frequency Calibration" };
-    const next = day < 3 ? `Day ${day + 1} will unlock immediately.` : "You've completed the full Reset.";
+    // Make the tradeoff explicit — completing the day fast-tracks the next
+    // one, skipping the intentional 24h pause. Members who don't want that
+    // can simply not press this button and wait for the natural unlock.
+    const next = day < 3
+      ? `This opens Day ${day + 1} immediately, skipping the 24h pause between days.`
+      : "You've completed the full Reset.";
     return `
       <div class="complete-day-bar" id="complete-day-bar">
         <div class="complete-day-text">
@@ -6034,6 +6113,47 @@ Begin.` },
       </div>
     `;
   }
+
+  // Fast-track tip — banner that appears at the top of Day 2 or Day 3
+  // when the member got there via the Complete Day button BEFORE the
+  // natural 24h clock. Meant to say: "yes you can move fast, but the
+  // pause was there on purpose — you can also close this and come back
+  // tomorrow if you'd rather let Day X settle." Dismissable per day.
+  //
+  // Fast-track detection: the natural unlock moment for the current day
+  // is first_login_at + (dayNum - 1) * 24h. If that moment is still in
+  // the future, they got here via completion (not by waiting).
+  function renderFastTrackTip() {
+    if (state.tier !== "preview") return "";
+    const day = Number(state.currentDay || 0);
+    if (![2, 3].includes(day)) return ""; // Day 1 has nothing to skip
+    if (!state.firstLoginAt) return "";
+    const naturalUnlockMs = new Date(state.firstLoginAt).getTime() + (day - 1) * 24 * 60 * 60 * 1000;
+    if (naturalUnlockMs <= Date.now()) return ""; // clock already passed, they didn't fast-track
+    // Per-day dismiss so it doesn't nag once acknowledged
+    try {
+      if (localStorage.getItem(`tfif_fasttrack_dismissed_day${day}`) === "1") return "";
+    } catch (_) { /* private mode etc — show it */ }
+    const labels = { 2: "Decision & Action", 3: "Frequency Calibration" };
+    return `
+      <div class="fasttrack-tip" data-fasttrack-day="${day}">
+        <div class="fasttrack-tip-body">
+          <strong>You opened Day ${day} early.</strong>
+          <span>The 24h pause between days is optional but recommended — it lets what shifted actually settle. If you'd rather come back tomorrow, close this and return when you're ready. Day ${day} — ${labels[day]} — will still be here.</span>
+        </div>
+        <button type="button" class="fasttrack-tip-close" data-fasttrack-close="${day}" aria-label="Dismiss">×</button>
+      </div>
+    `;
+  }
+  // Dismiss handler — remembers per-day so it doesn't reappear.
+  document.body.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-fasttrack-close]");
+    if (!btn) return;
+    const day = btn.getAttribute("data-fasttrack-close");
+    try { localStorage.setItem(`tfif_fasttrack_dismissed_day${day}`, "1"); } catch (_) {}
+    const banner = btn.closest(".fasttrack-tip");
+    if (banner) banner.remove();
+  });
 
   // Wire up the Complete Day button(s) — delegated so the listener
   // survives re-renders of the chat area.
@@ -6625,6 +6745,14 @@ Begin.` },
               </div>
               <div>
                 <div class="day-chip">${DAY_META[state.currentDay - 1].label} · ${DAY_META[state.currentDay - 1].theme}</div>
+                ${(function () {
+                  // Reset window countdown — preview-tier only, only when the
+                  // window has started. Gives members a permanent "how much
+                  // time do I have?" answer without opening Account.
+                  if (state.tier === "full" || !state.previewEndsAt) return "";
+                  const ms = Math.max(0, new Date(state.previewEndsAt).getTime() - Date.now());
+                  return `<span class="window-chip"><span class="window-chip-dot"></span><span data-window-countdown>${escapeHtml(formatTimeRemaining(ms))}</span> left</span>`;
+                })()}
                 ${state.currentDay === 3 ? `<button class="save-work-btn" id="save-work-btn" type="button" title="Download your conversations">Export your conversations <span aria-hidden="true">↓</span></button>` : ""}
               </div>
             </div>
@@ -6644,6 +6772,7 @@ Begin.` },
                 <button class="send-btn" id="send-btn" type="button">↑</button>
               </div>
               <div class="composer-note">Your conversation is private. No one else has access to it.</div>
+              ${renderFastTrackTip()}
               ${renderCompleteDayBar()}
             </div>
             `}
@@ -6886,6 +7015,7 @@ Begin.` },
                 <button class="send-btn" id="send-btn" type="button">↑</button>
               </div>
               <div class="composer-note">Your conversation is private. No one else has access to it.</div>
+              ${renderFastTrackTip()}
               ${renderCompleteDayBar()}
             </div>
           </main>
@@ -9697,6 +9827,15 @@ Begin.` },
     if (remEl && state.previewEndsAt) {
       const ms = new Date(state.previewEndsAt).getTime() - Date.now();
       remEl.textContent = formatTimeRemaining(Math.max(0, ms));
+    }
+    // Refresh every window-countdown chip (sidebar + main header). Same
+    // source (state.previewEndsAt) so all chips stay in sync.
+    if (state.previewEndsAt) {
+      const wms = Math.max(0, new Date(state.previewEndsAt).getTime() - Date.now());
+      const text = formatTimeRemaining(wms);
+      document.querySelectorAll("[data-window-countdown]").forEach(el => {
+        el.textContent = text;
+      });
     }
   }
 
