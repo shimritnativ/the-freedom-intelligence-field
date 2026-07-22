@@ -23,6 +23,8 @@ const VALID_OUTCOMES = new Set([
   "no_answer",
   "declined",
   "callback",
+  "call_booked",
+  "no_need",
 ]);
 
 export default async function handler(req, res) {
