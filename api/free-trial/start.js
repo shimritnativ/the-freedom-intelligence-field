@@ -1,6 +1,6 @@
 // api/free-trial/start.js
 //
-// Begins a "5-Minute Preview" session. Captures the visitor's email +
+// Begins a "Free Preview of The Field" session. Captures the visitor's email +
 // chosen scenario, checks for prior use (email / IP / cookie in the
 // last 30 days), and returns a trial_id + the scenario's opening line
 // from the Field.
