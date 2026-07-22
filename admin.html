@@ -4146,16 +4146,26 @@
       const refundCents = Number(tcSummary.refund_cents || 0);
       const netCents = grossCents - refundCents;
 
-      // Intelligence tab — sum of every active segment size for the
-      // nav badge. Book Launch attendees segment was removed: those
-      // members came in free and are already in Shimrit's world.
+      // Intelligence tab — sum of every ACTIVE (non-dismissed) segment
+      // member for the nav badge. Book Launch attendees segment was
+      // removed: those members came in free and are already in
+      // Shimrit's world. Dismissed members are excluded so the badge
+      // matches what Geo actually sees on the Intelligence tab after
+      // clicking dismiss on rows she's already handled.
       const intel = d.intelligence || {};
+      const dismissalsBySegmentForCount = window._intelDismissalsBySegment || {};
+      function activeCount(segmentKey) {
+        const rows = intel[segmentKey] || [];
+        const dismissed = dismissalsBySegmentForCount[segmentKey] || new Set();
+        if (!dismissed.size) return rows.length;
+        return rows.filter(u => !dismissed.has(u.id)).length;
+      }
       const intelligenceTotal =
-        (intel.ready_for_upsell || []).length +
-        (intel.hot_reset_graduate || []).length +
-        (intel.at_risk_subscriber || []).length +
-        (intel.stuck_reset || []).length +
-        (intel.high_intent_buyer || []).length;
+        activeCount("ready_for_upsell") +
+        activeCount("hot_reset_graduate") +
+        activeCount("at_risk_subscriber") +
+        activeCount("stuck_reset") +
+        activeCount("high_intent_buyer");
 
       root.innerHTML = `
         <div class="wrap">
