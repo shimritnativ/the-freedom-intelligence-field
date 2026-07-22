@@ -107,6 +107,16 @@ export default async function handler(req, res) {
     // response, so even if Zapier is slow or the webhook 5xxs, the
     // chat still starts instantly. Zapier URL comes from env so it can
     // be rotated without a redeploy.
+    // Log the webhook decision so it's visible in Vercel Runtime Logs.
+    // Lets Geo diagnose "why didn't Zapier fire?" without adding console
+    // logs in a hurry every time.
+    if (!process.env.ZAPIER_TRY_OPTIN_WEBHOOK) {
+      console.log("zapier_skip_no_env_var", { email });
+    } else if (staff) {
+      console.log("zapier_skip_staff_email", { email });
+    } else {
+      console.log("zapier_firing", { email, first_name: firstName });
+    }
     if (process.env.ZAPIER_TRY_OPTIN_WEBHOOK && !staff) {
       const payload = {
         email,
