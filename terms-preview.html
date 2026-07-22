@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Field · Terms Welcome Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Inter:wght@400;500;600;700&display=swap" />
+<style>
+  :root {
+    --bg-dark: #0E0B07;
+    --bg-cream: #FAF6EE;
+    --bg-warm: #F5EFE0;
+    --bg-card: #FFFDF6;
+    --text: #1F1810;
+    --text-dim: #4A4030;
+    --text-mute: #6B5D48;
+    --text-inverse: #F7F1E1;
+    --text-inverse-dim: rgba(247, 241, 225, 0.7);
+    --gold: #C9A84C;
+    --gold-warm: #B99A5C;
+    --gold-soft: rgba(201, 168, 76, 0.10);
+    --gold-line: rgba(201, 168, 76, 0.28);
+    --font-serif: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-dark); font-family: var(--font-sans); color: var(--text-inverse); }
+
+  /* ─────────────────────────────────────────────────────────
+     PREVIEW FRAME — mock Field app behind the modal so Shimrit
+     sees the modal in the context it will actually appear in.
+     Not clickable, just visual.
+     ───────────────────────────────────────────────────────── */
+  .preview-note {
+    position: fixed;
+    top: 14px; left: 14px;
+    z-index: 100;
+    padding: 8px 14px;
+    background: rgba(201, 168, 76, 0.14);
+    border: 1px solid var(--gold-line);
+    border-radius: 999px;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--gold);
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .field-app {
+    position: relative;
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse 1200px 700px at 30% 20%, rgba(201, 168, 76, 0.05), transparent 60%),
+      var(--bg-dark);
+    overflow: hidden;
+  }
+  .field-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid rgba(247, 241, 225, 0.06);
+    background: rgba(14, 11, 7, 0.6);
+  }
+  .field-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .field-mark {
+    width: 30px; height: 30px;
+    border: 1.5px solid var(--gold);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gold);
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 14px;
+  }
+  .field-brand-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+  }
+  .field-brand-1 {
+    font-size: 10px;
+    letter-spacing: 0.28em;
+    color: var(--gold);
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .field-brand-2 {
+    font-size: 13px;
+    color: var(--text-inverse);
+    font-family: var(--font-serif);
+    font-style: italic;
+    margin-top: 2px;
+  }
+  .field-topbar-chip {
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--gold-soft);
+    border: 1px solid var(--gold-line);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+  .field-body {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 60px);
+  }
+  .field-sidebar {
+    padding: 20px 16px;
+    border-right: 1px solid rgba(247, 241, 225, 0.05);
+    background: rgba(0, 0, 0, 0.2);
+  }
+  .field-sidebar-label {
+    font-size: 9.5px;
+    letter-spacing: 0.24em;
+    color: rgba(247, 241, 225, 0.35);
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .field-day {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 4px;
+    background: transparent;
+  }
+  .field-day.active {
+    background: rgba(201, 168, 76, 0.08);
+  }
+  .field-day-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: rgba(201, 168, 76, 0.1);
+    border: 1px solid var(--gold-line);
+    color: var(--gold);
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .field-day-title {
+    font-size: 12px;
+    color: var(--text-inverse-dim);
+  }
+  .field-day-title strong { color: var(--text-inverse); font-weight: 500; }
+  .field-main {
+    padding: 40px 60px;
+  }
+  .field-main-header {
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .field-main-title {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 32px;
+    color: var(--text-inverse);
+    font-weight: 500;
+    margin: 0 0 24px;
+  }
+  .field-bubble {
+    max-width: 620px;
+    padding: 18px 22px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    font-family: Georgia, serif;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text-inverse);
+  }
+  .field-bubble-label {
+    font-size: 9.5px;
+    letter-spacing: 0.24em;
+    color: var(--gold);
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  /* ─────────────────────────────────────────────────────────
+     BACKDROP + MODAL
+     ───────────────────────────────────────────────────────── */
+  .terms-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(14, 11, 7, 0.76);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 900;
+    animation: tm-fade 320ms ease-out;
+  }
+  @keyframes tm-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .terms-modal {
+    position: fixed;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(560px, calc(100% - 40px));
+    max-height: calc(100vh - 40px);
+    background: var(--bg-card);
+    border-radius: 22px;
+    box-shadow:
+      0 50px 120px rgba(0, 0, 0, 0.55),
+      0 0 0 1px rgba(201, 168, 76, 0.28);
+    overflow: hidden;
+    z-index: 1000;
+    animation: tm-rise 480ms cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+  }
+  @keyframes tm-rise {
+    from { opacity: 0; transform: translate(-50%, calc(-50% + 20px)); }
+    to   { opacity: 1; transform: translate(-50%, -50%); }
+  }
+  .terms-modal-header {
+    padding: 34px 40px 24px;
+    text-align: center;
+    border-bottom: 1px solid rgba(201, 168, 76, 0.16);
+    background:
+      radial-gradient(ellipse 340px 120px at 50% 100%, rgba(201, 168, 76, 0.08), transparent 60%),
+      var(--bg-card);
+    flex-shrink: 0;
+  }
+  .terms-mark {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    border: 1.5px solid var(--gold);
+    background: var(--gold-soft);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gold);
+    margin-bottom: 14px;
+  }
+  .terms-mark svg { width: 22px; height: 22px; }
+  .terms-eyebrow {
+    font-size: 10.5px;
+    letter-spacing: 0.28em;
+    color: var(--gold);
+    text-transform: uppercase;
+    font-weight: 700;
+    margin: 0 0 8px;
+    font-family: var(--font-sans);
+  }
+  .terms-title {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 32px;
+    font-weight: 500;
+    color: var(--text);
+    margin: 0 0 6px;
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+  }
+  .terms-sub {
+    font-size: 13.5px;
+    color: var(--text-mute);
+    margin: 0;
+    line-height: 1.55;
+    font-family: var(--font-sans);
+  }
+  .terms-body {
+    padding: 24px 40px 22px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .terms-lead {
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 15.5px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin: 0 0 24px;
+    padding: 14px 16px;
+    background: rgba(201, 168, 76, 0.06);
+    border-left: 2px solid var(--gold);
+    border-radius: 0 8px 8px 0;
+  }
+  .terms-point {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  .terms-point:last-child { margin-bottom: 0; }
+  .terms-point-num {
+    flex-shrink: 0;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--gold);
+    color: #1a1410;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 600;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .terms-point-body {
+    flex: 1;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .terms-point-body strong {
+    font-weight: 700;
+    color: var(--text);
+  }
+  .terms-crisis {
+    margin-top: 22px;
+    padding: 14px 16px;
+    background: rgba(178, 34, 34, 0.05);
+    border-left: 2px solid #B22222;
+    border-radius: 0 8px 8px 0;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.55;
+    color: #5A2020;
+  }
+  .terms-crisis strong { color: #8A2020; font-weight: 700; }
+  .terms-footer {
+    padding: 20px 40px 28px;
+    background: rgba(201, 168, 76, 0.05);
+    border-top: 1px solid rgba(201, 168, 76, 0.18);
+    flex-shrink: 0;
+  }
+  .terms-consent {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 18px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.55;
+    cursor: pointer;
+    user-select: none;
+  }
+  .terms-consent input[type="checkbox"] {
+    flex-shrink: 0;
+    width: 18px; height: 18px;
+    margin-top: 2px;
+    accent-color: var(--gold);
+    cursor: pointer;
+  }
+  .terms-consent a {
+    color: var(--gold);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    font-weight: 600;
+  }
+  .terms-cta {
+    display: block;
+    width: 100%;
+    padding: 15px 22px;
+    background: var(--gold);
+    color: #1a1410;
+    font-family: var(--font-sans);
+    font-size: 13.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(201, 168, 76, 0.28),
+                0 0 30px rgba(201, 168, 76, 0.2);
+    transition: transform 150ms ease, box-shadow 200ms ease, background 180ms ease;
+  }
+  .terms-cta:hover:not(:disabled) {
+    transform: translateY(-1px);
+    background: var(--gold-warm);
+    box-shadow: 0 10px 28px rgba(201, 168, 76, 0.35),
+                0 0 40px rgba(201, 168, 76, 0.28);
+  }
+  .terms-cta:disabled {
+    background: rgba(201, 168, 76, 0.28);
+    color: rgba(26, 20, 16, 0.4);
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  /* Mobile — full width with breathing room */
+  @media (max-width: 600px) {
+    .field-body { grid-template-columns: 1fr; }
+    .field-sidebar { display: none; }
+    .field-main { padding: 20px; }
+    .field-main-title { font-size: 22px; }
+    .terms-modal { width: calc(100% - 24px); border-radius: 18px; }
+    .terms-modal-header { padding: 26px 24px 20px; }
+    .terms-title { font-size: 26px; }
+    .terms-body { padding: 20px 24px 18px; }
+    .terms-lead { font-size: 14.5px; }
+    .terms-point-body { font-size: 13.5px; }
+    .terms-footer { padding: 18px 24px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="preview-note">Preview — for approval</div>
+
+<!-- ─────────────────────────────────────────────────
+     Mock Field app in the background — non-functional
+     ───────────────────────────────────────────────── -->
+<div class="field-app" aria-hidden="true">
+  <div class="field-topbar">
+    <div class="field-brand">
+      <div class="field-mark">◆</div>
+      <div class="field-brand-text">
+        <span class="field-brand-1">Master Your Path</span>
+        <span class="field-brand-2">Freedom Intelligence Field</span>
+      </div>
+    </div>
+    <div class="field-topbar-chip">Day 1 · State Reset</div>
+  </div>
+  <div class="field-body">
+    <div class="field-sidebar">
+      <div class="field-sidebar-label">The 72-Hour Power Reset</div>
+      <div class="field-day active">
+        <div class="field-day-num">1</div>
+        <div class="field-day-title"><strong>Day 1</strong><br />State Reset</div>
+      </div>
+      <div class="field-day">
+        <div class="field-day-num">2</div>
+        <div class="field-day-title"><strong>Day 2</strong><br />Decision &amp; Action</div>
+      </div>
+      <div class="field-day">
+        <div class="field-day-num">3</div>
+        <div class="field-day-title"><strong>Day 3</strong><br />Frequency Calibration</div>
+      </div>
+    </div>
+    <div class="field-main">
+      <div class="field-main-header">Day 01 · State Reset</div>
+      <h1 class="field-main-title">Welcome. Take one slow breath before you begin.</h1>
+      <div class="field-bubble">
+        <div class="field-bubble-label">The Field</div>
+        Before we move anything, we reset your state. Where in your body do you feel the loop right now?
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────
+     BACKDROP + MODAL
+     ───────────────────────────────────────────────── -->
+<div class="terms-backdrop"></div>
+
+<div class="terms-modal" role="dialog" aria-modal="true" aria-labelledby="terms-title">
+  <div class="terms-modal-header">
+    <span class="terms-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2L2 8l10 6 10-6-10-6z"/>
+        <path d="M2 15l10 6 10-6"/>
+        <path d="M2 11l10 6 10-6"/>
+      </svg>
+    </span>
+    <p class="terms-eyebrow">Before we begin</p>
+    <h2 class="terms-title" id="terms-title">Welcome to The Field.</h2>
+    <p class="terms-sub">Please take a moment to read this before we begin.</p>
+  </div>
+
+  <div class="terms-body">
+    <p class="terms-lead">The Field is a coaching-adjacent AI experience built on Shimrit Nativ's Human Instrument® method. It is designed to support you in your inner work.</p>
+
+    <div class="terms-point">
+      <span class="terms-point-num">1</span>
+      <div class="terms-point-body">
+        <strong>Not medical or mental-health care.</strong> The Field is not therapy, medical advice, or a substitute for a licensed professional. Use your own judgment before acting on anything it says.
+      </div>
+    </div>
+
+    <div class="terms-point">
+      <span class="terms-point-num">2</span>
+      <div class="terms-point-body">
+        <strong>Your conversations are private.</strong> No one on our team reads your sessions unless you ask us to. Full details in our <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.
+      </div>
+    </div>
+
+    <div class="terms-point">
+      <span class="terms-point-num">3</span>
+      <div class="terms-point-body">
+        <strong>The Field can be wrong.</strong> It's AI. Bring your own discernment, especially before making real-world decisions.
+      </div>
+    </div>
+
+    <div class="terms-crisis">
+      <strong>If you are in crisis</strong> or having thoughts of self-harm, please contact a human crisis line or emergency service in your country. The Field cannot help in an emergency.
+    </div>
+  </div>
+
+  <div class="terms-footer">
+    <label class="terms-consent">
+      <input type="checkbox" id="terms-consent" />
+      <span>I have read and agree to the <a href="/terms.html" target="_blank" rel="noopener">Terms &amp; Conditions</a> and the <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>. I confirm I am 18 or over.</span>
+    </label>
+    <button class="terms-cta" id="terms-cta" disabled>I understand — begin</button>
+  </div>
+</div>
+
+<script>
+  // Preview interactivity: enable the CTA when the checkbox is ticked.
+  // In the real integration this button will POST to /api/accept-terms.
+  var checkbox = document.getElementById("terms-consent");
+  var cta = document.getElementById("terms-cta");
+  if (checkbox && cta) {
+    checkbox.addEventListener("change", function () {
+      cta.disabled = !checkbox.checked;
+    });
+    cta.addEventListener("click", function () {
+      alert("Preview only. In the live app this will save your acceptance and open The Field.");
+    });
+  }
+</script>
+
+</body>
+</html>
