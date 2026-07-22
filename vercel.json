@@ -50,6 +50,18 @@
     {
       "source": "/try",
       "destination": "/try.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/terms.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/privacy.html"
+    },
+    {
+      "source": "/terms-preview",
+      "destination": "/terms-preview.html"
     }
   ],
   "crons": [
