@@ -366,6 +366,10 @@
       background: rgba(46, 125, 50, 0.14);
       color: var(--success);
     }
+    .flag-bclub {
+      background: rgba(90, 60, 140, 0.14);
+      color: #5A3C8C;
+    }
     .flag-program-stack {
       display: inline-flex;
       gap: 4px;
@@ -408,6 +412,45 @@
       content: "•";
       margin-left: 4px;
       opacity: 0.7;
+    }
+    /* Program flag toggles — RISE, Past RISE, Certification.
+       Same interaction pattern as .engaged-toggle: always render all
+       three chips, dashed outline when inactive, solid pill when
+       active. Click cycles the value via /api/admin/member-flag-override. */
+    .program-toggle-stack {
+      display: inline-flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .program-toggle {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .program-toggle .flag-pill,
+    .program-toggle .flag-off-btn {
+      cursor: pointer;
+      transition: opacity 0.15s ease, color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    }
+    .program-toggle:hover .flag-pill { opacity: 0.85; }
+    .program-toggle .flag-off-btn {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border-radius: 4px;
+      color: var(--text-mute);
+      border: 1px dashed var(--border);
+      background: transparent;
+    }
+    .program-toggle:hover .flag-off-btn {
+      color: var(--gold);
+      border-color: var(--gold);
+      background: rgba(185, 154, 92, 0.06);
     }
     .day-badge {
       display: inline-block;
@@ -1154,13 +1197,18 @@
         const engagedBadge = m.is_newly_engaged
           ? `<button class="engaged-toggle" data-action="toggle-engaged" data-email="${esc(m.email)}" data-value="0" title="Marked engaged — click to unmark" type="button"><span class="flag-pill flag-yes">Yes</span></button>`
           : `<button class="engaged-toggle" data-action="toggle-engaged" data-email="${esc(m.email)}" data-value="1" title="Not marked engaged — click to mark manually (use when GHL tag hasn't synced)" type="button"><span class="flag-no-btn">Mark</span></button>`;
-        const programPills = [];
-        if (m.is_rise_current) programPills.push('<span class="flag-pill flag-rise" title="Current Rise client">RISE</span>');
-        if (m.is_rise_past) programPills.push('<span class="flag-pill flag-rise-past" title="Past Rise client / graduate">Past RISE</span>');
-        if (m.is_certification) programPills.push('<span class="flag-pill flag-cert" title="MYP Certification client">Certification</span>');
-        const programBadge = programPills.length
-          ? `<span class="flag-program-stack">${programPills.join("")}</span>`
-          : '<span class="flag-no">—</span>';
+        // Program column — three independent click-to-toggle chips.
+        // Always render all three so Geo/Carmen can add or remove any
+        // program flag inline when GHL tags haven't caught up.
+        const progFlag = (flag, on, activeClass, label, activeTitle, addTitle) => on
+          ? `<button class="program-toggle" data-action="toggle-flag" data-email="${esc(m.email)}" data-flag="${flag}" data-value="0" title="${esc(activeTitle)} — click to remove" type="button"><span class="flag-pill ${activeClass}">${label}</span></button>`
+          : `<button class="program-toggle" data-action="toggle-flag" data-email="${esc(m.email)}" data-flag="${flag}" data-value="1" title="${esc(addTitle)}" type="button"><span class="flag-off-btn">+ ${label}</span></button>`;
+        const programBadge = `<span class="program-toggle-stack">${
+          progFlag("is_rise_current", m.is_rise_current, "flag-rise", "RISE", "Current Rise client", "Mark as current Rise client") +
+          progFlag("is_rise_past",    m.is_rise_past,    "flag-rise-past", "Past RISE", "Past Rise client / graduate", "Mark as past Rise client") +
+          progFlag("is_certification", m.is_certification, "flag-cert", "Cert", "MYP Certification client", "Mark as MYP Certification client") +
+          progFlag("is_business_club", m.is_business_club, "flag-bclub", "Biz Club", "MYP Business Club member", "Mark as Business Club member")
+        }</span>`;
         const ghlUrl = m.ghl_contact_id
           ? `https://app.gohighlevel.com/v2/location/${GHL_LOCATION_ID}/contacts/detail/${encodeURIComponent(m.ghl_contact_id)}`
           : null;
@@ -1507,15 +1555,21 @@
         }
       });
 
-      // Delegated click handler for the Engaged toggle.
-      // Sends is_newly_engaged override to the server, updates the local
-      // row optimistically so the UI reflects the change immediately.
+      // Delegated click handler for all inline flag toggles —
+      // Engaged (data-action='toggle-engaged') and each Program pill
+      // (data-action='toggle-flag' with data-flag). Both POST to the
+      // same /api/admin/member-flag-override endpoint and update local
+      // state optimistically so the UI reflects immediately.
       document.getElementById("tbody").addEventListener("click", async (e) => {
-        const btn = e.target.closest("[data-action='toggle-engaged']");
+        const btn = e.target.closest("[data-action='toggle-engaged'], [data-action='toggle-flag']");
         if (!btn) return;
         e.stopPropagation();
         const email = btn.dataset.email;
+        const flag  = btn.dataset.action === "toggle-engaged"
+          ? "is_newly_engaged"
+          : btn.dataset.flag;
         const value = btn.dataset.value === "1";
+        if (!email || !flag) return;
         btn.disabled = true;
         try {
           const token = localStorage.getItem(SESSION_TOKEN_KEY);
@@ -1525,18 +1579,18 @@
               "Content-Type": "application/json",
               "x-session-token": token || "",
             },
-            body: JSON.stringify({ email, flag: "is_newly_engaged", value }),
+            body: JSON.stringify({ email, flag, value }),
           });
           const data = await r.json().catch(() => ({}));
           if (!r.ok || !data.ok) throw new Error(data.error || "override_failed");
           // Update local state so we don't need a full reload
           const row = allMembers.find(m => (m.email || "").toLowerCase() === (email || "").toLowerCase());
-          if (row) row.is_newly_engaged = value;
+          if (row) row[flag] = value;
           renderStats();
           renderTable();
         } catch (err) {
-          console.error("engaged_override_failed", err);
-          alert("Couldn't update engaged flag. Check console.");
+          console.error("flag_override_failed", err);
+          alert("Couldn't update flag. Check console.");
           btn.disabled = false;
         }
       });
