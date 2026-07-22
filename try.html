@@ -20,9 +20,9 @@
     --bg-cream: #FAF6EE;
     --bg-card: #FFFFFF;
     --bg-warm: #F5EFE0;
-    --text: #2B2318;
-    --text-dim: #6B5D48;
-    --text-mute: #8B7E66;
+    --text: #1F1810;
+    --text-dim: #4A4030;
+    --text-mute: #6B5D48;
     --text-inverse: #F7F1E1;
     --text-inverse-dim: rgba(247, 241, 225, 0.72);
     --text-inverse-mute: rgba(247, 241, 225, 0.45);
@@ -457,20 +457,56 @@
     margin-bottom: 8px;
     line-height: 1.5;
   }
+  .email-inline-names {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  @media (max-width: 480px) {
+    .email-inline-names { grid-template-columns: 1fr; }
+  }
   .email-inline-row {
     display: flex;
     gap: 8px;
   }
   .email-inline-input {
     flex: 1;
-    padding: 10px 14px;
+    padding: 12px 14px;
     border: 1.5px solid var(--border);
     border-radius: var(--radius-sm);
     font-family: var(--font-sans);
-    font-size: 14px;
+    font-size: 15px;
     color: var(--text);
     background: var(--bg-warm);
     min-width: 0;
+  }
+  .email-inline-name {
+    width: 100%;
+  }
+  .email-inline-consent {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 12px;
+    font-size: 12.5px;
+    color: var(--text-dim);
+    line-height: 1.55;
+    cursor: pointer;
+    user-select: none;
+  }
+  .email-inline-consent input[type="checkbox"] {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    margin-top: 3px;
+    accent-color: var(--gold);
+    cursor: pointer;
+  }
+  .email-inline-consent a {
+    color: var(--gold);
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
   .email-inline-input:focus {
     outline: 0;
@@ -778,11 +814,12 @@
   .side-price {
     font-family: var(--font-serif);
     font-style: italic;
-    font-size: 30px;
+    font-size: 48px;
     line-height: 1;
     color: var(--gold);
+    text-shadow: 0 0 22px rgba(201, 168, 76, 0.4);
   }
-  .side-price strong { font-weight: 500; }
+  .side-price strong { font-weight: 600; }
   .side-value-strike {
     font-size: 12px;
     color: rgba(247, 241, 225, 0.55);
@@ -902,12 +939,13 @@
   }
   .lp-h2 em { color: var(--gold); font-style: italic; }
   .lp-lead {
-    font-size: clamp(16px, 1.8vw, 19px);
-    line-height: 1.7; color: var(--text-dim); margin: 0 0 24px;
-    max-width: 720px;
+    font-size: clamp(17px, 1.9vw, 21px);
+    line-height: 1.65; color: var(--text-dim); margin: 0 0 26px;
+    max-width: 760px;
+    font-weight: 400;
   }
   .lp-section--dark .lp-lead { color: var(--text-inverse-dim); }
-  .lp-body-text { font-size: 16px; line-height: 1.75; color: var(--text-dim); }
+  .lp-body-text { font-size: 17px; line-height: 1.75; color: var(--text-dim); }
   .lp-body-text p { margin: 0 0 16px; }
   .lp-body-text p:last-child { margin: 0; }
 
@@ -1136,14 +1174,22 @@
     font-size: 13px; margin-left: 4px;
   }
   .value-total {
-    padding-top: 18px; margin-top: 4px;
-    border-top: 1px solid var(--gold-line);
+    padding-top: 22px; margin-top: 8px;
+    border-top: 2px solid var(--gold);
     border-bottom: 0;
-    font-size: 17px; font-weight: 600;
+    font-size: 19px; font-weight: 700;
+    align-items: center;
   }
+  /* The final €9 — deliberately huge and glowing so it lands hard.
+     After scrolling through €882 in stacked value, this is the number
+     people should carry away. */
   .v-price-hero {
     font-family: var(--font-serif); font-style: italic;
-    font-size: 34px; color: var(--gold); line-height: 1;
+    font-size: clamp(46px, 6vw, 62px);
+    color: var(--gold);
+    line-height: 1;
+    font-weight: 500;
+    text-shadow: 0 0 24px rgba(201, 168, 76, 0.35);
   }
   .value-cta {
     display: inline-block;
@@ -1172,22 +1218,48 @@
   .quote-card {
     background: var(--bg-card); border: 1px solid var(--border);
     border-left: 3px solid var(--gold); border-radius: var(--radius-md);
-    padding: 26px 24px;
+    padding: 28px 26px;
     display: flex;
     flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  /* Circular headshot at the top of each testimonial. Cover-fit so
+     photos of any aspect ratio look consistent. */
+  .quote-avatar {
+    width: 68px; height: 68px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--gold);
+    margin-bottom: 14px;
+    box-shadow: 0 4px 14px rgba(43, 35, 24, 0.10);
   }
   .quote-body {
-    font-family: var(--font-serif); font-style: italic;
-    font-size: 17px; line-height: 1.55;
-    color: var(--text); margin: 0 0 16px;
+    /* Sans-serif for readability (Shimrit's feedback: the tilted italic
+       serif was hard to scan). Still warm and readable, no compromise
+       on brand feel. */
+    font-family: var(--font-sans);
+    font-style: normal;
+    font-size: 16px;
+    line-height: 1.65;
+    color: var(--text);
+    margin: 0 0 18px;
+    font-weight: 400;
   }
-  /* Bolded phrases inside a quote — same face, gold-warm colour so
-     the reader's eye lands on the strongest line first. */
+  /* Bolded phrases inside a quote — actually bold now (700) so the
+     emphasis lands, and darker gold-warm colour so contrast reads
+     against the cream card. */
   .quote-body strong {
-    font-weight: 600;
-    color: #8A6D2E;
+    font-weight: 700;
+    color: #6B5218;
   }
-  .quote-name { font-size: 13px; color: var(--text-dim); font-weight: 600; margin-top: auto; }
+  .quote-name {
+    font-size: 14px;
+    color: var(--text);
+    font-weight: 700;
+    margin-top: auto;
+    letter-spacing: 0.02em;
+  }
   .quote-meta {
     font-size: 11.5px; color: var(--text-mute);
     letter-spacing: 0.04em; margin-top: 2px;
@@ -1272,12 +1344,34 @@
 
   .lp-footer {
     background: var(--bg-dark); color: var(--text-inverse-dim);
-    padding: 40px 24px; text-align: center;
-    font-size: 12px; letter-spacing: 0.06em;
+    padding: 50px 24px 40px; text-align: center;
+    font-size: 13px; letter-spacing: 0.02em;
   }
-  .lp-footer a { color: var(--gold); }
-  .lp-footer a:hover { color: var(--gold-warm); }
+  .lp-footer a { color: var(--gold); text-decoration: none; }
+  .lp-footer a:hover { color: var(--gold-warm); text-decoration: underline; }
   .lp-footer p { margin: 4px 0; }
+  .lp-footer-links {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 14px 22px; margin: 20px auto 18px;
+    font-size: 12.5px;
+  }
+  .lp-footer-links a { color: var(--text-inverse-dim); }
+  .lp-footer-links a:hover { color: var(--gold); }
+  .lp-footer-social {
+    display: flex; justify-content: center; gap: 14px; margin: 14px 0 8px;
+  }
+  .lp-footer-social a {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 1px solid rgba(201,168,76,0.35);
+    color: var(--gold); transition: background 200ms ease, transform 150ms ease;
+  }
+  .lp-footer-social a:hover { background: rgba(201,168,76,0.15); transform: translateY(-2px); }
+  .lp-footer-social svg { width: 16px; height: 16px; }
+  .lp-footer-copy {
+    font-size: 11.5px; color: rgba(247, 241, 225, 0.4);
+    letter-spacing: 0.06em; margin-top: 18px;
+  }
 
   /* ═════════════════════════════════════════════════════════════
      METHODOLOGY SECTION — "Not a chatbot. A process."
@@ -1966,22 +2060,27 @@
     <p class="lp-lead" style="margin: 0 auto 8px;">Moving through the 72-Hour Power Reset. All from the first weeks of the Field being live.</p>
     <div class="testimonials-grid">
       <div class="quote-card reveal">
+        <img class="quote-avatar" src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/testimonial-pics/Anne.jpg" alt="Anne" loading="lazy" />
         <p class="quote-body">"What an amazing experience so far! It is very <strong>scary accurate and thus powerful.</strong> I like the format for the different days, <strong>made me reflect deeper</strong> during the days. Love it!"</p>
         <div class="quote-name">Anne</div>
       </div>
       <div class="quote-card reveal">
+        <img class="quote-avatar" src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/testimonial-pics/Maria.png" alt="Maria" loading="lazy" />
         <p class="quote-body">"I just finished day 1. <strong>It feels soooo good.</strong> I am already loving this AI of ours! It has been an amazing session."</p>
         <div class="quote-name">Maria</div>
       </div>
       <div class="quote-card reveal">
+        <img class="quote-avatar" src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/testimonial-pics/Antonella.jpg" alt="Antonella" loading="lazy" />
         <p class="quote-body">"I am very concentrated… I find myself talking or thinking in English. <strong>My capability to stop myself as soon as the loop arrives, to see better and choose from the real me, has increased.</strong> And I feel proud of my last days."</p>
         <div class="quote-name">Antonella</div>
       </div>
       <div class="quote-card reveal">
+        <img class="quote-avatar" src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/testimonial-pics/Lisa.png" alt="Lisa" loading="lazy" />
         <p class="quote-body">"I was skeptical but excited about using AI. I'm just starting but <strong>so surprised about the positive experience I had.</strong> Looking forward to my next experience with The Field!"</p>
         <div class="quote-name">Lisa</div>
       </div>
       <div class="quote-card reveal quote-card--wide">
+        <img class="quote-avatar" src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/testimonial-pics/Katii.jpg" alt="Katti" loading="lazy" />
         <p class="quote-body"><strong>"I love this so much!</strong> Thank you for creating such a great and helpful tool."</p>
         <div class="quote-name">Katti</div>
       </div>
@@ -2043,7 +2142,28 @@
 </section>
 
 <footer class="lp-footer">
-  <p>The Freedom Intelligence Field · A 72-hour experience by Master Your Path · <a href="/reset">The Reset</a></p>
+  <p><strong style="color: var(--text-inverse); font-weight: 600;">The Freedom Intelligence Field</strong></p>
+  <p>A 72-hour experience by Master Your Path</p>
+
+  <div class="lp-footer-social" aria-label="Follow Shimrit on social">
+    <a href="https://www.instagram.com/shimrit.nativ/" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/></svg>
+    </a>
+    <a href="https://www.youtube.com/@shimritnativ" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 8a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v8a4 4 0 0 0 4 4h12a4 4 0 0 0 4-4V8z"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></svg>
+    </a>
+    <a href="https://www.facebook.com/shimrit.nativ" target="_blank" rel="noopener" aria-label="Facebook" title="Facebook">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 12a10 10 0 1 0-11.6 9.9V15h-2.4v-3h2.4V9.8c0-2.4 1.4-3.7 3.6-3.7 1 0 2.1.2 2.1.2v2.3h-1.2c-1.2 0-1.5.7-1.5 1.5V12h2.6l-.4 3h-2.2v6.9A10 10 0 0 0 22 12z"/></svg>
+    </a>
+  </div>
+
+  <div class="lp-footer-links">
+    <a href="https://shimrit-nativ-8d99.mykajabi.com/privacy-policy" target="_blank" rel="noopener">Privacy policy</a>
+    <a href="https://shimrit-nativ-8d99.mykajabi.com/terms" target="_blank" rel="noopener">Terms &amp; conditions</a>
+    <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener">EU dispute resolution</a>
+  </div>
+
+  <p class="lp-footer-copy">© Master Your Path. All rights reserved.</p>
   <p style="opacity: 0.7; font-size: 11px;">© Master Your Path. All rights reserved.</p>
 </footer>
 
@@ -2247,11 +2367,18 @@
     wrap.className = "email-inline";
     wrap.id = "email-inline";
     wrap.innerHTML = `
+      <div class="email-inline-names">
+        <input class="email-inline-input email-inline-name" id="email-first-name" type="text" placeholder="First name" autocomplete="given-name" required />
+        <input class="email-inline-input email-inline-name" id="email-last-name" type="text" placeholder="Last name" autocomplete="family-name" />
+      </div>
       <div class="email-inline-row">
         <input class="email-inline-input" id="email-inline-input" type="email" placeholder="your@email.com" autocomplete="email" required />
         <button class="email-inline-submit" id="email-inline-submit" type="button">Enter →</button>
       </div>
-      <div class="email-inline-fineprint">By entering your email, you consent to receive communication from Master Your Path. We never share your data.</div>
+      <label class="email-inline-consent">
+        <input type="checkbox" id="email-consent-checkbox" />
+        <span>I consent to receive communications from Master Your Path. I can unsubscribe at any time. Read our <a href="https://shimrit-nativ-8d99.mykajabi.com/privacy-policy" target="_blank" rel="noopener">privacy policy</a>.</span>
+      </label>
       <div class="email-inline-error" id="email-inline-error" style="display:none;"></div>
       <button type="button" class="chip-back" id="chip-back" style="margin-top: 10px;">← Choose another doorway</button>
     `;
@@ -2268,12 +2395,28 @@
 
   async function submitInlineEmail() {
     const input = $("email-inline-input");
+    const firstNameEl = $("email-first-name");
+    const lastNameEl = $("email-last-name");
+    const consentEl = $("email-consent-checkbox");
     const btn = $("email-inline-submit");
     const errBox = $("email-inline-error");
     const email = (input.value || "").trim();
+    const firstName = (firstNameEl && firstNameEl.value || "").trim();
+    const lastName = (lastNameEl && lastNameEl.value || "").trim();
+    const consent = !!(consentEl && consentEl.checked);
     errBox.style.display = "none";
+    if (!firstName) {
+      errBox.textContent = "Please enter your first name.";
+      errBox.style.display = "block";
+      return;
+    }
     if (!email || !email.includes("@")) {
       errBox.textContent = "Please enter a valid email.";
+      errBox.style.display = "block";
+      return;
+    }
+    if (!consent) {
+      errBox.textContent = "Please tick the consent box so we can send you the preview.";
       errBox.style.display = "block";
       return;
     }
@@ -2285,6 +2428,9 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
+          first_name: firstName,
+          last_name: lastName,
+          consent: true,
           scenario: state.scenario,
           cookie_id: getCookieId(),
         }),
