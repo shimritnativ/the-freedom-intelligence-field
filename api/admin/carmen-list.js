@@ -66,9 +66,15 @@ export default async function handler(req, res) {
         -- "Newly engaged" flag catches any variant: "newly engaged",
         -- "reset newly engaged", "newly engaged reset", "reset - newly
         -- engaged", etc. A single '%newly engaged%' match covers them all.
-        EXISTS (
-          SELECT 1 FROM jsonb_array_elements_text(COALESCE(mgt.tags, '[]'::jsonb)) t(tag)
-          WHERE LOWER(t.tag) LIKE '%newly engaged%'
+        -- OR'd with the manual override so Carmen/Geo can mark someone
+        -- engaged when GHL tags haven't synced (or the tag pattern is
+        -- unusual and slipped through).
+        (
+          EXISTS (
+            SELECT 1 FROM jsonb_array_elements_text(COALESCE(mgt.tags, '[]'::jsonb)) t(tag)
+            WHERE LOWER(t.tag) LIKE '%newly engaged%'
+          )
+          OR COALESCE(mpo.is_newly_engaged, false)
         ) AS is_newly_engaged,
         -- Rise program — split into CURRENT vs PAST.
         --   Current tags:  "rise client", "rise paused", bare "rise"
