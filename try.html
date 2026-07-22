@@ -1594,6 +1594,90 @@
   }
   .final-cta-btn:hover { background: var(--gold-warm); }
 
+  /* Floating "Start the Reset · €9" shortcut pill. Invisible above the
+     fold — appears only after the user has scrolled past the chat
+     widget, so the preview stays the primary CTA for cold traffic and
+     the shortcut is available to warm buyers without competing for
+     attention. Bottom-right on desktop, bottom-center on mobile. */
+  .float-cta {
+    position: fixed;
+    bottom: 22px;
+    right: 24px;
+    z-index: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 22px 12px 18px;
+    background: var(--gold);
+    color: #1a1410;
+    border: 1.5px solid var(--gold);
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-size: 13.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    box-shadow: 0 12px 28px rgba(43, 35, 24, 0.16),
+                0 0 0 4px rgba(201, 168, 76, 0.12),
+                0 0 30px rgba(201, 168, 76, 0.25);
+    opacity: 0;
+    transform: translateY(20px);
+    pointer-events: none;
+    transition: opacity 380ms cubic-bezier(0.16, 1, 0.3, 1),
+                transform 380ms cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 200ms ease,
+                background 180ms ease;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+  .float-cta.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .float-cta:hover {
+    background: var(--gold-warm);
+    box-shadow: 0 16px 34px rgba(43, 35, 24, 0.22),
+                0 0 0 4px rgba(201, 168, 76, 0.18),
+                0 0 40px rgba(201, 168, 76, 0.35);
+    transform: translateY(-2px);
+  }
+  .float-cta-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #FFFDF6;
+    box-shadow: 0 0 8px rgba(255, 253, 246, 0.7);
+    animation: float-cta-pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes float-cta-pulse {
+    0%, 100% { opacity: 0.75; transform: scale(1); }
+    50%      { opacity: 1;    transform: scale(1.25); }
+  }
+  .float-cta-price {
+    color: #1a1410;
+    font-weight: 800;
+    padding-left: 10px;
+    margin-left: 2px;
+    border-left: 1px solid rgba(0, 0, 0, 0.18);
+  }
+  @media (max-width: 720px) {
+    .float-cta {
+      right: 50%;
+      transform: translate(50%, 20px);
+      bottom: 16px;
+      padding: 11px 20px 11px 16px;
+      font-size: 13px;
+    }
+    .float-cta.is-visible {
+      transform: translate(50%, 0);
+    }
+    .float-cta:hover {
+      transform: translate(50%, -2px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .float-cta { transition: opacity 200ms ease; }
+    .float-cta-dot { animation: none; }
+  }
+
   .lp-footer {
     background: var(--bg-dark); color: var(--text-inverse-dim);
     padding: 50px 24px 40px; text-align: center;
@@ -2515,6 +2599,18 @@
   </div>
 </section>
 
+<!-- Floating shortcut pill — invisible above the fold, fades in once
+     the user has scrolled past the chat widget. Warm buyers get a
+     one-click shortcut without pulling attention from the preview. -->
+<a class="float-cta" id="float-cta"
+   href="https://masteryourpath.thrivecart.com/power-reset-ads"
+   target="_blank" rel="noopener"
+   aria-label="Start the 72-Hour Power Reset for €9">
+  <span class="float-cta-dot" aria-hidden="true"></span>
+  Start the Reset
+  <span class="float-cta-price">€9</span>
+</a>
+
 <footer class="lp-footer">
   <p><strong style="color: var(--text-inverse); font-weight: 600;">The Freedom Intelligence Field</strong></p>
   <p>A 72-hour experience by Master Your Path</p>
@@ -3084,6 +3180,30 @@
     });
   }
 
+  // Floating "Start the Reset · €9" pill — invisible above the fold,
+  // fades in once the chat widget has scrolled mostly out of view.
+  // Uses IntersectionObserver rather than a scroll listener so it's
+  // cheap + doesn't fight the rest of the page's animations.
+  function initFloatCta() {
+    const cta = document.getElementById("float-cta");
+    const anchor = document.getElementById("chat-widget");
+    if (!cta || !anchor) return;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        // Show once the chat widget is mostly out of view (either
+        // scrolled past OR user hasn't reached it yet — but on this
+        // page the widget IS the hero so "out of view" means "scrolled
+        // past it").
+        if (!entry.isIntersecting && entry.boundingClientRect.top < 0) {
+          cta.classList.add("is-visible");
+        } else if (entry.isIntersecting) {
+          cta.classList.remove("is-visible");
+        }
+      });
+    }, { threshold: 0.1 });
+    io.observe(anchor);
+  }
+
   // ── Boot
   document.addEventListener("DOMContentLoaded", () => {
     seedParticles();
@@ -3093,6 +3213,7 @@
     initConstellation();
     initConstellationProximity();
     initConstellationAutoCycle();
+    initFloatCta();
 
     const input = $("cw-input");
     if (input) {
