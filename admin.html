@@ -2114,13 +2114,15 @@
          the iframe sits flush with the admin background on both sides.
          Without this the inline padding:0 didn't beat the mobile
          .section { padding: 16px 14px } override below it in cascade. */
-      #panel-launch {
+      #panel-launch,
+      #panel-carmen {
         padding: 0 !important;
         margin: 0 !important;
         border: none !important;
         background: transparent !important;
       }
-      #panel-launch iframe {
+      #panel-launch iframe,
+      #panel-carmen iframe {
         width: 100%;
         margin: 0;
         background: var(--bg);
@@ -2439,6 +2441,22 @@
       // mounted so any in-progress calculations aren't lost. After it
       // loads, push the live data via postMessage so the "Actual" fields
       // auto-fill from real purchases.
+      // Lead Nurture (Carmen) tab — lazy-load the iframe the first time
+      // the tab is opened. Same pattern as the Launch tracker: swap
+      // about:blank for the real src with a cache-bust query param.
+      if (tab === "lead-nurture") {
+        const cframe = document.getElementById("carmen-frame");
+        if (cframe && cframe.getAttribute("src") === "about:blank") {
+          const realSrc = cframe.getAttribute("data-real-src");
+          if (realSrc) {
+            const bust = window._carmenBust
+              || (window._carmenBust = Date.now());
+            const sep = realSrc.includes("?") ? "&" : "?";
+            cframe.setAttribute("src", realSrc + sep + "v=" + bust);
+          }
+        }
+      }
+
       if (tab === "launch") {
         const frame = document.getElementById("launch-tracker-frame");
         if (frame && frame.getAttribute("src") === "about:blank") {
@@ -4800,6 +4818,23 @@
                The queue + CSV import UI live at /aira. Admin keeps a
                link to /aira in the sidebar nav below. -->
 
+          <!-- Lead Nurture tab — embeds Carmen's outreach page inside
+               the admin shell. Same lazy-load + cache-bust pattern as
+               the Launch tracker iframe. /carmen still works as a
+               standalone URL for Carmen herself. -->
+          <div data-tab-content="lead-nurture" style="display: none;">
+            <div class="section" id="panel-carmen" style="padding: 0; overflow: visible; background: transparent; border: none; box-shadow: none;">
+              <iframe
+                id="carmen-frame"
+                title="Lead Nurture (Carmen's outreach)"
+                src="about:blank"
+                data-real-src="/carmen"
+                style="width: 100%; height: 1800px; border: none; display: block; background: var(--bg);"
+                loading="lazy"></iframe>
+            </div>
+          </div>
+          <!-- /end Lead Nurture tab -->
+
             </div><!-- /.dashboard-main -->
 
             <!-- Left-side tab navigation. Sticky on desktop, horizontal scroll on mobile. -->
@@ -4812,6 +4847,7 @@
               <button class="tab-btn" data-tab="engagement" onclick="switchTab('engagement')">Engagement</button>
               <button class="tab-btn" data-tab="notifications" onclick="switchTab('notifications')">Notifications</button>
               <button class="tab-btn" data-tab="launch" onclick="switchTab('launch')"><span class="tab-label">Launch tracker <span class="tab-sparkle tab-rocket">🚀</span></span></button>
+              <button class="tab-btn" data-tab="lead-nurture" onclick="switchTab('lead-nurture')"><span class="tab-label">Lead Nurture <span class="tab-sparkle">📞</span></span></button>
               <a class="tab-btn" href="/aira" target="_blank" rel="noopener" style="text-decoration: none;" title="Opens Aira's SOPs in a new tab"><span class="tab-label">Aira SOPs <span style="font-size: 11px; color: var(--gold); margin-left: 2px;">↗</span></span></a>
             </nav>
           </div><!-- /.dashboard-body -->
