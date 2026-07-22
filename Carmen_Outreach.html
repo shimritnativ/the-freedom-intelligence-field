@@ -486,6 +486,15 @@
     .outcome-trigger[data-value="callback"] {
       background-color: #E8E4F3; border-color: #A69AC6; color: #4B4187;
     }
+    /* Call booked — deeper green with a stronger border to signal
+       "closed the loop, this converted". */
+    .outcome-trigger[data-value="call_booked"] {
+      background-color: #D5EBC6; border-color: #6BA047; color: #2F5A16;
+    }
+    /* No need — soft neutral grey so it reads as "resolved, no action". */
+    .outcome-trigger[data-value="no_need"] {
+      background-color: #ECE9E1; border-color: #B4AC96; color: #5A5240;
+    }
     .outcome-menu {
       position: absolute;
       top: calc(100% + 6px);
@@ -541,7 +550,9 @@
     .outcome-item[data-outcome="reached"]   .outcome-item-dot { background: #6B9C4E; }
     .outcome-item[data-outcome="no_answer"] .outcome-item-dot { background: #C99450; }
     .outcome-item[data-outcome="declined"]  .outcome-item-dot { background: #B45F5F; }
-    .outcome-item[data-outcome="callback"]  .outcome-item-dot { background: #7A6EB5; }
+    .outcome-item[data-outcome="callback"]    .outcome-item-dot { background: #7A6EB5; }
+    .outcome-item[data-outcome="call_booked"] .outcome-item-dot { background: #4E8A2A; }
+    .outcome-item[data-outcome="no_need"]     .outcome-item-dot { background: #8A8272; }
     .outcome-item[data-outcome=""] .outcome-item-dot { background: transparent; border: 1.5px dashed rgba(0,0,0,0.15); }
     .ghl-btn {
       display: inline-flex;
@@ -851,8 +862,10 @@
             <div class="mf-group-chips">
               <button class="filter-chip" data-filter="outcome_reached" type="button">Call held</button>
               <button class="filter-chip" data-filter="outcome_no_answer" type="button">Attempted</button>
-              <button class="filter-chip" data-filter="outcome_declined" type="button">Declined</button>
+              <button class="filter-chip" data-filter="outcome_call_booked" type="button">Call booked</button>
               <button class="filter-chip" data-filter="outcome_callback" type="button">Callback</button>
+              <button class="filter-chip" data-filter="outcome_declined" type="button">Declined</button>
+              <button class="filter-chip" data-filter="outcome_no_need" type="button">No need</button>
             </div>
           </div>
         </div>
@@ -1026,10 +1039,12 @@
         // Outcome filters — match the outcome column values written by
         // the outcome dropdown. "outcome_reached" for a legacy contacted
         // row without an outcome (e.g. old checkbox ticks) also counts.
-        case "outcome_reached":   return m.call_outcome === "reached" || (m.contacted && !m.call_outcome);
-        case "outcome_no_answer": return m.call_outcome === "no_answer";
-        case "outcome_declined":  return m.call_outcome === "declined";
-        case "outcome_callback":  return m.call_outcome === "callback";
+        case "outcome_reached":     return m.call_outcome === "reached" || (m.contacted && !m.call_outcome);
+        case "outcome_no_answer":   return m.call_outcome === "no_answer";
+        case "outcome_declined":    return m.call_outcome === "declined";
+        case "outcome_callback":    return m.call_outcome === "callback";
+        case "outcome_call_booked": return m.call_outcome === "call_booked";
+        case "outcome_no_need":     return m.call_outcome === "no_need";
         case "all":
         default:                  return true;
       }
@@ -1148,8 +1163,10 @@
                   ["", "Not yet"],
                   ["no_answer", "Attempted"],
                   ["reached", "Call held"],
-                  ["declined", "Declined"],
+                  ["call_booked", "Call booked"],
                   ["callback", "Callback"],
+                  ["declined", "Declined"],
+                  ["no_need", "No need"],
                 ];
                 const currentLabel = (opts.find(([v]) => v === current) || ["", "Not yet"])[1];
                 const items = opts.map(([v, label]) => `
@@ -1190,7 +1207,7 @@
       renderTable();
       renderStats();
       try {
-        const label = { reached: "Call held ✓", no_answer: "Attempted ✓", declined: "Declined ✓", callback: "Callback ✓" }[outcome] || "Unmarked";
+        const label = { reached: "Call held ✓", no_answer: "Attempted ✓", declined: "Declined ✓", callback: "Callback ✓", call_booked: "Call booked ✓", no_need: "No need ✓" }[outcome] || "Unmarked";
         if (!outcome) {
           const res = await fetch("/api/admin/carmen-contacted", {
             method: "DELETE",
@@ -1344,6 +1361,8 @@
       outcome_no_answer: "Attempted",
       outcome_declined: "Declined",
       outcome_callback: "Callback",
+      outcome_call_booked: "Call booked",
+      outcome_no_need: "No need",
     };
     function updateMoreFiltersLabel() {
       const btn = document.getElementById("more-filters-btn");
