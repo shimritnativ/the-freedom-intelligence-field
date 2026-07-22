@@ -5,23 +5,18 @@
 // last 30 days), and returns a trial_id + the scenario's opening line
 // from the Field.
 //
-// Dedup rules — one free trial per person per 30 days:
-//   - Email match (case-insensitive, exact after normalisation)
-//   - IP match (best-effort — behind Cloudflare/Vercel edge this is the
-//     origin IP, not perfect for shared networks but good enough)
-//   - Cookie ID match (client-supplied; primary signal on the same device)
-//
-// Test-mode bypass: any @shimritnativ.com or @masteryourpath.com email
-// skips dedup so Shimrit can test the flow repeatedly.
+// Dedup removed — this LP is lead capture, not gating. Any email is
+// accepted, including repeats. is_staff_test still gets flagged on
+// @shimritnativ.com and @masteryourpath.com submissions so we can
+// filter them out of analytics + skip the Zapier webhook.
 //
 // POST /api/free-trial/start
-// Body: { email, scenario, cookie_id? }
+// Body: { email, first_name, last_name, consent, scenario, cookie_id? }
 // Returns: { trial_id, opening, exchanges_remaining, expires_at }
 
 import { sql } from "@vercel/postgres";
 import { FREE_TRIAL_SCENARIOS, FREE_TRIAL_MAX_EXCHANGES } from "../../lib/prompts/free-trial.js";
 
-const DEDUP_WINDOW_DAYS = 30;
 const SESSION_MINUTES = 15;
 const STAFF_DOMAINS = ["@shimritnativ.com", "@masteryourpath.com"];
 
@@ -73,29 +68,15 @@ export default async function handler(req, res) {
   const ip = getClientIp(req);
 
   try {
-    // Dedup check (skipped for staff emails so Shimrit can test).
-    if (!staff) {
-      const { rows: existing } = await sql`
-        SELECT id, scenario, started_at
-        FROM free_trials
-        WHERE (
-              LOWER(email) = ${email}
-              ${cookieId ? sql`OR cookie_id = ${cookieId}` : sql``}
-              ${ip ? sql`OR ip = ${ip}` : sql``}
-            )
-          AND started_at > NOW() - (${DEDUP_WINDOW_DAYS}::text || ' days')::interval
-        ORDER BY started_at DESC
-        LIMIT 1
-      `;
-      if (existing.length > 0) {
-        return res.status(200).json({
-          ok: false,
-          reason: "already_used",
-          message: "You've already taken the 5-Minute Preview. The next step is the full 72-Hour Reset — that's where the real work begins.",
-          reset_link: "https://masteryourpath.thrivecart.com/power-reset-ads",
-        });
-      }
-    }
+    // Dedup removed 2026-07-22 — the goal for this LP is lead capture,
+    // not gating. Any email is accepted, including repeats. Every submit
+    // still creates a fresh trial row + fires the Zapier webhook so
+    // returning visitors don't miss the GHL nurture.
+    //
+    // The previous dedup query also had a @vercel/postgres syntax bug
+    // (nested sql`` fragments were interpolating as parameters, causing
+    // "syntax error at or near \"$2\"" on any submit). Removing the
+    // query altogether resolves it.
 
     // Create the trial. exchange_count starts at 0 (the opening from the
     // Field isn't counted as one of the 6 — the first exchange is the
