@@ -49,11 +49,20 @@ export default async function handler(req, res) {
   const body = (req.body && typeof req.body === "object") ? req.body : {};
   const emailRaw = String(body.email || "").trim();
   const email = emailRaw.toLowerCase();
+  const firstName = String(body.first_name || "").trim().slice(0, 80);
+  const lastName = String(body.last_name || "").trim().slice(0, 80);
+  const consent = body.consent === true || body.consent === "true";
   const scenarioId = String(body.scenario || "").trim().toLowerCase();
   const cookieId = String(body.cookie_id || "").trim().slice(0, 128) || null;
 
   if (!email || !email.includes("@") || email.length > 320) {
     return res.status(400).json({ error: "invalid_email" });
+  }
+  if (!firstName) {
+    return res.status(400).json({ error: "first_name_required" });
+  }
+  if (!consent) {
+    return res.status(400).json({ error: "consent_required" });
   }
   const scenario = FREE_TRIAL_SCENARIOS[scenarioId];
   if (!scenario) {
@@ -111,6 +120,31 @@ export default async function handler(req, res) {
       INSERT INTO free_trial_messages (trial_id, role, content, exchange_number)
       VALUES (${trial.id}, 'assistant', ${scenario.opening}, 0)
     `;
+
+    // Fire the Zapier webhook so this opt-in becomes a GHL contact with
+    // the "try-preview" tag. Fire-and-forget: we don't await the
+    // response, so even if Zapier is slow or the webhook 5xxs, the
+    // chat still starts instantly. Zapier URL comes from env so it can
+    // be rotated without a redeploy.
+    if (process.env.ZAPIER_TRY_OPTIN_WEBHOOK && !staff) {
+      const payload = {
+        email,
+        first_name: firstName,
+        last_name: lastName || null,
+        scenario: scenario.id,
+        scenario_label: scenario.label,
+        consent_given_at: new Date().toISOString(),
+        source: "try_preview_lp",
+        ip,
+      };
+      fetch(process.env.ZAPIER_TRY_OPTIN_WEBHOOK, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).catch((err) => {
+        console.warn("zapier_try_optin_webhook_failed", { message: err?.message });
+      });
+    }
 
     return res.status(200).json({
       ok: true,
