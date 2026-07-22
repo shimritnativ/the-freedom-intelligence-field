@@ -1191,24 +1191,53 @@
         const tierBadge = m.tier === "full"
           ? '<span class="tier-badge tier-full">Unlimited</span>'
           : '<span class="tier-badge tier-preview">Reset</span>';
-        // Engaged is a clickable toggle so Geo/Carmen can override cases
-        // where GHL tags haven't synced. Click cycles Yes ⇄ No via the
-        // /api/admin/member-flag-override endpoint.
-        const engagedBadge = m.is_newly_engaged
-          ? `<button class="engaged-toggle" data-action="toggle-engaged" data-email="${esc(m.email)}" data-value="0" title="Marked engaged — click to unmark" type="button"><span class="flag-pill flag-yes">Yes</span></button>`
-          : `<button class="engaged-toggle" data-action="toggle-engaged" data-email="${esc(m.email)}" data-value="1" title="Not marked engaged — click to mark manually (use when GHL tag hasn't synced)" type="button"><span class="flag-no-btn">Mark</span></button>`;
-        // Program column — three independent click-to-toggle chips.
-        // Always render all three so Geo/Carmen can add or remove any
-        // program flag inline when GHL tags haven't caught up.
-        const progFlag = (flag, on, activeClass, label, activeTitle, addTitle) => on
-          ? `<button class="program-toggle" data-action="toggle-flag" data-email="${esc(m.email)}" data-flag="${flag}" data-value="0" title="${esc(activeTitle)} — click to remove" type="button"><span class="flag-pill ${activeClass}">${label}</span></button>`
-          : `<button class="program-toggle" data-action="toggle-flag" data-email="${esc(m.email)}" data-flag="${flag}" data-value="1" title="${esc(addTitle)}" type="button"><span class="flag-off-btn">+ ${label}</span></button>`;
-        const programBadge = `<span class="program-toggle-stack">${
-          progFlag("is_rise_current", m.is_rise_current, "flag-rise", "RISE", "Current Rise client", "Mark as current Rise client") +
-          progFlag("is_rise_past",    m.is_rise_past,    "flag-rise-past", "Past RISE", "Past Rise client / graduate", "Mark as past Rise client") +
-          progFlag("is_certification", m.is_certification, "flag-cert", "Cert", "MYP Certification client", "Mark as MYP Certification client") +
-          progFlag("is_business_club", m.is_business_club, "flag-bclub", "Biz Club", "MYP Business Club member", "Mark as Business Club member")
-        }</span>`;
+        // Engaged — single-select dropdown [Yes / No], same styling as
+        // the outcome dropdown so it feels native. Menu closes on pick.
+        const engagedBadge = (function () {
+          const yes = !!m.is_newly_engaged;
+          const label = yes ? "Yes" : "No";
+          const items = [
+            ["1", "Yes"],
+            ["0", "No"],
+          ].map(([v, l]) => `
+            <div class="outcome-item" data-flag-value="${v}" data-selected="${(v === (yes ? '1' : '0')) ? '1' : '0'}" role="option">
+              <span class="outcome-item-check" aria-hidden="true">
+                <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 8 7 12 13 4"/></svg>
+              </span>
+              <span>${l}</span>
+              <span class="outcome-item-dot" aria-hidden="true"></span>
+            </div>`).join("");
+          return `
+            <div class="outcome-dd" data-flag-dd data-flag="is_newly_engaged" data-email="${esc(m.email)}">
+              <button type="button" class="outcome-trigger" aria-haspopup="listbox" aria-expanded="false" title="Toggle Engaged status">${label}</button>
+              <div class="outcome-menu" role="listbox">${items}</div>
+            </div>`;
+        })();
+
+        // Program — multi-toggle dropdown. Trigger summarises currently
+        // active flags ("RISE, Cert" or "None"). Menu stays open on
+        // click so Geo can flip several without reopening.
+        const progItems = [
+          ["is_rise_current",  "RISE",       m.is_rise_current],
+          ["is_rise_past",     "Past RISE",  m.is_rise_past],
+          ["is_certification", "Certification", m.is_certification],
+          ["is_business_club", "Business Club", m.is_business_club],
+        ];
+        const progActive = progItems.filter(([,,on]) => on).map(([,l]) => l);
+        const progLabel = progActive.length ? progActive.join(", ") : "None";
+        const progMenu = progItems.map(([flag, l, on]) => `
+          <div class="outcome-item" data-multi-flag="${flag}" data-selected="${on ? '1' : '0'}" role="option">
+            <span class="outcome-item-check" aria-hidden="true">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 8 7 12 13 4"/></svg>
+            </span>
+            <span>${l}</span>
+            <span class="outcome-item-dot" aria-hidden="true"></span>
+          </div>`).join("");
+        const programBadge = `
+          <div class="outcome-dd" data-program-dd data-email="${esc(m.email)}">
+            <button type="button" class="outcome-trigger" aria-haspopup="listbox" aria-expanded="false" title="Toggle program flags (menu stays open — click outside to close)">${esc(progLabel)}</button>
+            <div class="outcome-menu" role="listbox">${progMenu}</div>
+          </div>`;
         const ghlUrl = m.ghl_contact_id
           ? `https://app.gohighlevel.com/v2/location/${GHL_LOCATION_ID}/contacts/detail/${encodeURIComponent(m.ghl_contact_id)}`
           : null;
@@ -1514,84 +1543,108 @@
       // Refresh
       document.getElementById("refresh-btn").addEventListener("click", () => loadList());
 
-      // Custom outcome dropdown wiring (replaces the native <select>).
-      // Click the pill to toggle the menu; click an item to select and
-      // close; click outside to close any open menu.
-      document.getElementById("tbody").addEventListener("click", (e) => {
+      // Custom dropdown wiring (replaces the native <select>).
+      // Three dropdown types share this handler:
+      //   [data-outcome-dd] — Outcome column (single-select, closes on pick)
+      //   [data-flag-dd]    — Engaged column (single-select Yes/No, closes on pick)
+      //   [data-program-dd] — Program column (multi-toggle, stays open)
+      // Trigger toggles the menu; items act per dropdown type; clicking
+      // outside closes any open menu.
+      const DD_SELECTOR = "[data-outcome-dd], [data-flag-dd], [data-program-dd]";
+      document.getElementById("tbody").addEventListener("click", async (e) => {
         const trigger = e.target.closest(".outcome-trigger");
         const item = e.target.closest(".outcome-item");
         if (trigger) {
           e.stopPropagation();
-          const dd = trigger.closest("[data-outcome-dd]");
+          const dd = trigger.closest(DD_SELECTOR);
+          if (!dd) return;
           const wasOpen = dd.classList.contains("open");
           // Close all other open dropdowns first
-          document.querySelectorAll("[data-outcome-dd].open").forEach(el => {
+          document.querySelectorAll(DD_SELECTOR).forEach(el => {
             if (el !== dd) el.classList.remove("open");
           });
           dd.classList.toggle("open", !wasOpen);
           trigger.setAttribute("aria-expanded", String(!wasOpen));
-        } else if (item) {
-          e.stopPropagation();
-          const dd = item.closest("[data-outcome-dd]");
-          const email = dd.dataset.email;
+          return;
+        }
+        if (!item) return;
+        e.stopPropagation();
+        const dd = item.closest(DD_SELECTOR);
+        if (!dd) return;
+        const email = dd.dataset.email;
+
+        // Outcome dropdown → existing setOutcome path.
+        if (dd.hasAttribute("data-outcome-dd")) {
           const outcome = item.dataset.outcome || "";
           dd.classList.remove("open");
           const trig = dd.querySelector(".outcome-trigger");
           if (trig) trig.setAttribute("aria-expanded", "false");
           setOutcome(email, outcome);
+          return;
+        }
+
+        // Engaged flag dropdown → single-select Yes/No.
+        if (dd.hasAttribute("data-flag-dd")) {
+          const flag = dd.dataset.flag;
+          const value = item.dataset.flagValue === "1";
+          dd.classList.remove("open");
+          const trig = dd.querySelector(".outcome-trigger");
+          if (trig) trig.setAttribute("aria-expanded", "false");
+          await setFlagOverride(email, flag, value, item);
+          return;
+        }
+
+        // Program dropdown → multi-toggle, menu stays open.
+        if (dd.hasAttribute("data-program-dd")) {
+          const flag = item.dataset.multiFlag;
+          const wasOn = item.dataset.selected === "1";
+          await setFlagOverride(email, flag, !wasOn, item);
+          return;
         }
       });
-      // Close any open outcome dropdown when clicking outside
+      // Close any open dropdown when clicking outside
       document.addEventListener("click", (e) => {
-        if (e.target.closest("[data-outcome-dd]")) return;
-        document.querySelectorAll("[data-outcome-dd].open").forEach(el => el.classList.remove("open"));
+        if (e.target.closest(DD_SELECTOR)) return;
+        document.querySelectorAll(DD_SELECTOR).forEach(el => el.classList.remove("open"));
       });
 
-      // Delegated click handler for cheat sheet buttons.
-      document.getElementById("tbody").addEventListener("click", (e) => {
-        const btn = e.target.closest("[data-action='cheat']");
-        if (btn) {
-          openCheatSheet(btn.dataset.email, btn.dataset.name);
-        }
-      });
-
-      // Delegated click handler for all inline flag toggles —
-      // Engaged (data-action='toggle-engaged') and each Program pill
-      // (data-action='toggle-flag' with data-flag). Both POST to the
-      // same /api/admin/member-flag-override endpoint and update local
-      // state optimistically so the UI reflects immediately.
-      document.getElementById("tbody").addEventListener("click", async (e) => {
-        const btn = e.target.closest("[data-action='toggle-engaged'], [data-action='toggle-flag']");
-        if (!btn) return;
-        e.stopPropagation();
-        const email = btn.dataset.email;
-        const flag  = btn.dataset.action === "toggle-engaged"
-          ? "is_newly_engaged"
-          : btn.dataset.flag;
-        const value = btn.dataset.value === "1";
+      // Shared server call for both Engaged and Program dropdowns.
+      // Updates local row optimistically, re-renders, surfaces the real
+      // server error message if the call fails.
+      async function setFlagOverride(email, flag, value, itemEl) {
         if (!email || !flag) return;
-        btn.disabled = true;
+        const token = localStorage.getItem(SESSION_TOKEN_KEY);
+        if (!token) { alert("Not signed in — reload the admin page."); return; }
         try {
-          const token = localStorage.getItem(SESSION_TOKEN_KEY);
           const r = await fetch("/api/admin/member-flag-override", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "x-session-token": token || "",
+              "x-session-token": token,
             },
             body: JSON.stringify({ email, flag, value }),
           });
-          const data = await r.json().catch(() => ({}));
-          if (!r.ok || !data.ok) throw new Error(data.error || "override_failed");
-          // Update local state so we don't need a full reload
+          let data = null;
+          try { data = await r.json(); } catch (_) { /* non-JSON response */ }
+          if (!r.ok || !data || !data.ok) {
+            const detail = (data && (data.message || data.error)) || `HTTP ${r.status}`;
+            throw new Error(detail);
+          }
           const row = allMembers.find(m => (m.email || "").toLowerCase() === (email || "").toLowerCase());
           if (row) row[flag] = value;
           renderStats();
           renderTable();
         } catch (err) {
           console.error("flag_override_failed", err);
-          alert("Couldn't update flag. Check console.");
-          btn.disabled = false;
+          alert("Couldn't update flag: " + (err && err.message ? err.message : "unknown error"));
+        }
+      }
+
+      // Delegated click handler for cheat sheet buttons.
+      document.getElementById("tbody").addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-action='cheat']");
+        if (btn) {
+          openCheatSheet(btn.dataset.email, btn.dataset.name);
         }
       });
 
