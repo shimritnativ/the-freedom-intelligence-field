@@ -65,11 +65,17 @@
          stop reading as "yellow boxes" against the cream page. Also
          swapped --kpi-bg from --panel to --bg-card so plain KPIs sit
          calmly on white; the revenue KPI keeps its warm gold treatment
-         via the .kpi-revenue gradient. */
+         via the .kpi-revenue gradient.
+         2026-07-22 pass 2 (Palette B): pulled the last of the yellow
+         out. --panel now #F2EDE0 — same neutral warm cream as bg-warm
+         but a shade deeper so panels still lift off the page without
+         reading as saturated. --border tightened to #E4DED0 (slightly
+         cooler beige) so hairlines feel like proper structure lines,
+         not gold stains. */
       --bg: #FAF6EE;
       --bg-card: #FFFFFF;
       --bg-warm: #F5EFE0;
-      --panel: #EDE4C6;
+      --panel: #F2EDE0;
       --gold: #B99A5C;
       --gold-soft: rgba(185, 154, 92, 0.10);
       --gold-line: rgba(185, 154, 92, 0.28);
@@ -78,7 +84,7 @@
       --text-mid: #6B5D48;
       --text-dim: #8B7E66;
       --text-mute: #B8AC96;
-      --border: #E8DFC8;
+      --border: #E4DED0;
       --green: #4A7C3A;
       --red: #C03A2B;
       --shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
@@ -1848,6 +1854,107 @@
       gap: 28px;
       align-items: start;
     }
+    /* ═════════════════════════════════════════════════════════════
+       WIZARD — Notifications tab 3-step flow
+       ═════════════════════════════════════════════════════════════ */
+    .wiz-steps {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 22px;
+    }
+    .wiz-step {
+      display: flex; align-items: center; gap: 8px;
+      cursor: pointer;
+      opacity: 0.55;
+      transition: opacity 0.2s ease;
+    }
+    .wiz-step:hover { opacity: 0.85; }
+    .wiz-step--active { opacity: 1; cursor: default; }
+    .wiz-step--done { opacity: 0.9; }
+    .wiz-step-dot {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: var(--panel);
+      color: var(--text-dim);
+      font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid var(--border);
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+    .wiz-step--active .wiz-step-dot {
+      background: var(--gold); color: #FFFFFF; border-color: var(--gold);
+    }
+    .wiz-step--done .wiz-step-dot {
+      background: var(--bg-warm); color: var(--text); border-color: var(--gold-line);
+    }
+    .wiz-step-label {
+      font-size: 12px; font-weight: 600; color: var(--text-dim);
+      letter-spacing: 0.02em;
+    }
+    .wiz-step--active .wiz-step-label { color: var(--text); }
+    .wiz-connector {
+      flex: 1; height: 1px; background: var(--border); min-width: 20px;
+    }
+    /* Nav buttons at bottom of wizard */
+    .wiz-nav-btn {
+      padding: 9px 22px;
+      border-radius: 999px;
+      font-size: 12px; font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    }
+    .wiz-nav-back {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+    }
+    .wiz-nav-back:hover { border-color: var(--gold-line); color: var(--text); }
+    .wiz-nav-next {
+      background: var(--gold);
+      border: 1px solid var(--gold);
+      color: #FFFFFF;
+    }
+    .wiz-nav-next:hover { background: var(--dark); border-color: var(--dark); }
+    .wiz-nav-next:active { transform: scale(0.98); }
+
+    /* Audience preset chips */
+    .aud-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .aud-chip {
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: 1.5px solid var(--border);
+      background: var(--bg-card);
+      font-size: 12.5px;
+      color: var(--text);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 500;
+      font-family: inherit;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .aud-chip:hover { border-color: var(--gold-line); }
+    .aud-chip--active {
+      background: var(--gold);
+      color: #FFFFFF;
+      border-color: var(--gold);
+    }
+    .aud-cnt {
+      background: var(--panel);
+      border-radius: 999px;
+      padding: 1px 8px;
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--text-dim);
+      min-width: 18px;
+      text-align: center;
+    }
+    .aud-chip--active .aud-cnt {
+      background: rgba(255,255,255,0.22);
+      color: #FFFFFF;
+    }
+
     .tabs {
       display: flex;
       flex-direction: column;
@@ -2173,6 +2280,11 @@
         font-size: 11px !important;
         padding: 9px 10px !important;
       }
+
+      /* Wizard: mobile — step labels hide (dots only), padding tightens */
+      .wiz-step-label { display: none !important; }
+      .wiz-steps { gap: 6px !important; }
+      .aud-chip { font-size: 11.5px !important; padding: 8px 12px !important; }
 
       /* Notifications send form — recipient list reasonable height, preset
          message buttons wrap evenly, custom inputs full-width, all radios
@@ -4628,52 +4740,94 @@
           <!-- ===== NOTIFICATIONS TAB ===== -->
           <div data-tab-content="notifications" style="display: none;">
 
-          <!-- Push notification send panel — pick recipients, pick a
-               prepared reminder OR write custom copy, fire it. -->
+          <!-- Push notification send panel — 3-step wizard.
+               Step 1: Audience (delivery + who)
+               Step 2: Message (preset picker or custom)
+               Step 3: Review & send (tap-to-go action + confirmation) -->
           <div class="section" id="panel-push-test">
             <h2><span class="h2-eyebrow">Notifications</span>Send a push notification</h2>
-            <p style="font-size: 12.5px; color: var(--text-dim); margin: 0 0 14px; line-height: 1.5;">
+            <p style="font-size: 12.5px; color: var(--text-dim); margin: 0 0 18px; line-height: 1.5;">
               Send any of the prepared reminders or a custom message to one, many, or all members who have notifications enabled.
             </p>
 
-            <!-- Delivery mode: push + inbox (selected recipients, full reach)
-                 vs. inbox only (no phone interruption; visible to everyone via
-                 the bell icon). Toggle hides the recipients section when
-                 inbox-only is chosen since recipients become irrelevant. -->
-            <div style="margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px;">
-              <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.18em; color: var(--text-dim); text-transform: uppercase;">Delivery</div>
-              <label style="display: flex; align-items: flex-start; gap: 8px; padding: 8px 12px; background: var(--panel); border: 1px solid var(--gold-line); border-radius: 8px; cursor: pointer;">
-                <input type="radio" name="push-mode" value="push" id="push-mode-push" checked onchange="updatePushMode()" style="margin-top: 2px;" />
-                <div>
-                  <div style="font-size: 13px; color: var(--text); font-weight: 600;">Push + inbox</div>
-                  <div style="font-size: 11.5px; color: var(--text-dim);">Pings selected members&apos; phones AND saves to the inbox.</div>
-                </div>
-              </label>
-              <label style="display: flex; align-items: flex-start; gap: 8px; padding: 8px 12px; background: var(--panel); border: 1px solid var(--gold-line); border-radius: 8px; cursor: pointer;">
-                <input type="radio" name="push-mode" value="inbox" id="push-mode-inbox" onchange="updatePushMode()" style="margin-top: 2px;" />
-                <div>
-                  <div style="font-size: 13px; color: var(--text); font-weight: 600;">Inbox only <span style="font-weight: 400; color: var(--text-mute);">— no phone interruption</span></div>
-                  <div style="font-size: 11.5px; color: var(--text-dim);">Saves to the inbox so every member sees it via the bell icon. No push, no device pings.</div>
-                </div>
-              </label>
+            <!-- Step indicator: three dots with connectors. Active step
+                 lights gold, completed steps go warm-beige, upcoming
+                 stays soft cream. Click a dot to jump back to a previous
+                 step (never forward — you must complete the current step). -->
+            <div class="wiz-steps" id="push-wiz-steps">
+              <div class="wiz-step wiz-step--active" data-step="1" onclick="pushWizGoTo(1)">
+                <span class="wiz-step-dot">1</span>
+                <span class="wiz-step-label">Audience</span>
+              </div>
+              <div class="wiz-connector"></div>
+              <div class="wiz-step" data-step="2" onclick="pushWizGoTo(2)">
+                <span class="wiz-step-dot">2</span>
+                <span class="wiz-step-label">Message</span>
+              </div>
+              <div class="wiz-connector"></div>
+              <div class="wiz-step" data-step="3" onclick="pushWizGoTo(3)">
+                <span class="wiz-step-dot">3</span>
+                <span class="wiz-step-label">Review &amp; send</span>
+              </div>
             </div>
 
-            <div id="push-recipients-section" style="margin-bottom: 18px;">
-              <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.18em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px;">Recipients</div>
-              <div id="push-subscribers-list" style="background: var(--panel); border: 1px solid var(--gold-line); border-radius: 8px; padding: 10px 12px; max-height: 240px; overflow-y: auto;">
-                <div style="font-size: 12px; color: var(--text-mute); font-style: italic; text-align: center; padding: 8px 0;">Loading subscribers…</div>
-              </div>
-              <div style="margin-top: 6px;">
-                <label style="font-size: 11.5px; color: var(--text-dim); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-                  <input type="checkbox" id="push-select-all" onclick="togglePushSelectAll()" />
-                  <span>Select all subscribers</span>
+            <!-- ═══════════════════════════════════════════════════════
+                 STEP 1 · AUDIENCE
+                 Delivery mode + audience preset chips + custom list
+                 ═══════════════════════════════════════════════════════ -->
+            <div class="wiz-panel" data-wiz-panel="1">
+
+              <!-- Delivery mode -->
+              <div style="margin-bottom: 20px; display: flex; flex-direction: column; gap: 6px;">
+                <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.18em; color: var(--text-dim); text-transform: uppercase;">Delivery</div>
+                <label style="display: flex; align-items: flex-start; gap: 8px; padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
+                  <input type="radio" name="push-mode" value="push" id="push-mode-push" checked onchange="updatePushMode()" style="margin-top: 3px;" />
+                  <div>
+                    <div style="font-size: 13px; color: var(--text); font-weight: 600;">Push + inbox</div>
+                    <div style="font-size: 11.5px; color: var(--text-dim);">Pings selected members&apos; phones AND saves to the inbox.</div>
+                  </div>
+                </label>
+                <label style="display: flex; align-items: flex-start; gap: 8px; padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
+                  <input type="radio" name="push-mode" value="inbox" id="push-mode-inbox" onchange="updatePushMode()" style="margin-top: 3px;" />
+                  <div>
+                    <div style="font-size: 13px; color: var(--text); font-weight: 600;">Inbox only <span style="font-weight: 400; color: var(--text-mute);">— no phone interruption</span></div>
+                    <div style="font-size: 11.5px; color: var(--text-dim);">Saves to the inbox so every member sees it via the bell icon. No push, no device pings.</div>
+                  </div>
                 </label>
               </div>
+
+              <!-- Audience section (hidden when inbox-only is picked) -->
+              <div id="push-recipients-section">
+                <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.18em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 10px;">Who is this for?</div>
+
+                <!-- Preset audience chips — one click covers 90% of sends -->
+                <div class="aud-chips" id="push-audience-chips" style="margin-bottom: 14px;">
+                  <button type="button" class="aud-chip aud-chip--active" data-audience="all" onclick="setPushAudience('all')">Everyone <span class="aud-cnt" id="aud-cnt-all">0</span></button>
+                  <button type="button" class="aud-chip" data-audience="unlimited" onclick="setPushAudience('unlimited')">Unlimited only <span class="aud-cnt" id="aud-cnt-unlimited">0</span></button>
+                  <button type="button" class="aud-chip" data-audience="reset" onclick="setPushAudience('reset')">Reset only <span class="aud-cnt" id="aud-cnt-reset">0</span></button>
+                  <button type="button" class="aud-chip" data-audience="custom" onclick="setPushAudience('custom')">Custom…</button>
+                </div>
+
+                <!-- Custom list (hidden unless Custom chip is picked) -->
+                <div id="push-subscribers-list" style="display: none; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; max-height: 300px; overflow-y: auto;">
+                  <div style="font-size: 12px; color: var(--text-mute); font-style: italic; text-align: center; padding: 8px 0;">Loading subscribers…</div>
+                </div>
+                <div id="push-select-all-wrap" style="display: none; margin-top: 6px;">
+                  <label style="font-size: 11.5px; color: var(--text-dim); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                    <input type="checkbox" id="push-select-all" onclick="togglePushSelectAll()" />
+                    <span>Select all subscribers</span>
+                  </label>
+                </div>
+              </div>
             </div>
 
-            <div style="margin-bottom: 18px;">
-              <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.18em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px;">Message</div>
-              <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
+            <!-- ═══════════════════════════════════════════════════════
+                 STEP 2 · MESSAGE
+                 Preset buttons OR custom title/body + preview
+                 ═══════════════════════════════════════════════════════ -->
+            <div class="wiz-panel" data-wiz-panel="2" style="display: none;">
+              <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.18em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 10px;">Pick a message</div>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px;">
                 <button type="button" class="push-msg-btn preset-btn" data-key="day2_unlocked" onclick="selectPushMessage('day2_unlocked')">Day 2 unlocked</button>
                 <button type="button" class="push-msg-btn preset-btn" data-key="day2_nudge" onclick="selectPushMessage('day2_nudge')">Day 2 nudge</button>
                 <button type="button" class="push-msg-btn preset-btn" data-key="day3_unlocked" onclick="selectPushMessage('day3_unlocked')">Day 3 unlocked</button>
@@ -4681,60 +4835,82 @@
                 <button type="button" class="push-msg-btn preset-btn" data-key="window_closing" onclick="selectPushMessage('window_closing')">Window closing</button>
                 <button type="button" class="push-msg-btn preset-btn" data-key="custom" onclick="selectPushMessage('custom')">Custom…</button>
               </div>
-              <div id="push-message-preview" style="background: var(--panel); border: 1px solid var(--gold-line); border-radius: 8px; padding: 12px 14px;">
+              <div id="push-message-preview" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px;">
                 <div id="push-preview-title" style="font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px;">Pick a message above</div>
-                <div id="push-preview-body" style="font-size: 12px; color: var(--text-dim); line-height: 1.4;">The preview will appear here.</div>
+                <div id="push-preview-body" style="font-size: 12px; color: var(--text-dim); line-height: 1.5;">The preview will appear here.</div>
               </div>
               <div id="push-custom-form" style="display: none; margin-top: 10px;">
-                <input type="text" id="push-custom-title" placeholder="Title (e.g., A small reminder)" maxlength="80" style="width: 100%; padding: 8px 10px; border: 1px solid var(--gold-line); border-radius: 6px; font-family: inherit; font-size: 13px; margin-bottom: 6px; box-sizing: border-box;" oninput="updateCustomPreview()" />
-                <textarea id="push-custom-body" placeholder="Body (e.g., The Field is here when you are.)" maxlength="300" rows="3" style="width: 100%; padding: 8px 10px; border: 1px solid var(--gold-line); border-radius: 6px; font-family: inherit; font-size: 13px; resize: vertical; box-sizing: border-box;" oninput="updateCustomPreview()"></textarea>
+                <input type="text" id="push-custom-title" placeholder="Title (e.g., A small reminder)" maxlength="80" style="width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 13px; margin-bottom: 6px; box-sizing: border-box; background: var(--bg-card);" oninput="updateCustomPreview()" />
+                <textarea id="push-custom-body" placeholder="Body (e.g., The Field is here when you are.)" maxlength="300" rows="3" style="width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 13px; resize: vertical; box-sizing: border-box; background: var(--bg-card);" oninput="updateCustomPreview()"></textarea>
               </div>
             </div>
 
-            <!-- Optional tap-to-go CTA. When a destination is picked, the
-                 Field renders a small gold button at the bottom of the
-                 notification card. Tapping it runs the chosen action —
-                 open a process, jump to a day, resume last conversation,
-                 or open an external URL. -->
-            <div style="margin-bottom: 14px;">
-              <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.18em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px;">Tap-to-go action <span style="font-weight: 400; color: var(--text-mute); letter-spacing: 0; text-transform: none;">(optional)</span></div>
-              <select id="push-cta-destination" onchange="updateCtaForm()" style="width: 100%; padding: 8px 10px; border: 1px solid var(--gold-line); border-radius: 6px; font-family: inherit; font-size: 13px; background: var(--bg-card); color: var(--text); margin-bottom: 6px;">
-                <option value="">— No action (info only) —</option>
-                <optgroup label="Open a process">
-                  <option value="process:morning-activation">Morning Activation</option>
-                  <option value="process:evening-reset">Evening Reset</option>
-                  <option value="process:desired-outcome-snapshot">Desired Outcome Snapshot</option>
-                  <option value="process:grand-vision">Grand Vision</option>
-                  <option value="process:setting-the-destination">Setting the Destination</option>
-                  <option value="process:decision-alignment">Decision Alignment</option>
-                  <option value="process:frequency-booster">The Frequency Booster</option>
-                  <option value="process:identity-upgrade">Identity Upgrade</option>
-                  <option value="process:worthy-to-receive">Worthy to Receive</option>
-                  <option value="process:body-intelligence">Body Intelligence</option>
-                  <option value="process:emotional-addiction-release">Emotional Addiction Release</option>
-                  <option value="process:root-pattern-release">Root Pattern Release</option>
-                  <option value="process:prosperity-code">The Prosperity Code</option>
-                  <option value="process:abundance-projection">Abundance Projection</option>
-                  <option value="process:financial-thermostat-reset">Financial Thermostat Reset</option>
-                  <option value="process:dream-reading">Dream Reading</option>
-                  <option value="process:frequency-calibration">Frequency Calibration</option>
-                </optgroup>
-                <optgroup label="Jump to">
-                  <option value="day:1">Day 1</option>
-                  <option value="day:2">Day 2</option>
-                  <option value="day:3">Day 3</option>
-                  <option value="continue:last">Continue last conversation</option>
-                </optgroup>
-                <optgroup label="External">
-                  <option value="url:">External URL…</option>
-                </optgroup>
-              </select>
-              <input type="url" id="push-cta-url" placeholder="https://..." style="width: 100%; padding: 8px 10px; border: 1px solid var(--gold-line); border-radius: 6px; font-family: inherit; font-size: 13px; margin-bottom: 6px; box-sizing: border-box; display: none;" />
-              <input type="text" id="push-cta-label" placeholder="Button label (defaults to &quot;Open&quot;)" maxlength="40" style="width: 100%; padding: 8px 10px; border: 1px solid var(--gold-line); border-radius: 6px; font-family: inherit; font-size: 13px; box-sizing: border-box; display: none;" />
+            <!-- ═══════════════════════════════════════════════════════
+                 STEP 3 · REVIEW & SEND
+                 Summary + optional tap-to-go action + send button
+                 ═══════════════════════════════════════════════════════ -->
+            <div class="wiz-panel" data-wiz-panel="3" style="display: none;">
+
+              <!-- Summary card -->
+              <div class="wiz-summary" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 18px;">
+                <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.18em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 10px;">Review</div>
+                <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: 12.5px;">
+                  <div style="color: var(--text-dim);">Delivery</div>
+                  <div id="wiz-summary-delivery" style="color: var(--text); font-weight: 500;">Push + inbox</div>
+                  <div style="color: var(--text-dim);">Audience</div>
+                  <div id="wiz-summary-audience" style="color: var(--text); font-weight: 500;">Everyone (0 people)</div>
+                  <div style="color: var(--text-dim);">Message</div>
+                  <div id="wiz-summary-message" style="color: var(--text); font-weight: 500;">—</div>
+                </div>
+              </div>
+
+              <!-- Optional tap-to-go CTA -->
+              <div style="margin-bottom: 14px;">
+                <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.18em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px;">Tap-to-go action <span style="font-weight: 400; color: var(--text-mute); letter-spacing: 0; text-transform: none;">(optional)</span></div>
+                <select id="push-cta-destination" onchange="updateCtaForm()" style="width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 13px; background: var(--bg-card); color: var(--text); margin-bottom: 6px;">
+                  <option value="">— No action (info only) —</option>
+                  <optgroup label="Open a process">
+                    <option value="process:morning-activation">Morning Activation</option>
+                    <option value="process:evening-reset">Evening Reset</option>
+                    <option value="process:desired-outcome-snapshot">Desired Outcome Snapshot</option>
+                    <option value="process:grand-vision">Grand Vision</option>
+                    <option value="process:setting-the-destination">Setting the Destination</option>
+                    <option value="process:decision-alignment">Decision Alignment</option>
+                    <option value="process:frequency-booster">The Frequency Booster</option>
+                    <option value="process:identity-upgrade">Identity Upgrade</option>
+                    <option value="process:worthy-to-receive">Worthy to Receive</option>
+                    <option value="process:body-intelligence">Body Intelligence</option>
+                    <option value="process:emotional-addiction-release">Emotional Addiction Release</option>
+                    <option value="process:root-pattern-release">Root Pattern Release</option>
+                    <option value="process:prosperity-code">The Prosperity Code</option>
+                    <option value="process:abundance-projection">Abundance Projection</option>
+                    <option value="process:financial-thermostat-reset">Financial Thermostat Reset</option>
+                    <option value="process:dream-reading">Dream Reading</option>
+                    <option value="process:frequency-calibration">Frequency Calibration</option>
+                  </optgroup>
+                  <optgroup label="Jump to">
+                    <option value="day:1">Day 1</option>
+                    <option value="day:2">Day 2</option>
+                    <option value="day:3">Day 3</option>
+                    <option value="continue:last">Continue last conversation</option>
+                  </optgroup>
+                  <optgroup label="External">
+                    <option value="url:">External URL…</option>
+                  </optgroup>
+                </select>
+                <input type="url" id="push-cta-url" placeholder="https://..." style="width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 13px; margin-bottom: 6px; box-sizing: border-box; display: none; background: var(--bg-card);" />
+                <input type="text" id="push-cta-label" placeholder="Button label (defaults to &quot;Open&quot;)" maxlength="40" style="width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 13px; box-sizing: border-box; display: none; background: var(--bg-card);" />
+              </div>
+
+              <button class="preset-btn" style="background: var(--gold); color: #FFFFFF; border-color: var(--gold); padding: 12px 28px; font-weight: 700; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; width: 100%; margin-top: 6px;" onclick="sendBulkPush()" id="push-send-btn">Send notification</button>
+              <div id="push-test-status" style="margin-top: 12px; font-size: 12px; color: var(--text-dim); font-style: italic; text-align: center;"></div>
             </div>
 
-            <button class="preset-btn" style="background: var(--gold); color: var(--dark); border-color: var(--gold); padding: 8px 18px; font-weight: 600; margin-top: 10px;" onclick="sendBulkPush()" id="push-send-btn">Send notification</button>
-            <div id="push-test-status" style="margin-top: 12px; font-size: 12px; color: var(--text-dim); font-style: italic;"></div>
+            <!-- Wizard navigation buttons — back/next flow between steps. -->
+            <div class="wiz-nav" id="push-wiz-nav" style="display: flex; justify-content: space-between; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border);">
+              <button type="button" class="wiz-nav-btn wiz-nav-back" id="push-wiz-back" onclick="pushWizBack()" style="visibility: hidden;">← Back</button>
+              <button type="button" class="wiz-nav-btn wiz-nav-next" id="push-wiz-next" onclick="pushWizNext()">Next →</button>
+            </div>
           </div>
 
           <!-- Manage inbox: list of every notification saved to the inbox,
@@ -8151,6 +8327,8 @@
         // Expose globally so the engagement panel can render from it.
         window._pushSubscribers = pushSubscribers;
         if (typeof renderNotificationEngagement === "function") renderNotificationEngagement();
+        // Refresh the audience preset chip counts + auto-tick the default.
+        if (typeof updatePushAudienceCounts === "function") updatePushAudienceCounts();
         if (pushSubscribers.length === 0) {
           list.innerHTML = '<div style="font-size: 12px; color: var(--text-mute); font-style: italic; text-align: center; padding: 12px 0;">No members have enabled notifications yet.</div>';
           return;
@@ -8219,6 +8397,110 @@
       // Keep the per-group headers visually in sync when master toggles.
       document.querySelectorAll(".push-group-select").forEach(cb => { cb.checked = checked; });
     }
+
+    // ─── Notifications wizard ─────────────────────────────────────────
+    // 3-step flow: 1) Audience, 2) Message, 3) Review & send.
+    // pushWizStep is the current step (1/2/3). setPushAudience picks a
+    // preset audience (all/unlimited/reset/custom); custom reveals the
+    // full subscriber list and lets the admin cherry-pick.
+    let pushWizStep = 1;
+    let pushWizAudience = "all"; // "all" | "unlimited" | "reset" | "custom"
+
+    function pushWizShow(step) {
+      pushWizStep = step;
+      document.querySelectorAll(".wiz-panel").forEach(p => {
+        p.style.display = (Number(p.getAttribute("data-wiz-panel")) === step) ? "" : "none";
+      });
+      // Step indicator state
+      document.querySelectorAll("#push-wiz-steps .wiz-step").forEach(el => {
+        const s = Number(el.getAttribute("data-step"));
+        el.classList.toggle("wiz-step--active", s === step);
+        el.classList.toggle("wiz-step--done", s < step);
+      });
+      // Nav buttons
+      const back = document.getElementById("push-wiz-back");
+      const next = document.getElementById("push-wiz-next");
+      if (back) back.style.visibility = (step === 1) ? "hidden" : "";
+      if (next) next.style.display = (step === 3) ? "none" : "";
+      // Refresh the review summary each time we land on step 3
+      if (step === 3) updatePushWizSummary();
+    }
+    function pushWizGoTo(step) {
+      // Allow clicking dots to jump backward, never forward past the current.
+      if (step <= pushWizStep) pushWizShow(step);
+    }
+    function pushWizNext() {
+      if (pushWizStep < 3) pushWizShow(pushWizStep + 1);
+    }
+    function pushWizBack() {
+      if (pushWizStep > 1) pushWizShow(pushWizStep - 1);
+    }
+    window.pushWizGoTo = pushWizGoTo;
+    window.pushWizNext = pushWizNext;
+    window.pushWizBack = pushWizBack;
+
+    // Audience preset chips — one click picks who. "custom" reveals the
+    // full subscriber list; the others just tick the checkboxes matching
+    // the tier so the send logic (which reads .push-recipient:checked)
+    // works unchanged.
+    function setPushAudience(audience) {
+      pushWizAudience = audience;
+      document.querySelectorAll("#push-audience-chips .aud-chip").forEach(chip => {
+        chip.classList.toggle("aud-chip--active", chip.getAttribute("data-audience") === audience);
+      });
+      const list = document.getElementById("push-subscribers-list");
+      const selectAllWrap = document.getElementById("push-select-all-wrap");
+      if (audience === "custom") {
+        if (list) list.style.display = "";
+        if (selectAllWrap) selectAllWrap.style.display = "";
+      } else {
+        if (list) list.style.display = "none";
+        if (selectAllWrap) selectAllWrap.style.display = "none";
+        // Auto-check the right recipients so the existing send logic
+        // (reads .push-recipient:checked) picks them up.
+        document.querySelectorAll(".push-recipient").forEach(cb => {
+          const group = cb.getAttribute("data-group");
+          if (audience === "all") cb.checked = true;
+          else if (audience === "unlimited") cb.checked = (group === "unlimited");
+          else if (audience === "reset") cb.checked = (group === "reset");
+        });
+      }
+    }
+    window.setPushAudience = setPushAudience;
+
+    // Update the audience count badges after subscribers load.
+    function updatePushAudienceCounts() {
+      const subs = pushSubscribers || [];
+      const unl = subs.filter(s => s.tier === "full").length;
+      const res = subs.filter(s => s.tier !== "full").length;
+      const setCnt = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n; };
+      setCnt("aud-cnt-all", subs.length);
+      setCnt("aud-cnt-unlimited", unl);
+      setCnt("aud-cnt-reset", res);
+      // Auto-tick "all" so a new tab load has an audience selected.
+      if (pushWizAudience === "all") setPushAudience("all");
+    }
+    window.updatePushAudienceCounts = updatePushAudienceCounts;
+
+    // Populate the Step 3 summary with the current selections.
+    function updatePushWizSummary() {
+      const modeEl = document.querySelector('input[name="push-mode"]:checked');
+      const mode = modeEl ? modeEl.value : "push";
+      const sumDelivery = document.getElementById("wiz-summary-delivery");
+      if (sumDelivery) sumDelivery.textContent = mode === "inbox"
+        ? "Inbox only (no phone push)"
+        : "Push + inbox";
+
+      const audLabel = { all: "Everyone", unlimited: "Unlimited only", reset: "Reset only", custom: "Custom" }[pushWizAudience] || "Everyone";
+      const selectedCount = document.querySelectorAll(".push-recipient:checked").length;
+      const sumAud = document.getElementById("wiz-summary-audience");
+      if (sumAud) sumAud.textContent = `${audLabel} (${selectedCount} ${selectedCount === 1 ? "person" : "people"})`;
+
+      const previewTitle = (document.getElementById("push-preview-title") || {}).textContent || "";
+      const sumMsg = document.getElementById("wiz-summary-message");
+      if (sumMsg) sumMsg.textContent = previewTitle || "—";
+    }
+    window.updatePushWizSummary = updatePushWizSummary;
     // Per-tier group toggle — checks / unchecks every recipient inside
     // the group (Unlimited vs Reset-only) so Geo can blast just one
     // tier without having to click every row.
