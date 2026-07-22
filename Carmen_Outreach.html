@@ -371,6 +371,44 @@
       gap: 4px;
       flex-wrap: wrap;
     }
+    /* Clickable engaged toggle — lets Geo/Carmen manually mark someone
+       engaged when GHL tags haven't synced. Yes state = pill button.
+       No state = dashed outline so the affordance is discoverable. */
+    .engaged-toggle {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .engaged-toggle .flag-pill {
+      cursor: pointer;
+      transition: opacity 0.15s ease;
+    }
+    .engaged-toggle:hover .flag-pill { opacity: 0.85; }
+    .engaged-toggle .flag-no-btn {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border-radius: 4px;
+      color: var(--text-mute);
+      border: 1px dashed var(--border);
+      background: transparent;
+      transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    }
+    .engaged-toggle:hover .flag-no-btn {
+      color: var(--success);
+      border-color: var(--success);
+      background: rgba(46, 125, 50, 0.06);
+    }
+    .engaged-toggle.is-manual .flag-pill::after {
+      content: "•";
+      margin-left: 4px;
+      opacity: 0.7;
+    }
     .day-badge {
       display: inline-block;
       min-width: 22px;
@@ -1110,9 +1148,12 @@
         const tierBadge = m.tier === "full"
           ? '<span class="tier-badge tier-full">Unlimited</span>'
           : '<span class="tier-badge tier-preview">Reset</span>';
+        // Engaged is a clickable toggle so Geo/Carmen can override cases
+        // where GHL tags haven't synced. Click cycles Yes ⇄ No via the
+        // /api/admin/member-flag-override endpoint.
         const engagedBadge = m.is_newly_engaged
-          ? '<span class="flag-pill flag-yes" title="Has &quot;newly engaged reset&quot; tag in GHL">Yes</span>'
-          : '<span class="flag-no">—</span>';
+          ? `<button class="engaged-toggle" data-action="toggle-engaged" data-email="${esc(m.email)}" data-value="0" title="Marked engaged — click to unmark" type="button"><span class="flag-pill flag-yes">Yes</span></button>`
+          : `<button class="engaged-toggle" data-action="toggle-engaged" data-email="${esc(m.email)}" data-value="1" title="Not marked engaged — click to mark manually (use when GHL tag hasn't synced)" type="button"><span class="flag-no-btn">Mark</span></button>`;
         const programPills = [];
         if (m.is_rise_current) programPills.push('<span class="flag-pill flag-rise" title="Current Rise client">RISE</span>');
         if (m.is_rise_past) programPills.push('<span class="flag-pill flag-rise-past" title="Past Rise client / graduate">Past RISE</span>');
@@ -1463,6 +1504,40 @@
         const btn = e.target.closest("[data-action='cheat']");
         if (btn) {
           openCheatSheet(btn.dataset.email, btn.dataset.name);
+        }
+      });
+
+      // Delegated click handler for the Engaged toggle.
+      // Sends is_newly_engaged override to the server, updates the local
+      // row optimistically so the UI reflects the change immediately.
+      document.getElementById("tbody").addEventListener("click", async (e) => {
+        const btn = e.target.closest("[data-action='toggle-engaged']");
+        if (!btn) return;
+        e.stopPropagation();
+        const email = btn.dataset.email;
+        const value = btn.dataset.value === "1";
+        btn.disabled = true;
+        try {
+          const token = localStorage.getItem(SESSION_TOKEN_KEY);
+          const r = await fetch("/api/admin/member-flag-override", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-session-token": token || "",
+            },
+            body: JSON.stringify({ email, flag: "is_newly_engaged", value }),
+          });
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok || !data.ok) throw new Error(data.error || "override_failed");
+          // Update local state so we don't need a full reload
+          const row = allMembers.find(m => (m.email || "").toLowerCase() === (email || "").toLowerCase());
+          if (row) row.is_newly_engaged = value;
+          renderStats();
+          renderTable();
+        } catch (err) {
+          console.error("engaged_override_failed", err);
+          alert("Couldn't update engaged flag. Check console.");
+          btn.disabled = false;
         }
       });
 
