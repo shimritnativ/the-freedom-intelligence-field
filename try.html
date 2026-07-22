@@ -1817,6 +1817,38 @@
   @media (max-width: 900px) {
     .orbit-grid { grid-template-columns: 1fr; gap: 40px; }
   }
+  /* Golden ambient glow behind the constellation — the piece that
+     was missing. Same treatment as hello's .unlimited-block::before:
+     a large soft radial gradient anchored where the orbit lives, so
+     the pills read as bathed in warm gold light rather than sitting
+     on a cold black rectangle. */
+  .constellation-section {
+    position: relative;
+    overflow: hidden;
+  }
+  /* Massive ambient gold glow anchored behind the constellation. Two
+     stacked radial gradients — one big soft base layer covering the
+     whole area, one tighter brighter core over the pills. Combined
+     they produce the "bathed in gold" atmosphere from hello. */
+  .constellation-section::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle 900px at 75% 50%, rgba(201, 168, 76, 0.22), transparent 60%),
+      radial-gradient(circle 500px at 75% 50%, rgba(201, 168, 76, 0.18), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .constellation-section > .lp-container { position: relative; z-index: 1; }
+  @media (max-width: 900px) {
+    .constellation-section::before {
+      background:
+        radial-gradient(circle 700px at 50% 65%, rgba(201, 168, 76, 0.22), transparent 60%),
+        radial-gradient(circle 400px at 50% 65%, rgba(201, 168, 76, 0.18), transparent 70%);
+    }
+  }
+
   /* Constellation orbit — ported verbatim from hello.thefieldai.app so
      the "Field that knows you" treatment is consistent across both
      properties. Three-layer nesting per pill (orbit > magnet > pill)
@@ -1846,7 +1878,8 @@
   .constellation-center-label {
     font-family: var(--font-serif);
     font-style: italic;
-    font-size: 22px;
+    font-size: 44px;
+    font-weight: 500;
     fill: var(--gold);
     text-anchor: middle;
   }
@@ -1863,12 +1896,12 @@
   .process-pill {
     display: inline-block;
     background: rgba(14, 11, 7, 0.85);
-    border: 1px solid var(--gold-line);
-    color: var(--text-inverse);
+    border: 1px solid var(--gold);
+    color: var(--gold);
     padding: 9px 18px;
     border-radius: 999px;
     font-family: var(--font-sans);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     letter-spacing: 0.02em;
     white-space: nowrap;
@@ -1877,6 +1910,7 @@
     cursor: default;
     pointer-events: auto;
     opacity: 0;
+    text-shadow: 0 0 12px rgba(201, 168, 76, 0.3);
     transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
                 border-color 0.25s ease,
                 background 0.25s ease,
@@ -1940,14 +1974,17 @@
     box-shadow: 0 0 30px rgba(201, 168, 76, 0.35),
                 0 4px 20px rgba(0, 0, 0, 0.5);
   }
-  /* Smaller inner-ring variant */
+  /* Smaller inner-ring variant — same full gold as the outer pills, just
+     smaller padding + font so they read as a secondary ring but still
+     part of the same golden constellation. */
   .process-pill--small {
     padding: 6px 12px;
     font-size: 11px;
-    color: var(--text-inverse-dim);
+    color: var(--gold);
     background: rgba(14, 11, 7, 0.7);
-    border-color: rgba(201, 168, 76, 0.18);
+    border-color: var(--gold);
     letter-spacing: 0.02em;
+    text-shadow: 0 0 10px rgba(201, 168, 76, 0.3);
   }
   .process-pill--small.is-hot {
     color: var(--gold);
@@ -1961,7 +1998,7 @@
     .process-pill { font-size: 11px; padding: 6px 12px; white-space: nowrap; }
     .process-pill--small { font-size: 9.5px; padding: 4px 8px; }
     .process-pill.is-hot { box-shadow: 0 0 18px rgba(201, 168, 76, 0.4); }
-    .constellation-center-label { font-size: 14px; }
+    .constellation-center-label { font-size: 36px; }
   }
 </style>
 </head>
@@ -2299,8 +2336,12 @@
   </div>
 </section>
 
-<!-- Reset outcomes — orbit of what the Reset unlocks -->
-<section class="lp-section lp-section--dark">
+<!-- Reset outcomes — orbit of what the Reset unlocks.
+     Section has a large golden radial glow anchored on the right side
+     (where the constellation lives) — same treatment as hello's
+     .unlimited-block::before so the pills feel bathed in gold light
+     rather than sitting on cold black. -->
+<section class="lp-section lp-section--dark constellation-section">
   <div class="lp-container reveal">
     <div class="orbit-grid">
       <div class="orbit-copy">
@@ -2364,7 +2405,7 @@
           </circle>
           <image href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png"
                  x="430" y="430" width="140" height="140" preserveAspectRatio="xMidYMid meet" />
-          <text class="constellation-center-label" x="500" y="410">The Reset</text>
+          <text class="constellation-center-label" x="500" y="395">The Reset</text>
         </svg>
 
         <!-- Primary orbit (8 pills, ~40% radius) -->
@@ -2782,7 +2823,7 @@
     } else if (phase === "email") {
       input.disabled = true;
       send.disabled = true;
-      input.placeholder = "Add your email above to begin ↑";
+      input.placeholder = "Add your info to start ↑";
     } else if (phase === "active") {
       input.disabled = false;
       send.disabled = false;
@@ -2849,11 +2890,29 @@
     `;
     body.appendChild(wrap);
     scrollChatToBottom();
+    // Focus the first-name field first — that's the natural first thing
+    // to fill in. Previously landed on the email, which meant the name
+    // fields felt like an afterthought and got skipped visually.
+    const firstNameEl = $("email-first-name");
     const input = $("email-inline-input");
-    input.focus();
+    if (firstNameEl) firstNameEl.focus();
+    else if (input) input.focus();
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") { e.preventDefault(); submitInlineEmail(); }
     });
+    // Enter on the name fields also submits (progressive flow — user
+    // shouldn't need to tab through everything to submit).
+    if (firstNameEl) {
+      firstNameEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); submitInlineEmail(); }
+      });
+    }
+    const lastNameEl = $("email-last-name");
+    if (lastNameEl) {
+      lastNameEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); submitInlineEmail(); }
+      });
+    }
     $("email-inline-submit").addEventListener("click", submitInlineEmail);
     $("chip-back").addEventListener("click", resetToDoorways);
   }
