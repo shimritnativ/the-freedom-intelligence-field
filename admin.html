@@ -8149,15 +8149,59 @@
           list.innerHTML = '<div style="font-size: 12px; color: var(--text-mute); font-style: italic; text-align: center; padding: 12px 0;">No members have enabled notifications yet.</div>';
           return;
         }
-        list.innerHTML = pushSubscribers.map(s => `
-          <label style="display: flex; align-items: center; gap: 10px; padding: 6px 4px; cursor: pointer; border-radius: 4px;">
-            <input type="checkbox" class="push-recipient" value="${escapeHtml(s.id)}" data-email="${escapeHtml(s.email)}" />
-            <div style="flex: 1; min-width: 0;">
-              <div style="font-size: 12.5px; color: var(--text); font-weight: 500;">${escapeHtml(s.email)}${s.display_name ? ' <span style="color: var(--text-dim); font-weight: 400;">(' + escapeHtml(s.display_name) + ')</span>' : ''}</div>
-              <div style="font-size: 11px; color: var(--text-mute);">${s.devices} device${s.devices === 1 ? '' : 's'} · ${s.tier === 'full' ? 'Unlimited' : 'Power Reset'}${s.last_sent ? ' · last sent ' + fmtRelative(s.last_sent) : ''}</div>
+
+        // Split subscribers into two groups by tier so Geo can send
+        // process-specific notifications only to members who have
+        // access to those processes. Unlimited members can receive
+        // "guided process" nudges; Reset-only members can't.
+        const unlimited = pushSubscribers.filter(s => s.tier === "full");
+        const resetOnly = pushSubscribers.filter(s => s.tier !== "full");
+
+        function renderSub(s) {
+          return `
+            <label style="display: flex; align-items: center; gap: 10px; padding: 6px 4px; cursor: pointer; border-radius: 4px;">
+              <input type="checkbox" class="push-recipient" data-group="${s.tier === 'full' ? 'unlimited' : 'reset'}" value="${escapeHtml(s.id)}" data-email="${escapeHtml(s.email)}" />
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 12.5px; color: var(--text); font-weight: 500;">${escapeHtml(s.email)}${s.display_name ? ' <span style="color: var(--text-dim); font-weight: 400;">(' + escapeHtml(s.display_name) + ')</span>' : ''}</div>
+                <div style="font-size: 11px; color: var(--text-mute);">${s.devices} device${s.devices === 1 ? '' : 's'}${s.last_sent ? ' · last sent ' + fmtRelative(s.last_sent) : ''}</div>
+              </div>
+            </label>
+          `;
+        }
+
+        function renderGroup(label, subs, groupKey, badge) {
+          if (subs.length === 0) return "";
+          return `
+            <div class="push-group" style="margin-bottom: 14px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 4px 8px; border-bottom: 1px solid var(--gold-line); margin-bottom: 4px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 700; color: var(--gold);">${label}</span>
+                  <span style="background: ${badge.bg}; color: ${badge.color}; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; letter-spacing: 0.04em;">${subs.length}</span>
+                </div>
+                <label style="font-size: 11px; color: var(--text-dim); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                  <input type="checkbox" class="push-group-select" data-group="${groupKey}" onclick="togglePushGroup(this)" />
+                  <span>Select all in group</span>
+                </label>
+              </div>
+              ${subs.map(renderSub).join("")}
             </div>
-          </label>
-        `).join("");
+          `;
+        }
+
+        list.innerHTML = [
+          renderGroup(
+            "Unlimited",
+            unlimited,
+            "unlimited",
+            { bg: "rgba(201, 168, 76, 0.14)", color: "var(--gold)" }
+          ),
+          renderGroup(
+            "Power Reset only",
+            resetOnly,
+            "reset",
+            { bg: "rgba(107, 156, 78, 0.14)", color: "#4A6B2E" }
+          ),
+        ].join("");
       } catch (err) {
         list.innerHTML = '<div style="font-size: 12px; color: var(--text-mute); font-style: italic; text-align: center; padding: 8px 0;">Network error loading subscribers.</div>';
       }
@@ -8166,7 +8210,20 @@
     function togglePushSelectAll() {
       const checked = document.getElementById("push-select-all").checked;
       document.querySelectorAll(".push-recipient").forEach(cb => { cb.checked = checked; });
+      // Keep the per-group headers visually in sync when master toggles.
+      document.querySelectorAll(".push-group-select").forEach(cb => { cb.checked = checked; });
     }
+    // Per-tier group toggle — checks / unchecks every recipient inside
+    // the group (Unlimited vs Reset-only) so Geo can blast just one
+    // tier without having to click every row.
+    function togglePushGroup(el) {
+      const group = el.getAttribute("data-group");
+      const checked = el.checked;
+      document.querySelectorAll(`.push-recipient[data-group="${group}"]`).forEach(cb => {
+        cb.checked = checked;
+      });
+    }
+    window.togglePushGroup = togglePushGroup;
 
     function selectPushMessage(key) {
       selectedPushKey = key;
