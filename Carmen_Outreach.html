@@ -1594,11 +1594,16 @@
           return;
         }
 
-        // Program dropdown → multi-toggle, menu stays open.
+        // Program dropdown → multi-toggle. Menu stays open so Geo can
+        // flip several flags in a row. Updates are done in place (no
+        // renderTable) so previously-checked items stay checked and the
+        // dropdown doesn't close. Local row state is still updated so
+        // the next full render reflects the changes.
         if (dd.hasAttribute("data-program-dd")) {
           const flag = item.dataset.multiFlag;
           const wasOn = item.dataset.selected === "1";
-          await setFlagOverride(email, flag, !wasOn, item);
+          const newVal = !wasOn;
+          await setFlagOverrideInPlace(email, flag, newVal, item, dd);
           return;
         }
       });
@@ -1608,28 +1613,34 @@
         document.querySelectorAll(DD_SELECTOR).forEach(el => el.classList.remove("open"));
       });
 
-      // Shared server call for both Engaged and Program dropdowns.
-      // Updates local row optimistically, re-renders, surfaces the real
-      // server error message if the call fails.
-      async function setFlagOverride(email, flag, value, itemEl) {
-        if (!email || !flag) return;
+      // Low-level POST — returns true on success, throws with a real
+      // error message on failure. Reused by both single- and
+      // multi-select flag flows.
+      async function postFlagOverride(email, flag, value) {
         const token = localStorage.getItem(SESSION_TOKEN_KEY);
-        if (!token) { alert("Not signed in — reload the admin page."); return; }
+        if (!token) throw new Error("Not signed in — reload the admin page.");
+        const r = await fetch("/api/admin/member-flag-override", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-session-token": token,
+          },
+          body: JSON.stringify({ email, flag, value }),
+        });
+        let data = null;
+        try { data = await r.json(); } catch (_) { /* non-JSON response */ }
+        if (!r.ok || !data || !data.ok) {
+          const detail = (data && (data.message || data.error)) || `HTTP ${r.status}`;
+          throw new Error(detail);
+        }
+      }
+
+      // Single-select flow (Engaged) — closes menu, re-renders row so
+      // the trigger label updates.
+      async function setFlagOverride(email, flag, value) {
+        if (!email || !flag) return;
         try {
-          const r = await fetch("/api/admin/member-flag-override", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-session-token": token,
-            },
-            body: JSON.stringify({ email, flag, value }),
-          });
-          let data = null;
-          try { data = await r.json(); } catch (_) { /* non-JSON response */ }
-          if (!r.ok || !data || !data.ok) {
-            const detail = (data && (data.message || data.error)) || `HTTP ${r.status}`;
-            throw new Error(detail);
-          }
+          await postFlagOverride(email, flag, value);
           const row = allMembers.find(m => (m.email || "").toLowerCase() === (email || "").toLowerCase());
           if (row) row[flag] = value;
           renderStats();
@@ -1638,6 +1649,46 @@
           console.error("flag_override_failed", err);
           alert("Couldn't update flag: " + (err && err.message ? err.message : "unknown error"));
         }
+      }
+
+      // Multi-select flow (Program) — updates the item + trigger label
+      // in place so the dropdown stays open and existing checkmarks are
+      // preserved. Local row state is still synced so the next render
+      // shows the right pills.
+      async function setFlagOverrideInPlace(email, flag, value, itemEl, ddEl) {
+        if (!email || !flag) return;
+        // Optimistic UI flip
+        itemEl.dataset.selected = value ? "1" : "0";
+        updateProgramTriggerLabel(ddEl);
+        try {
+          await postFlagOverride(email, flag, value);
+          const row = allMembers.find(m => (m.email || "").toLowerCase() === (email || "").toLowerCase());
+          if (row) row[flag] = value;
+        } catch (err) {
+          // Roll back the optimistic flip on failure
+          itemEl.dataset.selected = value ? "0" : "1";
+          updateProgramTriggerLabel(ddEl);
+          console.error("flag_override_failed", err);
+          alert("Couldn't update flag: " + (err && err.message ? err.message : "unknown error"));
+        }
+      }
+
+      // Reads current selection from all .outcome-item[data-multi-flag]
+      // inside the given program dropdown and rewrites the trigger text.
+      const PROG_LABELS = {
+        is_rise_current:  "RISE",
+        is_rise_past:     "Past RISE",
+        is_certification: "Certification",
+        is_business_club: "Business Club",
+      };
+      function updateProgramTriggerLabel(ddEl) {
+        if (!ddEl) return;
+        const active = [];
+        ddEl.querySelectorAll(".outcome-item[data-multi-flag]").forEach(el => {
+          if (el.dataset.selected === "1") active.push(PROG_LABELS[el.dataset.multiFlag] || el.dataset.multiFlag);
+        });
+        const trig = ddEl.querySelector(".outcome-trigger");
+        if (trig) trig.textContent = active.length ? active.join(", ") : "None";
       }
 
       // Delegated click handler for cheat sheet buttons.
