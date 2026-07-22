@@ -367,16 +367,15 @@
   .chip-label {
     display: block;
     color: var(--text);
-    /* Cormorant Garamond italic at a heavier weight + slightly larger
-       size than the previous 17px. This matches the display treatment
-       used across the reset LP and hello.thefieldai.app headings while
-       staying properly legible at chip size. */
+    /* Cormorant Garamond (same face as the hero title) but NOT italic
+       so it stays scannable at chip size. Bigger + heavier weight so
+       the title reads without effort. */
     font-family: var(--font-serif);
-    font-style: italic;
+    font-style: normal;
     font-weight: 500;
-    font-size: 20px;
-    line-height: 1.2;
-    letter-spacing: -0.005em;
+    font-size: 26px;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
   }
   .chip:hover {
     background: var(--gold-soft);
@@ -387,22 +386,20 @@
   .chip:active { transform: scale(0.99); }
   .chip-num {
     display: block;
-    font-family: var(--font-serif);
+    font-family: var(--font-sans);
     color: var(--gold);
-    font-size: 14px;
-    font-weight: 500;
-    letter-spacing: 0.08em;
-    font-style: italic;
-    margin-bottom: 2px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    margin-bottom: 4px;
   }
   .chip-hint {
     display: block;
     font-family: var(--font-sans);
-    font-style: normal;
     font-weight: 400;
-    font-size: 12.5px;
+    font-size: 14px;
     color: var(--text-dim);
-    line-height: 1.5;
+    line-height: 1.55;
     margin-top: 4px;
   }
 
@@ -955,8 +952,52 @@
                 transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
   }
   .reveal.in-view { opacity: 1; transform: translateY(0); }
+  .reveal-delay-1 { transition-delay: 0.08s; }
+  .reveal-delay-2 { transition-delay: 0.16s; }
+  .reveal-delay-3 { transition-delay: 0.24s; }
+  .reveal-delay-4 { transition-delay: 0.32s; }
   @media (prefers-reduced-motion: reduce) {
     .reveal { opacity: 1; transform: none; transition: none; }
+    .shimmer { animation: none !important; color: var(--gold) !important; -webkit-text-fill-color: var(--gold); }
+  }
+
+  /* Gold shimmer that runs across any accent phrase. Uses background-clip
+     to run the gradient through the letterforms — same treatment as the
+     hello.thefieldai.app hero. */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--gold) 0%,
+      #F2DA8E 45%,
+      #FFF1B8 50%,
+      #F2DA8E 55%,
+      var(--gold) 100%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 6s linear infinite;
+    font-style: italic;
+  }
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Soft card lift + gold halo on hover — brings the "shining" feel
+     Shimrit asked for to any card that opts in. */
+  .lift {
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+                border-color 0.25s ease;
+  }
+  .lift:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 30px 60px rgba(26, 22, 18, 0.14),
+                0 0 0 1px var(--gold-line),
+                0 0 60px rgba(201, 168, 76, 0.20);
   }
 
   /* VSL */
@@ -999,6 +1040,195 @@
     aspect-ratio: 1 / 1;
     max-width: 520px;
   }
+  /* ═════════════════════════════════════════════════════════════
+     INTERACTIVE DAY 1 / 2 / 3 PREVIEW MOCKUP
+     Fake browser window with scripted chat exchanges per day.
+     Click a tab to swap the content. Replaces the VSL.
+     ═════════════════════════════════════════════════════════════ */
+  .day-mockup-wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 8px;
+  }
+  .day-mockup {
+    background: #0e0b08;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid rgba(201, 168, 76, 0.15);
+    box-shadow:
+      0 60px 120px rgba(0, 0, 0, 0.55),
+      0 0 0 1px rgba(201, 168, 76, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    position: relative;
+  }
+  /* Soft gold glow behind the whole thing */
+  .day-mockup::before {
+    content: "";
+    position: absolute;
+    inset: -60px;
+    background: radial-gradient(ellipse at 50% 30%, rgba(201, 168, 76, 0.18), transparent 60%);
+    z-index: -1;
+    pointer-events: none;
+  }
+  .day-mockup-chrome {
+    display: flex;
+    align-items: center;
+    padding: 14px 20px;
+    background: rgba(0, 0, 0, 0.35);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    position: relative;
+  }
+  .day-mockup-dots {
+    display: flex; gap: 6px;
+  }
+  .day-mockup-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: rgba(255, 255, 255, 0.14);
+  }
+  .day-mockup-url {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    font-family: var(--font-sans);
+    letter-spacing: 0.02em;
+  }
+  /* Gold underline under the "browser" — subtle brand accent */
+  .day-mockup-chrome::after {
+    content: "";
+    position: absolute;
+    bottom: -1px;
+    left: 20px;
+    width: 220px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--gold), transparent);
+  }
+  .day-mockup-body {
+    padding: 36px 40px 24px;
+    min-height: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+  @media (max-width: 640px) {
+    .day-mockup-body { padding: 26px 22px 20px; }
+  }
+  .day-mockup-eyebrow {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 700;
+  }
+  .day-mockup-title {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: clamp(26px, 3vw, 34px);
+    color: var(--text-inverse);
+    margin: 6px 0 0;
+    line-height: 1.15;
+  }
+  .day-mockup-chat {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 12px;
+  }
+  .day-mockup-bubble {
+    max-width: 82%;
+    padding: 14px 18px;
+    border-radius: 14px;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--text-inverse);
+  }
+  .day-mockup-bubble.field {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    align-self: flex-start;
+  }
+  .day-mockup-bubble.field::before {
+    content: "THE FIELD";
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 9.5px;
+    letter-spacing: 0.24em;
+    color: var(--gold);
+    font-weight: 700;
+    font-style: normal;
+    margin-bottom: 8px;
+  }
+  .day-mockup-bubble.user {
+    background: rgba(201, 168, 76, 0.12);
+    border: 1px solid rgba(201, 168, 76, 0.24);
+    align-self: flex-end;
+    color: var(--text-inverse);
+  }
+  .day-mockup-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px 20px 22px;
+    background: rgba(0, 0, 0, 0.25);
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+  }
+  .day-mockup-tab {
+    padding: 8px 20px;
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(247, 241, 225, 0.55);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: color 200ms ease, background 200ms ease;
+  }
+  .day-mockup-tab:hover { color: var(--text-inverse); }
+  .day-mockup-tab.active {
+    background: var(--gold);
+    color: #1a1410;
+    box-shadow: 0 0 20px rgba(201, 168, 76, 0.4);
+  }
+  /* Fade the content on tab switch — small polish so day changes feel
+     like a state transition, not a snap. */
+  .day-mockup-content {
+    animation: mockup-fade 340ms ease-out;
+  }
+  @keyframes mockup-fade {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  /* Center CTA below the mockup */
+  .day-mockup-cta-wrap {
+    margin-top: 34px;
+    text-align: center;
+  }
+  .day-mockup-cta {
+    display: inline-block;
+    padding: 18px 44px;
+    background: var(--gold);
+    color: #1a1410;
+    font-family: var(--font-sans);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    border-radius: 999px;
+    box-shadow: 0 0 40px rgba(201, 168, 76, 0.35);
+    transition: transform 150ms ease, box-shadow 200ms ease, background 180ms ease;
+  }
+  .day-mockup-cta:hover {
+    background: var(--gold-warm);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 40px rgba(201, 168, 76, 0.5);
+  }
+  .day-mockup-cta:active { transform: translateY(0); }
+
   .vsl-video {
     width: 100%; height: 100%;
     display: block;
@@ -1056,16 +1286,25 @@
   }
   @keyframes dash-drift { to { stroke-dashoffset: -600; } }
   .arc-label {
-    font-family: var(--font-serif); font-style: italic;
-    font-size: 15px; fill: var(--text);
+    /* Cormorant Garamond (same face as the hero title), not italic, big
+       enough to read. Matches the doorway chip titles. */
+    font-family: var(--font-serif);
+    font-style: normal;
+    font-size: 22px;
+    font-weight: 500;
+    fill: var(--text);
   }
   .arc-label-hint {
-    font-family: var(--font-sans); font-size: 11px;
-    fill: var(--text-dim); letter-spacing: 0.06em;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+    fill: var(--text-dim);
+    letter-spacing: 0.08em;
   }
   .arc-num {
     font-family: var(--font-serif); font-style: italic;
-    font-size: 24px; fill: var(--gold);
+    font-size: 28px; fill: var(--gold);
+    font-weight: 500;
   }
 
   /* Mobile-only vertical stacked version. Desktop uses the SVG arc,
@@ -1099,14 +1338,25 @@
     }
     .arc-m-body { text-align: left; }
     .arc-m-title {
-      font-family: var(--font-serif); font-style: italic;
-      font-size: 20px; color: var(--text); margin: 0 0 4px;
+      /* Same Cormorant Garamond (non-italic) treatment as the desktop
+         arc labels and the doorway chip titles. */
+      font-family: var(--font-serif);
+      font-style: normal;
+      font-weight: 500;
+      font-size: 24px;
+      color: var(--text);
+      margin: 0 0 4px;
       line-height: 1.2;
+      letter-spacing: -0.01em;
     }
     .arc-m-hint {
-      font-family: var(--font-sans); font-size: 11px;
-      color: var(--text-dim); letter-spacing: 0.1em;
-      text-transform: uppercase; margin: 0;
+      font-family: var(--font-sans);
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin: 0;
     }
     /* Vertical dashed line connecting the three circles */
     .arc-m-row:not(:last-child)::before {
@@ -1296,10 +1546,12 @@
   }
   .faq-q {
     width: 100%; background: transparent;
-    padding: 18px 22px; text-align: left;
-    font-family: var(--font-serif); font-style: italic;
-    font-size: 18px; font-weight: 500; color: var(--text);
+    padding: 22px 26px; text-align: left;
+    font-family: var(--font-sans);
+    font-size: 18px; font-weight: 600; color: var(--text);
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    letter-spacing: -0.005em;
+    line-height: 1.4;
   }
   .faq-q::after {
     content: "+"; font-family: var(--font-sans);
@@ -1425,80 +1677,52 @@
     line-height: 1.6;
     margin: 0;
   }
+  /* Instrument visual — ported verbatim from hello.thefieldai.app so the
+     methodology section on /try matches the treatment on the main site.
+     Wrapper has the soft gold gradient tint + rounded border; SVG holds
+     the concentric rings, triangle, nodes, and pulsing core. */
   .mh-b-visual {
-    aspect-ratio: 1;
-    max-width: 460px;
-    margin: 0 auto;
     position: relative;
-    background:
-      radial-gradient(circle at center, rgba(201, 168, 76, 0.10), transparent 60%),
-      linear-gradient(180deg, rgba(247, 241, 225, 0.02), transparent);
-    border: 1px solid var(--border-dark);
+    padding: 50px 40px;
+    background: linear-gradient(135deg, rgba(201, 168, 76, 0.12), rgba(201, 168, 76, 0.02));
+    border: 1px solid var(--gold-line);
     border-radius: 24px;
   }
-  .mh-b-svg {
-    width: 100%; height: 100%;
-    display: block;
+  @media (max-width: 900px) {
+    .mh-b-visual { padding: 30px 24px; }
   }
-  .tri-line {
-    fill: none;
-    stroke: var(--gold);
-    stroke-width: 1.5;
-    opacity: 0.55;
+  .instrument-diagram {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
   }
-  .tri-ring {
-    fill: none;
-    stroke: var(--gold);
-    stroke-width: 1;
-    stroke-dasharray: 3 5;
-    opacity: 0.25;
-    transform-origin: 50% 50%;
-    animation: tri-spin 40s linear infinite;
+  .instrument-diagram svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
   }
-  .tri-ring.inner {
-    animation-duration: 60s;
-    animation-direction: reverse;
-    opacity: 0.18;
-  }
-  @keyframes tri-spin {
+  /* Concentric rings — different rotation speeds and directions for a
+     cosmic, "slowly breathing" feel. Transform-origin set inline on the
+     <g> wrapper via style attribute. */
+  .spin-slow { animation: spin-slow 60s linear infinite; }
+  .spin-reverse { animation: spin-slow 80s linear infinite reverse; }
+  @keyframes spin-slow {
     from { transform: rotate(0deg); }
     to   { transform: rotate(360deg); }
   }
-  .tri-node {
-    fill: var(--bg-dark);
-    stroke: var(--gold);
-    stroke-width: 2;
+  /* Triangle drawn in on reveal — dash-offset trick. Triggered when the
+     parent .reveal is-visible. */
+  .draw-stroke {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    transition: stroke-dashoffset 2s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .tri-node-label {
-    font-family: var(--font-serif);
-    font-style: italic;
-    font-size: 22px;
-    fill: var(--gold);
-    font-weight: 500;
-  }
-  .tri-core {
-    fill: var(--gold);
-    animation: tri-pulse 2.8s ease-in-out infinite;
-    transform-origin: center;
-  }
-  @keyframes tri-pulse {
-    0%, 100% { opacity: 0.85; r: 6; }
-    50%      { opacity: 1; r: 8; }
-  }
-  .tri-caption {
-    position: absolute;
-    bottom: 22px; left: 50%;
-    transform: translateX(-50%);
-    font-family: var(--font-sans);
-    font-size: 10.5px;
-    font-weight: 700;
-    letter-spacing: 0.24em;
-    text-transform: uppercase;
-    color: var(--gold);
-    opacity: 0.75;
-  }
+  .reveal.in-view .draw-stroke { stroke-dashoffset: 0; }
   @media (prefers-reduced-motion: reduce) {
-    .tri-ring, .tri-core { animation: none; }
+    .spin-slow, .spin-reverse { animation: none; }
+    .draw-stroke { stroke-dashoffset: 0; transition: none; }
   }
 
   /* ═════════════════════════════════════════════════════════════
@@ -1514,125 +1738,151 @@
   @media (max-width: 900px) {
     .orbit-grid { grid-template-columns: 1fr; gap: 40px; }
   }
-  /* Constellation-style orbit (borrowed from the-field-website.html).
-     Nesting matters: the OUTER .rst-orbit handles centering with
-     translate(-50%, -50%) and is NEVER animated. The INNER .rst-pill
-     gets the float animation. Putting both on one element causes the
-     animation transform to overwrite the centering — that's the bug
-     in the previous approach where all pills stacked in the middle. */
-  /* Padding-bottom trick keeps a square container even when aspect-ratio
-     doesn't resolve inside a grid cell (which was making the whole stage
-     collapse and stacking every pill in the center). Absolute-positioned
-     inner wrapper fills the reserved space. */
-  .orbit-stage {
+  /* Constellation orbit — ported verbatim from hello.thefieldai.app so
+     the "Field that knows you" treatment is consistent across both
+     properties. Three-layer nesting per pill (orbit > magnet > pill)
+     lets positioning, cursor pull, and float animation each own a
+     transform stack without fighting each other. */
+  .constellation {
     position: relative;
     width: 100%;
-    max-width: 560px;
+    max-width: 620px;
     margin: 0 auto;
-    padding-bottom: 100%;   /* forces a 1:1 aspect */
-    background:
-      radial-gradient(circle at center, rgba(201, 168, 76, 0.12), transparent 65%);
+    aspect-ratio: 1;
   }
-  .orbit-inner {
+  .constellation svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
     position: absolute;
     inset: 0;
   }
-  .rst-orbit {
-    position: absolute;
-    transform: translate(-50%, -50%);   /* Positioning only. Do NOT animate this. */
-    pointer-events: none;
+  .constellation-line {
+    stroke: var(--gold);
+    stroke-width: 0.5;
+    opacity: 0;
+    transition: opacity 1.2s ease;
   }
-  .rst-pill {
+  .constellation.is-revealed .constellation-line { opacity: 0.25; }
+  .constellation-center-label {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 22px;
+    fill: var(--gold);
+    text-anchor: middle;
+  }
+  .process-orbit {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+  }
+  .process-magnet {
     display: inline-block;
-    padding: 8px 16px;
+    transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+  .process-pill {
+    display: inline-block;
     background: rgba(14, 11, 7, 0.85);
-    border: 1px solid var(--gold);
+    border: 1px solid var(--gold-line);
+    color: var(--text-inverse);
+    padding: 9px 18px;
     border-radius: 999px;
-    color: var(--gold);
     font-family: var(--font-sans);
-    font-size: 12.5px;
+    font-size: 14px;
     font-weight: 500;
     letter-spacing: 0.02em;
     white-space: nowrap;
-    box-shadow: 0 0 20px rgba(201, 168, 76, 0.2);
-    animation: rst-float var(--dur, 7s) ease-in-out infinite;
-    animation-delay: var(--del, 0s);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    cursor: default;
+    pointer-events: auto;
+    opacity: 0;
+    transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+                border-color 0.25s ease,
+                background 0.25s ease,
+                box-shadow 0.3s ease,
+                color 0.25s ease;
+    animation: pill-float var(--float-duration, 7s) ease-in-out infinite;
+    animation-delay: var(--float-delay, 0s);
     will-change: transform;
   }
-  /* Three drift keyframes so neighbouring pills don't move in unison. */
-  @keyframes rst-float-a {
-    0%, 100% { transform: translate(0, 0); }
-    25%      { transform: translate(6px, -8px); }
-    50%      { transform: translate(0, -14px); }
-    75%      { transform: translate(-6px, -8px); }
+  .constellation.is-revealed .process-pill { opacity: 1; }
+  /* Staggered fade-in per pill so the orbit comes online one node at a time. */
+  .process-pill[data-i="0"]  { transition-delay: 0.05s; }
+  .process-pill[data-i="1"]  { transition-delay: 0.13s; }
+  .process-pill[data-i="2"]  { transition-delay: 0.21s; }
+  .process-pill[data-i="3"]  { transition-delay: 0.29s; }
+  .process-pill[data-i="4"]  { transition-delay: 0.37s; }
+  .process-pill[data-i="5"]  { transition-delay: 0.45s; }
+  .process-pill[data-i="6"]  { transition-delay: 0.53s; }
+  .process-pill[data-i="7"]  { transition-delay: 0.61s; }
+  .process-pill[data-i="8"]  { transition-delay: 0.69s; }
+  .process-pill[data-i="9"]  { transition-delay: 0.77s; }
+  .process-pill[data-i="10"] { transition-delay: 0.85s; }
+  .process-pill[data-i="11"] { transition-delay: 0.93s; }
+  /* Three drift keyframes so neighbours don't move in unison. */
+  @keyframes pill-float-a {
+    0%   { transform: translate(0, 0); }
+    25%  { transform: translate(6px, -8px); }
+    50%  { transform: translate(0, -14px); }
+    75%  { transform: translate(-6px, -8px); }
+    100% { transform: translate(0, 0); }
   }
-  @keyframes rst-float-b {
-    0%, 100% { transform: translate(0, 0); }
-    25%      { transform: translate(-10px, -4px); }
-    50%      { transform: translate(-6px, -12px); }
-    75%      { transform: translate(8px, -6px); }
+  @keyframes pill-float-b {
+    0%   { transform: translate(0, 0); }
+    25%  { transform: translate(-10px, -4px); }
+    50%  { transform: translate(-6px, -12px); }
+    75%  { transform: translate(8px, -6px); }
+    100% { transform: translate(0, 0); }
   }
-  @keyframes rst-float-c {
-    0%, 100% { transform: translate(0, 0); }
-    33%      { transform: translate(10px, -6px); }
-    66%      { transform: translate(-8px, -10px); }
+  @keyframes pill-float-c {
+    0%   { transform: translate(0, 0); }
+    33%  { transform: translate(10px, -6px); }
+    66%  { transform: translate(-8px, -10px); }
+    100% { transform: translate(0, 0); }
   }
-  .rst-pill[data-i="0"],  .rst-pill[data-i="3"],
-  .rst-pill[data-i="6"],  .rst-pill[data-i="9"]  { animation-name: rst-float-a; }
-  .rst-pill[data-i="1"],  .rst-pill[data-i="4"],
-  .rst-pill[data-i="7"],  .rst-pill[data-i="10"] { animation-name: rst-float-b; }
-  .rst-pill[data-i="2"],  .rst-pill[data-i="5"],
-  .rst-pill[data-i="8"],  .rst-pill[data-i="11"] { animation-name: rst-float-c; }
-
-  /* Central diamond node */
-  .orbit-svg {
-    position: absolute;
-    inset: 0;
-    width: 100%; height: 100%;
-    pointer-events: none;
+  .process-pill[data-i="0"],  .process-pill[data-i="3"],
+  .process-pill[data-i="6"],  .process-pill[data-i="9"]  { animation-name: pill-float-a; }
+  .process-pill[data-i="1"],  .process-pill[data-i="4"],
+  .process-pill[data-i="7"],  .process-pill[data-i="10"] { animation-name: pill-float-b; }
+  .process-pill[data-i="2"],  .process-pill[data-i="5"],
+  .process-pill[data-i="8"],  .process-pill[data-i="11"] { animation-name: pill-float-c; }
+  @keyframes pill-float {
+    0%   { transform: translate(0, 0); }
+    50%  { transform: translate(4px, -10px); }
+    100% { transform: translate(0, 0); }
   }
-  .orbit-diamond {
-    fill: none;
-    stroke: var(--gold);
-    stroke-width: 1.5;
+  /* Cursor proximity → pill brightens, scales, and lights its border. */
+  .process-pill.is-hot {
+    background: rgba(201, 168, 76, 0.18);
+    border-color: var(--gold);
+    color: var(--gold);
+    box-shadow: 0 0 30px rgba(201, 168, 76, 0.35),
+                0 4px 20px rgba(0, 0, 0, 0.5);
   }
-  .orbit-diamond--inner { opacity: 0.55; }
-  .orbit-core {
-    fill: var(--gold);
-    animation: tri-pulse 3s ease-in-out infinite;
-    transform-origin: center;
+  /* Smaller inner-ring variant */
+  .process-pill--small {
+    padding: 6px 12px;
+    font-size: 11px;
+    color: var(--text-inverse-dim);
+    background: rgba(14, 11, 7, 0.7);
+    border-color: rgba(201, 168, 76, 0.18);
+    letter-spacing: 0.02em;
   }
-  .orbit-center-label {
-    font-family: var(--font-serif);
-    font-style: italic;
-    fill: var(--gold);
-    font-size: 22px;
-    text-anchor: middle;
-  }
-  .orbit-ring {
-    fill: none;
-    stroke: var(--gold);
-    stroke-width: 0.5;
-    stroke-dasharray: 2 6;
-    opacity: 0.28;
-    transform-origin: 500px 500px;
-    animation: rst-spin 90s linear infinite;
-  }
-  .orbit-ring.inner {
-    stroke-dasharray: 3 8;
-    animation-duration: 70s;
-    animation-direction: reverse;
-    opacity: 0.4;
-  }
-  @keyframes rst-spin {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
+  .process-pill--small.is-hot {
+    color: var(--gold);
+    border-color: var(--gold);
   }
   @media (prefers-reduced-motion: reduce) {
-    .rst-pill, .orbit-ring, .orbit-core { animation: none; }
+    .process-pill { animation: none; }
   }
   @media (max-width: 720px) {
-    .rst-pill { font-size: 11px; padding: 6px 12px; }
+    .constellation { max-width: 380px; }
+    .process-pill { font-size: 11px; padding: 6px 12px; white-space: nowrap; }
+    .process-pill--small { font-size: 9.5px; padding: 4px 8px; }
+    .process-pill.is-hot { box-shadow: 0 0 18px rgba(201, 168, 76, 0.4); }
+    .constellation-center-label { font-size: 14px; }
   }
 </style>
 </head>
@@ -1768,32 +2018,115 @@
      LONG-FORM LP SECTIONS
      ═══════════════════════════════════════════════════════════════ -->
 
-<!-- VSL / video demo — light background so the top of the page isn't
-     one continuous dark banner. -->
-<section class="lp-section lp-section--warm">
-  <div class="lp-container narrow reveal">
-    <p class="lp-eyebrow" style="text-align:center;">See it in action</p>
-    <h2 class="lp-h2" style="text-align:center;">A moment inside the Field.</h2>
-    <p class="lp-lead" style="text-align:center; margin: 0 auto 30px;">
-      A quick look at what one exchange actually feels like. Then choose your doorway above to feel it yourself.
+<!-- Interactive Day 1 / 2 / 3 preview mockup — replaces the previous
+     VSL. People have already tried the Field in the preview chat above,
+     so a second video is redundant. This shows the shape of each day
+     of the paid Reset, one exchange at a time. -->
+<section class="lp-section lp-section--dark">
+  <div class="lp-container reveal">
+    <p class="lp-eyebrow" style="text-align:center; color: var(--gold);">Inside the 72 hours</p>
+    <h2 class="lp-h2" style="text-align:center;">See how the three days <span class="shimmer">move you</span>.</h2>
+    <p class="lp-lead" style="text-align:center; margin: 0 auto 36px; color: var(--text-inverse-dim);">
+      A glimpse of the Field guiding one area of your life from stress back into power.
     </p>
-    <div class="vsl-wrap vsl-wrap--square">
-      <!-- Video hosted in the GitHub repo. For faster + more reliable
-           playback in production, drop this file into public/ so Vercel
-           serves it at /ad3-momentum-square.mp4 and swap the src. -->
-      <video
-        class="vsl-video"
-        src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/ad3-momentum-square.mp4"
-        controls
-        playsinline
-        preload="metadata"
-        muted
-        loop
-        autoplay
-      ></video>
+
+    <div class="day-mockup-wrap reveal reveal-delay-1">
+      <div class="day-mockup" id="day-mockup">
+        <div class="day-mockup-chrome">
+          <div class="day-mockup-dots">
+            <span class="day-mockup-dot"></span>
+            <span class="day-mockup-dot"></span>
+            <span class="day-mockup-dot"></span>
+          </div>
+          <div class="day-mockup-url">thefieldai.app</div>
+        </div>
+        <div class="day-mockup-body" id="day-mockup-body">
+          <!-- content is rendered by JS from DAY_PREVIEWS below -->
+        </div>
+        <div class="day-mockup-tabs" role="tablist" aria-label="Preview each day of the Reset">
+          <button type="button" class="day-mockup-tab active" data-day="1" role="tab" aria-selected="true">Day 1</button>
+          <button type="button" class="day-mockup-tab" data-day="2" role="tab" aria-selected="false">Day 2</button>
+          <button type="button" class="day-mockup-tab" data-day="3" role="tab" aria-selected="false">Day 3</button>
+        </div>
+      </div>
+      <div class="day-mockup-cta-wrap">
+        <a class="day-mockup-cta" href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank" rel="noopener">Start your reset for €9</a>
+      </div>
     </div>
   </div>
 </section>
+
+<script>
+  // Scripted per-day preview content. Kept short — this isn't a demo of
+  // every possible exchange, it's a taste of the shape of each day so
+  // people know what they're paying for.
+  const DAY_PREVIEWS = {
+    1: {
+      eyebrow: "Day 01 · State Reset",
+      title: "Interrupt the loop.",
+      messages: [
+        { role: "field", text: "Before we move anything, we reset your state. Where in your body do you feel the loop right now?" },
+        { role: "user",  text: "In my chest. Tight, like everything is waiting on me." },
+        { role: "field", text: "Stay with it. We interrupt the pattern at the root, not the surface. Breathe here with me for a moment." },
+      ],
+    },
+    2: {
+      eyebrow: "Day 02 · Decision & Action",
+      title: "One clean move.",
+      messages: [
+        { role: "field", text: "One decision has been circling. Name it as simply as you can." },
+        { role: "user",  text: "Whether to raise my prices. I keep coming back to it and then dropping it." },
+        { role: "field", text: "That is what Day 1 was pointing to. Let's design the action that holds it — Mind, Heart, and Body, together." },
+      ],
+    },
+    3: {
+      eyebrow: "Day 03 · Frequency Calibration",
+      title: "Anchor the shift.",
+      messages: [
+        { role: "field", text: "You have stepped into this new state. What does the version of you who lives here see tomorrow morning?" },
+        { role: "user",  text: "Calm. Clear. Not scrambling for the phone before I've even opened my eyes." },
+        { role: "field", text: "Good. That is your imagination scene. Let's build the return thought that brings you back when the old pull tries." },
+      ],
+    },
+  };
+
+  function renderDayPreview(day) {
+    const preview = DAY_PREVIEWS[day];
+    if (!preview) return;
+    const body = document.getElementById("day-mockup-body");
+    if (!body) return;
+    const html = `
+      <div class="day-mockup-content">
+        <div class="day-mockup-eyebrow">${preview.eyebrow}</div>
+        <h3 class="day-mockup-title">${preview.title}</h3>
+        <div class="day-mockup-chat">
+          ${preview.messages.map(m => `
+            <div class="day-mockup-bubble ${m.role}">${m.text}</div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+    body.innerHTML = html;
+  }
+
+  (function initDayMockup() {
+    // Initial render
+    renderDayPreview(1);
+    // Tab wiring
+    document.querySelectorAll(".day-mockup-tab").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const day = Number(btn.dataset.day || 1);
+        document.querySelectorAll(".day-mockup-tab").forEach(b => {
+          b.classList.remove("active");
+          b.setAttribute("aria-selected", "false");
+        });
+        btn.classList.add("active");
+        btn.setAttribute("aria-selected", "true");
+        renderDayPreview(day);
+      });
+    });
+  })();
+</script>
 
 <!-- Methodology — "Not a chatbot. A process." -->
 <section class="lp-section lp-section--dark">
@@ -1801,7 +2134,7 @@
     <div class="mh-b-grid">
       <div class="mh-b-copy">
         <p class="lp-eyebrow">The methodology</p>
-        <h2 class="lp-h2">Not a chatbot. <em>A process.</em></h2>
+        <h2 class="lp-h2">Not a chatbot. <span class="shimmer">A process.</span></h2>
         <p class="lp-lead">
           Most AI coaching products are wrappers around generic language models. The Field is something different. It is a structured experience built on the Human Instrument® framework, a methodology developed over more than ten years by coach, entrepreneur and author Shimrit Nativ, refined with thousands of clients before a single line of AI code was written.
         </p>
@@ -1829,23 +2162,45 @@
           </div>
         </div>
       </div>
-      <div class="mh-b-visual" aria-hidden="true">
-        <svg class="mh-b-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
-          <circle class="tri-ring" cx="200" cy="200" r="170" />
-          <circle class="tri-ring inner" cx="200" cy="200" r="130" />
-          <!-- Triangle connecting M (top), B (bottom-left), H (bottom-right) -->
-          <polygon class="tri-line" points="200,80 100,290 300,290" />
-          <!-- Nodes -->
-          <circle class="tri-node" cx="200" cy="80" r="26" />
-          <text class="tri-node-label" x="200" y="88" text-anchor="middle">M</text>
-          <circle class="tri-node" cx="100" cy="290" r="26" />
-          <text class="tri-node-label" x="100" y="298" text-anchor="middle">B</text>
-          <circle class="tri-node" cx="300" cy="290" r="26" />
-          <text class="tri-node-label" x="300" y="298" text-anchor="middle">H</text>
-          <!-- Pulsing core -->
-          <circle class="tri-core" cx="200" cy="220" r="6" />
-        </svg>
-        <div class="tri-caption">The Instrument</div>
+      <div class="mh-b-visual reveal" aria-hidden="true">
+        <div class="instrument-diagram">
+          <svg viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <radialGradient id="instGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#C9A84C" stop-opacity="0.35"/>
+                <stop offset="100%" stop-color="#C9A84C" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <circle cx="160" cy="160" r="140" fill="url(#instGlow)"/>
+            <!-- Three concentric rings, slow-spinning in alternating directions -->
+            <g class="spin-slow" style="transform-origin: 160px 160px;">
+              <circle cx="160" cy="160" r="130" fill="none" stroke="#C9A84C" stroke-width="0.6" opacity="0.4" stroke-dasharray="3 6"/>
+            </g>
+            <g class="spin-reverse" style="transform-origin: 160px 160px;">
+              <circle cx="160" cy="160" r="95" fill="none" stroke="#C9A84C" stroke-width="0.6" opacity="0.5" stroke-dasharray="2 8"/>
+            </g>
+            <g class="spin-slow" style="transform-origin: 160px 160px; animation-duration: 40s;">
+              <circle cx="160" cy="160" r="60" fill="none" stroke="#C9A84C" stroke-width="0.6" opacity="0.7" stroke-dasharray="1 4"/>
+            </g>
+            <!-- Triangle drawn in on reveal -->
+            <polygon class="draw-stroke" points="160,55 245,210 75,210" fill="none" stroke="#C9A84C" stroke-width="1.2"/>
+            <!-- Mind -->
+            <circle cx="160" cy="55" r="20" fill="#0E0B07" stroke="#C9A84C" stroke-width="1.5"/>
+            <text x="160" y="62" text-anchor="middle" font-family="Cormorant Garamond" font-style="italic" font-size="20" fill="#C9A84C">M</text>
+            <!-- Heart -->
+            <circle cx="245" cy="210" r="20" fill="#0E0B07" stroke="#C9A84C" stroke-width="1.5"/>
+            <text x="245" y="217" text-anchor="middle" font-family="Cormorant Garamond" font-style="italic" font-size="20" fill="#C9A84C">H</text>
+            <!-- Body -->
+            <circle cx="75" cy="210" r="20" fill="#0E0B07" stroke="#C9A84C" stroke-width="1.5"/>
+            <text x="75" y="217" text-anchor="middle" font-family="Cormorant Garamond" font-style="italic" font-size="20" fill="#C9A84C">B</text>
+            <!-- Center — pulsing gold core (SMIL) -->
+            <circle cx="160" cy="160" r="8" fill="#C9A84C">
+              <animate attributeName="r" values="6;10;6" dur="3s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.8;1;0.8" dur="3s" repeatCount="indefinite" />
+            </circle>
+            <text x="160" y="280" text-anchor="middle" font-family="Inter" font-size="10" fill="#C9A84C" letter-spacing="2">THE INSTRUMENT</text>
+          </svg>
+        </div>
       </div>
     </div>
   </div>
@@ -1855,7 +2210,7 @@
 <section class="lp-section">
   <div class="lp-container narrow reveal" style="text-align:center;">
     <p class="lp-eyebrow">Reset. Decide. Calibrate.</p>
-    <h2 class="lp-h2">Not another thing to understand.<br/><em>Something to move.</em></h2>
+    <h2 class="lp-h2">Not another thing to understand.<br/><span class="shimmer">Something to move.</span></h2>
     <p class="lp-lead" style="margin: 0 auto 24px;">
       Stress, frustration and depletion do not usually disappear because you understand them better. They shift when you interrupt the state that keeps recreating the same response, the same delay, and the same loop.
     </p>
@@ -1871,7 +2226,7 @@
     <div class="orbit-grid">
       <div class="orbit-copy">
         <p class="lp-eyebrow">What the Reset unlocks</p>
-        <h2 class="lp-h2">Three days that <em>move you.</em></h2>
+        <h2 class="lp-h2">Three days that <span class="shimmer">move you.</span></h2>
         <p class="lp-lead">
           The Reset is not information. It is a state change. Members walk out of the 72 hours holding one interrupted pattern, one aligned decision, and a nervous system that is no longer running the old loop on autopilot.
         </p>
@@ -1879,55 +2234,74 @@
           These are the shifts people name most often, in their own words, after Day 3.
         </p>
       </div>
-      <div class="orbit-stage" aria-hidden="true">
-        <div class="orbit-inner">
-          <!-- SVG background: rings, central diamond, label. viewBox 1000x1000
-               scales inside orbit-inner (which is the actual square box). -->
-          <svg class="orbit-svg" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-            <defs>
-              <radialGradient id="rst-glow" cx="50%" cy="50%" r="50%">
-                <stop offset="0%"   stop-color="#C9A84C" stop-opacity="0.32"/>
-                <stop offset="45%"  stop-color="#C9A84C" stop-opacity="0.08"/>
-                <stop offset="100%" stop-color="#C9A84C" stop-opacity="0"/>
-              </radialGradient>
-            </defs>
-            <circle cx="500" cy="500" r="280" fill="url(#rst-glow)">
-              <animate attributeName="r" values="260;310;260" dur="7s" repeatCount="indefinite" />
-              <animate attributeName="opacity" values="0.55;1;0.55" dur="7s" repeatCount="indefinite" />
-            </circle>
-            <circle class="orbit-ring"       cx="500" cy="500" r="360" />
-            <circle class="orbit-ring inner" cx="500" cy="500" r="220" />
-            <!-- Center node — MYP logo with breathing halo. Same treatment
-                 the-field-website uses for its constellation center. -->
-            <circle cx="500" cy="500" r="78" fill="#0E0B07" stroke="#C9A84C" stroke-width="1.5"/>
-            <circle cx="500" cy="500" r="66" fill="rgba(201, 168, 76, 0.18)">
-              <animate attributeName="r" values="60;72;60" dur="3.5s" repeatCount="indefinite" />
-              <animate attributeName="opacity" values="0.55;0.85;0.55" dur="3.5s" repeatCount="indefinite" />
-            </circle>
-            <image href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png"
-                   x="430" y="430" width="140" height="140" preserveAspectRatio="xMidYMid meet" />
-            <text class="orbit-center-label" x="500" y="410">The Reset</text>
-          </svg>
+      <!-- Constellation — ported verbatim from hello.thefieldai.app.
+           SVG holds the background glow, spinning rings, connector lines,
+           and the center hub. HTML pills float on top for readable
+           labels + magnetic cursor pull. -->
+      <div class="constellation" id="reset-constellation">
+        <svg viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <radialGradient id="rstConstGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"   stop-color="#C9A84C" stop-opacity="0.35"/>
+              <stop offset="40%"  stop-color="#C9A84C" stop-opacity="0.08"/>
+              <stop offset="100%" stop-color="#C9A84C" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <!-- Pulsing background glow -->
+          <circle cx="500" cy="500" r="280" fill="url(#rstConstGlow)">
+            <animate attributeName="r" values="260;310;260" dur="7s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.55;1;0.55" dur="7s" repeatCount="indefinite" />
+          </circle>
+          <!-- Three concentric guide rings, slow-spinning -->
+          <g class="spin-slow" style="transform-origin: 500px 500px; animation-duration: 90s;">
+            <circle cx="500" cy="500" r="260" fill="none" stroke="#C9A84C" stroke-width="0.5" opacity="0.22" stroke-dasharray="2 6"/>
+          </g>
+          <g class="spin-reverse" style="transform-origin: 500px 500px; animation-duration: 70s;">
+            <circle cx="500" cy="500" r="180" fill="none" stroke="#C9A84C" stroke-width="0.5" opacity="0.28" stroke-dasharray="3 8"/>
+          </g>
+          <g class="spin-slow" style="transform-origin: 500px 500px; animation-duration: 50s;">
+            <circle cx="500" cy="500" r="110" fill="none" stroke="#C9A84C" stroke-width="0.5" opacity="0.45" stroke-dasharray="1 3"/>
+          </g>
+          <!-- Connector lines from center to each pill position -->
+          <!-- Primary orbit (r ≈ 360) -->
+          <line class="constellation-line" x1="500" y1="500" x2="500" y2="140"/>
+          <line class="constellation-line" x1="500" y1="500" x2="780" y2="320"/>
+          <line class="constellation-line" x1="500" y1="500" x2="860" y2="500"/>
+          <line class="constellation-line" x1="500" y1="500" x2="780" y2="680"/>
+          <line class="constellation-line" x1="500" y1="500" x2="500" y2="860"/>
+          <line class="constellation-line" x1="500" y1="500" x2="220" y2="680"/>
+          <line class="constellation-line" x1="500" y1="500" x2="140" y2="500"/>
+          <line class="constellation-line" x1="500" y1="500" x2="220" y2="320"/>
+          <!-- Secondary orbit (r ≈ 230) -->
+          <line class="constellation-line" x1="500" y1="500" x2="663" y2="338"/>
+          <line class="constellation-line" x1="500" y1="500" x2="663" y2="662"/>
+          <line class="constellation-line" x1="500" y1="500" x2="337" y2="662"/>
+          <line class="constellation-line" x1="500" y1="500" x2="337" y2="338"/>
+          <!-- Center hub -->
+          <circle cx="500" cy="500" r="78" fill="#0E0B07" stroke="#C9A84C" stroke-width="1.5"/>
+          <circle cx="500" cy="500" r="66" fill="rgba(201, 168, 76, 0.18)">
+            <animate attributeName="r" values="60;72;60" dur="3.5s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.55;0.85;0.55" dur="3.5s" repeatCount="indefinite" />
+          </circle>
+          <image href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png"
+                 x="430" y="430" width="140" height="140" preserveAspectRatio="xMidYMid meet" />
+          <text class="constellation-center-label" x="500" y="410">The Reset</text>
+        </svg>
 
-          <!-- Floating pills. Labels pulled directly from the Reset LP:
-               Day 1 (State Reset) → interrupt the loop, locate the pattern
-               Day 2 (Decision & Action) → aligned decision, one grounded move
-               Day 3 (Power Calibration) → frequency shift, shift that holds
-               Plus overall Reset outcomes (back to power, new baseline). -->
-          <div class="rst-orbit" style="top: 10%;   left: 50%;">  <span class="rst-pill" data-i="0"  style="--dur: 7s;   --del: 0s;">Interrupt the loop</span></div>
-          <div class="rst-orbit" style="top: 18.5%; left: 74.6%;"><span class="rst-pill" data-i="1"  style="--dur: 8s;   --del: -1s;">One aligned decision</span></div>
-          <div class="rst-orbit" style="top: 50%;   left: 88%;">  <span class="rst-pill" data-i="2"  style="--dur: 7.5s; --del: -2s;">State reset</span></div>
-          <div class="rst-orbit" style="top: 81.5%; left: 74.6%;"><span class="rst-pill" data-i="3"  style="--dur: 8.5s; --del: -0.5s;">One grounded move</span></div>
-          <div class="rst-orbit" style="top: 90%;   left: 50%;">  <span class="rst-pill" data-i="4"  style="--dur: 7s;   --del: -1.5s;">Power calibration</span></div>
-          <div class="rst-orbit" style="top: 81.5%; left: 25.4%;"><span class="rst-pill" data-i="5"  style="--dur: 8s;   --del: -3s;">Back to power</span></div>
-          <div class="rst-orbit" style="top: 50%;   left: 12%;">  <span class="rst-pill" data-i="6"  style="--dur: 7.2s; --del: -2.5s;">Real change in life</span></div>
-          <div class="rst-orbit" style="top: 18.5%; left: 25.4%;"><span class="rst-pill" data-i="7"  style="--dur: 8.2s; --del: -1s;">Frequency shift</span></div>
-          <!-- Inner ring (4 shorter labels closer to center) -->
-          <div class="rst-orbit" style="top: 31.5%; left: 57.7%;"><span class="rst-pill" data-i="8"  style="--dur: 5.5s; --del: -1.2s;">Locate the pattern</span></div>
-          <div class="rst-orbit" style="top: 57.7%; left: 68.5%;"><span class="rst-pill" data-i="9"  style="--dur: 6.2s; --del: -2.2s;">Move differently</span></div>
-          <div class="rst-orbit" style="top: 68.5%; left: 42.3%;"><span class="rst-pill" data-i="10" style="--dur: 5.8s; --del: -0.4s;">Shift that holds</span></div>
-          <div class="rst-orbit" style="top: 42.3%; left: 31.5%;"><span class="rst-pill" data-i="11" style="--dur: 6s;   --del: -1.8s;">New baseline</span></div>
-        </div>
+        <!-- Primary orbit (8 pills, ~40% radius) -->
+        <div class="process-orbit" style="top: 10%;   left: 50%;">  <span class="process-magnet"><span class="process-pill" data-i="0"  style="--float-duration: 6s;   animation-delay: 0s;">Interrupt the loop</span></span></div>
+        <div class="process-orbit" style="top: 18.5%; left: 74.6%;"><span class="process-magnet"><span class="process-pill" data-i="1"  style="--float-duration: 7s;   animation-delay: -1s;">One aligned decision</span></span></div>
+        <div class="process-orbit" style="top: 50%;   left: 88%;">  <span class="process-magnet"><span class="process-pill" data-i="2"  style="--float-duration: 8s;   animation-delay: -2s;">State reset</span></span></div>
+        <div class="process-orbit" style="top: 81.5%; left: 74.6%;"><span class="process-magnet"><span class="process-pill" data-i="3"  style="--float-duration: 6.5s; animation-delay: -0.5s;">One grounded move</span></span></div>
+        <div class="process-orbit" style="top: 90%;   left: 50%;">  <span class="process-magnet"><span class="process-pill" data-i="4"  style="--float-duration: 7.5s; animation-delay: -3s;">Power calibration</span></span></div>
+        <div class="process-orbit" style="top: 81.5%; left: 25.4%;"><span class="process-magnet"><span class="process-pill" data-i="5"  style="--float-duration: 6s;   animation-delay: -1.5s;">Back to power</span></span></div>
+        <div class="process-orbit" style="top: 50%;   left: 12%;">  <span class="process-magnet"><span class="process-pill" data-i="6"  style="--float-duration: 7s;   animation-delay: -2.5s;">Real change in life</span></span></div>
+        <div class="process-orbit" style="top: 18.5%; left: 25.4%;"><span class="process-magnet"><span class="process-pill" data-i="7"  style="--float-duration: 8s;   animation-delay: -0.8s;">Frequency shift</span></span></div>
+        <!-- Secondary orbit (4 smaller pills, ~25% radius) -->
+        <div class="process-orbit" style="top: 31.5%; left: 57.7%;"><span class="process-magnet"><span class="process-pill process-pill--small" data-i="8"  style="--float-duration: 5.5s; animation-delay: -1.2s;">Locate the pattern</span></span></div>
+        <div class="process-orbit" style="top: 57.7%; left: 68.5%;"><span class="process-magnet"><span class="process-pill process-pill--small" data-i="9"  style="--float-duration: 6.2s; animation-delay: -2.2s;">Move differently</span></span></div>
+        <div class="process-orbit" style="top: 68.5%; left: 42.3%;"><span class="process-magnet"><span class="process-pill process-pill--small" data-i="10" style="--float-duration: 5.8s; animation-delay: -0.4s;">Shift that holds</span></span></div>
+        <div class="process-orbit" style="top: 42.3%; left: 31.5%;"><span class="process-magnet"><span class="process-pill process-pill--small" data-i="11" style="--float-duration: 6s;   animation-delay: -1.8s;">New baseline</span></span></div>
       </div>
     </div>
   </div>
@@ -1942,19 +2316,19 @@
       Bring one area of your life into the process and let it guide you from stress and depletion back into power. The five-minute preview shows you the doorway. The Reset is the walk-through.
     </p>
     <div class="steps-grid">
-      <div class="step reveal">
+      <div class="step lift reveal">
         <div class="step-num">01</div>
         <h3 class="step-title">State Reset</h3>
         <p class="step-desc">Interrupt the loop that keeps recreating the same response. The Field walks you through locating what has actually been leading you — the pattern under the pattern — and resets your inner state before you touch anything else.</p>
         <p class="step-outcome"><strong>You leave Day 1 with:</strong> the specific pattern named, and the state that runs it interrupted.</p>
       </div>
-      <div class="step reveal">
+      <div class="step lift reveal">
         <div class="step-num">02</div>
         <h3 class="step-title">Decision &amp; Action</h3>
         <p class="step-desc">From the new state, one decision surfaces that has been postponed or blurred. The Field helps you align it and land one grounded, aligned action — not forced, not performed. Something you can actually move on today.</p>
         <p class="step-outcome"><strong>You leave Day 2 with:</strong> one aligned decision and one real move made in your actual life.</p>
       </div>
-      <div class="step reveal">
+      <div class="step lift reveal">
         <div class="step-num">03</div>
         <h3 class="step-title">Power Calibration</h3>
         <p class="step-desc">The reset only lasts if the frequency holds. Day 3 calibrates you to the reality you are stepping into so the new state becomes your baseline — not a peak you fall away from once the container closes.</p>
@@ -2059,22 +2433,22 @@
     <h2 class="lp-h2">Real words from members.</h2>
     <p class="lp-lead" style="margin: 0 auto 8px;">Moving through the 72-Hour Power Reset. All from the first weeks of the Field being live.</p>
     <div class="testimonials-grid">
-      <div class="quote-card reveal">
+      <div class="quote-card lift reveal">
         <img class="quote-avatar" src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/testimonial-pics/Anne.jpg" alt="Anne" loading="lazy" />
         <p class="quote-body">"What an amazing experience so far! It is very <strong>scary accurate and thus powerful.</strong> I like the format for the different days, <strong>made me reflect deeper</strong> during the days. Love it!"</p>
         <div class="quote-name">Anne</div>
       </div>
-      <div class="quote-card reveal">
+      <div class="quote-card lift reveal">
         <img class="quote-avatar" src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/testimonial-pics/Maria.png" alt="Maria" loading="lazy" />
         <p class="quote-body">"I just finished day 1. <strong>It feels soooo good.</strong> I am already loving this AI of ours! It has been an amazing session."</p>
         <div class="quote-name">Maria</div>
       </div>
-      <div class="quote-card reveal">
+      <div class="quote-card lift reveal">
         <img class="quote-avatar" src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/testimonial-pics/Antonella.jpg" alt="Antonella" loading="lazy" />
         <p class="quote-body">"I am very concentrated… I find myself talking or thinking in English. <strong>My capability to stop myself as soon as the loop arrives, to see better and choose from the real me, has increased.</strong> And I feel proud of my last days."</p>
         <div class="quote-name">Antonella</div>
       </div>
-      <div class="quote-card reveal">
+      <div class="quote-card lift reveal">
         <img class="quote-avatar" src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/testimonial-pics/Lisa.png" alt="Lisa" loading="lazy" />
         <p class="quote-body">"I was skeptical but excited about using AI. I'm just starting but <strong>so surprised about the positive experience I had.</strong> Looking forward to my next experience with The Field!"</p>
         <div class="quote-name">Lisa</div>
@@ -2586,6 +2960,118 @@
     document.querySelectorAll(".reveal").forEach(el => io.observe(el));
   }
 
+  // Constellation reveal — same treatment as hello.thefieldai.app. When
+  // the constellation scrolls into view, the connector lines fade in
+  // and each pill opacity-transitions in sequence via CSS delays.
+  function initConstellation() {
+    const stage = document.getElementById("reset-constellation");
+    if (!stage) return;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          stage.classList.add("is-revealed");
+          io.disconnect();
+        }
+      });
+    }, { rootMargin: "0px 0px -100px 0px", threshold: 0.15 });
+    io.observe(stage);
+  }
+
+  // Cursor proximity — every mousemove, compute distance from cursor to
+  // each pill. Any pill inside HOT_RADIUS gets .is-hot (border lights
+  // gold + glow) and its .process-magnet wrapper gets a small transform
+  // pulling it toward the cursor. Ported from hello.thefieldai.app.
+  function initConstellationProximity() {
+    const stage = document.getElementById("reset-constellation");
+    if (!stage) return;
+    const pills = Array.from(stage.querySelectorAll(".process-pill"));
+    if (!pills.length) return;
+    // Skip proximity on touch devices — mousemove doesn't fire reliably,
+    // and the auto-cycle handles interactivity there.
+    const isTouch = window.matchMedia("(hover: none), (pointer: coarse)").matches;
+    if (isTouch) return;
+    const HOT_RADIUS = 120;
+    const PULL_STRENGTH = 14;
+    let ticking = false;
+    document.addEventListener("mousemove", (e) => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const stageRect = stage.getBoundingClientRect();
+        const margin = 200;
+        if (e.clientX < stageRect.left - margin ||
+            e.clientX > stageRect.right + margin ||
+            e.clientY < stageRect.top - margin ||
+            e.clientY > stageRect.bottom + margin) {
+          pills.forEach((pill) => {
+            if (pill.classList.contains("is-hot")) {
+              pill.classList.remove("is-hot");
+              const magnet = pill.parentElement;
+              if (magnet) magnet.style.transform = "";
+            }
+          });
+          ticking = false;
+          return;
+        }
+        pills.forEach((pill) => {
+          const magnet = pill.parentElement;
+          const rect = pill.getBoundingClientRect();
+          const cx = rect.left + rect.width / 2;
+          const cy = rect.top + rect.height / 2;
+          const dx = e.clientX - cx;
+          const dy = e.clientY - cy;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < HOT_RADIUS) {
+            pill.classList.add("is-hot");
+            const pull = (1 - dist / HOT_RADIUS) * PULL_STRENGTH;
+            const ang = Math.atan2(dy, dx);
+            if (magnet) {
+              magnet.style.transform =
+                `translate(${Math.cos(ang) * pull}px, ${Math.sin(ang) * pull}px)`;
+            }
+          } else {
+            pill.classList.remove("is-hot");
+            if (magnet) magnet.style.transform = "";
+          }
+        });
+        ticking = false;
+      });
+    });
+  }
+
+  // Touch/mobile auto-cycle — mousemove doesn't work reliably, so on
+  // touch devices rotate the is-hot class through the pills so the orbit
+  // still reads as alive. Ported from hello.thefieldai.app.
+  function initConstellationAutoCycle() {
+    const stage = document.getElementById("reset-constellation");
+    if (!stage) return;
+    const pills = Array.from(stage.querySelectorAll(".process-pill"));
+    if (!pills.length) return;
+    const isTouch = window.matchMedia("(hover: none), (pointer: coarse)").matches;
+    if (!isTouch) return;
+    let prev = null;
+    function startCycle() {
+      setInterval(() => {
+        if (prev) prev.classList.remove("is-hot");
+        let next;
+        do {
+          next = pills[Math.floor(Math.random() * pills.length)];
+        } while (next === prev && pills.length > 1);
+        next.classList.add("is-hot");
+        prev = next;
+      }, 1400);
+    }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          startCycle();
+          io.disconnect();
+        }
+      });
+    }, { threshold: 0.2 });
+    io.observe(stage);
+  }
+
   function initFaq() {
     document.querySelectorAll(".faq-item").forEach(item => {
       const q = item.querySelector(".faq-q");
@@ -2604,6 +3090,9 @@
     renderGreetingAndChips();
     initReveals();
     initFaq();
+    initConstellation();
+    initConstellationProximity();
+    initConstellationAutoCycle();
 
     const input = $("cw-input");
     if (input) {
