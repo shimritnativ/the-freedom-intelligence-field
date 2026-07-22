@@ -1,6 +1,6 @@
 // api/free-trial/message.js
 //
-// The core turn of the "5-Minute Preview". Takes a user message, checks
+// The core turn of the "Free Preview of The Field". Takes a user message, checks
 // the trial is still valid (not expired, not over the 6-exchange budget),
 // calls Claude with the mini-Field prompt, saves both sides, returns the
 // assistant's reply plus how many exchanges are left.
