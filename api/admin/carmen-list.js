@@ -107,6 +107,14 @@ export default async function handler(req, res) {
           )
           OR COALESCE(mpo.is_certification, false)
         ) AS is_certification,
+        -- MYP Business Club — tag OR manual override.
+        (
+          EXISTS (
+            SELECT 1 FROM jsonb_array_elements_text(COALESCE(mgt.tags, '[]'::jsonb)) t(tag)
+            WHERE LOWER(t.tag) LIKE '%business club%'
+          )
+          OR COALESCE(mpo.is_business_club, false)
+        ) AS is_business_club,
         mgt.updated_at AS tags_synced_at,
         -- Last DM date pulled from the GHL custom field named "last dm date"
         -- (case-insensitive). If Shimrit renames it we broaden the match here.
@@ -191,6 +199,7 @@ export default async function handler(req, res) {
       is_rise_current: !!r.is_rise_current,
       is_rise_past: !!r.is_rise_past,
       is_certification: !!r.is_certification,
+      is_business_club: !!r.is_business_club,
       tags_synced_at: r.tags_synced_at || null,
       has_tag_summary: !!r.has_tag_summary,
       has_notes: !!r.has_notes,
