@@ -53,17 +53,23 @@
   <style>
     :root {
       /* Warmer, softer palette matched to Carmen's page. The old gold
-         (#C9A84C) read as bright yellow against cream and felt jumpy;
+         (#B99A5C) read as bright yellow against cream and felt jumpy;
          moving to #B99A5C keeps the accent recognizable but easier on
          the eye. Borders are now a solid warm beige (#E8DFC8) instead
          of a semi-transparent gold — cleaner lines that stop feeling
          like a stain against long white sections. --bg-warm is a new
          cream tone reserved for table headers and filter strips so they
-         separate from cards without pulling color-eye. */
+         separate from cards without pulling color-eye.
+         2026-07-22 audit: --panel toned from #F4ECD0 → #EDE4C6 (~15%
+         less yellow saturation) so KPI backgrounds and hover strips
+         stop reading as "yellow boxes" against the cream page. Also
+         swapped --kpi-bg from --panel to --bg-card so plain KPIs sit
+         calmly on white; the revenue KPI keeps its warm gold treatment
+         via the .kpi-revenue gradient. */
       --bg: #FAF6EE;
       --bg-card: #FFFFFF;
       --bg-warm: #F5EFE0;
-      --panel: #F4ECD0;
+      --panel: #EDE4C6;
       --gold: #B99A5C;
       --gold-soft: rgba(185, 154, 92, 0.10);
       --gold-line: rgba(185, 154, 92, 0.28);
@@ -76,7 +82,7 @@
       --green: #4A7C3A;
       --red: #C03A2B;
       --shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
-      --kpi-bg: var(--panel);
+      --kpi-bg: var(--bg-card);
     }
     [data-theme="dark"] {
       /* Dark palette: near-black base with only a whisper of warmth, so the
@@ -252,12 +258,12 @@
     .skel-line {
       display: block;
       border-radius: 4px;
-      background: rgba(201, 168, 76, 0.14);
+      background: rgba(185, 154, 92, 0.14);
       background-image: linear-gradient(
         90deg,
-        rgba(201, 168, 76, 0.10) 0%,
-        rgba(201, 168, 76, 0.24) 50%,
-        rgba(201, 168, 76, 0.10) 100%
+        rgba(185, 154, 92, 0.10) 0%,
+        rgba(185, 154, 92, 0.24) 50%,
+        rgba(185, 154, 92, 0.10) 100%
       );
       background-size: 200px 100%;
       background-repeat: no-repeat;
@@ -398,7 +404,7 @@
     .kpi.clickable:hover {
       border-color: var(--gold);
       transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(201, 168, 76, 0.18);
+      box-shadow: 0 8px 24px rgba(185, 154, 92, 0.18);
     }
     .kpi.clickable::after {
       content: "↓";
@@ -412,7 +418,7 @@
     }
     .kpi.clickable:hover::after { opacity: 1; }
     .kpi.kpi-revenue {
-      background: linear-gradient(135deg, var(--gold-soft) 0%, var(--panel) 100%);
+      background: linear-gradient(135deg, var(--gold-soft) 0%, var(--bg-warm) 100%);
       border-color: var(--gold);
     }
     /* Flash effect when scrolled-to via KPI card click */
@@ -421,12 +427,12 @@
     }
     @keyframes section-flash {
       0% { box-shadow: 0 0 0 4px var(--gold), 0 12px 40px rgba(0, 0, 0, 0.08); }
-      100% { box-shadow: 0 0 0 0 rgba(201, 168, 76, 0), 0 12px 40px rgba(0, 0, 0, 0.08); }
+      100% { box-shadow: 0 0 0 0 rgba(185, 154, 92, 0), 0 12px 40px rgba(0, 0, 0, 0.08); }
     }
 
     /* Today's Highlights strip */
     .highlights {
-      background: linear-gradient(135deg, var(--gold-soft) 0%, var(--panel) 100%);
+      background: linear-gradient(135deg, var(--gold-soft) 0%, var(--bg-warm) 100%);
       border: 1px solid var(--gold);
       border-radius: 14px;
       padding: 18px 22px 16px;
@@ -880,7 +886,7 @@
         gap: 12px;
         padding: 7px 0;
         border: none !important;
-        border-bottom: 1px solid rgba(201, 168, 76, 0.08) !important;
+        border-bottom: 1px solid rgba(185, 154, 92, 0.08) !important;
         font-size: 13px;
         white-space: normal;
         text-align: right;
@@ -936,7 +942,7 @@
         gap: 12px;
         padding: 7px 0;
         border: none !important;
-        border-bottom: 1px solid rgba(201, 168, 76, 0.08) !important;
+        border-bottom: 1px solid rgba(185, 154, 92, 0.08) !important;
         font-size: 13px;
         white-space: normal;
         text-align: right;
@@ -1244,7 +1250,7 @@
       border-top: 1px solid rgba(255, 255, 255, 0.1);
       margin: 6px 0;
     }
-    .tier-preview { background: rgba(201, 168, 76, 0.18); color: #8B6F2F; }
+    .tier-preview { background: rgba(185, 154, 92, 0.18); color: #8B6F2F; }
     .tier-full { background: rgba(74, 124, 58, 0.18); color: var(--green); }
     /* Comp pill — sits inline next to emails of Unlimited users who haven't
        actually paid (team accounts, GEO100 comps, admin-granted access). */
@@ -1872,7 +1878,7 @@
       justify-content: space-between;
       gap: 8px;
     }
-    .tab-btn:hover { color: var(--text); background: rgba(201, 168, 76, 0.08); }
+    .tab-btn:hover { color: var(--text); background: rgba(185, 154, 92, 0.08); }
     .tab-btn--active {
       color: var(--text);
       background: var(--gold-soft);
@@ -5541,7 +5547,7 @@
     }
     function renderChannelPnlSkeleton() {
       const row = () => `
-        <div style="background: var(--bg-card, #FFFFFF); border: 1px solid var(--gold-line, rgba(201, 168, 76, 0.28)); border-radius: 12px; padding: 12px 16px;">
+        <div style="background: var(--bg-card, #FFFFFF); border: 1px solid var(--gold-line, rgba(185, 154, 92, 0.28)); border-radius: 12px; padding: 12px 16px;">
           <div class="skel-line" style="width: 30%; height: 15px; margin-bottom: 12px;"></div>
           <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
             <div><div class="skel-line" style="width: 55%; height: 10px; margin-bottom: 6px;"></div><div class="skel-line" style="width: 75%; height: 20px;"></div></div>
@@ -5565,7 +5571,7 @@
       `;
     }
     function renderChannelDeepDiveSkeleton() {
-      const cardSkel = () => `<div style="background: var(--bg-card, #FFFFFF); border: 1px solid var(--gold-line, rgba(201, 168, 76, 0.28)); border-radius: 12px; padding: 14px 16px;"><div class="skel-line" style="width: 30%; height: 15px; margin-bottom: 12px;"></div><div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;">${'<div><div class="skel-line" style="width: 60%; height: 9px; margin-bottom: 6px;"></div><div class="skel-line" style="width: 65%; height: 16px;"></div></div>'.repeat(5)}</div></div>`;
+      const cardSkel = () => `<div style="background: var(--bg-card, #FFFFFF); border: 1px solid var(--gold-line, rgba(185, 154, 92, 0.28)); border-radius: 12px; padding: 14px 16px;"><div class="skel-line" style="width: 30%; height: 15px; margin-bottom: 12px;"></div><div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;">${'<div><div class="skel-line" style="width: 60%; height: 9px; margin-bottom: 6px;"></div><div class="skel-line" style="width: 65%; height: 16px;"></div></div>'.repeat(5)}</div></div>`;
       return `
         <div class="section is-loading" style="background: var(--bg-warm, #F4ECD0); border: 1px solid var(--gold-line); border-radius: 12px; padding: 20px 22px; margin-bottom: 22px;">
           <div style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 22px; color: var(--text-mute); margin-bottom: 8px;">Channel deep dive</div>
@@ -5654,7 +5660,7 @@
           : `No revenue yet &middot; ${buyers} buyer${buyers === 1 ? '' : 's'}`;
 
         return `
-          <div style="background: var(--bg-card, #FFFFFF); border: 1px solid var(--gold-line, rgba(201, 168, 76, 0.28)); border-radius: 12px; padding: 12px 16px;">
+          <div style="background: var(--bg-card, #FFFFFF); border: 1px solid var(--gold-line, rgba(185, 154, 92, 0.28)); border-radius: 12px; padding: 12px 16px;">
             <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; gap: 12px; flex-wrap: wrap;">
               <div style="display: flex; align-items: baseline; gap: 10px; min-width: 0;">
                 <span style="font-weight: 700; font-size: 15px; color: var(--text);">${escapeHtml(ch.label)}</span>
@@ -5680,7 +5686,7 @@
                 <div style="font-size: 17px; font-weight: 700; margin-top: 2px; color: ${roasColor}; font-variant-numeric: tabular-nums;">${roasStr}</div>
               </div>
             </div>
-            <div style="font-size: 11.5px; color: var(--text-dim); border-top: 1px solid rgba(201, 168, 76, 0.15); padding-top: 6px; margin-top: 2px;">
+            <div style="font-size: 11.5px; color: var(--text-dim); border-top: 1px solid rgba(185, 154, 92, 0.15); padding-top: 6px; margin-top: 2px;">
               ${breakdownLine}
             </div>
           </div>
@@ -5785,7 +5791,7 @@
         const paybackText = e.paybackRatio == null ? '—' : (e.paybackRatio >= 1 ? 'Immediate' : 'Not yet');
         const paybackColor = e.paybackRatio == null ? muted : (e.paybackRatio >= 1 ? goodColor : badColor);
         return `
-          <div style="background: var(--bg-card, #FFFFFF); border: 1px solid var(--gold-line, rgba(201, 168, 76, 0.28)); border-radius: 12px; padding: 14px 16px;">
+          <div style="background: var(--bg-card, #FFFFFF); border: 1px solid var(--gold-line, rgba(185, 154, 92, 0.28)); border-radius: 12px; padding: 14px 16px;">
             <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;">
               <span style="font-weight: 700; font-size: 15px; color: var(--text);">${escapeHtml(e.label)}</span>
               <span style="font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim);">${escapeHtml(e.sub)}</span>
@@ -5818,7 +5824,7 @@
       }).join('');
 
       // ---- Section 2: Product mix per channel (stacked bars) ----
-      const resetSwatch = '#C9A84C';
+      const resetSwatch = '#B99A5C';
       const activationSwatch = '#7A6B3F';
       const unlimitedSwatch = '#4A7C3A';
       const mixRows = enriched.map(e => {
@@ -5868,14 +5874,14 @@
             <div style="font-size: 13px; font-weight: 700; margin-bottom: 10px; color: var(--text);">${escapeHtml(e.label)}</div>
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
               <div style="flex: 1; height: 22px; background: var(--bg-warm, #F4ECD0); border-radius: 3px; position: relative;">
-                <div style="height: 100%; width: 100%; background: rgba(201, 168, 76, 0.5); border-radius: 3px;"></div>
+                <div style="height: 100%; width: 100%; background: rgba(185, 154, 92, 0.5); border-radius: 3px;"></div>
                 <span style="position: absolute; left: 6px; top: 4px; font-size: 11px; font-weight: 600; color: var(--text);">${fmtNum(e.signups)} signup${e.signups === 1 ? '' : 's'}</span>
               </div>
             </div>
             <div style="font-size: 10px; color: ${s2bColor}; margin-bottom: 6px;">↓ ${pct1(e.signupToBuyPct)} convert</div>
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
               <div style="flex: 1; height: 22px; background: var(--bg-warm, #F4ECD0); border-radius: 3px; position: relative;">
-                <div style="height: 100%; width: ${Math.max(0, buyerBarPct)}%; background: rgba(201, 168, 76, 0.75); border-radius: 3px;"></div>
+                <div style="height: 100%; width: ${Math.max(0, buyerBarPct)}%; background: rgba(185, 154, 92, 0.75); border-radius: 3px;"></div>
                 <span style="position: absolute; left: 6px; top: 4px; font-size: 11px; font-weight: 600; color: ${e.buyers > 0 ? 'var(--text)' : muted};">${fmtNum(e.buyers)} buyer${e.buyers === 1 ? '' : 's'}</span>
               </div>
             </div>
@@ -5908,7 +5914,7 @@
           </div>
 
           ${sectionHeader('2', 'Product mix per channel')}
-          <div style="background: var(--bg-card, #FFFFFF); border: 1px solid var(--gold-line, rgba(201, 168, 76, 0.28)); border-radius: 12px; padding: 14px 16px; margin-bottom: 22px;">
+          <div style="background: var(--bg-card, #FFFFFF); border: 1px solid var(--gold-line, rgba(185, 154, 92, 0.28)); border-radius: 12px; padding: 14px 16px; margin-bottom: 22px;">
             <div style="display: flex; align-items: center; margin-bottom: 12px; gap: 12px; flex-wrap: wrap;">
               <span style="font-size: 11px; display: inline-flex; align-items: center; gap: 5px; color: var(--text);"><span style="display: inline-block; width: 10px; height: 10px; background: ${resetSwatch}; border-radius: 2px;"></span>Reset</span>
               <span style="font-size: 11px; display: inline-flex; align-items: center; gap: 5px; color: var(--text);"><span style="display: inline-block; width: 10px; height: 10px; background: ${activationSwatch}; border-radius: 2px;"></span>Activation</span>
@@ -5918,7 +5924,7 @@
           </div>
 
           ${sectionHeader('3', 'Conversion funnel per channel')}
-          <div style="background: var(--bg-card, #FFFFFF); border: 1px solid var(--gold-line, rgba(201, 168, 76, 0.28)); border-radius: 12px; padding: 14px 16px;">
+          <div style="background: var(--bg-card, #FFFFFF); border: 1px solid var(--gold-line, rgba(185, 154, 92, 0.28)); border-radius: 12px; padding: 14px 16px;">
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
               ${funnels}
             </div>
@@ -7060,7 +7066,7 @@
           const ctaRateFmt = a.cta_rate == null ? '<span style="color: var(--text-mute);">—</span>' : pct(a.cta_rate);
           const purchRateFmt = a.purchase_rate == null ? '<span style="color: var(--text-mute);">—</span>' : pct(a.purchase_rate);
           const campaignBadge = a.campaign
-            ? `<span class="tier-badge" style="background: rgba(201, 168, 76, 0.12); color: var(--gold); border-color: rgba(201, 168, 76, 0.3); font-size: 10px;">${escapeHtml(a.campaign)}</span>`
+            ? `<span class="tier-badge" style="background: rgba(185, 154, 92, 0.12); color: var(--gold); border-color: rgba(185, 154, 92, 0.3); font-size: 10px;">${escapeHtml(a.campaign)}</span>`
             : '';
           const parsed = parseAdName(a.ad_name);
           return `
@@ -8193,7 +8199,7 @@
             "Unlimited",
             unlimited,
             "unlimited",
-            { bg: "rgba(201, 168, 76, 0.14)", color: "var(--gold)" }
+            { bg: "rgba(185, 154, 92, 0.14)", color: "var(--gold)" }
           ),
           renderGroup(
             "Power Reset only",
@@ -8653,7 +8659,7 @@
           '@keyframes ptr-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }' +
           '.ptr-indicator { position: fixed; top: 0; left: 50%; transform: translate(-50%, -60px); width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.98); box-shadow: 0 4px 14px rgba(0,0,0,0.18); display: flex; align-items: center; justify-content: center; z-index: 10000; transition: transform 0.22s ease, opacity 0.22s ease; pointer-events: none; }' +
           '.ptr-indicator svg { width: 22px; height: 22px; }' +
-          '.ptr-indicator .ptr-arc { stroke: var(--gold, #C9A84C); stroke-width: 2.5; fill: none; stroke-linecap: round; transition: stroke-dashoffset 0.1s linear; }' +
+          '.ptr-indicator .ptr-arc { stroke: var(--gold, #B99A5C); stroke-width: 2.5; fill: none; stroke-linecap: round; transition: stroke-dashoffset 0.1s linear; }' +
           '.ptr-indicator.is-spinning svg { animation: ptr-spin 0.85s linear infinite; }';
         document.head.appendChild(s);
       }
