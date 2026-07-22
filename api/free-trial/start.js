@@ -128,13 +128,22 @@ export default async function handler(req, res) {
         source: "try_preview_lp",
         ip,
       };
-      fetch(process.env.ZAPIER_TRY_OPTIN_WEBHOOK, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }).catch((err) => {
+      // AWAIT the fetch — critical on Vercel serverless. Fire-and-forget
+      // fetch() often never actually goes out because Vercel freezes the
+      // container the moment the function returns. Awaiting adds ~300ms
+      // of latency to the chat start but guarantees the webhook is
+      // actually delivered to Zapier. Wrapped in try/catch so a Zapier
+      // 5xx doesn't break the chat.
+      try {
+        const zapRes = await fetch(process.env.ZAPIER_TRY_OPTIN_WEBHOOK, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        console.log("zapier_response", { status: zapRes.status, ok: zapRes.ok });
+      } catch (err) {
         console.warn("zapier_try_optin_webhook_failed", { message: err?.message });
-      });
+      }
     }
 
     return res.status(200).json({
