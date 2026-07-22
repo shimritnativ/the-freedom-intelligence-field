@@ -41,58 +41,47 @@ export default async function handler(req, res) {
   const value = !!body.value;
 
   if (!email) return res.status(400).json({ error: "email_required" });
-  const by = user.email;
-
   try {
     // Per-flag branches. Template literal form so we stay on the
-    // vercel/postgres sql tag without needing sql.query(). Each branch
-    // is essentially the same upsert but bound to a specific column —
-    // safer than string interpolation and mirrors how carmen-list reads
-    // the same columns.
+    // vercel/postgres sql tag without needing sql.query(). Only the
+    // flag column + email are written — updated_at / updated_by are
+    // intentionally omitted because the existing table was created
+    // without them. If you want an audit trail later, add those
+    // columns via ALTER TABLE and reintroduce them here.
     if (flag === "is_newly_engaged") {
       await sql`
-        INSERT INTO member_program_overrides (email, is_newly_engaged, updated_at, updated_by)
-        VALUES (${email}, ${value}, NOW(), ${by})
+        INSERT INTO member_program_overrides (email, is_newly_engaged)
+        VALUES (${email}, ${value})
         ON CONFLICT (email) DO UPDATE SET
-          is_newly_engaged = EXCLUDED.is_newly_engaged,
-          updated_at       = NOW(),
-          updated_by       = EXCLUDED.updated_by
+          is_newly_engaged = EXCLUDED.is_newly_engaged
       `;
     } else if (flag === "is_rise_current") {
       await sql`
-        INSERT INTO member_program_overrides (email, is_rise_current, updated_at, updated_by)
-        VALUES (${email}, ${value}, NOW(), ${by})
+        INSERT INTO member_program_overrides (email, is_rise_current)
+        VALUES (${email}, ${value})
         ON CONFLICT (email) DO UPDATE SET
-          is_rise_current = EXCLUDED.is_rise_current,
-          updated_at      = NOW(),
-          updated_by      = EXCLUDED.updated_by
+          is_rise_current = EXCLUDED.is_rise_current
       `;
     } else if (flag === "is_rise_past") {
       await sql`
-        INSERT INTO member_program_overrides (email, is_rise_past, updated_at, updated_by)
-        VALUES (${email}, ${value}, NOW(), ${by})
+        INSERT INTO member_program_overrides (email, is_rise_past)
+        VALUES (${email}, ${value})
         ON CONFLICT (email) DO UPDATE SET
-          is_rise_past = EXCLUDED.is_rise_past,
-          updated_at   = NOW(),
-          updated_by   = EXCLUDED.updated_by
+          is_rise_past = EXCLUDED.is_rise_past
       `;
     } else if (flag === "is_certification") {
       await sql`
-        INSERT INTO member_program_overrides (email, is_certification, updated_at, updated_by)
-        VALUES (${email}, ${value}, NOW(), ${by})
+        INSERT INTO member_program_overrides (email, is_certification)
+        VALUES (${email}, ${value})
         ON CONFLICT (email) DO UPDATE SET
-          is_certification = EXCLUDED.is_certification,
-          updated_at       = NOW(),
-          updated_by       = EXCLUDED.updated_by
+          is_certification = EXCLUDED.is_certification
       `;
     } else if (flag === "is_business_club") {
       await sql`
-        INSERT INTO member_program_overrides (email, is_business_club, updated_at, updated_by)
-        VALUES (${email}, ${value}, NOW(), ${by})
+        INSERT INTO member_program_overrides (email, is_business_club)
+        VALUES (${email}, ${value})
         ON CONFLICT (email) DO UPDATE SET
-          is_business_club = EXCLUDED.is_business_club,
-          updated_at       = NOW(),
-          updated_by       = EXCLUDED.updated_by
+          is_business_club = EXCLUDED.is_business_club
       `;
     } else {
       return res.status(400).json({ error: "invalid_flag", flag });
