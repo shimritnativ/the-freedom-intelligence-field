@@ -370,6 +370,63 @@
       background: rgba(90, 60, 140, 0.14);
       color: #5A3C8C;
     }
+    /* Compact program-flag chips shown inside the Program-column
+       trigger button. One tiny colored badge per active flag. Full
+       label lives in the title attribute + inside the dropdown menu. */
+    .prog-chip-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      flex-wrap: nowrap;
+    }
+    .prog-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 18px;
+      padding: 0 5px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .prog-chip.flag-rise      { background: rgba(185, 154, 92, 0.18); color: #8A6D2E; }
+    .prog-chip.flag-rise-past { background: var(--bg-warm); color: var(--text-dim); border: 1px solid var(--gold-line); }
+    .prog-chip.flag-cert      { background: rgba(46, 125, 50, 0.14); color: var(--success); }
+    .prog-chip.flag-bclub     { background: rgba(90, 60, 140, 0.14); color: #5A3C8C; }
+    .prog-add {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 18px;
+      color: var(--text-mute);
+      font-weight: 600;
+      font-size: 14px;
+      border-radius: 4px;
+      border: 1px dashed var(--border);
+    }
+    .prog-caret {
+      margin-left: 4px;
+      opacity: 0.55;
+      font-size: 9px;
+    }
+    /* Trigger button itself — override the wide default outcome-trigger
+       styling so the Program cell packs chips tightly instead of
+       stretching to full column width. */
+    .program-trigger {
+      display: inline-flex !important;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px !important;
+      min-height: 26px;
+      width: auto !important;
+      text-align: left !important;
+    }
+    /* Dropdown menu itself — a bit wider so full program names fit. */
+    .program-dd .outcome-menu { min-width: 180px; }
     .flag-program-stack {
       display: inline-flex;
       gap: 4px;
@@ -1214,28 +1271,32 @@
             </div>`;
         })();
 
-        // Program — multi-toggle dropdown. Trigger summarises currently
-        // active flags ("RISE, Cert" or "None"). Menu stays open on
-        // click so Geo can flip several without reopening.
+        // Program — multi-toggle dropdown. Trigger shows a compact row
+        // of colored dots + short letters for each active program (R,
+        // PR, C, BC). Empty state shows "+" affordance. Menu stays
+        // open on click so Geo can flip several without reopening.
         const progItems = [
-          ["is_rise_current",  "RISE",       m.is_rise_current],
-          ["is_rise_past",     "Past RISE",  m.is_rise_past],
-          ["is_certification", "Certification", m.is_certification],
-          ["is_business_club", "Business Club", m.is_business_club],
+          ["is_rise_current",  "R",  "RISE",          "flag-rise",      m.is_rise_current],
+          ["is_rise_past",     "PR", "Past RISE",     "flag-rise-past", m.is_rise_past],
+          ["is_certification", "C",  "Certification", "flag-cert",      m.is_certification],
+          ["is_business_club", "BC", "Business Club", "flag-bclub",     m.is_business_club],
         ];
-        const progActive = progItems.filter(([,,on]) => on).map(([,l]) => l);
-        const progLabel = progActive.length ? progActive.join(", ") : "None";
-        const progMenu = progItems.map(([flag, l, on]) => `
+        const progChips = progItems
+          .filter(([,,,,on]) => on)
+          .map(([,short, full, cls]) => `<span class="prog-chip ${cls}" title="${esc(full)}">${short}</span>`)
+          .join("");
+        const progTrigger = progChips || '<span class="prog-add">+</span>';
+        const progMenu = progItems.map(([flag, short, full, cls, on]) => `
           <div class="outcome-item" data-multi-flag="${flag}" data-selected="${on ? '1' : '0'}" role="option">
             <span class="outcome-item-check" aria-hidden="true">
               <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 8 7 12 13 4"/></svg>
             </span>
-            <span>${l}</span>
+            <span class="flag-pill ${cls}">${full}</span>
             <span class="outcome-item-dot" aria-hidden="true"></span>
           </div>`).join("");
         const programBadge = `
-          <div class="outcome-dd" data-program-dd data-email="${esc(m.email)}">
-            <button type="button" class="outcome-trigger" aria-haspopup="listbox" aria-expanded="false" title="Toggle program flags (menu stays open — click outside to close)">${esc(progLabel)}</button>
+          <div class="outcome-dd program-dd" data-program-dd data-email="${esc(m.email)}">
+            <button type="button" class="outcome-trigger program-trigger" aria-haspopup="listbox" aria-expanded="false" title="Program flags — click to add/remove"><span class="prog-chip-row">${progTrigger}</span><span class="prog-caret" aria-hidden="true">▾</span></button>
             <div class="outcome-menu" role="listbox">${progMenu}</div>
           </div>`;
         const ghlUrl = m.ghl_contact_id
@@ -1673,22 +1734,48 @@
         }
       }
 
-      // Reads current selection from all .outcome-item[data-multi-flag]
-      // inside the given program dropdown and rewrites the trigger text.
-      const PROG_LABELS = {
-        is_rise_current:  "RISE",
-        is_rise_past:     "Past RISE",
-        is_certification: "Certification",
-        is_business_club: "Business Club",
+      // Program dropdown metadata — used to rebuild the trigger chips
+      // in place when the user flips a flag inside the menu. Kept in
+      // sync with the initial render up in renderTable().
+      const PROG_META = {
+        is_rise_current:  { short: "R",  full: "RISE",          cls: "flag-rise" },
+        is_rise_past:     { short: "PR", full: "Past RISE",     cls: "flag-rise-past" },
+        is_certification: { short: "C",  full: "Certification", cls: "flag-cert" },
+        is_business_club: { short: "BC", full: "Business Club", cls: "flag-bclub" },
       };
       function updateProgramTriggerLabel(ddEl) {
         if (!ddEl) return;
-        const active = [];
+        const chips = [];
         ddEl.querySelectorAll(".outcome-item[data-multi-flag]").forEach(el => {
-          if (el.dataset.selected === "1") active.push(PROG_LABELS[el.dataset.multiFlag] || el.dataset.multiFlag);
+          if (el.dataset.selected !== "1") return;
+          const m = PROG_META[el.dataset.multiFlag];
+          if (!m) return;
+          const chip = document.createElement("span");
+          chip.className = "prog-chip " + m.cls;
+          chip.title = m.full;
+          chip.textContent = m.short;
+          chips.push(chip);
         });
         const trig = ddEl.querySelector(".outcome-trigger");
-        if (trig) trig.textContent = active.length ? active.join(", ") : "None";
+        if (!trig) return;
+        // Rebuild trigger contents: chip row + caret
+        const row = document.createElement("span");
+        row.className = "prog-chip-row";
+        if (chips.length) {
+          chips.forEach(c => row.appendChild(c));
+        } else {
+          const add = document.createElement("span");
+          add.className = "prog-add";
+          add.textContent = "+";
+          row.appendChild(add);
+        }
+        const caret = document.createElement("span");
+        caret.className = "prog-caret";
+        caret.setAttribute("aria-hidden", "true");
+        caret.textContent = "▾";
+        trig.innerHTML = "";
+        trig.appendChild(row);
+        trig.appendChild(caret);
       }
 
       // Delegated click handler for cheat sheet buttons.
