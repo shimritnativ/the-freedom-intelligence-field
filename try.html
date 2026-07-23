@@ -3080,7 +3080,7 @@
           <div style="display: flex; align-items: center; gap: 10px;">
             <div class="cw-progress" id="cw-progress" style="display: none;">
               <div class="cw-progress-bar"><div class="cw-progress-fill" id="cw-progress-fill"></div></div>
-              <span id="cw-progress-count">0 / 6</span>
+              <span id="cw-progress-count">0 / 5</span>
             </div>
             <!-- Expand → maximize the chat. Hidden while maximized. -->
             <button class="cw-expand-btn" id="cw-expand-btn" type="button" aria-label="Open chat full-screen" title="Open full-screen">
@@ -3941,18 +3941,19 @@
 
 <script>
   // ═══════════════════════════════════════════════════════════════
-  // Chat scenarios — matches lib/prompts/free-trial.js on the server
+  // Chat doorways, matches lib/prompts/free-trial.js on the server.
+  // Approved doorways 2026-07-23 (Free Trial system prompt).
   // ═══════════════════════════════════════════════════════════════
   const SCENARIOS = [
-    { id: "pattern",  label: "I know the pattern but I still do it",
-      hint: "When you can see yourself repeating something and still cannot stop." },
-    { id: "message",  label: "One message throws my whole day off",
-      hint: "When something tiny lands wrong and it takes hours to come back." },
-    { id: "reacting", label: "I keep reacting the same way",
-      hint: "In relationships, at work, or anywhere the same loop keeps showing up." }
+    { id: "results",       label: "01. Results and Reality",
+      hint: "When something in the outer world, money, an outcome, unexpected news, or a repeating situation triggers a reaction you would like to shift." },
+    { id: "relationships", label: "02. Relationships",
+      hint: "When the same reaction fires with someone else, no matter how much you already understand where it comes from." },
+    { id: "decisions",     label: "03. Decisions and Action",
+      hint: "When you can see the next step clearly and still stay exactly where you are." }
   ];
 
-  const MAX_EXCHANGES = 6;
+  const MAX_EXCHANGES = 5;
   // Send all "buy the Reset" CTAs straight to the ads-funnel ThriveCart
   // checkout so attribution stays clean and there's no LP hop.
   const RESET_LINK = "https://masteryourpath.thrivecart.com/power-reset-ads";
@@ -4050,7 +4051,7 @@
 
   // ── Initial greeting + chips
   function renderGreetingAndChips() {
-    addBubble("assistant", "Welcome. Take one slow breath before you begin.\n\nBelow are three doorways into the Field. Choose the one that names what you are actually carrying right now, not what sounds smartest. That is where we start.");
+    addBubble("assistant", "Welcome. Take one slow breath before you begin.\n\nYou already know the loop that holds you back. Below are three areas it tends to show up. Choose the one active for you right now.");
     setInputState("idle");
     renderDoorways();
   }
@@ -4131,7 +4132,7 @@
     while (body.children.length > 1) body.removeChild(body.lastElementChild);
     // Just in case first got removed (shouldn't), re-add the greeting
     if (!first) {
-      addBubble("assistant", "Welcome. Take one slow breath before you begin.\n\nBelow are three doorways into the Field. Choose the one that names what you are actually carrying right now, not what sounds smartest. That is where we start.");
+      addBubble("assistant", "Welcome. Take one slow breath before you begin.\n\nYou already know the loop that holds you back. Below are three areas it tends to show up. Choose the one active for you right now.");
     }
     renderDoorways();
     setInputState("idle");
