@@ -13,7 +13,12 @@
 <link rel="icon" type="image/png" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- Cormorant Garamond dropped 2026-07-23 per Geo: she preferred
+     the cleaner Georgia italic she was seeing in Claude's preview.
+     Georgia is a system font (installed on macOS + iOS + Windows +
+     most Android WebViews) so it renders instantly without a font
+     download. Inter is still loaded for the sans stack. -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg-dark: #0E0B07;
@@ -37,7 +42,7 @@
     --radius-md: 14px;
     --radius-lg: 24px;
     --radius-pill: 999px;
-    --font-serif: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+    --font-serif: Georgia, 'Times New Roman', 'Cormorant Garamond', serif;
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   }
   *, *::before, *::after { box-sizing: border-box; }
@@ -117,11 +122,12 @@
     background:
       radial-gradient(ellipse 1600px 900px at 50% 15%, rgba(201, 168, 76, 0.12), transparent 60%),
       radial-gradient(ellipse 900px 700px at 20% 80%, rgba(201, 168, 76, 0.05), transparent 55%),
+      /* Subtle glow at the bottom edge that lifts the seam into the
+         next section so the two dark blocks read as continuous
+         rather than "section ends, section starts". */
+      linear-gradient(to bottom, transparent 70%, rgba(201, 168, 76, 0.05) 100%),
       var(--bg-dark);
     color: var(--text-inverse);
-    /* Pre-hero and free-preview hero read as one continuous section:
-       tight bottom padding here + tight top padding on .hero mean
-       there's no "end of section" dead space between them. */
     padding: clamp(32px, 4.5vw, 60px) 24px 16px;
     overflow: hidden;
     text-align: center;
@@ -513,11 +519,14 @@
 
   .hero {
     position: relative;
-    background: radial-gradient(ellipse 1400px 900px at 50% 20%, rgba(201, 168, 76, 0.06), transparent 60%),
-                var(--bg-dark);
+    background:
+      radial-gradient(ellipse 1400px 900px at 50% 20%, rgba(201, 168, 76, 0.06), transparent 60%),
+      /* Matching lift at the top edge, mirror of the pre-hero's
+         bottom fade so the seam between the two dark sections
+         reads as one continuous surface. */
+      linear-gradient(to top, transparent 70%, rgba(201, 168, 76, 0.05) 100%),
+      var(--bg-dark);
     color: var(--text-inverse);
-    /* Top padding pulled tight so the pre-hero above flows into
-       this section without a visible seam. */
     padding: 20px 24px 80px;
     overflow: hidden;
   }
