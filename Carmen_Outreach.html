@@ -331,7 +331,7 @@
       font-size: 12.5px;
     }
     th, td {
-      padding: 10px 12px;
+      padding: 14px 12px;
       text-align: left;
       border-bottom: 1px solid var(--border);
       vertical-align: middle;
@@ -357,15 +357,27 @@
     tr.contacted td { opacity: 0.5; }
     tr.contacted td.actions-cell,
     tr.contacted td.cheat-cell { opacity: 1; }
+    /* Member cell — clearer hierarchy so name is the anchor and email
+       reads as quiet metadata. Long emails truncate with an ellipsis
+       instead of wrapping into a second line (which was making the
+       whole cell feel stacked/cramped). Hover reveals the full
+       address via the browser tooltip we set in the render function. */
+    .member-cell { max-width: 240px; }
     .row-name {
       font-weight: 600;
       color: var(--text);
+      font-size: 13.5px;
+      line-height: 1.3;
     }
     .row-email {
       font-size: 11px;
-      color: var(--text-dim);
-      margin-top: 2px;
-      word-break: break-all;
+      color: var(--text-mute);
+      margin-top: 5px;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 220px;
     }
     .tier-badge {
       display: inline-block;
@@ -1133,6 +1145,7 @@
               <button class="filter-chip" data-filter="is_rise_current" type="button">RISE</button>
               <button class="filter-chip" data-filter="is_rise_past" type="button">Past RISE</button>
               <button class="filter-chip" data-filter="is_certification" type="button">Certification</button>
+              <button class="filter-chip" data-filter="is_business_club" type="button">Business Club</button>
             </div>
           </div>
           <div class="mf-group">
@@ -1319,6 +1332,7 @@
         case "is_rise_current":   return !!m.is_rise_current;
         case "is_rise_past":      return !!m.is_rise_past;
         case "is_certification":  return !!m.is_certification;
+        case "is_business_club":  return !!m.is_business_club;
         case "never_logged_in":   return isNeverLoggedIn(m);
         case "stuck_day_0":       return isStalledDay(m, 0);
         case "stuck_day_1":       return isStalledDay(m, 1);
@@ -1458,7 +1472,7 @@
           <tr class="${m.contacted ? 'contacted' : ''}" data-email="${esc(m.email)}">
             <td class="member-cell">
               <div class="row-name">${esc(nameForDisplay(m))}</div>
-              <div class="row-email">${esc(m.email)}</div>
+              <div class="row-email" title="${esc(m.email)}">${esc(m.email)}</div>
             </td>
             <td data-label="WhatsApp">
               ${wa
@@ -1708,6 +1722,7 @@
       is_rise_current: "RISE",
       is_rise_past: "Past RISE",
       is_certification: "Certification",
+      is_business_club: "Business Club",
       never_logged_in: "Never logged in",
       stuck_day_0: "Stalled Day 0",
       stuck_day_1: "Stalled Day 1",
