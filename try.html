@@ -444,24 +444,30 @@
     color: var(--gold);
     margin: 0 0 20px;
   }
+  /* Free-preview title is now a direction, not a headline. Smaller,
+     restrained, sits under the eyebrow as instructions for what
+     they're about to try. The big cinematic headline moment
+     already happened in the pre-hero above. */
   .hero-title {
     font-family: var(--font-serif);
     font-weight: 400;
     font-style: italic;
-    font-size: clamp(36px, 6vw, 68px);
-    line-height: 1.05;
-    letter-spacing: -0.015em;
-    margin: 0 0 18px;
+    font-size: clamp(20px, 2.4vw, 26px);
+    line-height: 1.35;
+    letter-spacing: 0;
+    margin: 0 auto 14px;
     color: var(--text-inverse);
+    max-width: 640px;
   }
   .hero-title em { font-style: italic; color: var(--gold); }
   .hero-lead {
     font-family: var(--font-sans);
-    font-size: clamp(15px, 1.8vw, 17px);
+    font-size: clamp(13px, 1.5vw, 15px);
     line-height: 1.65;
     color: var(--text-inverse-dim);
-    margin: 0;
+    margin: 0 auto;
     font-weight: 300;
+    max-width: 560px;
   }
 
   /* ═════════════════════════════════════════════════════════════
@@ -1784,22 +1790,19 @@
     font-weight: 700;
     letter-spacing: 0.02em;
     border-radius: 999px;
-    /* On the dark section the earlier gold-heavy shadow read as an
-       over-bright halo. Now: mostly black depth shadow with a very
-       subtle gold undertone so the button feels grounded, not
-       radioactive. */
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45),
-                0 4px 10px rgba(0, 0, 0, 0.30),
-                0 0 0 1px rgba(201, 168, 76, 0.35);
+    /* Cleaner shadow — the previous heavy black stack was reading
+       as muddy under the interaction board above. Now just a
+       subtle contact shadow + a soft gold aura so it feels lifted
+       against the dark section, not weighed down. */
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35),
+                0 0 24px rgba(201, 168, 76, 0.18);
     transition: transform 150ms ease, box-shadow 200ms ease, background 180ms ease;
   }
   .day-mockup-cta:hover {
     background: var(--gold-warm);
     transform: translateY(-2px);
-    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.50),
-                0 6px 14px rgba(0, 0, 0, 0.35),
-                0 0 0 1px var(--gold),
-                0 0 30px rgba(201, 168, 76, 0.20);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.40),
+                0 0 40px rgba(201, 168, 76, 0.28);
   }
   .day-mockup-cta:active { transform: translateY(0); }
 
@@ -2112,16 +2115,16 @@
   .value-stack.rich .v-title {
     font-family: var(--font-serif);
     font-style: italic;
-    font-size: 18px;
-    line-height: 1.25;
+    font-size: 24px;
+    line-height: 1.2;
     color: var(--text);
-    margin: 0 0 6px;
+    margin: 0 0 8px;
     font-weight: 500;
   }
   .value-stack.rich .v-desc {
     font-family: var(--font-sans);
-    font-size: 14px;
-    line-height: 1.55;
+    font-size: 15px;
+    line-height: 1.6;
     color: var(--text-mid);
     margin: 0;
   }
@@ -2264,8 +2267,8 @@
     .value-stack.rich { padding: 20px 18px; }
     .value-stack.rich .value-row { grid-template-columns: 32px 1fr; gap: 12px; }
     .value-stack.rich .v-num { width: 28px; height: 28px; font-size: 12px; }
-    .value-stack.rich .v-title { font-size: 16px; }
-    .value-stack.rich .v-desc { font-size: 13px; }
+    .value-stack.rich .v-title { font-size: 20px; }
+    .value-stack.rich .v-desc { font-size: 14px; }
     .value-stack.rich .v-price {
       grid-column: 2 / -1;
       justify-self: start;
@@ -2273,25 +2276,32 @@
     }
   }
 
-  /* Testimonials — 2x2 grid, centered. */
+  /* Testimonials grid — 3 columns on desktop so the top trio
+     sits in one clean row. Falls back to 1 column on narrow. */
   .testimonials-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 20px;
     margin: 36px auto 0;
-    max-width: 860px;
+    max-width: 1180px;
+  }
+  @media (max-width: 900px) {
+    .testimonials-grid { grid-template-columns: repeat(2, 1fr); max-width: 780px; }
   }
   @media (max-width: 640px) {
     .testimonials-grid { grid-template-columns: 1fr; }
   }
   /* Testimonials screenshot — single composite image replacement
-     for the lower testimonials grid. Sized big and unframed
-     (2026-07-23 per Geo — the box + shadow was reading as a
-     cream card around what's already a self-contained image). */
+     for the lower testimonials grid. Full-bleed on desktop, no
+     frame or shadow (2026-07-23 per Geo). The image itself has
+     its own beige backdrop so wrapping it in another box was
+     making it feel like a card inside a card. */
   .testimonial-screenshot {
-    max-width: 1280px;
+    max-width: 1560px;
+    width: 100%;
     margin: 32px auto 0;
     padding: 0;
+    background: transparent;
   }
   .testimonial-screenshot img {
     width: 100%;
@@ -2886,18 +2896,9 @@
   </div>
 </section>
 
-<!-- Dark divider — small gold hairline + diamond ornament so the
-     two dark sections read as one continuous cinematic surface
-     with intentional punctuation between them, not an accidental
-     seam. -->
-<div class="dark-divider" aria-hidden="true">
-  <span class="dark-divider-mark">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 2 L22 12 L12 22 L2 12 Z"/>
-      <path d="M12 7 L17 12 L12 17 L7 12 Z" opacity="0.6"/>
-    </svg>
-  </span>
-</div>
+<!-- Dark divider removed 2026-07-23 per Geo — the free-preview
+     hero is now a light cream section (below), so the pre-hero
+     dark → cream transition provides its own natural break. -->
 
 <!-- ═══════════════════════════════════════════════════════════════
      HERO — free preview chat sits immediately after the pre-hero
@@ -2952,7 +2953,7 @@
         <!-- €9 CTA pill only appears when chat is maximized so users
              can convert without needing to minimize + scroll first. -->
         <div class="cw-max-cta" role="complementary">
-          <span class="cw-max-cta-text">Loved it? Unlock the full Reset — <strong>€9</strong></span>
+          <span class="cw-max-cta-text">Loved it? Unlock the full Reset for <strong>€9</strong></span>
           <a class="cw-max-cta-btn" href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank" rel="noopener">Get it →</a>
         </div>
         <div class="cw-body" id="cw-body">
@@ -3011,7 +3012,7 @@
            the new video with the "start here for free" segment. -->
       <div class="vsl-placeholder">
         <div class="play-badge" aria-hidden="true">▶</div>
-        <div class="vsl-caption">Shimrit's video — coming soon</div>
+        <div class="vsl-caption">Shimrit's video coming soon</div>
       </div>
     </div>
   </div>
@@ -3356,19 +3357,19 @@
       <div class="step lift reveal">
         <div class="step-num">01</div>
         <h3 class="step-title">State Reset</h3>
-        <p class="step-desc">Interrupt the loop that keeps recreating the same response. The Field walks you through locating what has actually been leading you — the pattern under the pattern — and resets your inner state before you touch anything else.</p>
+        <p class="step-desc">Interrupt the loop that keeps recreating the same response. The Field walks you through locating what has actually been leading you (the pattern under the pattern) and resets your inner state before you touch anything else.</p>
         <p class="step-outcome"><strong>You leave Day 1 with:</strong> the specific pattern named, and the state that runs it interrupted.</p>
       </div>
       <div class="step lift reveal">
         <div class="step-num">02</div>
         <h3 class="step-title">Decision &amp; Action</h3>
-        <p class="step-desc">From the new state, one decision surfaces that has been postponed or blurred. The Field helps you align it and land one grounded, aligned action — not forced, not performed. Something you can actually move on today.</p>
+        <p class="step-desc">From the new state, one decision surfaces that has been postponed or blurred. The Field helps you align it and land one grounded, aligned action. Not forced, not performed. Something you can actually move on today.</p>
         <p class="step-outcome"><strong>You leave Day 2 with:</strong> one aligned decision and one real move made in your actual life.</p>
       </div>
       <div class="step lift reveal">
         <div class="step-num">03</div>
         <h3 class="step-title">Power Calibration</h3>
-        <p class="step-desc">The reset only lasts if the frequency holds. Day 3 calibrates you to the reality you are stepping into so the new state becomes your baseline — not a peak you fall away from once the container closes.</p>
+        <p class="step-desc">The reset only lasts if the frequency holds. Day 3 calibrates you to the reality you are stepping into so the new state becomes your baseline, not a peak you fall away from once the container closes.</p>
         <p class="step-outcome"><strong>You leave Day 3 with:</strong> a new baseline you carry out into your week.</p>
       </div>
     </div>
@@ -3442,23 +3443,25 @@
      the top so people can SEE the shape of what's included before
      they read through the list. -->
 <section class="lp-section lp-section--warm">
-  <div class="lp-container narrow reveal">
+  <div class="lp-container reveal">
     <p class="lp-eyebrow" style="text-align:center;">What you get today</p>
     <h2 class="lp-h2" style="text-align:center;">Everything included in the Reset.</h2>
     <p class="lp-lead" style="text-align:center; margin: 0 auto 36px;">
       A full guided experience inside The Field, held with a real human group for the entire 72 hours. Once you finish the preview, this is your next step.
     </p>
 
-    <img class="bonus-stack-img" src="https://assets.cdn.filesafe.space/eo4N6ugBtPJTQE4clj7A/media/6a1ef88c027d0d5be1577b6f.png" alt="Everything included in the 72-Hour Power Reset — bonus stack" loading="lazy" />
-
     <p class="lp-eyebrow" style="text-align:center; margin-top: 8px;">What you receive inside the 72-Hour Power Reset</p>
 
+    <!-- Side-by-side: bonus stack image on the left, value stack
+         on the right. Falls back to stacked on tablet/mobile. -->
+    <div class="value-with-stack">
+      <img class="bonus-stack-img" src="https://assets.cdn.filesafe.space/eo4N6ugBtPJTQE4clj7A/media/6a1ef88c027d0d5be1577b6f.png" alt="Everything included in the 72-Hour Power Reset — bonus stack" loading="lazy" />
     <div class="value-stack rich">
       <div class="value-row">
         <span class="v-num">1</span>
         <div class="v-body">
           <p class="v-title">The 72-Hour Power Reset Experience</p>
-          <p class="v-desc">A complete 3-day guided reset that moves you through State Reset, Decision &amp; Action, and Power Frequency Calibration — so you can interrupt one active loop, make one aligned decision, and step into the frequency of the reality you chose.</p>
+          <p class="v-desc">A complete 3-day guided reset that moves you through State Reset, Decision &amp; Action, and Power Frequency Calibration. Interrupt one active loop, make one aligned decision, and step into the frequency of the reality you chose.</p>
         </div>
         <span class="v-price">Value €297</span>
       </div>
@@ -3474,7 +3477,7 @@
         <span class="v-num">3</span>
         <div class="v-body">
           <p class="v-title">The Day-by-Day Reset Map</p>
-          <p class="v-desc">A simple structure showing exactly what to focus on each day — so you don't drift into overthinking, over-processing, or trying to solve your whole life at once.</p>
+          <p class="v-desc">A simple structure showing exactly what to focus on each day, so you don't drift into overthinking, over-processing, or trying to solve your whole life at once.</p>
         </div>
         <span class="v-price">Value €97</span>
       </div>
@@ -3498,7 +3501,7 @@
         <span class="v-num">6</span>
         <div class="v-body">
           <p class="v-title">Power Frequency Calibration Prompts</p>
-          <p class="v-desc">Prompts to guide you into building your Determined Imagination scene — a specific, sensory, alive picture of your desired reality — so you can step into the frequency of it and feel it as already real.</p>
+          <p class="v-desc">Prompts to guide you into building your Determined Imagination scene: a specific, sensory, alive picture of your desired reality. Step into the frequency of it and feel it as already real.</p>
         </div>
         <span class="v-price">Value €97</span>
       </div>
@@ -3506,7 +3509,7 @@
         <span class="v-num">7</span>
         <div class="v-body">
           <p class="v-title">Your Personalised Determined Imagination Scene MP3</p>
-          <p class="v-desc">A personalised audio of your Determined Imagination scene in Shimrit's voice — to listen to daily for 7 days and anchor the frequency of your desired reality into the subconscious.</p>
+          <p class="v-desc">A personalised audio of your Determined Imagination scene in Shimrit's voice. Listen to it daily for 7 days to anchor the frequency of your desired reality into the subconscious.</p>
         </div>
         <span class="v-price">Value €97</span>
       </div>
@@ -3514,7 +3517,7 @@
         <span class="v-num">8</span>
         <div class="v-body">
           <p class="v-title">Your Personalised Power Declaration MP3</p>
-          <p class="v-desc">A personalised audio of your Power Declaration in Shimrit's voice — to listen to daily for 7 days and amplify your vibration and magnetism.</p>
+          <p class="v-desc">A personalised audio of your Power Declaration in Shimrit's voice. Listen to it daily for 7 days to amplify your vibration and magnetism.</p>
         </div>
         <span class="v-price">Value €97</span>
       </div>
@@ -3537,7 +3540,7 @@
       <div class="value-row">
         <span class="v-num">★</span>
         <div class="v-body">
-          <p class="v-title">Bonus Day — The Architecture of Freedom Masterclass</p>
+          <p class="v-title">Bonus Day: The Architecture of Freedom Masterclass</p>
           <p class="v-desc">A powerful 50-minute class on the inner structure for sustainable income, leadership, and life.</p>
         </div>
         <span class="v-price">Value €47</span>
@@ -3552,6 +3555,8 @@
       </div>
     </div>
 
+    </div><!-- /.value-with-stack -->
+
     <div style="text-align:center; margin-top: 32px;">
       <a class="value-cta" href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank">Yes, start my reset for €9</a>
       <p style="font-size: 12px; color: var(--text-mute); margin: 12px 0 0;">Instant access · secure checkout · includes bonuses</p>
@@ -3565,10 +3570,10 @@
      now the composite testimonial image so real member voices show
      up as raw DM screenshots instead of restyled cards. -->
 <section class="lp-section">
-  <div class="lp-container reveal" style="text-align: center;">
+  <div class="lp-container reveal" style="text-align: center; max-width: 1560px;">
     <p class="lp-eyebrow">From people already in the Field</p>
     <h2 class="lp-h2">Real words from members.</h2>
-    <p class="lp-lead" style="margin: 0 auto 24px;">Moving through the 72-Hour Power Reset. All from the first weeks of the Field being live.</p>
+    <p class="lp-lead" style="margin: 0 auto 24px; max-width: 720px;">Moving through the 72-Hour Power Reset. All from the first weeks of the Field being live.</p>
     <div class="testimonial-screenshot">
       <img
         src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/screenshots/Screenshot%202026-07-23%20at%2015.03.31.png"
