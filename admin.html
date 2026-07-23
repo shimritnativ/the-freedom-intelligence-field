@@ -13,34 +13,18 @@
   <meta http-equiv="Expires" content="0">
   <title>The Field — Team Metrics</title>
   <script>
-    // Self-heal against a stale cached admin.html. iOS Safari held on
-    // to the un-cache-controlled version of this page for days even
-    // after we shipped cache-control headers. This script runs at the
-    // very top of <head>: if the URL has no cache-bust query param,
-    // add one once per session and reload. The next navigation then
-    // pulls a fresh copy from the server.
-    //
-    // Why not also compare build versions: an earlier attempt to fetch
-    // a server build SHA and force-reload on mismatch caused an
-    // infinite reload loop (the embedded version never matched the
-    // VERCEL_GIT_COMMIT_SHA, so every load thought it was stale and
-    // reloaded forever, leaving the page stuck on "Loading metrics...").
-    // The simple one-time cache-bust below is enough for the use case.
+    // Self-heal cache-bust: DISABLED 2026-07-23 per Geo's feedback.
+    // The old script auto-reloaded the page whenever it detected no
+    // ?v= param + no session flag, which was firing every time Geo
+    // came back to the admin tab and felt disruptive. Meta
+    // Cache-Control: no-cache above handles stale-content prevention
+    // on the browser side, and a manual Refresh is enough if a deploy
+    // ever fails to reach a device. We only run the URL-clean pass
+    // (strip ?v= if present) so old bookmarks stay tidy.
     (function () {
       try {
         var params = new URLSearchParams(location.search);
-        if (!params.has("v") && !sessionStorage.getItem("admin_v_reload")) {
-          // First load in this session: force a cache-bust reload so a
-          // fresh deploy is picked up even if the browser cached the old
-          // HTML. Uses ?v=timestamp because location.reload(true) isn't
-          // reliable across browsers.
-          sessionStorage.setItem("admin_v_reload", "1");
-          location.replace(location.pathname + "?v=" + Date.now() + location.hash);
-        } else if (params.has("v")) {
-          // Second load (post cache-bust): strip the ?v= param from the
-          // URL so the address bar shows the clean /admin URL. Uses
-          // history.replaceState so no navigation happens (no scroll
-          // jump, no reload, just an in-place URL rewrite).
+        if (params.has("v")) {
           params.delete("v");
           var clean = location.pathname + (params.toString() ? "?" + params.toString() : "") + location.hash;
           history.replaceState({}, "", clean);
@@ -5042,13 +5026,19 @@
                the Launch tracker iframe. /carmen still works as a
                standalone URL for Carmen herself. -->
           <div data-tab-content="lead-nurture" style="display: none;">
-            <div class="section" id="panel-carmen" style="padding: 0; overflow: visible; background: transparent; border: none; box-shadow: none;">
+            <!-- Carmen iframe fills the visible viewport minus admin's
+                 own header area. Iframe scrolls internally so there's
+                 exactly one scrollbar on this tab (previously the
+                 outer admin scroll + inner iframe scroll = two bars).
+                 Sticky topbar/filters inside the iframe pin correctly
+                 against the iframe's own scroll ancestor. -->
+            <div class="section" id="panel-carmen" style="padding: 0; overflow: hidden; background: transparent; border: none; box-shadow: none;">
               <iframe
                 id="carmen-frame"
                 title="Lead Nurture (Carmen's outreach)"
                 src="about:blank"
                 data-real-src="/carmen"
-                style="width: 100%; height: 1800px; border: none; display: block; background: var(--bg);"
+                style="width: 100%; height: calc(100vh - 160px); min-height: 600px; border: none; display: block; background: var(--bg); border-radius: 12px;"
                 loading="lazy"></iframe>
             </div>
           </div>
@@ -8999,13 +8989,13 @@
         return originalLoadMetrics.apply(this, arguments);
       };
     }
+    // Auto-refresh on tab return: intentionally DISABLED per Geo's
+    // request 2026-07-23 — the whole-page reload every time she came
+    // back to the admin browser tab felt disruptive (lost scroll
+    // position, in-flight edits interrupted). Manual Refresh button in
+    // the topbar is the sole way to force a full reload now.
     document.addEventListener("visibilitychange", () => {
-      if (!document.hidden) {
-        const staleMs = Date.now() - _lastMetricsLoadAt;
-        if (staleMs < 5 * 60 * 1000) return; // less than 5 min, skip
-        try { loadMetrics(); } catch (e) { /* ignore */ }
-        try { if (typeof loadAdsMetrics === "function") loadAdsMetrics(); } catch (e) { /* ignore */ }
-      }
+      // No-op — see comment above.
     });
 
     // ===== Pull-to-refresh (mobile) =====
