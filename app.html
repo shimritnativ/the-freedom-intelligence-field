@@ -8345,14 +8345,17 @@ Begin.` },
   }
 
   // ===== Voice input =====
-  // 5 minutes. Whisper-1 cost is ~$0.006/min so a max clip is still <4¢.
-  // The transcribe endpoint's bodyParser is 10mb; a 5-minute Opus clip
-  // base64-encoded is roughly 1.5mb, well within the cap.
-  const MAX_RECORDING_MS = 5 * 60 * 1000;
-  // Whisper rarely takes more than ~30s for a 5-min clip, but slow
-  // mobile networks can stretch this. 90s cap stops a hung request
-  // from making the UI feel permanently frozen.
-  const TRANSCRIBE_TIMEOUT_MS = 90 * 1000;
+  // 15 minutes (bumped 2026-07-23 from 5 min because Antonella and
+  // others were hitting the ceiling mid-thought and losing what they
+  // had just recorded). Cost ceiling: Whisper-1 is ~$0.006/min so a
+  // full 15-min clip is ~9¢. The transcribe endpoint's bodyParser is
+  // 25mb; a 15-minute Opus clip base64-encoded is roughly 4.5mb, well
+  // within the cap even at the highest-bitrate mobile codecs.
+  const MAX_RECORDING_MS = 15 * 60 * 1000;
+  // Slow mobile networks can take a while to upload larger clips. 3-min
+  // ceiling keeps the UI from hanging permanently on a stuck request
+  // while still allowing a slow phone on 3G to finish a 15-min upload.
+  const TRANSCRIBE_TIMEOUT_MS = 3 * 60 * 1000;
   const voiceState = {
     mediaRecorder: null, audioChunks: [], stream: null, mimeType: "",
     startedAt: 0, timerInterval: null, autoStopTimer: null, indicatorEl: null,
