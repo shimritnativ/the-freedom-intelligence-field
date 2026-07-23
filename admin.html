@@ -2410,6 +2410,13 @@
           frame.contentWindow.postMessage({ type: "set-theme", theme }, "*");
         }
       } catch {}
+      // Same for Carmen's Lead Nurture iframe.
+      try {
+        const cframe = document.getElementById("carmen-frame");
+        if (cframe && cframe.contentWindow) {
+          cframe.contentWindow.postMessage({ type: "set-theme", theme }, "*");
+        }
+      } catch {}
     }
     function toggleTheme() {
       const current = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
@@ -2593,8 +2600,12 @@
           if (realSrc) {
             const bust = window._carmenBust
               || (window._carmenBust = Date.now());
+            // Pass current admin theme so the iframe boots matching
+            // instead of flashing light-mode first.
+            const adminTheme = document.documentElement.getAttribute("data-theme") === "dark"
+              ? "dark" : "light";
             const sep = realSrc.includes("?") ? "&" : "?";
-            cframe.setAttribute("src", realSrc + sep + "v=" + bust);
+            cframe.setAttribute("src", realSrc + sep + "v=" + bust + "&theme=" + adminTheme);
           }
         }
       }
