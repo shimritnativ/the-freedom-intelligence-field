@@ -198,6 +198,20 @@
       background: var(--bg);
       pointer-events: none;
     }
+    /* Same trick for the gap BELOW the filters — between the sticky
+       filters bar and the sticky column-headers row. Without this,
+       rows scroll through the 12px margin gap. Extends 14px so a
+       hairline border on the header row is still covered. */
+    .filters::after {
+      content: "";
+      position: absolute;
+      left: -1px;
+      right: -1px;
+      bottom: -14px;
+      height: 14px;
+      background: var(--bg);
+      pointer-events: none;
+    }
     .filter-chip {
       background: transparent;
       color: var(--text-mid);
