@@ -56,6 +56,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "method_not_allowed" });
   }
 
+  const startedAt = Date.now();
   try {
     const token = req.headers["x-session-token"];
     const user = await getUserBySessionToken(token);
@@ -133,7 +134,11 @@ export default async function handler(req, res) {
       const errText = await openaiRes.text().catch(() => "");
       console.error("transcribe_openai_error", {
         status: openaiRes.status,
-        body: errText.slice(0, 200)
+        body: errText.slice(0, 200),
+        audio_bytes: audioBuffer.length,
+        mime_type: mimeType,
+        user_id: user.id,
+        elapsed_ms: Date.now() - startedAt,
       });
       return res.status(502).json({ error: "transcription_failed" });
     }
@@ -141,9 +146,27 @@ export default async function handler(req, res) {
     const data = await openaiRes.json();
     const text = ((data && data.text) || "").trim();
 
+    // Success-path logging so we can spot patterns without waiting
+    // for a user report. Every transcribe leaves a trace with the
+    // audio size, mime type, whether Whisper returned empty text,
+    // and round-trip time. Cross-reference with Vercel's own 413
+    // logs (which fire BEFORE our handler runs for oversized
+    // uploads) to see the full picture.
+    console.log("transcribe_ok", {
+      audio_bytes: audioBuffer.length,
+      mime_type: mimeType,
+      text_length: text.length,
+      text_empty: text.length === 0,
+      user_id: user.id,
+      elapsed_ms: Date.now() - startedAt,
+    });
+
     return res.status(200).json({ text });
   } catch (err) {
-    console.error("transcribe_error", { message: err?.message });
+    console.error("transcribe_error", {
+      message: err?.message,
+      elapsed_ms: Date.now() - startedAt,
+    });
     return res.status(500).json({ error: "internal_error" });
   }
 }
