@@ -119,16 +119,17 @@
      ═════════════════════════════════════════════════════════════ */
   .pre-hero {
     position: relative;
+    /* ONLY the top-anchored radial glow. Removed the bottom-left
+       ambient glow (was at 20% 80%) because it was making the
+       pre-hero's bottom edge subtly brighter than the hero
+       below it, creating a visible horizontal seam at the
+       transition. Now both sections are uniformly --bg-dark
+       from their midpoints down, so the boundary vanishes. */
     background:
-      radial-gradient(ellipse 1600px 900px at 50% 15%, rgba(201, 168, 76, 0.12), transparent 60%),
-      radial-gradient(ellipse 900px 700px at 20% 80%, rgba(201, 168, 76, 0.05), transparent 55%),
-      /* Subtle glow at the bottom edge that lifts the seam into the
-         next section so the two dark blocks read as continuous
-         rather than "section ends, section starts". */
-      linear-gradient(to bottom, transparent 70%, rgba(201, 168, 76, 0.05) 100%),
+      radial-gradient(ellipse 1600px 900px at 50% 15%, rgba(201, 168, 76, 0.12), transparent 55%),
       var(--bg-dark);
     color: var(--text-inverse);
-    padding: clamp(32px, 4.5vw, 60px) 24px 16px;
+    padding: clamp(32px, 4.5vw, 60px) 24px clamp(80px, 8vw, 120px);
     overflow: hidden;
     text-align: center;
   }
@@ -519,15 +520,17 @@
 
   .hero {
     position: relative;
+    /* Pure --bg-dark base with a very soft top-anchored ambient
+       glow. No linear-gradient blend at the top edge, so the
+       transition from pre-hero into this section is a single
+       uniform dark surface (no seam, no darker band). Top
+       padding gives breathing room for the "Experience the
+       Field" eyebrow to sit apart from the CTA above. */
     background:
-      radial-gradient(ellipse 1400px 900px at 50% 20%, rgba(201, 168, 76, 0.06), transparent 60%),
-      /* Matching lift at the top edge, mirror of the pre-hero's
-         bottom fade so the seam between the two dark sections
-         reads as one continuous surface. */
-      linear-gradient(to top, transparent 70%, rgba(201, 168, 76, 0.05) 100%),
+      radial-gradient(ellipse 1400px 900px at 50% 30%, rgba(201, 168, 76, 0.05), transparent 60%),
       var(--bg-dark);
     color: var(--text-inverse);
-    padding: 20px 24px 80px;
+    padding: clamp(60px, 6vw, 96px) 24px 80px;
     overflow: hidden;
   }
   .particles { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
@@ -959,21 +962,22 @@
     position: relative;
     margin-left: 10px;
   }
-  /* WhatsApp-style tail on the top-left. A rotated square with only the
-     left + bottom borders creates a triangle that seamlessly extends
-     the bubble's border. Same trick for user bubbles on the right. */
+  /* Clean triangular tails using clip-path so they sit flush at the
+     top corner of the bubble (matches the testimonial wall bubbles).
+     Bubbles get the matching top corner squared off so the tail
+     flows out of the bubble body instead of poking off a rounded
+     corner. */
+  .bubble.assistant { border-top-left-radius: 0; }
   .bubble.assistant::before {
     content: "";
     position: absolute;
-    top: 10px;
-    left: -6px;
-    width: 12px;
-    height: 12px;
+    top: 0;
+    left: -8px;
+    width: 10px;
+    height: 14px;
     background: var(--bg-card);
-    border-left: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-    transform: rotate(45deg);
-    border-bottom-left-radius: 3px;
+    clip-path: polygon(100% 0, 0 0, 100% 100%);
+    pointer-events: none;
   }
   .bubble.assistant.final {
     border-color: var(--gold-line);
@@ -981,7 +985,6 @@
   }
   .bubble.assistant.final::before {
     background: var(--bg-warm);
-    border-color: var(--gold-line);
   }
   .bubble.user {
     background: var(--text);
@@ -990,17 +993,18 @@
     max-width: 82%;
     position: relative;
     margin-right: 10px;
+    border-top-right-radius: 0;
   }
   .bubble.user::before {
     content: "";
     position: absolute;
-    top: 10px;
-    right: -6px;
-    width: 12px;
-    height: 12px;
+    top: 0;
+    right: -8px;
+    width: 10px;
+    height: 14px;
     background: var(--text);
-    transform: rotate(45deg);
-    border-bottom-right-radius: 3px;
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+    pointer-events: none;
   }
   /* Doorway chip block — visually distinct from chat bubbles so it
      reads as "these are BUTTONS you pick" rather than "another message". */
@@ -4240,7 +4244,7 @@
     addBubble("user", scenario.label + ".");
     // Field asks for email inline
     setTimeout(() => {
-      addBubble("assistant", "Beautiful. One thing before we begin — what email should I hold this conversation for? No password, no account. Just so this space has a container.");
+      addBubble("assistant", "One thing before we begin. What email should I hold this conversation for? No password, no account. Just so this space has a container.");
       showEmailInline();
     }, 400);
   }
