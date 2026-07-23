@@ -99,10 +99,244 @@
     font-weight: 500;
     color: var(--text-inverse);
   }
+  /* Logo-only variant used in the pre-hero — the "MASTER YOUR
+     PATH · Freedom Intelligence Field" text was doubling up with
+     the pre-hero eyebrow. Larger logo since it's now solo. */
+  .brand-header--logo-only { gap: 0; padding-bottom: 14px; }
+  .brand-header--logo-only .brand-logo { width: 72px; height: 72px; }
 
   /* ═════════════════════════════════════════════════════════════
-     HERO — dark canvas with embedded chat widget + copy
+     PRE-HERO — the ad-first opening statement. Sits above the
+     preview hero. Its job is to name the pattern the ad promised
+     to solve, then pull the reader down into the free preview.
+     Full-viewport dark canvas so it feels like a moment, not
+     just a section. CTA "Try it for free" scrolls to #free-preview.
      ═════════════════════════════════════════════════════════════ */
+  .pre-hero {
+    position: relative;
+    background:
+      radial-gradient(ellipse 1600px 900px at 50% 15%, rgba(201, 168, 76, 0.12), transparent 60%),
+      radial-gradient(ellipse 900px 700px at 20% 80%, rgba(201, 168, 76, 0.05), transparent 55%),
+      var(--bg-dark);
+    color: var(--text-inverse);
+    /* Aggressively tightened — pre-hero now sized to a single-fold
+       view so the "Try it for free" CTA is visible without scrolling
+       on typical laptop heights (~720-800px viewports). */
+    padding: clamp(32px, 4.5vw, 60px) 24px clamp(36px, 5vw, 68px);
+    overflow: hidden;
+    text-align: center;
+  }
+  .pre-hero .particles { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+  .pre-hero-inner {
+    position: relative;
+    z-index: 2;
+    max-width: 820px;
+    margin: 0 auto;
+  }
+  .pre-hero .brand-header {
+    justify-content: center;
+    margin-bottom: 18px;
+  }
+  .pre-hero-eyebrow { margin-bottom: 14px; }
+  .pre-hero-title { margin-bottom: 14px; }
+  .pre-hero-sub { margin-bottom: 18px; }
+  .pre-hero-meta { margin-bottom: 22px; }
+  .pre-hero-body { margin-bottom: 24px; }
+  .pre-hero-body p { margin: 0 0 10px; }
+  .pre-hero-scroll-cue { display: none; }
+  .pre-hero-eyebrow {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 0 0 22px;
+  }
+  .pre-hero-title {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-style: italic;
+    font-size: clamp(34px, 5.8vw, 62px);
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    margin: 0 0 22px;
+    color: var(--text-inverse);
+  }
+  .pre-hero-title em { font-style: italic; color: var(--gold); }
+  .pre-hero-sub {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: clamp(20px, 2.6vw, 28px);
+    line-height: 1.3;
+    color: var(--gold);
+    margin: 0 0 26px;
+  }
+  .pre-hero-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 18px;
+    border: 1px solid rgba(201, 168, 76, 0.35);
+    border-radius: var(--radius-pill);
+    background: rgba(201, 168, 76, 0.05);
+    color: var(--text-inverse-dim);
+    font-family: var(--font-sans);
+    font-size: 12.5px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 42px;
+  }
+  .pre-hero-meta strong { color: var(--gold); font-weight: 700; }
+  .pre-hero-body {
+    font-family: var(--font-serif);
+    font-size: clamp(16px, 1.9vw, 19px);
+    line-height: 1.7;
+    color: var(--text-inverse-dim);
+    max-width: 640px;
+    margin: 0 auto 40px;
+  }
+  .pre-hero-body p { margin: 0 0 14px; }
+  .pre-hero-body p:last-child { margin-bottom: 0; }
+  .pre-hero-body em { color: var(--gold); font-style: italic; }
+  .pre-hero-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 18px 34px;
+    background: var(--gold);
+    color: #1a1612;
+    border-radius: var(--radius-pill);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    transition: background 200ms ease, transform 120ms ease, box-shadow 200ms ease;
+    box-shadow: 0 0 0 rgba(201, 168, 76, 0.0), 0 12px 30px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+    border: 0;
+    text-decoration: none;
+  }
+  .pre-hero-cta:hover {
+    background: var(--gold-warm);
+    transform: translateY(-2px);
+    box-shadow: 0 0 40px rgba(201, 168, 76, 0.35), 0 18px 40px rgba(0, 0, 0, 0.3);
+  }
+  .pre-hero-cta:active { transform: translateY(0); }
+  .pre-hero-cta .arrow { display: inline-block; transition: transform 200ms ease; }
+  .pre-hero-cta:hover .arrow { transform: translateY(3px); }
+  .pre-hero-scroll-cue {
+    margin-top: 30px;
+    color: var(--text-inverse-dim);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    opacity: 0.55;
+  }
+
+  /* ═════════════════════════════════════════════════════════════
+     PATTERN + VSL — the "choose your pattern before the video"
+     section. Now warm cream so it breaks up the run of dark
+     sections between pre-hero and free-preview hero. The dark
+     VSL wrap pops beautifully against the light surface.
+     ═════════════════════════════════════════════════════════════ */
+  .pattern-vsl {
+    position: relative;
+    background: var(--bg-warm);
+    color: var(--text);
+    padding: clamp(70px, 8vw, 110px) 24px clamp(70px, 8vw, 110px);
+    overflow: hidden;
+  }
+  .pattern-vsl .lp-container { max-width: 860px; }
+  .pattern-vsl-intro {
+    text-align: center;
+    font-family: var(--font-serif);
+    font-size: clamp(17px, 2vw, 20px);
+    line-height: 1.55;
+    color: var(--text);
+    margin: 0 0 30px;
+  }
+  .pattern-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 auto 36px;
+    max-width: 620px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .pattern-list li {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: clamp(16px, 1.9vw, 19px);
+    line-height: 1.4;
+    color: var(--text-mid);
+    padding: 12px 20px;
+    border: 1px solid var(--gold-line);
+    border-radius: var(--radius-pill);
+    background: rgba(255, 255, 255, 0.55);
+    text-align: center;
+    transition: border-color 200ms ease, background 200ms ease, color 200ms ease;
+  }
+  .pattern-list li:hover {
+    border-color: var(--gold);
+    background: #fff;
+    color: var(--text);
+  }
+  .pattern-close {
+    text-align: center;
+    font-family: var(--font-serif);
+    font-size: clamp(17px, 2vw, 20px);
+    line-height: 1.5;
+    color: var(--text);
+    margin: 0 auto 6px;
+    max-width: 640px;
+  }
+  .pattern-close--emphasis {
+    font-style: italic;
+    color: var(--gold);
+    font-size: clamp(19px, 2.4vw, 24px);
+    margin-top: 8px;
+  }
+  .vsl-cue {
+    text-align: center;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 48px 0 22px;
+    font-weight: 700;
+  }
+  /* VSL section title block — replaces the tiny "Watch this short
+     video" eyebrow above the video with a proper h2 that reads as
+     the section's title. Sits above the video with the same
+     centered treatment as other lp-section headers. */
+  .vsl-title-block {
+    text-align: center;
+    margin: 0 auto 40px;
+    max-width: 720px;
+  }
+  .vsl-title-block .lp-eyebrow {
+    margin: 0 0 14px;
+  }
+  .vsl-title {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-style: italic;
+    font-size: clamp(30px, 4.4vw, 46px);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin: 0;
+    color: var(--text);
+  }
+  .vsl-title em { font-style: italic; color: var(--gold); }
+  /* Divider that softens the dark → cream transition between
+     pre-hero and the pattern section so it doesn't slam. */
+  .pre-hero + .pattern-vsl { border-top: 1px solid rgba(201, 168, 76, 0.15); }
   .hero {
     position: relative;
     background: radial-gradient(ellipse 1400px 900px at 50% 20%, rgba(201, 168, 76, 0.06), transparent 60%),
@@ -251,6 +485,207 @@
     height: 100%; width: 0%;
     background: var(--gold);
     transition: width 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* ═════════════════════════════════════════════════════════════
+     CHAT MAXIMIZE / MINIMIZE
+     Optional feature — the inline experience below stays 100%
+     functional; users can chat, send, and complete the preview
+     without ever expanding. Maximize is just a bigger window
+     for anyone who wants a focused space to work in.
+     ═════════════════════════════════════════════════════════════ */
+  /* Expand button in the chat header — inline state. */
+  .cw-expand-btn {
+    background: rgba(201, 168, 76, 0.10);
+    border: 1px solid rgba(201, 168, 76, 0.35);
+    color: var(--gold-warm);
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    transition: background 180ms ease, border-color 180ms ease, transform 100ms ease;
+    flex-shrink: 0;
+  }
+  .cw-expand-btn:hover {
+    background: rgba(201, 168, 76, 0.20);
+    border-color: var(--gold);
+  }
+  .cw-expand-btn:active { transform: scale(0.96); }
+  .cw-expand-btn svg { width: 15px; height: 15px; }
+  /* Hide the expand icon while already maximized (its role becomes the X). */
+  .chat-widget.is-maximized .cw-expand-btn { display: none; }
+
+  /* Minimize (X) button — visible only when maximized. */
+  .cw-minimize-btn {
+    display: none;
+    background: rgba(201, 168, 76, 0.14);
+    border: 1px solid rgba(201, 168, 76, 0.40);
+    color: var(--gold-warm);
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    position: relative;
+    transition: background 180ms ease, border-color 180ms ease, transform 100ms ease;
+    flex-shrink: 0;
+  }
+  .chat-widget.is-maximized .cw-minimize-btn { display: inline-flex; }
+  .cw-minimize-btn:hover {
+    background: rgba(201, 168, 76, 0.25);
+    border-color: var(--gold);
+  }
+  .cw-minimize-btn:active { transform: scale(0.96); }
+  .cw-minimize-btn svg { width: 18px; height: 18px; }
+  .cw-minimize-label {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 6px;
+    background: rgba(0, 0, 0, 0.80);
+    color: var(--text-inverse);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 150ms ease;
+    font-weight: 700;
+  }
+  .cw-minimize-btn:hover .cw-minimize-label { opacity: 1; }
+
+  /* Backdrop shown behind the maximized chat. Fixed to viewport
+     so it dims the whole LP, not just the section. */
+  .cw-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 5, 3, 0.85);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 9998;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 220ms ease;
+  }
+  .cw-backdrop.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Maximized chat state — desktop = centered modal card,
+     mobile = full-screen slide-up. Same DOM element, just
+     styled differently so conversation state is preserved. */
+  .chat-widget.is-maximized {
+    position: fixed;
+    top: 3vh;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(880px, calc(100vw - 40px));
+    height: 94vh;
+    max-height: none;
+    min-height: 0;
+    z-index: 9999;
+    border-radius: 18px;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(201, 168, 76, 0.20);
+    /* Apple-style natural motion curve — cubic-bezier(0.32, 0.72, 0, 1)
+       lands with a slight settle without feeling springy or draggy.
+       340ms sits in the pocket where it reads "considered" but never
+       "laggy." Backdrop fades faster (200ms) so the dim leads and
+       the widget follows. */
+    animation: cw-max-in 340ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+  @keyframes cw-max-in {
+    from { opacity: 0; transform: translate(-50%, 16px) scale(0.97); }
+    to   { opacity: 1; transform: translateX(-50%) scale(1); }
+  }
+  @media (max-width: 720px) {
+    .chat-widget.is-maximized {
+      top: 0;
+      left: 0;
+      transform: none;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      border-radius: 0;
+      animation: cw-max-in-mobile 320ms cubic-bezier(0.32, 0.72, 0, 1) both;
+    }
+    @keyframes cw-max-in-mobile {
+      from { transform: translateY(20px); opacity: 0; }
+      to   { transform: none; opacity: 1; }
+    }
+  }
+  .cw-backdrop { transition: opacity 200ms cubic-bezier(0.32, 0.72, 0, 1); }
+
+  /* Sticky €9 CTA pill shown ONLY when maximized. Keeps the offer
+     visible so users don't have to minimize + scroll to buy. */
+  .cw-max-cta {
+    display: none;
+  }
+  .chat-widget.is-maximized .cw-max-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: rgba(201, 168, 76, 0.10);
+    border: 1px solid rgba(201, 168, 76, 0.30);
+    border-radius: 999px;
+    padding: 8px 8px 8px 18px;
+    margin: 12px 20px 4px;
+    flex-shrink: 0;
+    color: var(--text);
+  }
+  .cw-max-cta-text {
+    font-size: 13px;
+    line-height: 1.35;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .cw-max-cta-text strong { color: var(--gold-warm); font-weight: 700; }
+  .cw-max-cta-btn {
+    background: var(--gold);
+    color: #1a1410;
+    border: 0;
+    border-radius: 999px;
+    padding: 10px 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 180ms ease, transform 100ms ease, box-shadow 200ms ease;
+    box-shadow: 0 8px 20px rgba(201, 168, 76, 0.35);
+  }
+  .cw-max-cta-btn:hover { background: var(--gold-warm); transform: translateY(-1px); }
+  @media (max-width: 720px) {
+    .chat-widget.is-maximized .cw-max-cta {
+      margin: 8px 12px 0;
+      padding: 7px 6px 7px 14px;
+    }
+    .cw-max-cta-text { font-size: 11.5px; }
+    .cw-max-cta-btn { padding: 8px 14px; font-size: 10px; }
+  }
+
+  /* Body scroll lock modifier applied to <html> while maximized so
+     the LP behind doesn't scroll under mobile fingers. */
+  html.chat-max-locked, html.chat-max-locked body {
+    overflow: hidden !important;
+    height: 100%;
+    touch-action: none;
+  }
+
+  /* Respect reduced-motion preferences. */
+  @media (prefers-reduced-motion: reduce) {
+    .chat-widget.is-maximized { animation: none; }
+    .cw-backdrop { transition: none; }
   }
   .cw-body {
     flex: 1;
@@ -848,10 +1283,15 @@
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    transition: background 180ms ease, transform 100ms ease;
+    transition: background 180ms ease, transform 100ms ease, box-shadow 220ms ease;
     font-family: var(--font-sans);
+    box-shadow: 0 10px 24px rgba(201, 168, 76, 0.30), 0 4px 10px rgba(0, 0, 0, 0.12);
   }
-  .side-cta-btn:hover { background: var(--gold-warm); }
+  .side-cta-btn:hover {
+    background: var(--gold-warm);
+    box-shadow: 0 14px 32px rgba(201, 168, 76, 0.45), 0 6px 14px rgba(0, 0, 0, 0.14);
+    transform: translateY(-1px);
+  }
   .side-cta-btn:active { transform: scale(0.98); }
 
   /* Right column: stack of 2 testimonials with initials avatars */
@@ -1249,13 +1689,13 @@
     font-weight: 700;
     letter-spacing: 0.02em;
     border-radius: 999px;
-    box-shadow: 0 0 40px rgba(201, 168, 76, 0.35);
+    box-shadow: 0 14px 32px rgba(201, 168, 76, 0.40), 0 6px 14px rgba(0, 0, 0, 0.20);
     transition: transform 150ms ease, box-shadow 200ms ease, background 180ms ease;
   }
   .day-mockup-cta:hover {
     background: var(--gold-warm);
     transform: translateY(-2px);
-    box-shadow: 0 8px 40px rgba(201, 168, 76, 0.5);
+    box-shadow: 0 20px 44px rgba(201, 168, 76, 0.55), 0 10px 20px rgba(0, 0, 0, 0.25);
   }
   .day-mockup-cta:active { transform: translateY(0); }
 
@@ -1484,10 +1924,227 @@
     font-size: 14px; font-weight: 700;
     letter-spacing: 0.08em; text-transform: uppercase;
     border-radius: var(--radius-pill);
-    transition: background 180ms ease, transform 100ms ease;
+    transition: background 180ms ease, transform 100ms ease, box-shadow 220ms ease;
+    box-shadow: 0 12px 28px rgba(201, 168, 76, 0.32), 0 4px 10px rgba(0, 0, 0, 0.14);
   }
-  .value-cta:hover { background: var(--gold-warm); }
+  .value-cta:hover {
+    background: var(--gold-warm);
+    box-shadow: 0 16px 36px rgba(201, 168, 76, 0.45), 0 6px 14px rgba(0, 0, 0, 0.18);
+    transform: translateY(-1px);
+  }
   .value-cta:active { transform: scale(0.98); }
+
+  /* Rich value stack — used on /try for the full 11-item Reset
+     bundle. Each row is a numbered card (gold pill index + title +
+     description + value line) so the offer reads like a considered
+     stack, not a bare receipt. Bonus stack image sits above it. */
+  .bonus-stack-img {
+    display: block;
+    max-width: 720px;
+    width: 100%;
+    height: auto;
+    margin: 0 auto 32px;
+    border-radius: var(--radius-md);
+    box-shadow: 0 20px 50px rgba(43, 35, 24, 0.12);
+  }
+  .value-stack.rich {
+    padding: 26px 28px;
+    background: linear-gradient(180deg, var(--bg-card) 0%, #FFFDF7 100%);
+    border: 1px solid var(--gold-line);
+    box-shadow: 0 24px 60px rgba(43, 35, 24, 0.08);
+  }
+  .value-stack.rich .value-row {
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 18px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .value-stack.rich .value-row:last-of-type { border-bottom: 0; }
+  .value-stack.rich .v-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--gold);
+    color: #fff;
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    margin-top: 2px;
+    box-shadow: 0 4px 10px rgba(201, 168, 76, 0.28);
+  }
+  .value-stack.rich .v-body {
+    text-align: left;
+    min-width: 0;
+  }
+  .value-stack.rich .v-title {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 18px;
+    line-height: 1.25;
+    color: var(--text);
+    margin: 0 0 6px;
+    font-weight: 500;
+  }
+  .value-stack.rich .v-desc {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--text-mid);
+    margin: 0;
+  }
+  .value-stack.rich .v-price {
+    font-family: var(--font-sans);
+    font-style: normal;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gold-warm);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    padding: 6px 10px;
+    background: rgba(201, 168, 76, 0.08);
+    border-radius: 6px;
+    margin-top: 2px;
+  }
+  .value-stack.rich .value-total {
+    grid-template-columns: 1fr auto;
+    padding-top: 24px;
+    margin-top: 8px;
+    border-top: 2px solid var(--gold);
+    border-bottom: 0;
+    font-size: 19px;
+    align-items: center;
+  }
+  .value-stack.rich .value-total .v-total-label {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    color: var(--text);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .value-stack.rich .value-total .v-strike-big {
+    text-decoration: line-through;
+    color: var(--text-mute);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    margin-left: 8px;
+    font-weight: 500;
+  }
+  .value-stack.rich .value-today {
+    grid-template-columns: 1fr auto;
+    padding-top: 20px;
+    padding-bottom: 8px;
+    border-bottom: 0;
+  }
+  .value-stack.rich .value-today .v-today-label {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    color: var(--text);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  /* ─── Final price block ────────────────────────────────────────
+     Replaces the two awkward space-between rows (Core Experience
+     Value €1,267 on left, empty middle, €9 on right). Now a
+     centered stack: strike-through "was" line, then a centered
+     "Today €9" pairing with the huge glowing hero €9. Reads as
+     one price statement instead of two disconnected rows. */
+  .value-stack.rich .value-final-block {
+    margin-top: 12px;
+    padding-top: 26px;
+    padding-bottom: 10px;
+    border-top: 2px solid var(--gold);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .value-stack.rich .value-was {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-mid);
+    font-weight: 600;
+  }
+  .value-stack.rich .value-was .v-strike-big {
+    text-decoration: line-through;
+    color: var(--text-mute);
+    font-family: var(--font-sans);
+    font-style: normal;
+    font-size: 15px;
+    margin-left: 6px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .value-stack.rich .value-now {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 8px 24px;
+  }
+  .value-stack.rich .value-now-label {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    font-weight: 700;
+  }
+  .value-stack.rich .value-now-price {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: clamp(56px, 8vw, 88px);
+    color: var(--gold);
+    line-height: 1;
+    font-weight: 500;
+    text-shadow: 0 0 30px rgba(201, 168, 76, 0.45);
+  }
+  @media (max-width: 480px) {
+    .value-stack.rich .value-now { gap: 14px; padding: 4px 12px; }
+    .value-stack.rich .value-now-label { font-size: 11px; letter-spacing: 0.2em; }
+  }
+
+  /* Legacy hero-price override kept for other places that still use
+     the old .v-price-hero class inside .value-stack.rich (e.g. the
+     inline row layout on older LP variants). */
+  .value-stack.rich .v-price.v-price-hero {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: clamp(52px, 7vw, 76px);
+    color: var(--gold);
+    line-height: 1;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    text-shadow: 0 0 30px rgba(201, 168, 76, 0.45);
+  }
+  @media (max-width: 640px) {
+    .value-stack.rich { padding: 20px 18px; }
+    .value-stack.rich .value-row { grid-template-columns: 32px 1fr; gap: 12px; }
+    .value-stack.rich .v-num { width: 28px; height: 28px; font-size: 12px; }
+    .value-stack.rich .v-title { font-size: 16px; }
+    .value-stack.rich .v-desc { font-size: 13px; }
+    .value-stack.rich .v-price {
+      grid-column: 2 / -1;
+      justify-self: start;
+      margin-top: 6px;
+    }
+  }
 
   /* Testimonials — 2x2 grid, centered. */
   .testimonials-grid {
@@ -1499,6 +2156,29 @@
   }
   @media (max-width: 640px) {
     .testimonials-grid { grid-template-columns: 1fr; }
+  }
+  /* Testimonials screenshot — single composite image replacement
+     for the lower testimonials grid. Centered, capped so it
+     doesn't stretch too wide on ultra-wide monitors, subtle
+     border + shadow so it reads as a "framed screenshot" rather
+     than a raw dropped file. */
+  .testimonial-screenshot {
+    max-width: 780px;
+    margin: 28px auto 0;
+    padding: 0 8px;
+  }
+  .testimonial-screenshot img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    box-shadow: 0 30px 60px rgba(26, 22, 18, 0.10),
+                0 8px 20px rgba(26, 22, 18, 0.06);
+  }
+  @media (max-width: 640px) {
+    .testimonial-screenshot { padding: 0; }
+    .testimonial-screenshot img { border-radius: 10px; }
   }
   .quote-card {
     background: var(--bg-card); border: 1px solid var(--border);
@@ -1625,9 +2305,14 @@
     border-radius: var(--radius-pill);
     font-size: 14px; font-weight: 700;
     letter-spacing: 0.08em; text-transform: uppercase;
-    transition: background 180ms ease;
+    transition: background 180ms ease, transform 100ms ease, box-shadow 220ms ease;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22), 0 4px 10px rgba(0, 0, 0, 0.12);
   }
-  .final-cta-btn:hover { background: var(--gold-warm); }
+  .final-cta-btn:hover {
+    background: var(--gold-warm);
+    transform: translateY(-1px);
+    box-shadow: 0 16px 36px rgba(201, 168, 76, 0.35), 0 6px 14px rgba(0, 0, 0, 0.18);
+  }
 
   /* Floating "Start the Reset · €9" shortcut pill. Invisible above the
      fold — appears only after the user has scrolled past the chat
@@ -2044,23 +2729,54 @@
 <body>
 
 <!-- ═══════════════════════════════════════════════════════════════
-     HERO — brand mark + copy on top, embedded chat below.
-     Brand mark lives INSIDE the hero (same dark background) so it
-     reads as one section, not header + separate block.
+     PRE-HERO — the ad-first opening. Names the pattern the ad
+     promised to solve, then pulls the reader down into the free
+     preview via the "Try it for free" CTA (which scrolls to
+     #free-preview, the current hero + chat widget).
      ═══════════════════════════════════════════════════════════════ -->
-<section class="hero">
+<section class="pre-hero" id="top">
+  <div class="particles" id="pre-hero-particles" aria-hidden="true"></div>
+  <div class="pre-hero-inner">
+    <!-- Text lockup removed per Geo 2026-07-23 — just the logo now
+         (the "MASTER YOUR PATH · Freedom Intelligence Field" text
+         doubled up with the pre-hero eyebrow below). -->
+    <div class="brand-header brand-header--logo-only" role="banner">
+      <img class="brand-logo" src="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" alt="Master Your Path" />
+    </div>
+    <p class="pre-hero-eyebrow">The 72-Hour Power Reset</p>
+    <h1 class="pre-hero-title">
+      If you're done trading your <em>aliveness</em><br/>
+      for security or comfort…
+    </h1>
+    <p class="pre-hero-sub">The next three days are your reset.</p>
+    <div class="pre-hero-meta">
+      <strong>€9</strong> · Instant access · Includes bonuses
+    </div>
+    <div class="pre-hero-body">
+      <p>A 3-day guided process to interrupt one active pattern — <em>the loop, reaction, decision, or state pulling you out of your power</em> — and calibrate your frequency to the reality you're choosing now.</p>
+    </div>
+    <a href="#free-preview" class="pre-hero-cta" data-scroll-to="#free-preview">
+      Try it for free
+      <span class="arrow" aria-hidden="true">↓</span>
+    </a>
+    <p class="pre-hero-scroll-cue">See the preview below</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     HERO — free preview chat sits immediately after the pre-hero
+     banner (order changed 2026-07-23 per Geo). Ad clickers who tap
+     "Try it for free" land on the chat within one scroll instead
+     of having to pass through the pattern/VSL section first. The
+     pattern + VSL + testimonials block now lives BELOW this — it's
+     the "deepen the offer" beat after users have tasted the Field.
+     ═══════════════════════════════════════════════════════════════ -->
+<section class="hero" id="free-preview">
   <div class="particles" id="particles" aria-hidden="true"></div>
   <div class="hero-inner">
     <div class="hero-copy">
-      <div class="brand-header" role="banner">
-        <img class="brand-logo" src="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" alt="Master Your Path logo" />
-        <div class="brand-text">
-          <span class="brand-line-1">Master Your Path</span>
-          <span class="brand-line-2">Freedom Intelligence Field</span>
-        </div>
-      </div>
       <p class="hero-eyebrow">Free Preview of The Field</p>
-      <h1 class="hero-title">That loop you keep returning to.<br/><em>It has a reset.</em></h1>
+      <h1 class="hero-title">Interrupt the pattern and <em>break the loop</em> in this free trial run inside The Field.</h1>
       <p class="hero-lead">
         Before you decide on the full 72-Hour Reset, step inside The Field for free. Choose a doorway below to start.
       </p>
@@ -2076,10 +2792,32 @@
               <span class="cw-title-l2">Freedom Intelligence Field</span>
             </div>
           </div>
-          <div class="cw-progress" id="cw-progress" style="display: none;">
-            <div class="cw-progress-bar"><div class="cw-progress-fill" id="cw-progress-fill"></div></div>
-            <span id="cw-progress-count">0 / 6</span>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="cw-progress" id="cw-progress" style="display: none;">
+              <div class="cw-progress-bar"><div class="cw-progress-fill" id="cw-progress-fill"></div></div>
+              <span id="cw-progress-count">0 / 6</span>
+            </div>
+            <!-- Expand → maximize the chat. Hidden while maximized. -->
+            <button class="cw-expand-btn" id="cw-expand-btn" type="button" aria-label="Open chat full-screen" title="Open full-screen">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+              </svg>
+            </button>
+            <!-- Minimize → return chat to inline. Shown ONLY while maximized. -->
+            <button class="cw-minimize-btn" id="cw-minimize-btn" type="button" aria-label="Minimize chat" title="Minimize">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+              <span class="cw-minimize-label" aria-hidden="true">Minimize</span>
+            </button>
           </div>
+        </div>
+        <!-- €9 CTA pill only appears when chat is maximized so users
+             can convert without needing to minimize + scroll first. -->
+        <div class="cw-max-cta" role="complementary">
+          <span class="cw-max-cta-text">Loved it? Unlock the full Reset — <strong>€9</strong></span>
+          <a class="cw-max-cta-btn" href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank" rel="noopener">Get it →</a>
         </div>
         <div class="cw-body" id="cw-body">
           <!-- Populated by JS: greeting + chips, then real conversation -->
@@ -2090,82 +2828,88 @@
         </div>
       </div>
     </div>
+    <!-- Backdrop that dims the LP when the chat is maximized.
+         Fixed to viewport so it covers everything behind. Clicking
+         it also minimizes (matches modal convention). -->
+    <div class="cw-backdrop" id="cw-backdrop" aria-hidden="true"></div>
 
   </div>
 </section>
 
+<!-- Reset breakdown + floating testimonials section removed per Geo
+     2026-07-23 (feedback round 2). The pre-hero + upcoming VSL /
+     testimonials block cover the same ground more cleanly, and the
+     value stack lives further down the page. -->
+
 <!-- ═══════════════════════════════════════════════════════════════
-     Own section for the Reset breakdown + testimonials — moved
-     out of the hero so it doesn't feel cramped. Light cream bg so
-     the dark Reset card + white testimonial cards visually pop.
+     PATTERN + VSL — the "choose your pattern, then watch the video"
+     moment. Sits AFTER the free preview (reorder 2026-07-23 per
+     Geo) so users have already tasted the Field and now know what
+     they're choosing a pattern for. Warm cream bg breaks up the
+     dark run and lets the dark VSL frame pop.
      ═══════════════════════════════════════════════════════════════ -->
-<section class="lp-section" style="padding-top: clamp(60px, 7vw, 100px); padding-bottom: clamp(60px, 7vw, 100px);">
+<section class="pattern-vsl">
   <div class="lp-container reveal">
-    <div style="text-align: center; max-width: 720px; margin: 0 auto 44px;">
-      <p class="lp-eyebrow">If the preview lands</p>
-      <h2 class="lp-h2">Take the real walk-through.</h2>
-      <p class="lp-lead" style="margin: 0 auto;">
-        The free preview shows you the doorway. The 72-Hour Power Reset is the actual crossing. Three days, held with a real human group, guided by The Field the whole way.
-      </p>
+    <!-- Section title moved above the pattern intro so the whole
+         "pattern → close → video" flow reads as one narrative under
+         one header (change 2026-07-23 per Geo). -->
+    <div class="vsl-title-block">
+      <p class="lp-eyebrow" style="color: var(--gold);">The 72-hour walk-through</p>
+      <h2 class="vsl-title">Watch this short video below to see <em>how it works</em>.</h2>
     </div>
-    <div class="chat-support-row">
-      <div class="reset-showcase-inner">
-        <div class="side-cta-card primary">
-          <p class="side-cta-eyebrow">Your next step</p>
-          <p class="side-cta-title">The 72-Hour Power Reset</p>
-          <p class="side-cta-sub">Three days that move you from the state that keeps recreating the loop, back into power. Instant access, no waitlist.</p>
 
-          <div class="side-days-detailed">
-            <div class="side-day-detailed">
-              <div class="side-day-header">
-                <span class="side-day-num">01</span>
-                <span class="side-day-title">State Reset</span>
-              </div>
-              <p class="side-day-body">Interrupt the loop. Locate the pattern under the pattern that is actually running you.</p>
-            </div>
-            <div class="side-day-detailed">
-              <div class="side-day-header">
-                <span class="side-day-num">02</span>
-                <span class="side-day-title">Decision &amp; Action</span>
-              </div>
-              <p class="side-day-body">One aligned decision. One grounded move you actually make in your real life today.</p>
-            </div>
-            <div class="side-day-detailed">
-              <div class="side-day-header">
-                <span class="side-day-num">03</span>
-                <span class="side-day-title">Power Calibration</span>
-              </div>
-              <p class="side-day-body">Calibrate to the new state so the shift becomes your baseline, not a peak you fall away from.</p>
-            </div>
-          </div>
+    <p class="pattern-vsl-intro">Before you watch the video below, choose the pattern you'd bring into the Reset:</p>
+    <ul class="pattern-list">
+      <li>The reaction that keeps taking over.</li>
+      <li>The decision you keep circling.</li>
+      <li>The thought loop that pulls you out of your power.</li>
+      <li>The state you keep slipping back into.</li>
+    </ul>
+    <p class="pattern-close">Bring that into the next 72 hours.</p>
+    <p class="pattern-close">You already have the power to change.</p>
+    <p class="pattern-close pattern-close--emphasis"><em>Now it's time to use it.</em></p>
 
-          <div class="side-price-row">
-            <span class="side-price"><strong>€9</strong></span>
-            <span class="side-instant">Instant access</span>
-          </div>
-
-          <a class="side-cta-btn" href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank">Join the Reset for €9</a>
-        </div>
-
-        <!-- Floating testimonials — sit around the black card so the box
-             stays fully visible but the social proof pops on top. On
-             mobile these stack below the card. -->
-        <blockquote class="floating-testi floating-testi--1">
-          <p>"I have done 2 days in the Field. <strong>No words to describe it.</strong> It is so simple and so powerful."</p>
-          <cite>Maria</cite>
-        </blockquote>
-        <blockquote class="floating-testi floating-testi--2">
-          <p>"It is very <strong>scary accurate and thus powerful.</strong> Made me reflect deeper during the days."</p>
-          <cite>Anne</cite>
-        </blockquote>
-        <blockquote class="floating-testi floating-testi--3">
-          <p>"I am not a big fan of AI, and this one, <strong>I am on cloud nine.</strong>"</p>
-          <cite>Lisa</cite>
-        </blockquote>
+    <div class="vsl-wrap">
+      <!-- VSL placeholder — swap the .vsl-placeholder for an
+           <iframe class="vsl-iframe" src="..."> once Shimrit records
+           the new video with the "start here for free" segment. -->
+      <div class="vsl-placeholder">
+        <div class="play-badge" aria-hidden="true">▶</div>
+        <div class="vsl-caption">Shimrit's video — coming soon</div>
       </div>
     </div>
   </div>
 </section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TESTIMONIALS (top cluster) — three social-proof cards right
+     after the VSL. Warm cream bg to continue the light section
+     from pattern-vsl. Second cluster still sits lower on the page.
+     ═══════════════════════════════════════════════════════════════ -->
+<section class="lp-section lp-section--warm">
+  <div class="lp-container reveal" style="text-align: center;">
+    <p class="lp-eyebrow">Already in motion</p>
+    <h2 class="lp-h2">People are already moving through real shifts in The Power Reset.</h2>
+    <div class="testimonials-grid" style="margin-top: 44px;">
+      <div class="quote-card lift reveal">
+        <img class="quote-avatar" src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/testimonial-pics/Anne.jpg" alt="Anna B." loading="lazy" />
+        <p class="quote-body">"What an amazing experience so far! It is very, <strong>scary, accurate and thus powerful.</strong> Also I like the format for the different days, <strong>made me reflect deeper</strong> during the days. Love it!"</p>
+        <div class="quote-name">Anna B.</div>
+      </div>
+      <div class="quote-card lift reveal">
+        <img class="quote-avatar" src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/testimonial-pics/Katii.jpg" alt="Katti" loading="lazy" />
+        <p class="quote-body"><strong>"I love this so much!"</strong> Thank you for creating such a great and helpful tool.</p>
+        <div class="quote-name">Katti</div>
+      </div>
+      <div class="quote-card lift reveal">
+        <img class="quote-avatar" src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/testimonial-pics/Lisa.png" alt="Lisa" loading="lazy" />
+        <p class="quote-body">"I was sceptical but excited about using AI. I'm just starting but <strong>so surprised about the positive experience I had.</strong> Looking forward to my next experience with The Field!"</p>
+        <div class="quote-name">Lisa</div>
+      </div>
+    </div>
+  </div>
+</section>
+
 
 <!-- ═══════════════════════════════════════════════════════════════
      LONG-FORM LP SECTIONS
@@ -2558,63 +3302,142 @@
   </div>
 </section>
 
-<!-- Value stack -->
+<!-- Value stack — full 11-item bundle with the bonus stack image at
+     the top so people can SEE the shape of what's included before
+     they read through the list. -->
 <section class="lp-section lp-section--warm">
   <div class="lp-container narrow reveal">
     <p class="lp-eyebrow" style="text-align:center;">What you get today</p>
     <h2 class="lp-h2" style="text-align:center;">Everything included in the Reset.</h2>
-    <p class="lp-lead" style="text-align:center; margin: 0 auto 32px;">
+    <p class="lp-lead" style="text-align:center; margin: 0 auto 36px;">
       A full guided experience inside The Field, held with a real human group for the entire 72 hours. Once you finish the preview, this is your next step.
     </p>
-    <div class="value-stack">
-      <div class="value-row"><span>The 72-Hour Power Reset experience</span><span class="v-price">€297</span></div>
-      <div class="value-row"><span>Private Freedom Intelligence Field access</span><span class="v-price">€197</span></div>
-      <div class="value-row"><span>Daily action activation prompts</span><span class="v-price">€291</span></div>
-      <div class="value-row"><span>Real-human group environment for 72 hours</span><span class="v-price">€97</span></div>
-      <div class="value-row value-total">
-        <span>Total value <span class="v-strike">€882</span></span>
-        <span class="v-price v-price-hero">€9</span>
+
+    <img class="bonus-stack-img" src="https://assets.cdn.filesafe.space/eo4N6ugBtPJTQE4clj7A/media/6a1ef88c027d0d5be1577b6f.png" alt="Everything included in the 72-Hour Power Reset — bonus stack" loading="lazy" />
+
+    <p class="lp-eyebrow" style="text-align:center; margin-top: 8px;">What you receive inside the 72-Hour Power Reset</p>
+
+    <div class="value-stack rich">
+      <div class="value-row">
+        <span class="v-num">1</span>
+        <div class="v-body">
+          <p class="v-title">The 72-Hour Power Reset Experience</p>
+          <p class="v-desc">A complete 3-day guided reset that moves you through State Reset, Decision &amp; Action, and Power Frequency Calibration — so you can interrupt one active loop, make one aligned decision, and step into the frequency of the reality you chose.</p>
+        </div>
+        <span class="v-price">Value €297</span>
+      </div>
+      <div class="value-row">
+        <span class="v-num">2</span>
+        <div class="v-body">
+          <p class="v-title">Private Freedom Intelligence Field Access</p>
+          <p class="v-desc">A private AI-guided experience built from Shimrit's methodology. It asks precise questions to help you locate what is leading, restore self-reference, and return to your own direction.</p>
+        </div>
+        <span class="v-price">Value €197</span>
+      </div>
+      <div class="value-row">
+        <span class="v-num">3</span>
+        <div class="v-body">
+          <p class="v-title">The Day-by-Day Reset Map</p>
+          <p class="v-desc">A simple structure showing exactly what to focus on each day — so you don't drift into overthinking, over-processing, or trying to solve your whole life at once.</p>
+        </div>
+        <span class="v-price">Value €97</span>
+      </div>
+      <div class="value-row">
+        <span class="v-num">4</span>
+        <div class="v-body">
+          <p class="v-title">State Reset Prompts</p>
+          <p class="v-desc">Guided prompts to help you identify the state, story, pattern, or protective mechanism currently leading your behaviour.</p>
+        </div>
+        <span class="v-price">Value €97</span>
+      </div>
+      <div class="value-row">
+        <span class="v-num">5</span>
+        <div class="v-body">
+          <p class="v-title">Decision Lock Prompts</p>
+          <p class="v-desc">Prompts to help you clarify what is no longer available, what direction you are choosing now, and what standard you are returning to.</p>
+        </div>
+        <span class="v-price">Value €97</span>
+      </div>
+      <div class="value-row">
+        <span class="v-num">6</span>
+        <div class="v-body">
+          <p class="v-title">Power Frequency Calibration Prompts</p>
+          <p class="v-desc">Prompts to guide you into building your Determined Imagination scene — a specific, sensory, alive picture of your desired reality — so you can step into the frequency of it and feel it as already real.</p>
+        </div>
+        <span class="v-price">Value €97</span>
+      </div>
+      <div class="value-row">
+        <span class="v-num">7</span>
+        <div class="v-body">
+          <p class="v-title">Your Personalised Determined Imagination Scene MP3</p>
+          <p class="v-desc">A personalised audio of your Determined Imagination scene in Shimrit's voice — to listen to daily for 7 days and anchor the frequency of your desired reality into the subconscious.</p>
+        </div>
+        <span class="v-price">Value €97</span>
+      </div>
+      <div class="value-row">
+        <span class="v-num">8</span>
+        <div class="v-body">
+          <p class="v-title">Your Personalised Power Declaration MP3</p>
+          <p class="v-desc">A personalised audio of your Power Declaration in Shimrit's voice — to listen to daily for 7 days and amplify your vibration and magnetism.</p>
+        </div>
+        <span class="v-price">Value €97</span>
+      </div>
+      <div class="value-row">
+        <span class="v-num">9</span>
+        <div class="v-body">
+          <p class="v-title">Moving Energy Beyond the Senses Meditation</p>
+          <p class="v-desc">A guided meditation to deepen the frequency calibration and anchor the new state in the body.</p>
+        </div>
+        <span class="v-price">Value €47</span>
+      </div>
+      <div class="value-row">
+        <span class="v-num">10</span>
+        <div class="v-body">
+          <p class="v-title">Real-Human Group Environment</p>
+          <p class="v-desc">A contained space to stay visible, supported, and moving through the 72 hours with others inside the same reset.</p>
+        </div>
+        <span class="v-price">Value €97</span>
+      </div>
+      <div class="value-row">
+        <span class="v-num">★</span>
+        <div class="v-body">
+          <p class="v-title">Bonus Day — The Architecture of Freedom Masterclass</p>
+          <p class="v-desc">A powerful 50-minute class on the inner structure for sustainable income, leadership, and life.</p>
+        </div>
+        <span class="v-price">Value €47</span>
+      </div>
+
+      <div class="value-final-block">
+        <p class="value-was">Core Experience Value <span class="v-strike-big">€1,267</span></p>
+        <div class="value-now">
+          <span class="value-now-label">Today</span>
+          <span class="value-now-price">€9</span>
+        </div>
       </div>
     </div>
-    <div style="text-align:center; margin-top: 28px;">
+
+    <div style="text-align:center; margin-top: 32px;">
       <a class="value-cta" href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank">Yes, start my reset for €9</a>
-      <p style="font-size: 12px; color: var(--text-mute); margin: 12px 0 0;">Instant access · secure checkout</p>
+      <p style="font-size: 12px; color: var(--text-mute); margin: 12px 0 0;">Instant access · secure checkout · includes bonuses</p>
     </div>
   </div>
 </section>
 
-<!-- Testimonials -->
+<!-- Testimonials — replaced the 5-card grid with a single curated
+     screenshot from Shimrit's Kajabi feedback thread (2026-07-23 per
+     Geo). Same section slot, same header intro, but the visual is
+     now the composite testimonial image so real member voices show
+     up as raw DM screenshots instead of restyled cards. -->
 <section class="lp-section">
   <div class="lp-container reveal" style="text-align: center;">
     <p class="lp-eyebrow">From people already in the Field</p>
     <h2 class="lp-h2">Real words from members.</h2>
-    <p class="lp-lead" style="margin: 0 auto 8px;">Moving through the 72-Hour Power Reset. All from the first weeks of the Field being live.</p>
-    <div class="testimonials-grid">
-      <div class="quote-card lift reveal">
-        <img class="quote-avatar" src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/testimonial-pics/Anne.jpg" alt="Anne" loading="lazy" />
-        <p class="quote-body">"What an amazing experience so far! It is very <strong>scary accurate and thus powerful.</strong> I like the format for the different days, <strong>made me reflect deeper</strong> during the days. Love it!"</p>
-        <div class="quote-name">Anne</div>
-      </div>
-      <div class="quote-card lift reveal">
-        <img class="quote-avatar" src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/testimonial-pics/Maria.png" alt="Maria" loading="lazy" />
-        <p class="quote-body">"I just finished day 1. <strong>It feels soooo good.</strong> I am already loving this AI of ours! It has been an amazing session."</p>
-        <div class="quote-name">Maria</div>
-      </div>
-      <div class="quote-card lift reveal">
-        <img class="quote-avatar" src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/testimonial-pics/Antonella.jpg" alt="Antonella" loading="lazy" />
-        <p class="quote-body">"I am very concentrated… I find myself talking or thinking in English. <strong>My capability to stop myself as soon as the loop arrives, to see better and choose from the real me, has increased.</strong> And I feel proud of my last days."</p>
-        <div class="quote-name">Antonella</div>
-      </div>
-      <div class="quote-card lift reveal">
-        <img class="quote-avatar" src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/testimonial-pics/Lisa.png" alt="Lisa" loading="lazy" />
-        <p class="quote-body">"I was skeptical but excited about using AI. I'm just starting but <strong>so surprised about the positive experience I had.</strong> Looking forward to my next experience with The Field!"</p>
-        <div class="quote-name">Lisa</div>
-      </div>
-      <div class="quote-card reveal quote-card--wide">
-        <img class="quote-avatar" src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/testimonial-pics/Katii.jpg" alt="Katti" loading="lazy" />
-        <p class="quote-body"><strong>"I love this so much!</strong> Thank you for creating such a great and helpful tool."</p>
-        <div class="quote-name">Katti</div>
-      </div>
+    <p class="lp-lead" style="margin: 0 auto 24px;">Moving through the 72-Hour Power Reset. All from the first weeks of the Field being live.</p>
+    <div class="testimonial-screenshot">
+      <img
+        src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/screenshots/Screenshot%202026-07-23%20at%2015.03.31.png"
+        alt="Selection of member testimonials from The Field"
+        loading="lazy" />
     </div>
   </div>
 </section>
@@ -2688,38 +3511,9 @@
   <p><strong style="color: var(--text-inverse); font-weight: 600;">The Freedom Intelligence Field</strong></p>
   <p>A 72-hour experience by Master Your Path</p>
 
-  <div class="lp-footer-social" aria-label="Follow Shimrit on social">
-    <a href="https://www.instagram.com/shimritnativ/" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/></svg>
-    </a>
-    <a href="https://www.facebook.com/ShimritNativMYP/" target="_blank" rel="noopener" aria-label="Facebook" title="Facebook">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 12a10 10 0 1 0-11.6 9.9V15h-2.4v-3h2.4V9.8c0-2.4 1.4-3.7 3.6-3.7 1 0 2.1.2 2.1.2v2.3h-1.2c-1.2 0-1.5.7-1.5 1.5V12h2.6l-.4 3h-2.2v6.9A10 10 0 0 0 22 12z"/></svg>
-    </a>
-    <a href="https://www.youtube.com/@shimritnativ" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 8a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v8a4 4 0 0 0 4 4h12a4 4 0 0 0 4-4V8z"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></svg>
-    </a>
-    <a href="https://www.linkedin.com/in/shimrit-nativ/" target="_blank" rel="noopener" aria-label="LinkedIn" title="LinkedIn">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 2h-17A1.5 1.5 0 0 0 2 3.5v17A1.5 1.5 0 0 0 3.5 22h17a1.5 1.5 0 0 0 1.5-1.5v-17A1.5 1.5 0 0 0 20.5 2zM8 19H5v-9h3v9zM6.5 8.3A1.75 1.75 0 1 1 6.5 4.8a1.75 1.75 0 0 1 0 3.5zM19 19h-3v-4.6c0-1.1-.4-1.8-1.4-1.8-.8 0-1.3.6-1.5 1.1-.1.2-.1.5-.1.7V19h-3v-9h3v1.3c.4-.6 1.1-1.5 2.7-1.5 2 0 3.4 1.3 3.4 4v5.2z"/></svg>
-    </a>
-    <a href="https://tiktok.com/shimritnativ" target="_blank" rel="noopener" aria-label="TikTok" title="TikTok">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.6 6.3a5.4 5.4 0 0 1-3.5-1.3 5.5 5.5 0 0 1-1.8-3.5H11v13.2a2.7 2.7 0 1 1-1.9-2.6V8.6a5.9 5.9 0 1 0 5.1 5.8V9.7a8.6 8.6 0 0 0 5 1.6V8a5.6 5.6 0 0 1-.6-1.7z"/></svg>
-    </a>
-    <a href="https://open.spotify.com/show/4pgBqwRUbGyq3a4IioAHqC?si=e0de1f6966634ad0" target="_blank" rel="noopener" aria-label="Spotify podcast" title="The Human Instrument Mastery Podcast on Spotify">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.4 14.4a.6.6 0 0 1-.9.2c-2.5-1.5-5.6-1.8-9.3-1a.6.6 0 1 1-.3-1.2c4-.9 7.4-.5 10.2 1.1.3.2.4.6.3.9zm1.2-2.7a.8.8 0 0 1-1.1.3c-2.9-1.8-7.3-2.3-10.7-1.3a.8.8 0 1 1-.4-1.5c3.9-1.2 8.8-.6 12.1 1.4.4.2.5.7.1 1.1zm.1-2.8c-3.4-2-9.1-2.2-12.4-1.2a.9.9 0 1 1-.5-1.8c3.8-1.1 10.1-.9 14 1.4a.9.9 0 1 1-1.1 1.6z"/></svg>
-    </a>
-    <a href="https://podcasts.apple.com/br/podcast/the-human-instrument-mastery-podcast-with-shimrit-nativ/id1796883694?l=en-GB" target="_blank" rel="noopener" aria-label="Apple Podcasts" title="The Human Instrument Mastery Podcast on Apple Podcasts">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-        <!-- Outer broadcast arc -->
-        <path d="M6.2 10.6a7.2 7.2 0 0 1 11.6 0"/>
-        <!-- Inner broadcast arc -->
-        <path d="M8.6 12.2a4.2 4.2 0 0 1 6.8 0"/>
-        <!-- Microphone body -->
-        <rect x="10.3" y="12.8" width="3.4" height="5.6" rx="1.7" fill="currentColor" stroke="none"/>
-        <!-- Base wave / stand hint -->
-        <path d="M9 20.5c1 .3 2 .5 3 .5s2-.2 3-.5"/>
-      </svg>
-    </a>
-  </div>
+  <!-- Social media links removed per Geo 2026-07-23 — the /try
+       page is an ad landing page and every offsite link is a
+       potential leak away from the paid checkout. -->
 
   <div class="lp-footer-links">
     <a href="/privacy" target="_blank" rel="noopener">Privacy policy</a>
@@ -2783,21 +3577,25 @@
   }
 
   // ── Particles (24 gold dots drifting)
+  // Seeds every element with class="particles" — covers both the
+  // pre-hero and the free-preview hero without needing separate JS.
   function seedParticles() {
-    const wrap = $("particles");
-    if (!wrap) return;
+    const wraps = document.querySelectorAll(".particles");
+    if (!wraps.length) return;
     const count = window.innerWidth < 720 ? 14 : 24;
-    for (let i = 0; i < count; i++) {
-      const p = document.createElement("div");
-      p.className = "particle";
-      p.style.setProperty("--sz", (2 + Math.random() * 5).toFixed(1) + "px");
-      p.style.setProperty("--op", (0.25 + Math.random() * 0.55).toFixed(2));
-      p.style.setProperty("--dur", (14 + Math.random() * 12).toFixed(1) + "s");
-      p.style.setProperty("--del", (-Math.random() * 12).toFixed(1) + "s");
-      p.style.top = (Math.random() * 100) + "%";
-      p.style.left = (Math.random() * 100) + "%";
-      wrap.appendChild(p);
-    }
+    wraps.forEach(wrap => {
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement("div");
+        p.className = "particle";
+        p.style.setProperty("--sz", (2 + Math.random() * 5).toFixed(1) + "px");
+        p.style.setProperty("--op", (0.25 + Math.random() * 0.55).toFixed(2));
+        p.style.setProperty("--dur", (14 + Math.random() * 12).toFixed(1) + "s");
+        p.style.setProperty("--del", (-Math.random() * 12).toFixed(1) + "s");
+        p.style.top = (Math.random() * 100) + "%";
+        p.style.left = (Math.random() * 100) + "%";
+        wrap.appendChild(p);
+      }
+    });
   }
 
   // Escape HTML first, THEN convert markdown-style bold. This order
@@ -3335,6 +4133,93 @@
       });
     }
     $("cw-send").addEventListener("click", sendMessage);
+
+    // ── Chat maximize / minimize ────────────────────────────────
+    // Wraps the existing widget with an "expanded" state that
+    // covers the viewport (mobile) or floats as a centered modal
+    // (desktop). Nothing about the inline chat experience changes —
+    // this is purely an optional bigger canvas. Same DOM element,
+    // so the conversation state survives every toggle.
+    const chatMax = (function () {
+      const widget   = document.getElementById("chat-widget");
+      const backdrop = document.getElementById("cw-backdrop");
+      const expandBtn = document.getElementById("cw-expand-btn");
+      const minBtn    = document.getElementById("cw-minimize-btn");
+      let hasAutoExpanded = false;
+
+      function isMaximized() { return widget.classList.contains("is-maximized"); }
+      function maximize(source) {
+        if (isMaximized()) return;
+        widget.classList.add("is-maximized");
+        backdrop.classList.add("is-visible");
+        document.documentElement.classList.add("chat-max-locked");
+        // Focus the input so keyboard users can keep typing.
+        const input = document.getElementById("cw-input");
+        if (input && !input.disabled) input.focus();
+        try {
+          if (window.dataLayer) window.dataLayer.push({ event: "chat_maximize", source: source || "manual" });
+        } catch (_) {}
+      }
+      function minimize() {
+        if (!isMaximized()) return;
+        widget.classList.remove("is-maximized");
+        backdrop.classList.remove("is-visible");
+        document.documentElement.classList.remove("chat-max-locked");
+        // Return the user to the chat's inline position instead of
+        // wherever the page happened to be scrolled (which is often
+        // the top, because the maximize scroll-locked the page).
+        // rAF ensures we scroll AFTER the fixed→inline layout flip.
+        requestAnimationFrame(() => {
+          try {
+            const rect = widget.getBoundingClientRect();
+            const target = window.scrollY + rect.top - Math.max(24, (window.innerHeight - rect.height) / 2);
+            window.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
+          } catch (_) {
+            widget.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        });
+        try {
+          if (window.dataLayer) window.dataLayer.push({ event: "chat_minimize" });
+        } catch (_) {}
+      }
+      function autoExpandIfMobile() {
+        if (hasAutoExpanded || isMaximized()) return;
+        if (window.matchMedia("(max-width: 720px)").matches) {
+          hasAutoExpanded = true;
+          maximize("mobile_first_send");
+        }
+      }
+
+      if (expandBtn) expandBtn.addEventListener("click", () => maximize("manual"));
+      if (minBtn)    minBtn.addEventListener("click",    () => minimize());
+      if (backdrop)  backdrop.addEventListener("click",  () => minimize());
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && isMaximized()) minimize();
+      });
+
+      return { maximize, minimize, autoExpandIfMobile };
+    })();
+
+    // Hook into the send-message flow so the first message on a
+    // mobile viewport auto-expands the chat (no UI to teach —
+    // typing IS the affordance). Desktop stays inline unless the
+    // user clicks expand.
+    const _originalSend = sendMessage;
+    window.sendMessage = async function () {
+      const input = document.getElementById("cw-input");
+      const willSend = input && (input.value || "").trim() && state.trialId && !state.isFinal;
+      if (willSend) chatMax.autoExpandIfMobile();
+      return _originalSend.apply(this, arguments);
+    };
+    // Rebind the send-button click and Enter key to the wrapped fn.
+    $("cw-send").removeEventListener("click", sendMessage);
+    $("cw-send").addEventListener("click", window.sendMessage);
+    const _input = document.getElementById("cw-input");
+    if (_input) {
+      _input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); window.sendMessage(); }
+      });
+    }
 
     window.addEventListener("beforeunload", () => {
       if (state.trialId && !state.isFinal) closeTrial("dismissed");
