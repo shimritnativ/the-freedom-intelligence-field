@@ -119,10 +119,10 @@
       radial-gradient(ellipse 900px 700px at 20% 80%, rgba(201, 168, 76, 0.05), transparent 55%),
       var(--bg-dark);
     color: var(--text-inverse);
-    /* Aggressively tightened — pre-hero now sized to a single-fold
-       view so the "Try it for free" CTA is visible without scrolling
-       on typical laptop heights (~720-800px viewports). */
-    padding: clamp(32px, 4.5vw, 60px) 24px clamp(36px, 5vw, 68px);
+    /* Pre-hero and free-preview hero read as one continuous section:
+       tight bottom padding here + tight top padding on .hero mean
+       there's no "end of section" dead space between them. */
+    padding: clamp(32px, 4.5vw, 60px) 24px 16px;
     overflow: hidden;
     text-align: center;
   }
@@ -191,16 +191,131 @@
   .pre-hero-meta strong { color: var(--gold); font-weight: 700; }
   .pre-hero-body {
     font-family: var(--font-serif);
-    font-size: clamp(19px, 2.4vw, 24px);
-    line-height: 1.5;
+    font-size: clamp(22px, 3vw, 30px);
+    line-height: 1.4;
     color: var(--text-inverse);
-    max-width: 720px;
+    max-width: 820px;
     margin: 0 auto 40px;
     font-weight: 400;
   }
   .pre-hero-body p { margin: 0 0 14px; }
   .pre-hero-body p:last-child { margin-bottom: 0; }
   .pre-hero-body em { color: var(--gold); font-style: italic; }
+
+  /* Video + quote lockup — small 16:9 video from Shimrit on the
+     left, warm personal quote on the right. Stacks vertically on
+     narrow screens with the video staying compact. */
+  .pre-hero-vq {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    align-items: center;
+    gap: 32px;
+    max-width: 860px;
+    margin: 12px auto 34px;
+    text-align: left;
+  }
+  @media (max-width: 720px) {
+    .pre-hero-vq {
+      grid-template-columns: 1fr;
+      gap: 20px;
+      max-width: 480px;
+      text-align: center;
+    }
+  }
+  .pre-hero-video {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45),
+                0 0 0 1px rgba(201, 168, 76, 0.30),
+                0 0 50px rgba(201, 168, 76, 0.15);
+  }
+  .pre-hero-video-el {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    background: #000;
+  }
+  .pre-hero-video-sound {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px 6px 8px;
+    background: rgba(14, 11, 7, 0.72);
+    border: 1px solid rgba(201, 168, 76, 0.45);
+    border-radius: 999px;
+    color: var(--gold);
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    transition: background 200ms ease, transform 120ms ease, border-color 200ms ease;
+  }
+  .pre-hero-video-sound:hover {
+    background: rgba(14, 11, 7, 0.90);
+    border-color: var(--gold);
+  }
+  .pre-hero-video-sound:active { transform: scale(0.96); }
+  .pre-hero-video-sound svg { width: 14px; height: 14px; }
+  .pre-hero-video-sound.is-unmuted .pre-hero-video-sound-label { display: none; }
+  /* Quote next to the video, Shimrit's warm personal welcome. */
+  .pre-hero-quote {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: clamp(15.5px, 1.8vw, 18px);
+    line-height: 1.6;
+    color: var(--text-inverse-dim);
+    margin: 0;
+    position: relative;
+    padding-left: 22px;
+  }
+  .pre-hero-quote::before {
+    content: "“";
+    position: absolute;
+    left: -2px;
+    top: -18px;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 56px;
+    color: var(--gold);
+    line-height: 1;
+    opacity: 0.75;
+  }
+  .pre-hero-quote-attr {
+    display: block;
+    margin-top: 14px;
+    font-family: var(--font-sans);
+    font-style: normal;
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 700;
+    line-height: 1.4;
+  }
+  .pre-hero-quote-role {
+    display: block;
+    margin-top: 4px;
+    font-size: 10px;
+    letter-spacing: 0.20em;
+    color: var(--text-inverse-dim);
+    font-weight: 500;
+  }
+  @media (max-width: 720px) {
+    .pre-hero-quote { padding-left: 0; padding-top: 14px; }
+    .pre-hero-quote::before { left: 50%; top: -6px; transform: translateX(-50%); }
+  }
   .pre-hero-cta {
     display: inline-flex;
     align-items: center;
@@ -401,7 +516,9 @@
     background: radial-gradient(ellipse 1400px 900px at 50% 20%, rgba(201, 168, 76, 0.06), transparent 60%),
                 var(--bg-dark);
     color: var(--text-inverse);
-    padding: 48px 24px 80px;
+    /* Top padding pulled tight so the pre-hero above flows into
+       this section without a visible seam. */
+    padding: 20px 24px 80px;
     overflow: hidden;
   }
   .particles { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
@@ -3023,18 +3140,54 @@
     <div class="brand-header brand-header--logo-only" role="banner">
       <img class="brand-logo" src="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png" alt="Master Your Path" />
     </div>
-    <p class="pre-hero-eyebrow">The 72-Hour Power Reset</p>
     <h1 class="pre-hero-title">
       If you're done trading your <em>aliveness</em><br/>
       for security or comfort…
     </h1>
-    <p class="pre-hero-sub">The next three days are your reset.</p>
-    <div class="pre-hero-meta">
-      <strong>€9</strong> · Instant access · Includes bonuses
+    <p class="pre-hero-sub">This is your Reset.</p>
+
+    <!-- Small Shimrit video on the left, warm personal welcome
+         quote on the right. Video autoplays muted; the corner
+         button unmutes on tap. Stacks on narrow screens. -->
+    <div class="pre-hero-vq">
+      <div class="pre-hero-video">
+        <video
+          id="pre-hero-video-el"
+          class="pre-hero-video-el"
+          autoplay
+          muted
+          loop
+          playsinline
+          preload="metadata"
+          poster="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png"
+          aria-label="Shimrit welcomes you to The Field">
+          <source src="https://placeholder.example.com/shimrit-reset-intro.mp4" type="video/mp4" />
+        </video>
+        <button type="button" class="pre-hero-video-sound" id="pre-hero-video-sound" aria-label="Unmute video" title="Unmute">
+          <svg class="icon-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <line x1="23" y1="9" x2="17" y2="15"></line>
+            <line x1="17" y1="9" x2="23" y2="15"></line>
+          </svg>
+          <svg class="icon-unmuted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: none;">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+          </svg>
+          <span class="pre-hero-video-sound-label">Tap for sound</span>
+        </button>
+      </div>
+      <blockquote class="pre-hero-quote">
+        Welcome to The Field. Give yourself the next few minutes and let it meet you exactly where you are. What you have been carrying gets named clearly. Not fixed, not analyzed, just seen.
+        <span class="pre-hero-quote-attr">
+          Shimrit Nativ
+          <span class="pre-hero-quote-role">Creator of The Field</span>
+        </span>
+      </blockquote>
     </div>
+
     <div class="pre-hero-body">
-      <p>A 3-day guided process to interrupt one active pattern: <em>the loop, reaction, decision, or state pulling you out of your power.</em></p>
-      <p>Calibrate your frequency to the reality you're choosing now.</p>
+      <p>A guided process to interrupt one active pattern: <em>the loop, reaction, decision, or state pulling you out of your power.</em></p>
     </div>
     <a href="#free-preview" class="pre-hero-cta" data-scroll-to="#free-preview">
       Try it for free
@@ -3060,7 +3213,7 @@
   <div class="particles" id="particles" aria-hidden="true"></div>
   <div class="hero-inner">
     <div class="hero-copy">
-      <p class="hero-eyebrow">Free Preview of The Field</p>
+      <p class="hero-eyebrow">Experience The Field in 5 minutes</p>
       <h1 class="hero-title">Interrupt the pattern and <em>break the loop</em> in this free trial run inside The Field.</h1>
       <p class="hero-lead">
         Before you decide on the full 72-Hour Reset, step inside The Field for free. Choose a doorway below to start.
@@ -3126,45 +3279,7 @@
      testimonials block cover the same ground more cleanly, and the
      value stack lives further down the page. -->
 
-<!-- ═══════════════════════════════════════════════════════════════
-     PATTERN + VSL — the "choose your pattern, then watch the video"
-     moment. Sits AFTER the free preview (reorder 2026-07-23 per
-     Geo) so users have already tasted the Field and now know what
-     they're choosing a pattern for. Warm cream bg breaks up the
-     dark run and lets the dark VSL frame pop.
-     ═══════════════════════════════════════════════════════════════ -->
-<section class="pattern-vsl">
-  <div class="lp-container reveal">
-    <!-- Section title moved above the pattern intro so the whole
-         "pattern → close → video" flow reads as one narrative under
-         one header (change 2026-07-23 per Geo). -->
-    <div class="vsl-title-block">
-      <p class="lp-eyebrow" style="color: var(--gold);">The 72-hour walk-through</p>
-      <h2 class="vsl-title">Watch this short video below to see <em>how it works</em>.</h2>
-    </div>
-
-    <p class="pattern-vsl-intro">Before you watch the video below, choose the pattern you'd bring into the Reset:</p>
-    <ul class="pattern-list">
-      <li>The reaction that keeps taking over.</li>
-      <li>The decision you keep circling.</li>
-      <li>The thought loop that pulls you out of your power.</li>
-      <li>The state you keep slipping back into.</li>
-    </ul>
-    <p class="pattern-close">Bring that into the next 72 hours.</p>
-    <p class="pattern-close">You already have the power to change.</p>
-    <p class="pattern-close pattern-close--emphasis"><em>Now it's time to use it.</em></p>
-
-    <div class="vsl-wrap">
-      <!-- VSL placeholder — swap the .vsl-placeholder for an
-           <iframe class="vsl-iframe" src="..."> once Shimrit records
-           the new video with the "start here for free" segment. -->
-      <div class="vsl-placeholder">
-        <div class="play-badge" aria-hidden="true">▶</div>
-        <div class="vsl-caption">Shimrit's video coming soon</div>
-      </div>
-    </div>
-  </div>
-</section>
+<!-- Pattern + VSL section removed entirely 2026-07-23 per Geo. -->
 
 <!-- ═══════════════════════════════════════════════════════════════
      TESTIMONIALS (top cluster) — three social-proof cards right
@@ -4530,6 +4645,35 @@
   }
 
   // ── Boot
+  // Pre-hero video: autoplays muted (browser policy); the corner
+  // "Tap for sound" button unmutes on the user's first tap and
+  // swaps the icon to the "unmuted" speaker.
+  function initPreHeroVideo() {
+    const video = document.getElementById("pre-hero-video-el");
+    const btn = document.getElementById("pre-hero-video-sound");
+    if (!video || !btn) return;
+    btn.addEventListener("click", () => {
+      const willUnmute = video.muted;
+      video.muted = !willUnmute ? true : false;
+      if (willUnmute) {
+        // Attempt play in case autoplay was paused (some browsers pause
+        // when user gestures on the page).
+        try { video.play(); } catch (_) {}
+        btn.classList.add("is-unmuted");
+        btn.setAttribute("aria-label", "Mute video");
+        btn.setAttribute("title", "Mute");
+        btn.querySelector(".icon-muted").style.display = "none";
+        btn.querySelector(".icon-unmuted").style.display = "";
+      } else {
+        btn.classList.remove("is-unmuted");
+        btn.setAttribute("aria-label", "Unmute video");
+        btn.setAttribute("title", "Unmute");
+        btn.querySelector(".icon-muted").style.display = "";
+        btn.querySelector(".icon-unmuted").style.display = "none";
+      }
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     seedParticles();
     renderGreetingAndChips();
@@ -4539,6 +4683,7 @@
     initConstellationProximity();
     initConstellationAutoCycle();
     initFloatCta();
+    initPreHeroVideo();
 
     const input = $("cw-input");
     if (input) {
