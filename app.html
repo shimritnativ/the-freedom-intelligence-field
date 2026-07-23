@@ -8352,10 +8352,11 @@ Begin.` },
   // 25mb; a 15-minute Opus clip base64-encoded is roughly 4.5mb, well
   // within the cap even at the highest-bitrate mobile codecs.
   const MAX_RECORDING_MS = 15 * 60 * 1000;
-  // Slow mobile networks can take a while to upload larger clips. 3-min
-  // ceiling keeps the UI from hanging permanently on a stuck request
-  // while still allowing a slow phone on 3G to finish a 15-min upload.
-  const TRANSCRIBE_TIMEOUT_MS = 3 * 60 * 1000;
+  // Slow mobile networks can take a while to upload larger clips.
+  // 5-min ceiling keeps the UI from hanging permanently on a stuck
+  // request while still allowing a slow phone on 3G to finish a
+  // 15-min upload with headroom to spare.
+  const TRANSCRIBE_TIMEOUT_MS = 5 * 60 * 1000;
   const voiceState = {
     mediaRecorder: null, audioChunks: [], stream: null, mimeType: "",
     startedAt: 0, timerInterval: null, autoStopTimer: null, indicatorEl: null,
@@ -8458,9 +8459,16 @@ Begin.` },
   function showRecordingIndicator() {
     const composer = document.querySelector(".composer");
     if (!composer) return;
+    // Format the max recording time from MAX_RECORDING_MS so the
+    // display never drifts from the actual cap again. Previously
+    // this was hardcoded to "5:00" and stayed wrong after the cap
+    // was bumped to 15 min.
+    const maxMin = Math.floor(MAX_RECORDING_MS / 60000);
+    const maxSec = Math.floor((MAX_RECORDING_MS % 60000) / 1000);
+    const maxLabel = `${maxMin}:${String(maxSec).padStart(2, "0")}`;
     voiceState.indicatorEl = document.createElement("div");
     voiceState.indicatorEl.className = "recording-indicator";
-    voiceState.indicatorEl.innerHTML = '<span class="red-dot"></span><span class="rec-time">0:00</span> / 5:00';
+    voiceState.indicatorEl.innerHTML = `<span class="red-dot"></span><span class="rec-time">0:00</span> / ${maxLabel}`;
     composer.appendChild(voiceState.indicatorEl);
   }
 
