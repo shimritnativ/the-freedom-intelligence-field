@@ -2302,26 +2302,163 @@
   @media (max-width: 640px) {
     .testimonials-grid { grid-template-columns: 1fr; }
   }
-  /* Testimonials screenshot — single composite image replacement
-     for the lower testimonials grid. Full-bleed on desktop, no
-     frame or shadow (2026-07-23 per Geo). The image itself has
-     its own beige backdrop so wrapping it in another box was
-     making it feel like a card inside a card. */
-  .testimonial-screenshot {
-    max-width: 1560px;
-    width: 100%;
-    margin: 32px auto 0;
-    padding: 0;
-    background: transparent;
+  /* ═════════════════════════════════════════════════════════════
+     TESTIMONIAL WALL — replaces the image-only version 2026-07-23
+     per Geo. Native HTML cards so mobile stays readable at any
+     size and each card can tilt/straighten on hover for polish.
+     Cards start at a slight rotation (via --tilt CSS var per
+     card); on hover they animate to 0deg + a soft lift.
+     ═════════════════════════════════════════════════════════════ */
+  .lp-section--testimonial-wall { background: #ECE4CE; }
+  .testimonial-wall {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 44px 28px;
+    max-width: 1180px;
+    margin: 44px auto 0;
+    padding: 12px;
+    perspective: 1200px;
   }
-  .testimonial-screenshot img {
-    width: 100%;
-    height: auto;
+  @media (max-width: 900px) {
+    .testimonial-wall { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 36px 20px; }
+  }
+  @media (max-width: 640px) {
+    .testimonial-wall {
+      grid-template-columns: 1fr;
+      gap: 28px;
+      max-width: 460px;
+      padding: 6px;
+    }
+  }
+  .testi-card {
+    transform: rotate(var(--tilt, 0deg));
+    transition: transform 400ms cubic-bezier(0.32, 0.72, 0, 1);
+    cursor: default;
+    will-change: transform;
+  }
+  .testi-card:hover {
+    transform: rotate(0deg) translateY(-4px) scale(1.02);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .testi-card, .testi-card:hover { transform: none; transition: none; }
+  }
+  .testi-bubble {
+    background: #FFFFFF;
+    border-radius: 14px;
+    padding: 12px 14px 10px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 14.5px;
+    line-height: 1.45;
+    color: #1E1E1E;
+    text-align: left;
+    box-shadow: 0 2px 8px rgba(26, 22, 18, 0.10),
+                0 12px 28px rgba(26, 22, 18, 0.06);
+    position: relative;
+  }
+  .testi-bubble--green { background: #D9FDD3; }
+  .testi-bubble p {
+    margin: 0;
     display: block;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-    background: transparent;
+    text-align: left;
+  }
+  /* WhatsApp-style tails — small triangle at the top corner. White
+     received bubbles get the tail on the top-left; green sent
+     bubbles get it on the top-right. The corresponding rounded
+     corner is squared off so the tail flows naturally out of the
+     bubble instead of floating detached. */
+  .testi-bubble::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 10px;
+    height: 14px;
+    pointer-events: none;
+  }
+  .testi-bubble:not(.testi-bubble--green) {
+    border-top-left-radius: 0;
+  }
+  .testi-bubble:not(.testi-bubble--green)::before {
+    left: -8px;
+    background: #FFFFFF;
+    clip-path: polygon(100% 0, 100% 100%, 0 0);
+  }
+  .testi-bubble--green {
+    border-top-right-radius: 0;
+  }
+  .testi-bubble--green::before {
+    right: -8px;
+    background: #D9FDD3;
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
+  .testi-meta-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 6px;
+    font-size: 10.5px;
+    color: rgba(30, 30, 30, 0.42);
+    text-align: right;
+  }
+  .testi-meta-row .checks { color: #4FC3F7; letter-spacing: -1px; font-size: 11px; }
+  .testi-reactions {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-top: 6px;
+    background: #FFFFFF;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 11px;
+    color: #1E1E1E;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    position: absolute;
+    bottom: -10px;
+    left: 14px;
+  }
+  .testi-attribution {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+    padding-left: 4px;
+    text-align: left;
+  }
+  .testi-attribution > div { text-align: left; }
+  .testi-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--gold);
+    color: #FFFFFF;
+    font-family: var(--font-serif);
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .testi-avatar--field {
+    background: var(--gold);
+    font-size: 15px;
+  }
+  .testi-name {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 15.5px;
+    color: var(--text);
+    margin: 0;
+    line-height: 1.15;
+  }
+  .testi-role {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 2px 0 0;
+    font-weight: 700;
   }
   .quote-card {
     background: var(--bg-card); border: 1px solid var(--border);
@@ -3580,16 +3717,142 @@
      Geo). Same section slot, same header intro, but the visual is
      now the composite testimonial image so real member voices show
      up as raw DM screenshots instead of restyled cards. -->
-<section class="lp-section">
-  <div class="lp-container reveal" style="text-align: center; max-width: 1560px;">
+<section class="lp-section lp-section--testimonial-wall">
+  <div class="lp-container reveal" style="text-align: center; max-width: 1240px;">
     <p class="lp-eyebrow">From people already in the Field</p>
     <h2 class="lp-h2">Real words from members.</h2>
     <p class="lp-lead" style="margin: 0 auto 24px; max-width: 720px;">Moving through the 72-Hour Power Reset. All from the first weeks of the Field being live.</p>
-    <div class="testimonial-screenshot">
-      <img
-        src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/screenshots/Screenshot%202026-07-23%20at%2015.03.31.png"
-        alt="Selection of member testimonials from The Field"
-        loading="lazy" />
+
+    <div class="testimonial-wall">
+      <div class="testi-card" style="--tilt: -2.5deg;">
+        <div class="testi-bubble">
+          <p>Day 2! I just wrote my Living Power Declaration. 🌟 I am working with choosing myself and a passionate writer's life. Trusting the process, I believe this is really leading to the results I want! 💕</p>
+          <div class="testi-meta-row"><span>10:32</span></div>
+        </div>
+        <div class="testi-attribution">
+          <span class="testi-avatar">E</span>
+          <div>
+            <p class="testi-name">Elena R.</p>
+            <p class="testi-role">72-Hour Reset</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="testi-card" style="--tilt: 2deg;">
+        <div class="testi-bubble">
+          <p>I was sceptical but excited (if that's possible) about using AI. I'm just starting, but so surprised at the positive experience I had. Looking forward to my next session.</p>
+          <div class="testi-meta-row"><span>12:04</span></div>
+          <span class="testi-reactions">❤️ 🙏 2</span>
+        </div>
+        <div class="testi-attribution">
+          <span class="testi-avatar">A</span>
+          <div>
+            <p class="testi-name">Anna P.</p>
+            <p class="testi-role">First session</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="testi-card" style="--tilt: -1.5deg;">
+        <div class="testi-bubble testi-bubble--green">
+          <p>I am all in. I have enjoyed the 72 hours sooo much that I've signed up for the whole year in the Unlimited Field. I am really full of joy. I have no words to express what I am feeling. Thank you Shimrit and the team for creating this amazing tool.</p>
+          <div class="testi-meta-row"><span>09:41</span> <span class="checks">✓✓</span></div>
+        </div>
+        <div class="testi-attribution">
+          <span class="testi-avatar">C</span>
+          <div>
+            <p class="testi-name">Claudia B.</p>
+            <p class="testi-role">Unlimited Field · Annual</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="testi-card" style="--tilt: 3deg;">
+        <div class="testi-bubble testi-bubble--green">
+          <p>Dear Shimrit, thank you. I'm so excited. For now I'm following the 72-Hour power reset: it's so powerful! As a boomer, I could never imagine having such a deep, intimate, sincere and practical relationship with AI. I'm following the path and I feel my energy renewed, and I feel more alive. And that's fantastic!</p>
+          <div class="testi-meta-row"><span>02:27</span> <span class="checks">✓✓</span></div>
+        </div>
+        <div class="testi-attribution">
+          <span class="testi-avatar">M</span>
+          <div>
+            <p class="testi-name">Marie C.</p>
+            <p class="testi-role">72-Hour Reset</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="testi-card" style="--tilt: -3deg;">
+        <div class="testi-bubble testi-bubble--green">
+          <p>I just finished day 1. It feels soooo good. I am already loving this AI of ours!! 🥰 It has been an amazing session.</p>
+          <div class="testi-meta-row"><span>22:20</span> <span class="checks">✓✓</span></div>
+          <span class="testi-reactions">❤️</span>
+        </div>
+        <div class="testi-attribution">
+          <span class="testi-avatar">G</span>
+          <div>
+            <p class="testi-name">Grace T.</p>
+            <p class="testi-role">Day one</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="testi-card" style="--tilt: 1.5deg;">
+        <div class="testi-bubble testi-bubble--green">
+          <p>Have done 2 days in the Field… no words to describe.</p>
+          <div class="testi-meta-row"><span>08:29</span> <span class="checks">✓✓</span></div>
+        </div>
+        <div class="testi-attribution">
+          <span class="testi-avatar testi-avatar--field">✦</span>
+          <div>
+            <p class="testi-name">Member of the Field</p>
+            <p class="testi-role">Unlimited Field</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="testi-card" style="--tilt: 2.5deg;">
+        <div class="testi-bubble">
+          <p>What an amazing experience so far! It is very scary, accurate, and thus powerful. I also like the format for the different days; it made me reflect deeper as I went. Love it!</p>
+          <div class="testi-meta-row"><span>22:21</span></div>
+          <span class="testi-reactions">❤️ 🔎 4</span>
+        </div>
+        <div class="testi-attribution">
+          <span class="testi-avatar">D</span>
+          <div>
+            <p class="testi-name">David M.</p>
+            <p class="testi-role">Unlimited Field</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="testi-card" style="--tilt: -2deg;">
+        <div class="testi-bubble">
+          <p>It is my pleasure. I am the first one surprised, because I was a bit skeptical with AI in general. But this one has blown my mind! It is really beyond any expectation I could have had. Happy to be in the Field, and thank you for the bonuses. 😊</p>
+          <div class="testi-meta-row"><span>08:33</span></div>
+        </div>
+        <div class="testi-attribution">
+          <span class="testi-avatar testi-avatar--field">✦</span>
+          <div>
+            <p class="testi-name">Member of the Field</p>
+            <p class="testi-role">Unlimited Field</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="testi-card" style="--tilt: 3deg;">
+        <div class="testi-bubble testi-bubble--green">
+          <p>I am working with my Living Power Declaration and my Determined Imagination Scene. I repeat them twice a day. Very powerful!</p>
+          <div class="testi-meta-row"><span>22:33</span> <span class="checks">✓✓</span></div>
+          <span class="testi-reactions">❤️ ⭐ 4</span>
+        </div>
+        <div class="testi-attribution">
+          <span class="testi-avatar">S</span>
+          <div>
+            <p class="testi-name">Sofia L.</p>
+            <p class="testi-role">Unlimited Field</p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
