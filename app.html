@@ -8508,6 +8508,20 @@ Begin.` },
     }, TRANSCRIBE_TIMEOUT_MS);
 
     try {
+      // Vercel's serverless functions cap request payloads at 4.5MB.
+      // Base64 encoding inflates the raw blob by ~33%, plus JSON
+      // overhead. Anything over ~3MB raw is likely to trip Vercel's
+      // FUNCTION_PAYLOAD_TOO_LARGE (413) BEFORE our handler runs,
+      // which is why we can't see it in our logs. Reject client-side
+      // with a helpful message + preserved audio instead. Root-caused
+      // 2026-07-23 (Antonella's 3-min Android Chrome clips).
+      const MAX_RAW_BYTES = 3 * 1024 * 1024; // 3 MB
+      if (blob.size > MAX_RAW_BYTES) {
+        const mb = (blob.size / (1024 * 1024)).toFixed(1);
+        const err = new Error(`Recording is ${mb}MB, which is too large for upload. Try a shorter clip.`);
+        err.statusCode = 413;
+        throw err;
+      }
       const audioBase64 = await blobToBase64(blob);
       const res = await fetch(API_BASE + "/transcribe", {
         method: "POST",
@@ -8560,13 +8574,13 @@ Begin.` },
   // retry will work or they should download and try later.
   function describeTranscribeError(err) {
     if (!err) return "Something went wrong.";
-    if (err.name === "AbortError") return "Took too long. Your network may be slow — your recording is saved.";
+    if (err.name === "AbortError") return "Took too long. Your network may be slow. Your recording is saved.";
     if (err.message === "transcription_empty") return "We didn't pick up any speech. Try again, or check the recording.";
-    if (err.statusCode === 401) return "Your session expired. Refresh the page and try again — your recording is saved.";
+    if (err.statusCode === 401) return "Your session expired. Refresh the page and try again. Your recording is saved.";
     if (err.statusCode === 413) return "Recording is too large. Try a shorter clip.";
-    if (err.statusCode >= 500) return "Our transcription service hiccupped. Your recording is saved — try again in a moment.";
-    if (err.message && err.message.includes("Failed to fetch")) return "Couldn't reach the server. Check your connection — your recording is saved.";
-    return "Couldn't transcribe. Your recording is saved — try again, or download it.";
+    if (err.statusCode >= 500) return "Our transcription service hiccupped. Your recording is saved. Try again in a moment.";
+    if (err.message && err.message.includes("Failed to fetch")) return "Couldn't reach the server. Check your connection. Your recording is saved.";
+    return "Couldn't transcribe. Your recording is saved. Try again, or download it.";
   }
 
   // Inline progress message shown in the composer area while
