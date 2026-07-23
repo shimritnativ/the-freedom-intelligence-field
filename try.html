@@ -559,20 +559,27 @@
      without ever expanding. Maximize is just a bigger window
      for anyone who wants a focused space to work in.
      ═════════════════════════════════════════════════════════════ */
-  /* Expand button in the chat header — inline state. */
+  /* Expand button in the chat header — inline state.
+     Hidden on desktop entirely (Geo 2026-07-23) since the chat
+     already has plenty of space on desktop. Mobile-only affordance
+     for anyone who wants to enter full-screen manually before
+     typing (auto-expand still fires on first send). */
   .cw-expand-btn {
+    display: none;
     background: rgba(201, 168, 76, 0.10);
     border: 1px solid rgba(201, 168, 76, 0.35);
     color: var(--gold-warm);
     width: 34px; height: 34px;
     border-radius: 8px;
-    display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     padding: 0;
     transition: background 180ms ease, border-color 180ms ease, transform 100ms ease;
     flex-shrink: 0;
+  }
+  @media (max-width: 720px) {
+    .cw-expand-btn { display: inline-flex; }
   }
   .cw-expand-btn:hover {
     background: rgba(201, 168, 76, 0.20);
@@ -687,6 +694,10 @@
       left: 0 !important;
       right: 0 !important;
       bottom: 0 !important;
+      /* CRITICAL — must override the desktop translateX(-50%)
+         centering. Without this the widget is pulled half its
+         width off-screen to the left on mobile. */
+      transform: translate3d(0, 0, 0) !important;
       width: 100vw !important;
       height: 100vh !important;
       height: 100dvh !important;
@@ -3443,19 +3454,20 @@
      the top so people can SEE the shape of what's included before
      they read through the list. -->
 <section class="lp-section lp-section--warm">
-  <div class="lp-container reveal">
+  <div class="lp-container narrow reveal">
     <p class="lp-eyebrow" style="text-align:center;">What you get today</p>
     <h2 class="lp-h2" style="text-align:center;">Everything included in the Reset.</h2>
     <p class="lp-lead" style="text-align:center; margin: 0 auto 36px;">
       A full guided experience inside The Field, held with a real human group for the entire 72 hours. Once you finish the preview, this is your next step.
     </p>
 
+    <!-- Bonus stack image sits above the value stack (reverted to
+         stacked layout 2026-07-23 per Geo — side-by-side didn't
+         read well with the image's collage aspect ratio). -->
+    <img class="bonus-stack-img" src="https://assets.cdn.filesafe.space/eo4N6ugBtPJTQE4clj7A/media/6a1ef88c027d0d5be1577b6f.png" alt="Everything included in the 72-Hour Power Reset bonus stack" loading="lazy" />
+
     <p class="lp-eyebrow" style="text-align:center; margin-top: 8px;">What you receive inside the 72-Hour Power Reset</p>
 
-    <!-- Side-by-side: bonus stack image on the left, value stack
-         on the right. Falls back to stacked on tablet/mobile. -->
-    <div class="value-with-stack">
-      <img class="bonus-stack-img" src="https://assets.cdn.filesafe.space/eo4N6ugBtPJTQE4clj7A/media/6a1ef88c027d0d5be1577b6f.png" alt="Everything included in the 72-Hour Power Reset — bonus stack" loading="lazy" />
     <div class="value-stack rich">
       <div class="value-row">
         <span class="v-num">1</span>
@@ -3555,7 +3567,6 @@
       </div>
     </div>
 
-    </div><!-- /.value-with-stack -->
 
     <div style="text-align:center; margin-top: 32px;">
       <a class="value-cta" href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank">Yes, start my reset for €9</a>
