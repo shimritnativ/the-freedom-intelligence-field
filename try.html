@@ -191,11 +191,12 @@
   .pre-hero-meta strong { color: var(--gold); font-weight: 700; }
   .pre-hero-body {
     font-family: var(--font-serif);
-    font-size: clamp(16px, 1.9vw, 19px);
-    line-height: 1.7;
-    color: var(--text-inverse-dim);
-    max-width: 640px;
+    font-size: clamp(19px, 2.4vw, 24px);
+    line-height: 1.5;
+    color: var(--text-inverse);
+    max-width: 720px;
     margin: 0 auto 40px;
+    font-weight: 400;
   }
   .pre-hero-body p { margin: 0 0 14px; }
   .pre-hero-body p:last-child { margin-bottom: 0; }
@@ -269,22 +270,29 @@
     gap: 12px;
   }
   .pattern-list li {
-    font-family: var(--font-serif);
-    font-style: italic;
-    font-size: clamp(16px, 1.9vw, 19px);
-    line-height: 1.4;
-    color: var(--text-mid);
-    padding: 12px 20px;
-    border: 1px solid var(--gold-line);
+    font-family: var(--font-sans);
+    font-style: normal;
+    font-weight: 500;
+    font-size: clamp(15px, 1.7vw, 17px);
+    line-height: 1.45;
+    letter-spacing: 0.01em;
+    color: var(--text);
+    padding: 16px 24px;
+    border: 1.5px solid rgba(201, 168, 76, 0.45);
     border-radius: var(--radius-pill);
-    background: rgba(255, 255, 255, 0.55);
+    background: #FFFFFF;
     text-align: center;
-    transition: border-color 200ms ease, background 200ms ease, color 200ms ease;
+    box-shadow: 0 6px 18px rgba(26, 22, 18, 0.06),
+                0 1px 3px rgba(26, 22, 18, 0.04);
+    transition: border-color 200ms ease, background 200ms ease, color 200ms ease, transform 150ms ease, box-shadow 200ms ease;
   }
   .pattern-list li:hover {
     border-color: var(--gold);
     background: #fff;
     color: var(--text);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 26px rgba(201, 168, 76, 0.20),
+                0 3px 8px rgba(26, 22, 18, 0.06);
   }
   .pattern-close {
     text-align: center;
@@ -300,6 +308,9 @@
     color: var(--gold);
     font-size: clamp(19px, 2.4vw, 24px);
     margin-top: 8px;
+    /* Extra breathing room between the crescendo line and the
+       video below so the moment lands before the VSL kicks in. */
+    margin-bottom: 72px;
   }
   .vsl-cue {
     text-align: center;
@@ -337,6 +348,54 @@
   /* Divider that softens the dark → cream transition between
      pre-hero and the pattern section so it doesn't slam. */
   .pre-hero + .pattern-vsl { border-top: 1px solid rgba(201, 168, 76, 0.15); }
+
+  /* ═════════════════════════════════════════════════════════════
+     DARK DIVIDER — used between two dark sections so the seam
+     reads as intentional gold punctuation rather than an accidental
+     tone shift. Thin gold hairline with a small diamond ornament
+     centered on top of it.
+     ═════════════════════════════════════════════════════════════ */
+  .dark-divider {
+    background: var(--bg-dark);
+    padding: 48px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .dark-divider::before {
+    content: "";
+    position: absolute;
+    left: 15%;
+    right: 15%;
+    top: 50%;
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(201, 168, 76, 0.35) 30%,
+      rgba(201, 168, 76, 0.55) 50%,
+      rgba(201, 168, 76, 0.35) 70%,
+      transparent 100%);
+  }
+  .dark-divider-mark {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background: var(--bg-dark);
+    color: var(--gold);
+    padding: 0 12px;
+  }
+  .dark-divider-mark svg { width: 18px; height: 18px; opacity: 0.85; }
+  @media (max-width: 720px) {
+    .dark-divider { padding: 32px 20px; }
+    .dark-divider::before { left: 8%; right: 8%; }
+    .dark-divider-mark { width: 36px; height: 36px; }
+    .dark-divider-mark svg { width: 14px; height: 14px; }
+  }
+
   .hero {
     position: relative;
     background: radial-gradient(ellipse 1400px 900px at 50% 20%, rgba(201, 168, 76, 0.06), transparent 60%),
@@ -566,7 +625,7 @@
   .cw-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(8, 5, 3, 0.85);
+    background: rgba(8, 5, 3, 0.88);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
     z-index: 9998;
@@ -577,6 +636,16 @@
   .cw-backdrop.is-visible {
     opacity: 1;
     pointer-events: auto;
+  }
+  /* Mobile: drop the backdrop-filter — iOS Safari renders blur very
+     slowly and it was making the maximize animation stutter. Solid
+     dark bg reads the same at that opacity. */
+  @media (max-width: 720px) {
+    .cw-backdrop {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      background: rgba(8, 5, 3, 0.94);
+    }
   }
 
   /* Maximized chat state — desktop = centered modal card,
@@ -607,19 +676,38 @@
   }
   @media (max-width: 720px) {
     .chat-widget.is-maximized {
-      top: 0;
-      left: 0;
-      transform: none;
-      width: 100vw;
-      height: 100vh;
-      height: 100dvh;
-      border-radius: 0;
-      animation: cw-max-in-mobile 320ms cubic-bezier(0.32, 0.72, 0, 1) both;
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      height: 100dvh !important;
+      max-width: none !important;
+      max-height: none !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+      border-radius: 0 !important;
+      z-index: 10000 !important;
+      /* GPU layer + fresh stacking context so nothing can trap
+         the portaled fixed element on iOS Safari. */
+      will-change: transform, opacity;
+      isolation: isolate;
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+      animation: cw-max-in-mobile 380ms cubic-bezier(0.32, 0.72, 0, 1) both;
     }
     @keyframes cw-max-in-mobile {
-      from { transform: translateY(20px); opacity: 0; }
-      to   { transform: none; opacity: 1; }
+      from { transform: translate3d(0, 32px, 0) !important; opacity: 0; }
+      to   { transform: translate3d(0, 0, 0) !important; opacity: 1; }
     }
+  }
+  /* Backdrop needs the highest-priority fixed too — same reason. */
+  .cw-backdrop.is-visible {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 9998 !important;
   }
   .cw-backdrop { transition: opacity 200ms cubic-bezier(0.32, 0.72, 0, 1); }
 
@@ -674,12 +762,19 @@
     .cw-max-cta-btn { padding: 8px 14px; font-size: 10px; }
   }
 
-  /* Body scroll lock modifier applied to <html> while maximized so
-     the LP behind doesn't scroll under mobile fingers. */
-  html.chat-max-locked, html.chat-max-locked body {
-    overflow: hidden !important;
-    height: 100%;
+  /* Scroll lock — puts overflow:hidden on <html> instead of
+     position:fixed on body, because the latter creates a
+     containing-block trap for position:fixed children on iOS
+     Safari (the maximized chat would render behind other
+     sections). Overscroll-behavior stops the rubber-band
+     scroll on iOS. */
+  html.chat-max-locked {
+    overflow: hidden;
+    overscroll-behavior: none;
     touch-action: none;
+  }
+  html.chat-max-locked body {
+    overflow: hidden;
   }
 
   /* Respect reduced-motion preferences. */
@@ -1689,13 +1784,22 @@
     font-weight: 700;
     letter-spacing: 0.02em;
     border-radius: 999px;
-    box-shadow: 0 14px 32px rgba(201, 168, 76, 0.40), 0 6px 14px rgba(0, 0, 0, 0.20);
+    /* On the dark section the earlier gold-heavy shadow read as an
+       over-bright halo. Now: mostly black depth shadow with a very
+       subtle gold undertone so the button feels grounded, not
+       radioactive. */
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45),
+                0 4px 10px rgba(0, 0, 0, 0.30),
+                0 0 0 1px rgba(201, 168, 76, 0.35);
     transition: transform 150ms ease, box-shadow 200ms ease, background 180ms ease;
   }
   .day-mockup-cta:hover {
     background: var(--gold-warm);
     transform: translateY(-2px);
-    box-shadow: 0 20px 44px rgba(201, 168, 76, 0.55), 0 10px 20px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.50),
+                0 6px 14px rgba(0, 0, 0, 0.35),
+                0 0 0 1px var(--gold),
+                0 0 30px rgba(201, 168, 76, 0.20);
   }
   .day-mockup-cta:active { transform: translateY(0); }
 
@@ -1937,15 +2041,38 @@
   /* Rich value stack — used on /try for the full 11-item Reset
      bundle. Each row is a numbered card (gold pill index + title +
      description + value line) so the offer reads like a considered
-     stack, not a bare receipt. Bonus stack image sits above it. */
+     stack, not a bare receipt. Bonus stack image sits next to it
+     on desktop, above it on mobile. */
   .bonus-stack-img {
     display: block;
     max-width: 720px;
     width: 100%;
     height: auto;
-    margin: 0 auto 32px;
-    border-radius: var(--radius-md);
-    box-shadow: 0 20px 50px rgba(43, 35, 24, 0.12);
+    margin: 0 auto;
+    /* Box/shadow removed 2026-07-23 per Geo — the image is a
+       collage of device mockups on a transparent bg, so any
+       wrapping shadow read as a cream card behind the image. */
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  /* Two-column layout: bonus image on the left, value stack on
+     the right. Falls back to stacked on tablet/mobile. */
+  .value-with-stack {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    align-items: start;
+    gap: 40px;
+    max-width: 1140px;
+    margin: 0 auto;
+  }
+  .value-with-stack .bonus-stack-img { max-width: 100%; }
+  @media (max-width: 900px) {
+    .value-with-stack {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+    .value-with-stack .bonus-stack-img { max-width: 560px; }
   }
   .value-stack.rich {
     padding: 26px 28px;
@@ -2158,27 +2285,22 @@
     .testimonials-grid { grid-template-columns: 1fr; }
   }
   /* Testimonials screenshot — single composite image replacement
-     for the lower testimonials grid. Centered, capped so it
-     doesn't stretch too wide on ultra-wide monitors, subtle
-     border + shadow so it reads as a "framed screenshot" rather
-     than a raw dropped file. */
+     for the lower testimonials grid. Sized big and unframed
+     (2026-07-23 per Geo — the box + shadow was reading as a
+     cream card around what's already a self-contained image). */
   .testimonial-screenshot {
-    max-width: 780px;
-    margin: 28px auto 0;
-    padding: 0 8px;
+    max-width: 1280px;
+    margin: 32px auto 0;
+    padding: 0;
   }
   .testimonial-screenshot img {
     width: 100%;
     height: auto;
     display: block;
-    border-radius: 14px;
-    border: 1px solid var(--border);
-    box-shadow: 0 30px 60px rgba(26, 22, 18, 0.10),
-                0 8px 20px rgba(26, 22, 18, 0.06);
-  }
-  @media (max-width: 640px) {
-    .testimonial-screenshot { padding: 0; }
-    .testimonial-screenshot img { border-radius: 10px; }
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
   }
   .quote-card {
     background: var(--bg-card); border: 1px solid var(--border);
@@ -2753,7 +2875,8 @@
       <strong>€9</strong> · Instant access · Includes bonuses
     </div>
     <div class="pre-hero-body">
-      <p>A 3-day guided process to interrupt one active pattern — <em>the loop, reaction, decision, or state pulling you out of your power</em> — and calibrate your frequency to the reality you're choosing now.</p>
+      <p>A 3-day guided process to interrupt one active pattern: <em>the loop, reaction, decision, or state pulling you out of your power.</em></p>
+      <p>Calibrate your frequency to the reality you're choosing now.</p>
     </div>
     <a href="#free-preview" class="pre-hero-cta" data-scroll-to="#free-preview">
       Try it for free
@@ -2762,6 +2885,19 @@
     <p class="pre-hero-scroll-cue">See the preview below</p>
   </div>
 </section>
+
+<!-- Dark divider — small gold hairline + diamond ornament so the
+     two dark sections read as one continuous cinematic surface
+     with intentional punctuation between them, not an accidental
+     seam. -->
+<div class="dark-divider" aria-hidden="true">
+  <span class="dark-divider-mark">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2 L22 12 L12 22 L2 12 Z"/>
+      <path d="M12 7 L17 12 L12 17 L7 12 Z" opacity="0.6"/>
+    </svg>
+  </span>
+</div>
 
 <!-- ═══════════════════════════════════════════════════════════════
      HERO — free preview chat sits immediately after the pre-hero
@@ -4146,29 +4282,76 @@
       const expandBtn = document.getElementById("cw-expand-btn");
       const minBtn    = document.getElementById("cw-minimize-btn");
       let hasAutoExpanded = false;
+      // Remember where the widget started so we can put it back
+      // when the user minimizes. Portal-to-body pattern: fixes
+      // iOS Safari's habit of trapping position:fixed inside
+      // ancestors that have transform/filter/backdrop-filter.
+      let originalParent = null;
+      let originalNextSibling = null;
 
       function isMaximized() { return widget.classList.contains("is-maximized"); }
+
+      // Scroll lock — html-level overflow:hidden preserves the
+      // scroll position visually AND doesn't create a containing
+      // block for the portaled fixed modal.
+      let savedScrollY = 0;
+      function lockBody() {
+        savedScrollY = window.scrollY || window.pageYOffset || 0;
+        document.documentElement.classList.add("chat-max-locked");
+      }
+      function unlockBody() {
+        document.documentElement.classList.remove("chat-max-locked");
+        // On iOS Safari the scroll survives the lock/unlock cycle,
+        // but on Chrome for Android it can jump — restore explicitly.
+        try { window.scrollTo(0, savedScrollY); } catch (_) {}
+      }
+
       function maximize(source) {
         if (isMaximized()) return;
+        // Save original DOM location before portaling to body.
+        originalParent = widget.parentNode;
+        originalNextSibling = widget.nextSibling;
+        // Move the widget + backdrop to body so nothing traps them.
+        // Backdrop first (lower z-index), then widget (on top).
+        document.body.appendChild(backdrop);
+        document.body.appendChild(widget);
+        // Lock the body BEFORE applying is-maximized so the initial
+        // animation frame renders against the frozen scroll position.
+        lockBody();
+        // Force a reflow so the transition from "just moved" to
+        // "add is-maximized" fires a real animation instead of
+        // Safari collapsing the two style writes into one frame.
+        void widget.offsetWidth;
         widget.classList.add("is-maximized");
         backdrop.classList.add("is-visible");
-        document.documentElement.classList.add("chat-max-locked");
         // Focus the input so keyboard users can keep typing.
         const input = document.getElementById("cw-input");
-        if (input && !input.disabled) input.focus();
+        if (input && !input.disabled) {
+          setTimeout(() => input.focus(), 340);
+        }
         try {
           if (window.dataLayer) window.dataLayer.push({ event: "chat_maximize", source: source || "manual" });
         } catch (_) {}
       }
+
       function minimize() {
         if (!isMaximized()) return;
         widget.classList.remove("is-maximized");
         backdrop.classList.remove("is-visible");
-        document.documentElement.classList.remove("chat-max-locked");
-        // Return the user to the chat's inline position instead of
-        // wherever the page happened to be scrolled (which is often
-        // the top, because the maximize scroll-locked the page).
-        // rAF ensures we scroll AFTER the fixed→inline layout flip.
+        // Unlock body FIRST — this restores the original scrollY so
+        // the widget's inline position calculation below is correct.
+        unlockBody();
+        // Move the widget + backdrop back to their original spot.
+        if (originalParent) {
+          if (originalNextSibling && originalNextSibling.parentNode === originalParent) {
+            originalParent.insertBefore(widget, originalNextSibling);
+          } else {
+            originalParent.appendChild(widget);
+          }
+          originalParent.appendChild(backdrop);
+        }
+        // Scroll to the widget's inline position so the user lands
+        // right on the chat (not the top of the LP).
         requestAnimationFrame(() => {
           try {
             const rect = widget.getBoundingClientRect();
@@ -4182,6 +4365,7 @@
           if (window.dataLayer) window.dataLayer.push({ event: "chat_minimize" });
         } catch (_) {}
       }
+
       function autoExpandIfMobile() {
         if (hasAutoExpanded || isMaximized()) return;
         if (window.matchMedia("(max-width: 720px)").matches) {
@@ -4225,8 +4409,11 @@
       if (state.trialId && !state.isFinal) closeTrial("dismissed");
     });
 
-    // Anchor id for "back to top" from the final CTA
-    document.querySelector(".hero").id = "top";
+    // NOTE — the old line `document.querySelector(".hero").id = "top"`
+    // was removed 2026-07-23. It was overwriting the hero's id from
+    // "free-preview" to "top", which broke the pre-hero "Try it for
+    // free" CTA scroll. The pre-hero itself now carries id="top" for
+    // the final-CTA back-to-top link, so nothing else needs to change.
   });
 </script>
 </body>
