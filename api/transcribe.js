@@ -106,11 +106,21 @@ export default async function handler(req, res) {
     // Language auto-detection enabled. Whisper detects the spoken language
     // automatically when no language parameter is provided. This lets the
     // Field support clients in any language they speak naturally.
+    //
     // Bias the transcription toward our domain vocabulary to reduce
     // mishears of terms like "Human Instrument", "Master Your Path", etc.
+    // WARNING — Whisper prompt biasing leaks: if the prompt contains
+    // repetitive patterns like "Day 1: X. Day 2: Y. Day 3: Z.", Whisper
+    // will hallucinate that pattern into low-confidence transcription
+    // windows (silences, quiet openings, accented speech). Root-caused
+    // 2026-07-23 when Antonella's recording of her anchor sentence was
+    // prepended with a fabricated "Day 4. Decision. Day 5. Decision.
+    // Day 6. Decision. Day 7. Decision." because the old prompt taught
+    // Whisper that pattern. Keep the vocabulary here as PROSE, never
+    // as a list of "Day N: X" pairs.
     formData.append(
       "prompt",
-      "Master Your Path. The Freedom Intelligence Field. Human Instrument. Day 1: State Reset. Day 2: Decision. Day 3: Aligned Action."
+      "Master Your Path. The Freedom Intelligence Field. Human Instrument method by Shimrit Nativ. The 72-Hour Power Reset guides members through a state reset, an aligned decision, and calibrated action."
     );
 
     const openaiRes = await fetch("https://api.openai.com/v1/audio/transcriptions", {
