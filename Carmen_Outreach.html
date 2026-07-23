@@ -24,6 +24,28 @@
       --danger-soft: rgba(178, 34, 34, 0.08);
       --wa-green: #25D366;
     }
+    /* Dark theme — applied when either the ?theme=dark URL param is
+       present at load OR the parent admin sends a { type:"set-theme",
+       theme:"dark" } postMessage. Values roughly mirror admin.html and
+       launch-tracker.html so the whole app feels like one surface. */
+    [data-theme="dark"] {
+      --bg: #1A1612;
+      --bg-card: #2C2416;
+      --bg-warm: #251F18;
+      --text: #F4ECD0;
+      --text-mid: #C7B78F;
+      --text-dim: #8A8064;
+      --text-mute: #5F5946;
+      --gold: #D4B864;
+      --gold-soft: rgba(212, 184, 100, 0.14);
+      --gold-line: rgba(212, 184, 100, 0.32);
+      --border: rgba(212, 184, 100, 0.22);
+      --success: #7AAE5E;
+      --success-soft: rgba(122, 174, 94, 0.12);
+      --danger: #E08580;
+      --danger-soft: rgba(224, 133, 128, 0.12);
+      --wa-green: #25D366;
+    }
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -154,6 +176,13 @@
       gap: 8px;
       margin-bottom: 12px;
       align-items: center;
+      /* Stick below the topbar so search + filter chips + sort stay
+         visible while scrolling the roster. --topbar-h is measured on
+         load / resize; --filters-h is measured after this element is
+         laid out so the sticky column headers can offset by both. */
+      position: sticky;
+      top: var(--topbar-h, 64px);
+      z-index: 30;
     }
     .filter-chip {
       background: transparent;
@@ -287,13 +316,12 @@
       text-transform: uppercase;
       color: var(--text-dim);
       white-space: nowrap;
-      /* Sticky column headers — glued below the topbar when Carmen scrolls
-         the queue. --topbar-h is set by JS on load / resize so the offset
-         is always exact regardless of the topbar's actual height (fallback
-         64px). Lower z-index than the topbar so the topbar always covers
-         this row visually. */
+      /* Sticky column headers — pinned below topbar + filter toolbar.
+         --topbar-h and --filters-h are measured in JS on load/resize so
+         the offset is exact regardless of wrapping. Lower z-index than
+         both so they always cover this row visually. */
       position: sticky;
-      top: var(--topbar-h, 64px);
+      top: calc(var(--topbar-h, 64px) + var(--filters-h, 60px) + 12px);
       z-index: 20;
       box-shadow: 0 1px 0 var(--border);
     }
@@ -1512,16 +1540,43 @@
       document.getElementById("cs-modal").classList.remove("open");
     }
 
-    // Measure the topbar so the sticky column headers pin exactly beneath
-    // it. Recomputed on window resize so the layout stays correct if the
-    // brand row ever wraps to two lines on a narrow screen.
-    function syncTopbarHeight() {
-      const topbar = document.querySelector(".topbar");
-      if (!topbar) return;
-      const h = topbar.getBoundingClientRect().height;
-      document.documentElement.style.setProperty("--topbar-h", h + "px");
+    // Measure the topbar + filters bar so both stack correctly at the
+    // top of the scroll region: topbar at 0, filters at --topbar-h,
+    // table headers at --topbar-h + --filters-h. Recomputed on resize
+    // so wrapping (narrow screens, extra chips) doesn't break offsets.
+    function syncStickyOffsets() {
+      const topbar  = document.querySelector(".topbar");
+      const filters = document.querySelector(".filters");
+      if (topbar)  document.documentElement.style.setProperty("--topbar-h",  topbar.getBoundingClientRect().height  + "px");
+      if (filters) document.documentElement.style.setProperty("--filters-h", filters.getBoundingClientRect().height + "px");
     }
-    window.addEventListener("resize", syncTopbarHeight);
+    // Back-compat alias — older code may still call this.
+    const syncTopbarHeight = syncStickyOffsets;
+    window.addEventListener("resize", syncStickyOffsets);
+
+    // ── Theme sync with parent admin frame ────────────────────────────
+    // Two paths:
+    //   1) URL param ?theme=dark on first load — used when admin.html
+    //      lazy-mounts this iframe so we boot in the right mode.
+    //   2) postMessage { type:"set-theme", theme } — used when Geo
+    //      toggles the moon icon after the iframe is mounted.
+    (function initTheme() {
+      try {
+        const params = new URLSearchParams(location.search);
+        if (params.get("theme") === "dark") {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      } catch {}
+    })();
+    window.addEventListener("message", (e) => {
+      const msg = e && e.data;
+      if (!msg || msg.type !== "set-theme") return;
+      if (msg.theme === "dark") {
+        document.documentElement.setAttribute("data-theme", "dark");
+      } else {
+        document.documentElement.removeAttribute("data-theme");
+      }
+    });
 
     // ── Wire up ──────────────────────────────────────────────────────────
     // Which filter values live INSIDE the "More filters" popover — used
@@ -1557,7 +1612,9 @@
       }
     }
     document.addEventListener("DOMContentLoaded", () => {
-      syncTopbarHeight();
+      syncStickyOffsets();
+      // Filters may wrap after render — measure once more on next tick.
+      requestAnimationFrame(syncStickyOffsets);
       // Filter chips (both primary row and popover chips)
       document.querySelectorAll(".filter-chip").forEach(chip => {
         chip.addEventListener("click", () => {
