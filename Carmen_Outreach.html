@@ -122,6 +122,17 @@
       margin: 0 auto;
       padding: 24px;
     }
+    /* Embed mode — set by JS when this page is rendered inside an
+       iframe (admin's Lead Nurture tab). Removes the max-width /
+       big side padding so the table has room to breathe, tightens
+       the intro card, and lets .table-wrap absorb any overflow with
+       horizontal scroll rather than clipping the last column. */
+    html.is-embedded body { font-size: 13px; }
+    html.is-embedded main { max-width: none; padding: 14px; }
+    html.is-embedded .intro { padding: 14px 18px; margin-bottom: 12px; }
+    html.is-embedded .topbar { padding: 12px 18px; }
+    html.is-embedded .brand-title { font-size: 17px; }
+    html.is-embedded .table-wrap { overflow-x: auto; }
     .intro {
       background: var(--bg-card);
       border: 1px solid var(--border);
@@ -1687,6 +1698,23 @@
     // Back-compat alias — older code may still call this.
     const syncTopbarHeight = syncStickyOffsets;
     window.addEventListener("resize", syncStickyOffsets);
+
+    // ── Embed detection ──────────────────────────────────────────────
+    // When Carmen's page is loaded inside admin's Lead Nurture iframe
+    // (window.self !== window.top), we tighten paddings and drop the
+    // max-width so the 13-column table has room instead of clipping
+    // the OUTCOME column on the right edge.
+    (function detectEmbed() {
+      try {
+        if (window.self !== window.top) {
+          document.documentElement.classList.add("is-embedded");
+        }
+      } catch (_) {
+        // Cross-origin iframe access threw — that itself means we're
+        // embedded, so flip the class.
+        document.documentElement.classList.add("is-embedded");
+      }
+    })();
 
     // ── Theme sync with parent admin frame ────────────────────────────
     // Two paths:
