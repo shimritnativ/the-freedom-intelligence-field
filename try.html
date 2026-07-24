@@ -1284,6 +1284,44 @@
     transition: background 180ms ease;
   }
   .cw-closing-btn:hover { background: var(--gold-warm); }
+  .cw-closing-lede {
+    font-family: var(--font-serif); font-style: italic;
+    font-size: 15.5px; line-height: 1.4; color: var(--text);
+    margin: 0 0 8px;
+  }
+  .cw-closing-sub {
+    font-size: 13.5px; color: var(--text-dim); line-height: 1.55;
+    margin: 0 0 14px;
+  }
+  .cw-closing-list {
+    background: rgba(201, 168, 76, 0.10);
+    border-left: 3px solid var(--gold);
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin: 0 0 14px;
+    text-align: left;
+  }
+  .cw-closing-list-label {
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--gold-warm);
+    margin: 0 0 8px;
+  }
+  .cw-closing-list ul {
+    list-style: none; padding: 0; margin: 0;
+    font-size: 13.5px; line-height: 1.55; color: var(--text);
+  }
+  .cw-closing-list li {
+    padding: 3px 0 3px 16px; position: relative;
+  }
+  .cw-closing-list li::before {
+    content: "·"; position: absolute; left: 0; top: 1px;
+    color: var(--gold); font-weight: 700; font-size: 18px;
+  }
+  .cw-closing-emphasis {
+    font-family: var(--font-serif); font-style: italic;
+    font-size: 14px; color: var(--gold);
+    margin: 0 0 14px;
+  }
   .cw-input-bar {
     padding: 12px 16px 14px;
     border-top: 1px solid var(--border);
@@ -3768,7 +3806,7 @@
     <p class="lp-eyebrow" style="text-align:center;">What you receive inside the 72-Hour Power Reset</p>
     <h2 class="lp-h2" style="text-align:center;">Everything included in the Reset.</h2>
     <p class="lp-lead" style="text-align:center; margin: 0 auto 36px;">
-      A full three-day guided experience, personal support and lifetime bonuses to support the reset from three angles: your timeline, your energetic signal, and your capacity to access a different potentiality.
+      Four full days inside the Field: a guided three-day reset, a bonus masterclass day, real-human support, and lifetime bonuses. All designed to support the reset from three angles: your timeline, your energetic signal, and your capacity to access a different potentiality.
     </p>
 
     <!-- Bonus stack image sits above the value stack (reverted to
@@ -4087,7 +4125,7 @@
 
       <div class="faq-item">
         <button class="faq-q" type="button">What happens after the preview?</button>
-        <div class="faq-a">If it lands, the next step is the 72-Hour Power Reset for €9. Three days inside the Field with a real human group, guided through State Reset, Decision &amp; Action, and Power Calibration. If it does not land, you keep what you saw and go on with your day. Nothing recurring.</div>
+        <div class="faq-a">If it lands, the next step is the 72-Hour Power Reset for €9. Four full days inside the Field with a real human group, guided through State Reset, Decision &amp; Action, and Power Calibration, plus a bonus masterclass day. If it does not land, you keep what you saw and go on with your day. Nothing recurring.</div>
       </div>
 
       <div class="faq-item">
@@ -4512,14 +4550,26 @@
         return;
       }
       if (data.ok === false && data.reason === "already_used") {
-        // Replace email-inline with "you've already been" message
+        // One preview per email. Replace the email input with a
+        // compelling conversion card that pushes them to the €9
+        // Reset. Structured for scan: hook line → transition →
+        // bulleted "what's inside" callout → italic emphasis → CTA.
         const wrap = $("email-inline");
+        const resetLink = data.reset_link || RESET_LINK;
         wrap.outerHTML = `
           <div class="cw-closing-card">
-            <p class="cw-closing-eyebrow">You've already tasted the Field</p>
-            <p class="cw-closing-title">The preview is one per person.</p>
-            <p class="cw-closing-body">${esc(data.message || "The full walk-through is the 72-Hour Reset.")}</p>
-            <a class="cw-closing-btn" href="${esc(data.reset_link || RESET_LINK)}">Enter the Reset for €9 →</a>
+            <p class="cw-closing-lede">You already spent a few minutes with a real pattern. If it's still with you, that's worth paying attention to.</p>
+            <p class="cw-closing-sub">For €9, you get the complete Power Reset: three days of real work inside the Field, the guided process, real-human support, and the space to actually shift the pattern. Plus a bonus fourth day featuring The Architecture of Freedom, a free masterclass.</p>
+            <div class="cw-closing-list">
+              <p class="cw-closing-list-label">What's inside</p>
+              <ul>
+                <li>Four days inside the Field</li>
+                <li>Real-human support the whole way</li>
+                <li>State Reset, Decision &amp; Action Alignment, and Frequency Calibration, guided step by step</li>
+                <li>A bonus fourth day: The Architecture of Freedom masterclass, plus lifetime access to additional bonuses</li>
+              </ul>
+            </div>
+            <a class="cw-closing-btn" href="${esc(resetLink)}" target="_blank" rel="noopener">Start the 72H Power Reset<span class="cta-price">€9</span></a>
           </div>
         `;
         state.phase = "already";
@@ -4617,7 +4667,7 @@
     card.innerHTML = `
       <p class="cw-closing-eyebrow">The preview closed</p>
       <p class="cw-closing-title">What just opened is the doorway.</p>
-      <p class="cw-closing-body">The 72-Hour Power Reset is where this actually goes. Three days, in your body, with the full method.</p>
+      <p class="cw-closing-body">The 72-Hour Power Reset is where this actually goes. Four full days, in your body, with the full method.</p>
       <a class="cw-closing-btn" href="${esc(resetLink)}" id="cw-closing-cta">Start the 72H Power Reset<span class="cta-price">€9</span></a>
     `;
     body.appendChild(card);
