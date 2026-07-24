@@ -4301,6 +4301,10 @@
     const body = $("cw-body");
     if (body) requestAnimationFrame(() => { body.scrollTop = body.scrollHeight; });
   }
+  function scrollChatToTop() {
+    const body = $("cw-body");
+    if (body) requestAnimationFrame(() => { body.scrollTop = 0; });
+  }
 
   // ── Particles (24 gold dots drifting)
   // Seeds every element with class="particles" — covers both the
@@ -4388,7 +4392,12 @@
     wrap.querySelectorAll(".chip").forEach(btn => {
       btn.addEventListener("click", () => onChipClick(btn.dataset.scenario));
     });
-    scrollChatToBottom();
+    // First render: scroll to TOP so the welcome message ("Take one slow
+    // breath...") is visible before the doorway chips. Previously called
+    // scrollChatToBottom() here, which on mobile pushed the greeting off
+    // screen and dropped users straight into the chip picker without
+    // context — flagged by Geo 2026-07-24.
+    scrollChatToTop();
   }
 
   // Central helper — controls the input's placeholder + disabled state
