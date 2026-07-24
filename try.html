@@ -325,8 +325,23 @@
     font-weight: 500;
   }
   @media (max-width: 720px) {
-    .pre-hero-quote { padding-left: 0; padding-top: 14px; }
-    .pre-hero-quote::before { left: 50%; top: -6px; transform: translateX(-50%); }
+    .pre-hero-quote { padding-left: 0; padding-top: 0; }
+    /* Mobile: render the opening quote mark inline at the start of
+       "Welcome to The Field..." instead of hovering above the sentence.
+       The absolute-positioned decorative mark reads cramped on narrow
+       screens (flagged by Geo 2026-07-24). Inline scales cleanly and
+       feels intentional at every width. */
+    .pre-hero-quote::before {
+      position: static;
+      display: inline;
+      font-size: 28px;
+      line-height: 0;
+      vertical-align: -8px;
+      margin-right: 4px;
+      left: auto;
+      top: auto;
+      transform: none;
+    }
   }
   .pre-hero-cta {
     display: inline-flex;
@@ -4567,6 +4582,8 @@
         const resetLink = data.reset_link || RESET_LINK;
         wrap.outerHTML = `
           <div class="cw-closing-card">
+            <p class="cw-closing-eyebrow">You've already stepped through</p>
+            <p class="cw-closing-title">The preview closes. The Field opens.</p>
             <p class="cw-closing-lede">You already spent a few minutes with a real pattern. If it's still with you, that's worth paying attention to.</p>
             <p class="cw-closing-sub">For €9, you get the complete Power Reset: three days of real work inside the Field, the guided process, real-human support, and the space to actually shift the pattern. Plus a bonus fourth day featuring The Architecture of Freedom, a free masterclass.</p>
             <div class="cw-closing-list">
@@ -4578,6 +4595,7 @@
                 <li>A bonus fourth day: The Architecture of Freedom masterclass, plus lifetime access to additional bonuses</li>
               </ul>
             </div>
+            <p class="cw-closing-emphasis">Awareness is the beginning. Movement is the reset.</p>
             <a class="cw-closing-btn" href="${esc(resetLink)}" target="_blank" rel="noopener">Start the 72H Power Reset<span class="cta-price">€9</span></a>
           </div>
         `;
