@@ -76,11 +76,11 @@ export default async function handler(req, res) {
     // Staff emails are exempt (Shimrit + team need to test freely).
     if (!staff) {
       const { rows: prior } = await sql`
-        SELECT id, scenario, created_at
+        SELECT scenario
         FROM free_trials
         WHERE LOWER(email) = ${email}
           AND is_staff_test = false
-        ORDER BY created_at DESC
+        ORDER BY id DESC
         LIMIT 1
       `;
       if (prior.length > 0) {
