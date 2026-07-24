@@ -66,17 +66,37 @@ export default async function handler(req, res) {
 
   const staff = isStaffEmail(email);
   const ip = getClientIp(req);
+  const RESET_LINK = "https://masteryourpath.thrivecart.com/power-reset-ads";
 
   try {
-    // Dedup removed 2026-07-22 — the goal for this LP is lead capture,
-    // not gating. Any email is accepted, including repeats. Every submit
-    // still creates a fresh trial row + fires the Zapier webhook so
-    // returning visitors don't miss the GHL nurture.
-    //
-    // The previous dedup query also had a @vercel/postgres syntax bug
-    // (nested sql`` fragments were interpolating as parameters, causing
-    // "syntax error at or near \"$2\"" on any submit). Removing the
-    // query altogether resolves it.
+    // Dedup re-added 2026-07-23 per Geo — one preview per email.
+    // If this email has already used a doorway, don't start another
+    // trial. Return an "already_used" payload so the client can show
+    // the conversion message pushing them to the €9 Reset instead.
+    // Staff emails are exempt (Shimrit + team need to test freely).
+    if (!staff) {
+      const { rows: prior } = await sql`
+        SELECT id, scenario, created_at
+        FROM free_trials
+        WHERE LOWER(email) = ${email}
+          AND is_staff_test = false
+        ORDER BY created_at DESC
+        LIMIT 1
+      `;
+      if (prior.length > 0) {
+        const priorTrial = prior[0];
+        const priorScenario = FREE_TRIAL_SCENARIOS[priorTrial.scenario];
+        const priorLabel = priorScenario ? priorScenario.label : "your doorway";
+        return res.status(200).json({
+          ok: false,
+          reason: "already_used",
+          prior_scenario: priorTrial.scenario,
+          prior_scenario_label: priorLabel,
+          reset_link: RESET_LINK,
+          message: "If what opened in the preview is still with you, that is the signal. It means the pattern is asking to move. The 72-Hour Power Reset is the walk-through: three days inside the Field with real-human support, guided through State Reset, Decision & Action, and Power Frequency Calibration. Plus lifetime bonuses.",
+        });
+      }
+    }
 
     // Create the trial. exchange_count starts at 0 (the opening from the
     // Field isn't counted as one of the 6 — the first exchange is the
