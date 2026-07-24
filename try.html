@@ -240,7 +240,15 @@
     aspect-ratio: 16 / 9;
     border-radius: 14px;
     overflow: hidden;
-    background: #000;
+    /* Placeholder: MYP logo centered small on black. Shown while
+       the video is loading. Cover-stretched poster was pixelating
+       the small square logo across the 16:9 frame — this keeps it
+       crisp at its native size (flagged by Geo 2026-07-24). */
+    background-color: #000;
+    background-image: url("https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 88px auto;
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45),
                 0 0 0 1px rgba(201, 168, 76, 0.30),
                 0 0 50px rgba(201, 168, 76, 0.15);
@@ -250,7 +258,9 @@
     height: 100%;
     object-fit: cover;
     display: block;
-    background: #000;
+    /* Transparent so the container's logo placeholder shows through
+       until the first video frame paints. */
+    background: transparent;
   }
   .pre-hero-video-sound {
     position: absolute;
@@ -3448,7 +3458,6 @@
           loop
           playsinline
           preload="metadata"
-          poster="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png"
           aria-label="Shimrit welcomes you to The Field">
           <source src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/New%20VSL%20Free%20Trial%20updated.mp4" type="video/mp4" />
         </video>
@@ -3546,7 +3555,7 @@
              can convert without needing to minimize + scroll first. -->
         <div class="cw-max-cta" role="complementary">
           <span class="cw-max-cta-text">Start the 72H Power Reset <strong>|  €9</strong></span>
-          <a class="cw-max-cta-btn" href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank" rel="noopener">Get it →</a>
+          <a class="cw-max-cta-btn" href="https://masteryourpath.thrivecart.com/power-reset-ads?utm_source=try_lp&utm_medium=cta&utm_campaign=try_preview&utm_content=maximized_chat_top" target="_blank" rel="noopener">Get it →</a>
         </div>
         <div class="cw-body" id="cw-body">
           <!-- Populated by JS: greeting + chips, then real conversation -->
@@ -3985,7 +3994,7 @@
     </div>
 
     <div style="text-align:center; margin-top: 32px;">
-      <a class="value-cta" href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank">Start the 72H Power Reset<span class="cta-price">€9</span></a>
+      <a class="value-cta" href="https://masteryourpath.thrivecart.com/power-reset-ads?utm_source=try_lp&utm_medium=cta&utm_campaign=try_preview&utm_content=value_stack" target="_blank">Start the 72H Power Reset<span class="cta-price">€9</span></a>
       <p style="font-size: 12px; color: var(--text-mute); margin: 12px 0 0;">Instant access · secure checkout · includes bonuses</p>
     </div>
   </div>
@@ -4230,7 +4239,7 @@
       <p class="p-final">Take the free preview at the top of this page. Then decide if the full Reset is your next step.</p>
       <a href="#free-preview" class="final-cta-btn">Take the free preview ↑</a>
       <p style="font-size: 12.5px; color: var(--text-dim); margin-top: 24px;">
-        Ready to skip the preview? <a href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank" style="color: var(--text); border-bottom: 1px solid var(--gold); font-weight: 500;">Start the 72H Power Reset for €9 →</a>
+        Ready to skip the preview? <a href="https://masteryourpath.thrivecart.com/power-reset-ads?utm_source=try_lp&utm_medium=cta&utm_campaign=try_preview&utm_content=skip_preview_link" target="_blank" style="color: var(--text); border-bottom: 1px solid var(--gold); font-weight: 500;">Start the 72H Power Reset for €9 →</a>
       </p>
     </div>
   </div>
@@ -4240,7 +4249,7 @@
      the user has scrolled past the chat widget. Warm buyers get a
      one-click shortcut without pulling attention from the preview. -->
 <a class="float-cta" id="float-cta"
-   href="https://masteryourpath.thrivecart.com/power-reset-ads"
+   href="https://masteryourpath.thrivecart.com/power-reset-ads?utm_source=try_lp&utm_medium=cta&utm_campaign=try_preview&utm_content=floating_pill"
    target="_blank" rel="noopener"
    aria-label="Start the 72-Hour Power Reset for €9">
   <span class="float-cta-dot" aria-hidden="true"></span>
@@ -4282,7 +4291,11 @@
   const MAX_EXCHANGES = 5;
   // Send all "buy the Reset" CTAs straight to the ads-funnel ThriveCart
   // checkout so attribution stays clean and there's no LP hop.
-  const RESET_LINK = "https://masteryourpath.thrivecart.com/power-reset-ads";
+  // UTM tagged as `closing_card` since this constant is used by the
+  // post-preview closing card that fires after a successful trial.
+  // The already-used card uses the server's reset_link (tagged
+  // separately as `already_used_card` in api/free-trial/start.js).
+  const RESET_LINK = "https://masteryourpath.thrivecart.com/power-reset-ads?utm_source=try_lp&utm_medium=cta&utm_campaign=try_preview&utm_content=closing_card";
   const COOKIE_KEY = "tfif_try_cookie_v1";
 
   function getCookieId() {
