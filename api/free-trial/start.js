@@ -66,7 +66,11 @@ export default async function handler(req, res) {
 
   const staff = isStaffEmail(email);
   const ip = getClientIp(req);
-  const RESET_LINK = "https://masteryourpath.thrivecart.com/power-reset-ads";
+  // UTM tagged as `already_used_card` since this URL is only ever
+  // sent to the client for the dedup ("you already stepped through")
+  // conversion card. The post-trial closing card uses a separate
+  // constant in try.html tagged as `closing_card`.
+  const RESET_LINK = "https://masteryourpath.thrivecart.com/power-reset-ads?utm_source=try_lp&utm_medium=cta&utm_campaign=try_preview&utm_content=already_used_card";
 
   try {
     // Dedup re-added 2026-07-23 per Geo — one preview per email.
