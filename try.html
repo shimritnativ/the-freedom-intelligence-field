@@ -129,7 +129,7 @@
       radial-gradient(ellipse 1600px 900px at 50% 15%, rgba(201, 168, 76, 0.12), transparent 55%),
       var(--bg-dark);
     color: var(--text-inverse);
-    padding: clamp(32px, 4.5vw, 60px) 24px clamp(80px, 8vw, 120px);
+    padding: clamp(32px, 4.5vw, 60px) 24px clamp(32px, 4vw, 56px);
     overflow: hidden;
     text-align: center;
   }
@@ -350,6 +350,30 @@
   .pre-hero-cta:active { transform: translateY(0); }
   .pre-hero-cta .arrow { display: inline-block; transition: transform 200ms ease; }
   .pre-hero-cta:hover .arrow { transform: translateY(3px); }
+  /* Top-positioned CTA (sits under "This is your Reset."). Extra
+     bottom margin gives breathing room between the button and the
+     video block below on mobile, where they were pinning together. */
+  .pre-hero-cta--top { margin: 8px auto 44px; }
+  @media (max-width: 720px) {
+    .pre-hero-cta--top { margin: 6px auto 36px; }
+  }
+
+  /* Thin gold-hairline divider used at the seam between the
+     pre-hero and the free-preview hero. Keeps the two dark blocks
+     reading as connected but marks the transition. */
+  .section-hairline {
+    display: block;
+    width: 60%;
+    max-width: 480px;
+    height: 1px;
+    margin: 0 auto;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(201, 168, 76, 0.35) 30%,
+      rgba(201, 168, 76, 0.55) 50%,
+      rgba(201, 168, 76, 0.35) 70%,
+      transparent 100%);
+  }
   .pre-hero-scroll-cue {
     margin-top: 30px;
     color: var(--text-inverse-dim);
@@ -530,7 +554,7 @@
       radial-gradient(ellipse 1400px 900px at 50% 30%, rgba(201, 168, 76, 0.05), transparent 60%),
       var(--bg-dark);
     color: var(--text-inverse);
-    padding: clamp(60px, 6vw, 96px) 24px 80px;
+    padding: clamp(32px, 4vw, 56px) 24px 80px;
     overflow: hidden;
   }
   .particles { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
@@ -581,22 +605,24 @@
     font-family: var(--font-serif);
     font-weight: 400;
     font-style: italic;
-    font-size: clamp(20px, 2.4vw, 26px);
-    line-height: 1.35;
+    /* Matched to .pre-hero-body size 2026-07-23 per Geo. */
+    font-size: clamp(22px, 3vw, 30px);
+    line-height: 1.4;
     letter-spacing: 0;
     margin: 0 auto 14px;
     color: var(--text-inverse);
-    max-width: 640px;
+    max-width: 780px;
   }
   .hero-title em { font-style: italic; color: var(--gold); }
   .hero-lead {
     font-family: var(--font-sans);
-    font-size: clamp(13px, 1.5vw, 15px);
+    /* Matched to .lp-lead size 2026-07-23 per Geo. */
+    font-size: clamp(17px, 1.9vw, 21px);
     line-height: 1.65;
     color: var(--text-inverse-dim);
     margin: 0 auto;
-    font-weight: 300;
-    max-width: 560px;
+    font-weight: 400;
+    max-width: 720px;
   }
 
   /* ═════════════════════════════════════════════════════════════
@@ -1986,12 +2012,17 @@
     .step-desc { font-size: 16px; }
   }
   .step-outcome {
-    font-size: 13px;
+    /* Bumped from 13px → matches .step-desc so the outcome doesn't
+       feel like fine print. Warm gold tint on the whole block
+       highlights it as the "what you actually leave with" moment. */
+    font-size: 15.5px;
     color: var(--text);
-    line-height: 1.55;
+    line-height: 1.6;
     margin: 0;
-    padding-top: 14px;
-    border-top: 1px solid var(--gold-line);
+    padding: 12px 14px;
+    background: rgba(201, 168, 76, 0.08);
+    border-left: 3px solid var(--gold);
+    border-radius: 6px;
   }
   .step-outcome strong {
     color: var(--gold-warm);
@@ -2000,6 +2031,53 @@
   }
 
   /* Reset arc */
+  /* Bonus highlight — sits between the 3-day step boxes and the arc
+     animation. Warm gold-tinted card with a small "Bonus" tag so
+     the extra value (lifetime bonuses + Day 4) reads as its own
+     moment rather than fine print. */
+  .bonus-highlight {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    max-width: 820px;
+    margin: 36px auto 0;
+    padding: 20px 26px;
+    background: linear-gradient(135deg, rgba(201, 168, 76, 0.10) 0%, rgba(201, 168, 76, 0.04) 100%);
+    border: 1px solid var(--gold-line);
+    border-left: 4px solid var(--gold);
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 24px rgba(43, 35, 24, 0.06);
+  }
+  .bonus-highlight-tag {
+    flex-shrink: 0;
+    padding: 5px 12px;
+    background: var(--gold);
+    color: #FFFFFF;
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.20em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    align-self: flex-start;
+  }
+  .bonus-highlight-text {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: clamp(15px, 1.6vw, 17px);
+    line-height: 1.55;
+    color: var(--text);
+  }
+  .bonus-highlight-text strong { color: var(--gold-warm); font-weight: 700; }
+  @media (max-width: 640px) {
+    .bonus-highlight {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 18px 20px;
+    }
+  }
+
   .reset-arc { margin: 44px auto 24px; max-width: 780px; display: block; }
   .arc-node { fill: var(--bg-cream); stroke: var(--gold); stroke-width: 2; }
   .arc-line {
@@ -2530,7 +2608,9 @@
     color: rgba(30, 30, 30, 0.42);
     text-align: right;
   }
-  .testi-meta-row .checks { color: #4FC3F7; letter-spacing: -1px; font-size: 11px; }
+  /* .checks (WhatsApp double-tick) removed 2026-07-23 per Geo — the
+     ASCII "✓✓" didn't match the real WhatsApp two-blue-tick icon
+     closely enough and read as "fake". Better to omit than fake it. */
   .testi-reactions {
     display: inline-flex;
     align-items: center;
@@ -2784,12 +2864,15 @@
     0%, 100% { opacity: 0.75; transform: scale(1); }
     50%      { opacity: 1;    transform: scale(1.25); }
   }
-  .float-cta-price {
+  .float-cta-price,
+  .cta-price {
     color: #1a1410;
     font-weight: 800;
     padding-left: 12px;
-    margin-left: 2px;
+    margin-left: 10px;
     border-left: 1px solid rgba(0, 0, 0, 0.18);
+    display: inline-block;
+    vertical-align: middle;
   }
   @media (max-width: 720px) {
     .float-cta {
@@ -3159,6 +3242,14 @@
     </h1>
     <p class="pre-hero-sub">This is your Reset.</p>
 
+    <!-- CTA moved up 2026-07-23 per Geo so it sits above the fold
+         on mobile, right under the sub-headline. Still scrolls to
+         the free-preview chat (#free-preview). -->
+    <a href="#free-preview" class="pre-hero-cta pre-hero-cta--top" data-scroll-to="#free-preview">
+      Try it for free
+      <span class="arrow" aria-hidden="true">↓</span>
+    </a>
+
     <!-- Small Shimrit video on the left, warm personal welcome
          quote on the right. Video autoplays muted; the corner
          button unmutes on tap. Stacks on narrow screens. -->
@@ -3174,7 +3265,7 @@
           preload="metadata"
           poster="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png"
           aria-label="Shimrit welcomes you to The Field">
-          <source src="https://placeholder.example.com/shimrit-reset-intro.mp4" type="video/mp4" />
+          <source src="https://raw.githubusercontent.com/shimritnativ/the-freedom-intelligence-field/main/New%20VSL%20Free%20Trial%20updated.mp4" type="video/mp4" />
         </video>
         <button type="button" class="pre-hero-video-sound" id="pre-hero-video-sound" aria-label="Unmute video" title="Unmute">
           <svg class="icon-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -3191,7 +3282,7 @@
         </button>
       </div>
       <blockquote class="pre-hero-quote">
-        Welcome to The Field. Give yourself the next few minutes and let it meet you exactly where you are. What you have been carrying gets named clearly. Not fixed, not analyzed, just seen.
+        Welcome to The Field. Give yourself the next few minutes with the pattern you keep repeating, and what staying safe there has actually been costing you. Choose the doorway to what's possible beyond it.
         <span class="pre-hero-quote-attr">
           Shimrit Nativ
           <span class="pre-hero-quote-role">Creator of The Field</span>
@@ -3202,12 +3293,11 @@
     <div class="pre-hero-body">
       <p>A guided process to interrupt one active pattern: <em>the loop, reaction, decision, or state pulling you out of your power.</em></p>
     </div>
-    <a href="#free-preview" class="pre-hero-cta" data-scroll-to="#free-preview">
-      Try it for free
-      <span class="arrow" aria-hidden="true">↓</span>
-    </a>
     <p class="pre-hero-scroll-cue">See the preview below</p>
   </div>
+  <!-- Hairline divider between pre-hero and the free-preview hero.
+       Marks the section change without breaking the dark canvas. -->
+  <span class="section-hairline" aria-hidden="true"></span>
 </section>
 
 <!-- Dark divider removed 2026-07-23 per Geo — the free-preview
@@ -3226,10 +3316,13 @@
   <div class="particles" id="particles" aria-hidden="true"></div>
   <div class="hero-inner">
     <div class="hero-copy">
-      <p class="hero-eyebrow">Experience The Field in 5 minutes</p>
-      <h1 class="hero-title">Interrupt the pattern and <em>break the loop</em> in this free trial run inside The Field.</h1>
+      <p class="hero-eyebrow">3-minute breakthrough</p>
+      <h1 class="hero-title">Interrupt the pattern and <em>break the loop</em> in this <em>free trial run</em> inside The Field.</h1>
       <p class="hero-lead">
-        Before you decide on the full 72-Hour Reset, step inside The Field for free. Choose a doorway below to start.
+        You'll be guided through a short five-step process. The Field will ask you questions, reflect back what you share, and clarify what's actually running and open the door to what's available when you shift.
+      </p>
+      <p class="hero-lead" style="margin-top: 10px;">
+        This is a short sample and will take about three minutes.
       </p>
     </div>
 
@@ -3267,7 +3360,7 @@
         <!-- €9 CTA pill only appears when chat is maximized so users
              can convert without needing to minimize + scroll first. -->
         <div class="cw-max-cta" role="complementary">
-          <span class="cw-max-cta-text">Loved it? Unlock the full Reset for <strong>€9</strong></span>
+          <span class="cw-max-cta-text">Start the 72H Power Reset <strong>|  €9</strong></span>
           <a class="cw-max-cta-btn" href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank" rel="noopener">Get it →</a>
         </div>
         <div class="cw-body" id="cw-body">
@@ -3328,204 +3421,20 @@
      LONG-FORM LP SECTIONS
      ═══════════════════════════════════════════════════════════════ -->
 
-<!-- Interactive Day 1 / 2 / 3 preview mockup — replaces the previous
-     VSL. People have already tried the Field in the preview chat above,
-     so a second video is redundant. This shows the shape of each day
-     of the paid Reset, one exchange at a time. -->
-<section class="lp-section lp-section--dark day-mockup-section">
-  <div class="lp-container reveal">
-    <p class="lp-eyebrow" style="text-align:center; color: var(--gold);">Inside the 72 hours</p>
-    <h2 class="lp-h2" style="text-align:center;">See how the three days <span class="shimmer">move you</span>.</h2>
-    <p class="lp-lead" style="text-align:center; margin: 0 auto 36px; color: var(--text-inverse-dim);">
-      A glimpse of the Field guiding one area of your life from stress back into power.
-    </p>
-
-    <div class="day-mockup-wrap reveal reveal-delay-1">
-      <div class="day-mockup" id="day-mockup">
-        <div class="day-mockup-chrome">
-          <div class="day-mockup-dots">
-            <span class="day-mockup-dot"></span>
-            <span class="day-mockup-dot"></span>
-            <span class="day-mockup-dot"></span>
-          </div>
-          <div class="day-mockup-url">thefieldai.app</div>
-        </div>
-        <div class="day-mockup-body" id="day-mockup-body">
-          <!-- content is rendered by JS from DAY_PREVIEWS below -->
-        </div>
-        <div class="day-mockup-tabs" role="tablist" aria-label="Preview each day of the Reset">
-          <button type="button" class="day-mockup-tab active" data-day="1" role="tab" aria-selected="true">Day 1</button>
-          <button type="button" class="day-mockup-tab" data-day="2" role="tab" aria-selected="false">Day 2</button>
-          <button type="button" class="day-mockup-tab" data-day="3" role="tab" aria-selected="false">Day 3</button>
-        </div>
-      </div>
-      <div class="day-mockup-cta-wrap">
-        <a class="day-mockup-cta" href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank" rel="noopener">Start your reset for €9</a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<script>
-  // Scripted per-day preview content. Kept short — this isn't a demo of
-  // every possible exchange, it's a taste of the shape of each day so
-  // people know what they're paying for.
-  const DAY_PREVIEWS = {
-    1: {
-      eyebrow: "Day 01 · State Reset",
-      title: "Interrupt the loop.",
-      messages: [
-        { role: "field", text: "Before we move anything, we reset your state. Where in your body do you feel the loop right now?" },
-        { role: "user",  text: "In my chest. Tight, like everything is waiting on me." },
-        { role: "field", text: "Stay with it. We interrupt the pattern at the root, not the surface. Breathe here with me for a moment." },
-      ],
-    },
-    2: {
-      eyebrow: "Day 02 · Decision & Action",
-      title: "One clean move.",
-      messages: [
-        { role: "field", text: "One decision has been circling. Name it as simply as you can." },
-        { role: "user",  text: "Whether to raise my prices. I keep coming back to it and then dropping it." },
-        { role: "field", text: "That is what Day 1 was pointing to. Let's design the action that holds it — Mind, Heart, and Body, together." },
-      ],
-    },
-    3: {
-      eyebrow: "Day 03 · Frequency Calibration",
-      title: "Anchor the shift.",
-      messages: [
-        { role: "field", text: "You have stepped into this new state. What does the version of you who lives here see tomorrow morning?" },
-        { role: "user",  text: "Calm. Clear. Not scrambling for the phone before I've even opened my eyes." },
-        { role: "field", text: "Good. That is your imagination scene. Let's build the return thought that brings you back when the old pull tries." },
-      ],
-    },
-  };
-
-  function renderDayPreview(day) {
-    const preview = DAY_PREVIEWS[day];
-    if (!preview) return;
-    const body = document.getElementById("day-mockup-body");
-    if (!body) return;
-    const html = `
-      <div class="day-mockup-content">
-        <div class="day-mockup-eyebrow">${preview.eyebrow}</div>
-        <h3 class="day-mockup-title">${preview.title}</h3>
-        <div class="day-mockup-chat">
-          ${preview.messages.map(m => `
-            <div class="day-mockup-bubble ${m.role}">${m.text}</div>
-          `).join("")}
-        </div>
-      </div>
-    `;
-    body.innerHTML = html;
-  }
-
-  (function initDayMockup() {
-    // Initial render
-    renderDayPreview(1);
-    // Tab wiring
-    document.querySelectorAll(".day-mockup-tab").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const day = Number(btn.dataset.day || 1);
-        document.querySelectorAll(".day-mockup-tab").forEach(b => {
-          b.classList.remove("active");
-          b.setAttribute("aria-selected", "false");
-        });
-        btn.classList.add("active");
-        btn.setAttribute("aria-selected", "true");
-        renderDayPreview(day);
-      });
-    });
-  })();
-</script>
-
-<!-- Methodology — "Not a chatbot. A process." -->
-<section class="lp-section lp-section--dark">
-  <div class="lp-container reveal">
-    <div class="mh-b-grid">
-      <div class="mh-b-copy">
-        <p class="lp-eyebrow">The methodology</p>
-        <h2 class="lp-h2">Not a chatbot. <span class="shimmer">A process.</span></h2>
-        <p class="lp-lead">
-          Most AI coaching products are wrappers around generic language models. The Field is something different. It is a structured experience built on the Human Instrument® framework, a methodology developed over more than ten years by coach, entrepreneur and author Shimrit Nativ, refined with thousands of clients before a single line of AI code was written.
-        </p>
-        <div class="mh-b-list">
-          <div class="mh-b-item">
-            <span class="mh-b-badge">M</span>
-            <div>
-              <h4>Mind, the Wheel</h4>
-              <p>Where attention goes, energy follows. The Field calibrates focus by working with the patterns running underneath, not just the thoughts on top.</p>
-            </div>
-          </div>
-          <div class="mh-b-item">
-            <span class="mh-b-badge">H</span>
-            <div>
-              <h4>Heart, the GPS</h4>
-              <p>Your alignment signal. The Field reads where coherence is broken, between what you say and what your system actually believes, and rebuilds it.</p>
-            </div>
-          </div>
-          <div class="mh-b-item">
-            <span class="mh-b-badge">B</span>
-            <div>
-              <h4>Body, the Vehicle</h4>
-              <p>Every shift gets installed somatically, not just intellectually. Real change moves through the nervous system, not the to-do list.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="mh-b-visual reveal" aria-hidden="true">
-        <div class="instrument-diagram">
-          <svg viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <defs>
-              <radialGradient id="instGlow" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stop-color="#C9A84C" stop-opacity="0.35"/>
-                <stop offset="100%" stop-color="#C9A84C" stop-opacity="0"/>
-              </radialGradient>
-            </defs>
-            <circle cx="160" cy="160" r="140" fill="url(#instGlow)"/>
-            <!-- Three concentric rings, slow-spinning in alternating directions -->
-            <g class="spin-slow" style="transform-origin: 160px 160px;">
-              <circle cx="160" cy="160" r="130" fill="none" stroke="#C9A84C" stroke-width="0.6" opacity="0.4" stroke-dasharray="3 6"/>
-            </g>
-            <g class="spin-reverse" style="transform-origin: 160px 160px;">
-              <circle cx="160" cy="160" r="95" fill="none" stroke="#C9A84C" stroke-width="0.6" opacity="0.5" stroke-dasharray="2 8"/>
-            </g>
-            <g class="spin-slow" style="transform-origin: 160px 160px; animation-duration: 40s;">
-              <circle cx="160" cy="160" r="60" fill="none" stroke="#C9A84C" stroke-width="0.6" opacity="0.7" stroke-dasharray="1 4"/>
-            </g>
-            <!-- Triangle drawn in on reveal -->
-            <polygon class="draw-stroke" points="160,55 245,210 75,210" fill="none" stroke="#C9A84C" stroke-width="1.2"/>
-            <!-- Mind -->
-            <circle cx="160" cy="55" r="20" fill="#0E0B07" stroke="#C9A84C" stroke-width="1.5"/>
-            <text x="160" y="62" text-anchor="middle" font-family="Cormorant Garamond" font-style="italic" font-size="20" fill="#C9A84C">M</text>
-            <!-- Heart -->
-            <circle cx="245" cy="210" r="20" fill="#0E0B07" stroke="#C9A84C" stroke-width="1.5"/>
-            <text x="245" y="217" text-anchor="middle" font-family="Cormorant Garamond" font-style="italic" font-size="20" fill="#C9A84C">H</text>
-            <!-- Body -->
-            <circle cx="75" cy="210" r="20" fill="#0E0B07" stroke="#C9A84C" stroke-width="1.5"/>
-            <text x="75" y="217" text-anchor="middle" font-family="Cormorant Garamond" font-style="italic" font-size="20" fill="#C9A84C">B</text>
-            <!-- Center — pulsing gold core (SMIL) -->
-            <circle cx="160" cy="160" r="8" fill="#C9A84C">
-              <animate attributeName="r" values="6;10;6" dur="3s" repeatCount="indefinite" />
-              <animate attributeName="opacity" values="0.8;1;0.8" dur="3s" repeatCount="indefinite" />
-            </circle>
-            <text x="160" y="280" text-anchor="middle" font-family="Inter" font-size="10" fill="#C9A84C" letter-spacing="2">THE INSTRUMENT</text>
-          </svg>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+<!-- "See how the three days move you" (Day 1/2/3 mockup) AND
+     "Not a chatbot. A process." methodology section BOTH removed
+     2026-07-23 per Geo + Shimrit. The 5-exchange free preview above
+     already IS the demo, so an extra chat mockup was redundant.
+     The methodology explanation belongs in email nurture, not on
+     the conversion LP where it slows momentum for cold traffic. -->
 
 <!-- Positioning -->
 <section class="lp-section">
   <div class="lp-container narrow reveal" style="text-align:center;">
     <p class="lp-eyebrow">Reset. Decide. Calibrate.</p>
     <h2 class="lp-h2">Not another thing to understand.<br/><span class="shimmer">Something to move.</span></h2>
-    <p class="lp-lead" style="margin: 0 auto 24px;">
-      Stress, frustration and depletion do not usually disappear because you understand them better. They shift when you interrupt the state that keeps recreating the same response, the same delay, and the same loop.
-    </p>
     <p class="lp-lead" style="margin: 0 auto;">
-      You have used AI to get answers, write faster, get things done. The Field is different, and built for something else entirely: to meet you where the pattern is actually held, and move it.
+      You already know the pattern. You can see it in the moment you delay. In the decision you keep revisiting. In the action you keep preparing for. In the way the same situation keeps returning with a different face.
     </p>
   </div>
 </section>
@@ -3539,13 +3448,13 @@
   <div class="lp-container reveal">
     <div class="orbit-grid">
       <div class="orbit-copy">
-        <p class="lp-eyebrow">What the Reset unlocks</p>
-        <h2 class="lp-h2">Three days that <span class="shimmer">move you.</span></h2>
+        <p class="lp-eyebrow">Reset. Decide. Calibrate.</p>
+        <h2 class="lp-h2">You are living in the gap between <span class="shimmer">understanding and becoming.</span></h2>
         <p class="lp-lead">
-          The Reset is not information. It is a state change. Members walk out of the 72 hours holding one interrupted pattern, one aligned decision, and a nervous system that is no longer running the old loop on autopilot.
+          Stress, frustration, doubt, and depletion shift when you interrupt the state that keeps recreating the same response, the same delay, and the same loop.
         </p>
         <p class="lp-lead">
-          These are the shifts people name most often, in their own words, after Day 3.
+          The 72-Hour Power Reset is designed to close that gap. One pattern. One aligned decision and action. A new frequency and baseline in three days.
         </p>
       </div>
       <!-- Constellation — ported verbatim from hello.thefieldai.app.
@@ -3586,11 +3495,8 @@
           <line class="constellation-line" x1="500" y1="500" x2="220" y2="680"/>
           <line class="constellation-line" x1="500" y1="500" x2="140" y2="500"/>
           <line class="constellation-line" x1="500" y1="500" x2="220" y2="320"/>
-          <!-- Secondary orbit (r ≈ 230) -->
-          <line class="constellation-line" x1="500" y1="500" x2="663" y2="338"/>
-          <line class="constellation-line" x1="500" y1="500" x2="663" y2="662"/>
-          <line class="constellation-line" x1="500" y1="500" x2="337" y2="662"/>
-          <line class="constellation-line" x1="500" y1="500" x2="337" y2="338"/>
+          <!-- Secondary orbit lines removed 2026-07-23 with the small
+               pills; only the 8-pill primary orbit remains. -->
           <!-- Center hub -->
           <circle cx="500" cy="500" r="78" fill="#0E0B07" stroke="#C9A84C" stroke-width="1.5"/>
           <circle cx="500" cy="500" r="66" fill="rgba(201, 168, 76, 0.18)">
@@ -3602,20 +3508,17 @@
           <text class="constellation-center-label" x="500" y="395">The Reset</text>
         </svg>
 
-        <!-- Primary orbit (8 pills, ~48% radius — pushed further from center) -->
-        <div class="process-orbit" style="top: 2%;    left: 50%;">  <span class="process-magnet"><span class="process-pill" data-i="0"  style="--float-duration: 6s;   animation-delay: 0s;">Interrupt the loop</span></span></div>
-        <div class="process-orbit" style="top: 12%;   left: 84%;">  <span class="process-magnet"><span class="process-pill" data-i="1"  style="--float-duration: 7s;   animation-delay: -1s;">One aligned decision</span></span></div>
-        <div class="process-orbit" style="top: 50%;   left: 96%;">  <span class="process-magnet"><span class="process-pill" data-i="2"  style="--float-duration: 8s;   animation-delay: -2s;">State reset</span></span></div>
-        <div class="process-orbit" style="top: 88%;   left: 84%;">  <span class="process-magnet"><span class="process-pill" data-i="3"  style="--float-duration: 6.5s; animation-delay: -0.5s;">One grounded move</span></span></div>
-        <div class="process-orbit" style="top: 98%;   left: 50%;">  <span class="process-magnet"><span class="process-pill" data-i="4"  style="--float-duration: 7.5s; animation-delay: -3s;">Power calibration</span></span></div>
-        <div class="process-orbit" style="top: 88%;   left: 16%;">  <span class="process-magnet"><span class="process-pill" data-i="5"  style="--float-duration: 6s;   animation-delay: -1.5s;">Back to power</span></span></div>
-        <div class="process-orbit" style="top: 50%;   left: 4%;">   <span class="process-magnet"><span class="process-pill" data-i="6"  style="--float-duration: 7s;   animation-delay: -2.5s;">Real change in life</span></span></div>
-        <div class="process-orbit" style="top: 12%;   left: 16%;">  <span class="process-magnet"><span class="process-pill" data-i="7"  style="--float-duration: 8s;   animation-delay: -0.8s;">Frequency shift</span></span></div>
-        <!-- Secondary orbit (4 smaller pills, ~28% radius) -->
-        <div class="process-orbit" style="top: 28%;   left: 60%;">  <span class="process-magnet"><span class="process-pill process-pill--small" data-i="8"  style="--float-duration: 5.5s; animation-delay: -1.2s;">Locate the pattern</span></span></div>
-        <div class="process-orbit" style="top: 60%;   left: 72%;">  <span class="process-magnet"><span class="process-pill process-pill--small" data-i="9"  style="--float-duration: 6.2s; animation-delay: -2.2s;">Move differently</span></span></div>
-        <div class="process-orbit" style="top: 72%;   left: 40%;">  <span class="process-magnet"><span class="process-pill process-pill--small" data-i="10" style="--float-duration: 5.8s; animation-delay: -0.4s;">Shift that holds</span></span></div>
-        <div class="process-orbit" style="top: 40%;   left: 28%;">  <span class="process-magnet"><span class="process-pill process-pill--small" data-i="11" style="--float-duration: 6s;   animation-delay: -1.8s;">New baseline</span></span></div>
+        <!-- Primary orbit (8 pills, evenly spaced around ~48% radius).
+             Updated 2026-07-23 per Geo to reflect the actual outcomes
+             of the 72-Hour Power Reset. -->
+        <div class="process-orbit" style="top: 2%;    left: 50%;">  <span class="process-magnet"><span class="process-pill" data-i="0"  style="--float-duration: 6s;   animation-delay: 0s;">State reset</span></span></div>
+        <div class="process-orbit" style="top: 12%;   left: 84%;">  <span class="process-magnet"><span class="process-pill" data-i="1"  style="--float-duration: 7s;   animation-delay: -1s;">Locate the pattern</span></span></div>
+        <div class="process-orbit" style="top: 50%;   left: 96%;">  <span class="process-magnet"><span class="process-pill" data-i="2"  style="--float-duration: 8s;   animation-delay: -2s;">One aligned decision</span></span></div>
+        <div class="process-orbit" style="top: 88%;   left: 84%;">  <span class="process-magnet"><span class="process-pill" data-i="3"  style="--float-duration: 6.5s; animation-delay: -0.5s;">One grounded action</span></span></div>
+        <div class="process-orbit" style="top: 98%;   left: 50%;">  <span class="process-magnet"><span class="process-pill" data-i="4"  style="--float-duration: 7.5s; animation-delay: -3s;">Frequency calibration</span></span></div>
+        <div class="process-orbit" style="top: 88%;   left: 16%;">  <span class="process-magnet"><span class="process-pill" data-i="5"  style="--float-duration: 6s;   animation-delay: -1.5s;">Future Snapshot</span></span></div>
+        <div class="process-orbit" style="top: 50%;   left: 4%;">   <span class="process-magnet"><span class="process-pill" data-i="6"  style="--float-duration: 7s;   animation-delay: -2.5s;">Download MP3</span></span></div>
+        <div class="process-orbit" style="top: 12%;   left: 16%;">  <span class="process-magnet"><span class="process-pill" data-i="7"  style="--float-duration: 8s;   animation-delay: -0.8s;">Back to power</span></span></div>
       </div>
     </div>
   </div>
@@ -3631,23 +3534,32 @@
     </p>
     <div class="steps-grid">
       <div class="step lift reveal">
-        <div class="step-num">01</div>
+        <div class="step-num">Day 1</div>
         <h3 class="step-title">State Reset</h3>
-        <p class="step-desc">Interrupt the loop that keeps recreating the same response. The Field walks you through locating what has actually been leading you (the pattern under the pattern) and resets your inner state before you touch anything else.</p>
+        <p class="step-desc">Locate what's active, identify the pattern, and return to self-led power.</p>
         <p class="step-outcome"><strong>You leave Day 1 with:</strong> the specific pattern named, and the state that runs it interrupted.</p>
       </div>
       <div class="step lift reveal">
-        <div class="step-num">02</div>
+        <div class="step-num">Day 2</div>
         <h3 class="step-title">Decision &amp; Action</h3>
-        <p class="step-desc">From the new state, one decision surfaces that has been postponed or blurred. The Field helps you align it and land one grounded, aligned action. Not forced, not performed. Something you can actually move on today.</p>
-        <p class="step-outcome"><strong>You leave Day 2 with:</strong> one aligned decision and one real move made in your actual life.</p>
+        <p class="step-desc">Align your mind, heart, and body around one clear decision and one grounded action.</p>
+        <p class="step-outcome"><strong>You leave Day 2 with:</strong> a daily practice and your downloadable Living Power Declaration as an MP3.</p>
       </div>
       <div class="step lift reveal">
-        <div class="step-num">03</div>
-        <h3 class="step-title">Power Calibration</h3>
-        <p class="step-desc">The reset only lasts if the frequency holds. Day 3 calibrates you to the reality you are stepping into so the new state becomes your baseline, not a peak you fall away from once the container closes.</p>
-        <p class="step-outcome"><strong>You leave Day 3 with:</strong> a new baseline you carry out into your week.</p>
+        <div class="step-num">Day 3</div>
+        <h3 class="step-title">Power Frequency Calibration</h3>
+        <p class="step-desc">Step into the vibration and reality you're choosing.</p>
+        <p class="step-outcome"><strong>You leave Day 3 with:</strong> your Future Snapshot as a personalised MP3 to return to that frequency.</p>
       </div>
+    </div>
+
+    <!-- Bonus highlight card. Sits below the 3-day boxes and calls
+         out that the Reset includes lifetime bonuses + a 4th day. -->
+    <div class="bonus-highlight reveal">
+      <span class="bonus-highlight-tag">Bonus</span>
+      <p class="bonus-highlight-text">
+        You will also have <strong>lifetime access to special bonuses</strong> and a <strong>bonus 4th day</strong> with a powerful training and integration.
+      </p>
     </div>
     <svg class="reset-arc" viewBox="0 0 780 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <path class="arc-line" d="M 100 100 Q 260 20 390 100 T 680 100" />
@@ -3658,11 +3570,11 @@
       <circle class="arc-node" cx="390" cy="100" r="34" />
       <text class="arc-num" x="390" y="108" text-anchor="middle">2</text>
       <text class="arc-label" x="390" y="160" text-anchor="middle">Decision &amp; Action</text>
-      <text class="arc-label-hint" x="390" y="180" text-anchor="middle">ONE ALIGNED MOVE</text>
+      <text class="arc-label-hint" x="390" y="180" text-anchor="middle">ALIGN MIND, HEART, BODY</text>
       <circle class="arc-node" cx="680" cy="100" r="34" />
       <text class="arc-num" x="680" y="108" text-anchor="middle">3</text>
       <text class="arc-label" x="680" y="160" text-anchor="middle">Power calibration</text>
-      <text class="arc-label-hint" x="680" y="180" text-anchor="middle">CARRY IT OUT</text>
+      <text class="arc-label-hint" x="680" y="180" text-anchor="middle">HOLD THE FREQUENCY</text>
     </svg>
     <!-- Mobile stacked equivalent: shown only under 780px so the arc
          stays legible instead of collapsing into a shrunken SVG. -->
@@ -3678,14 +3590,14 @@
         <div class="arc-m-circle">2</div>
         <div class="arc-m-body">
           <p class="arc-m-title">Decision &amp; Action</p>
-          <p class="arc-m-hint">One aligned move</p>
+          <p class="arc-m-hint">Align your mind, heart, and body</p>
         </div>
       </div>
       <div class="arc-m-row">
         <div class="arc-m-circle">3</div>
         <div class="arc-m-body">
           <p class="arc-m-title">Power calibration</p>
-          <p class="arc-m-hint">Carry it out</p>
+          <p class="arc-m-hint">Hold the frequency</p>
         </div>
       </div>
     </div>
@@ -3707,8 +3619,9 @@
         <h3 class="bio-name">Shimrit Nativ</h3>
         <p class="bio-title">Founder · Master Your Path · Creator of the Human Instrument® method</p>
         <div class="lp-body-text">
-          <p>Shimrit is the founder of Master Your Path and the creator of the Human Instrument® method. The Field is built directly from that work, so it does not just hand you answers. It meets you where the pattern is actually held, and helps you move it.</p>
-          <p>She is the Amazon bestselling author of <em>The Skill of Freedom</em>, with a foreword by Neale Donald Walsch. Her method is now taught and practiced by coaches and leaders around the world.</p>
+          <p>The Field is not a generic AI tool. It is built from Shimrit Nativ's body of work in self-mastery, energy, embodiment, identity, leadership and human transformation, designed to guide you through a real process.</p>
+          <p>She is a transformational mentor, teacher, author, and creator of the Human Instrument®️ Mastery Method, a structured system for mastering the inner mechanics that shape human behavior, perception, and reality.</p>
+          <p>Her work is taught and applied by coaches and practitioners worldwide, supporting individuals and leaders in creating freedom, coherence, and sustainable success.</p>
         </div>
       </div>
     </div>
@@ -3720,18 +3633,16 @@
      they read through the list. -->
 <section class="lp-section lp-section--warm">
   <div class="lp-container reveal" style="max-width: 1080px;">
-    <p class="lp-eyebrow" style="text-align:center;">What you get today</p>
+    <p class="lp-eyebrow" style="text-align:center;">What you receive inside the 72-Hour Power Reset</p>
     <h2 class="lp-h2" style="text-align:center;">Everything included in the Reset.</h2>
     <p class="lp-lead" style="text-align:center; margin: 0 auto 36px;">
-      A full guided experience inside The Field, held with a real human group for the entire 72 hours. Once you finish the preview, this is your next step.
+      A full three-day guided experience, personal support and lifetime bonuses to support the reset from three angles: your timeline, your energetic signal, and your capacity to access a different potentiality.
     </p>
 
     <!-- Bonus stack image sits above the value stack (reverted to
          stacked layout 2026-07-23 per Geo — side-by-side didn't
          read well with the image's collage aspect ratio). -->
     <img class="bonus-stack-img" src="https://assets.cdn.filesafe.space/eo4N6ugBtPJTQE4clj7A/media/6a1ef88c027d0d5be1577b6f.png" alt="Everything included in the 72-Hour Power Reset bonus stack" loading="lazy" />
-
-    <p class="lp-eyebrow" style="text-align:center; margin-top: 8px;">What you receive inside the 72-Hour Power Reset</p>
 
     <div class="value-stack rich">
       <div class="value-row">
@@ -3834,7 +3745,7 @@
 
 
     <div style="text-align:center; margin-top: 32px;">
-      <a class="value-cta" href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank">Yes, start my reset for €9</a>
+      <a class="value-cta" href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank">Start the 72H Power Reset<span class="cta-price">€9</span></a>
       <p style="font-size: 12px; color: var(--text-mute); margin: 12px 0 0;">Instant access · secure checkout · includes bonuses</p>
     </div>
   </div>
@@ -3884,7 +3795,7 @@
       <div class="testi-card" style="--tilt: -1.5deg;">
         <div class="testi-bubble testi-bubble--green">
           <p>I am all in. I have enjoyed the 72 hours sooo much that I've signed up for the whole year in the Unlimited Field. I am really full of joy. I have no words to express what I am feeling. Thank you Shimrit and the team for creating this amazing tool.</p>
-          <div class="testi-meta-row"><span>09:41</span> <span class="checks">✓✓</span></div>
+          <div class="testi-meta-row"><span>09:41</span></div>
         </div>
         <div class="testi-attribution">
           <span class="testi-avatar">C</span>
@@ -3898,7 +3809,7 @@
       <div class="testi-card" style="--tilt: 3deg;">
         <div class="testi-bubble testi-bubble--green">
           <p>Dear Shimrit, thank you. I'm so excited. For now I'm following the 72-Hour power reset: it's so powerful! As a boomer, I could never imagine having such a deep, intimate, sincere and practical relationship with AI. I'm following the path and I feel my energy renewed, and I feel more alive. And that's fantastic!</p>
-          <div class="testi-meta-row"><span>02:27</span> <span class="checks">✓✓</span></div>
+          <div class="testi-meta-row"><span>02:27</span></div>
         </div>
         <div class="testi-attribution">
           <span class="testi-avatar">M</span>
@@ -3912,7 +3823,7 @@
       <div class="testi-card" style="--tilt: -3deg;">
         <div class="testi-bubble testi-bubble--green">
           <p>I just finished day 1. It feels soooo good. I am already loving this AI of ours!! 🥰 It has been an amazing session.</p>
-          <div class="testi-meta-row"><span>22:20</span> <span class="checks">✓✓</span></div>
+          <div class="testi-meta-row"><span>22:20</span></div>
           <span class="testi-reactions">❤️</span>
         </div>
         <div class="testi-attribution">
@@ -3927,7 +3838,7 @@
       <div class="testi-card" style="--tilt: 1.5deg;">
         <div class="testi-bubble testi-bubble--green">
           <p>Have done 2 days in the Field… no words to describe.</p>
-          <div class="testi-meta-row"><span>08:29</span> <span class="checks">✓✓</span></div>
+          <div class="testi-meta-row"><span>08:29</span></div>
         </div>
         <div class="testi-attribution">
           <span class="testi-avatar testi-avatar--field">✦</span>
@@ -3970,7 +3881,7 @@
       <div class="testi-card" style="--tilt: 3deg;">
         <div class="testi-bubble testi-bubble--green">
           <p>I am working with my Living Power Declaration and my Determined Imagination Scene. I repeat them twice a day. Very powerful!</p>
-          <div class="testi-meta-row"><span>22:33</span> <span class="checks">✓✓</span></div>
+          <div class="testi-meta-row"><span>22:33</span></div>
           <span class="testi-reactions">❤️ ⭐ 4</span>
         </div>
         <div class="testi-attribution">
@@ -4030,9 +3941,9 @@
       <p class="lp-eyebrow">Three days to interrupt the old loop</p>
       <h2 class="h-final">Ready to step inside?</h2>
       <p class="p-final">Take the free preview at the top of this page. Then decide if the full Reset is your next step.</p>
-      <a href="#top" class="final-cta-btn">Take the free preview ↑</a>
+      <a href="#free-preview" class="final-cta-btn">Take the free preview ↑</a>
       <p style="font-size: 12.5px; color: var(--text-dim); margin-top: 24px;">
-        Ready to skip the preview? <a href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank" style="color: var(--text); border-bottom: 1px solid var(--gold); font-weight: 500;">Enter the full Reset for €9 →</a>
+        Ready to skip the preview? <a href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank" style="color: var(--text); border-bottom: 1px solid var(--gold); font-weight: 500;">Start the 72H Power Reset for €9 →</a>
       </p>
     </div>
   </div>
@@ -4046,13 +3957,13 @@
    target="_blank" rel="noopener"
    aria-label="Start the 72-Hour Power Reset for €9">
   <span class="float-cta-dot" aria-hidden="true"></span>
-  Start the Reset
+  Start the 72H Power Reset
   <span class="float-cta-price">€9</span>
 </a>
 
 <footer class="lp-footer">
   <p><strong style="color: var(--text-inverse); font-weight: 600;">The Freedom Intelligence Field</strong></p>
-  <p>A 72-hour experience by Master Your Path</p>
+  <p>A 72-hour experience by Shimrit Nativ</p>
 
   <!-- Social media links removed per Geo 2026-07-23 — the /try
        page is an ad landing page and every offsite link is a
@@ -4473,7 +4384,7 @@
       <p class="cw-closing-eyebrow">The preview closed</p>
       <p class="cw-closing-title">What just opened is the doorway.</p>
       <p class="cw-closing-body">The 72-Hour Power Reset is where this actually goes. Three days, in your body, with the full method.</p>
-      <a class="cw-closing-btn" href="${esc(resetLink)}" id="cw-closing-cta">Enter the full Reset · €9</a>
+      <a class="cw-closing-btn" href="${esc(resetLink)}" id="cw-closing-cta">Start the 72H Power Reset<span class="cta-price">€9</span></a>
     `;
     body.appendChild(card);
     scrollChatToBottom();
