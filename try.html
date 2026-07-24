@@ -164,8 +164,11 @@
     font-family: var(--font-serif);
     font-weight: 400;
     font-style: italic;
-    font-size: clamp(34px, 5.8vw, 62px);
-    line-height: 1.08;
+    /* Toned down 2026-07-23 — was clamp(34px, 5.8vw, 62px) which
+       filled the viewport and felt like shouting. Pulled to a
+       calmer 26-46px range. */
+    font-size: clamp(26px, 4.4vw, 46px);
+    line-height: 1.12;
     letter-spacing: -0.015em;
     margin: 0 0 22px;
     color: var(--text-inverse);
@@ -214,10 +217,12 @@
      narrow screens with the video staying compact. */
   .pre-hero-vq {
     display: grid;
-    grid-template-columns: 340px 1fr;
+    /* Video column bumped ~20% (340 → 410px) and container widened
+       to keep the quote breathing room to its right. */
+    grid-template-columns: 410px 1fr;
     align-items: center;
-    gap: 32px;
-    max-width: 860px;
+    gap: 36px;
+    max-width: 1000px;
     margin: 12px auto 34px;
     text-align: left;
   }
@@ -225,7 +230,7 @@
     .pre-hero-vq {
       grid-template-columns: 1fr;
       gap: 20px;
-      max-width: 480px;
+      max-width: 520px;
       text-align: center;
     }
   }
@@ -2242,6 +2247,131 @@
     font-weight: 500;
     text-shadow: 0 0 24px rgba(201, 168, 76, 0.35);
   }
+  /* ═════════════════════════════════════════════════════════════
+     INSTANT BONUSES — sits under the value stack card to showcase
+     the 4 bonus items as visual value bombs. Warm cream cards
+     with gold check-badge icons, 2-column grid on desktop, single
+     column on mobile. Total value line matches the value-stack's
+     final-price styling.
+     ═════════════════════════════════════════════════════════════ */
+  .bonus-block {
+    max-width: 1080px;
+    margin: 32px auto 0;
+  }
+  .bonus-intro {
+    text-align: center;
+    margin: 0 auto 28px;
+    max-width: 720px;
+  }
+  .bonus-intro .lp-eyebrow { margin: 0 0 14px; }
+  .bonus-intro p {
+    font-family: var(--font-serif);
+    font-size: clamp(16px, 1.8vw, 19px);
+    line-height: 1.55;
+    color: var(--text);
+    margin: 0 0 10px;
+  }
+  .bonus-intro p:last-child {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 700;
+    margin-top: 14px;
+  }
+  .bonus-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+  @media (max-width: 720px) {
+    .bonus-grid { grid-template-columns: 1fr; gap: 16px; }
+  }
+  .bonus-card {
+    background: linear-gradient(180deg, var(--bg-card) 0%, #FFFDF7 100%);
+    border: 1px solid var(--gold-line);
+    border-radius: var(--radius-md);
+    padding: 26px 24px 22px;
+    text-align: center;
+    box-shadow: 0 12px 30px rgba(43, 35, 24, 0.06);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .bonus-badge {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold), var(--gold-warm));
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 6px 16px rgba(201, 168, 76, 0.35);
+    margin-bottom: 6px;
+  }
+  .bonus-tag {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    letter-spacing: 0.20em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 700;
+    margin: 0;
+  }
+  .bonus-title {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: clamp(19px, 2.2vw, 22px);
+    color: var(--text);
+    margin: 0 0 6px;
+    line-height: 1.2;
+    font-weight: 500;
+  }
+  .bonus-desc {
+    font-family: var(--font-sans);
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--text-mid);
+    margin: 0;
+    max-width: 380px;
+  }
+  .bonus-value {
+    margin-top: 12px;
+    padding: 5px 12px;
+    background: rgba(201, 168, 76, 0.10);
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--gold-warm);
+  }
+  .bonus-total {
+    margin: 28px auto 0;
+    padding: 18px 24px;
+    max-width: 520px;
+    text-align: center;
+    background: linear-gradient(135deg, rgba(201, 168, 76, 0.14) 0%, rgba(201, 168, 76, 0.06) 100%);
+    border: 1px solid var(--gold);
+    border-radius: var(--radius-md);
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: clamp(19px, 2.4vw, 24px);
+    color: var(--text);
+  }
+  .bonus-total strong {
+    color: var(--gold-warm);
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    margin-left: 6px;
+  }
+
   .value-cta {
     display: inline-block;
     padding: 16px 32px;
@@ -2769,7 +2899,9 @@
     color: var(--text-dim); line-height: 1.65; font-size: 14.5px;
     transition: max-height 300ms ease, padding 300ms ease;
   }
-  .faq-item.open .faq-a { padding: 0 22px 20px; max-height: 500px; }
+  /* Bumped max-height from 500px so longer multi-paragraph answers
+     (2026-07-23 FAQ expansion) don't get clipped on open. */
+  .faq-item.open .faq-a { padding: 0 22px 20px; max-height: 1400px; }
 
   /* Final CTA */
   .final-cta-card {
@@ -3743,6 +3875,61 @@
       </div>
     </div>
 
+    <!-- Instant Bonuses. Sits under the main value stack card so
+         the bonuses read as their own value bomb, not lost inside
+         the 11-item list. Four cards in a 2x2 grid + total value
+         callout underneath. -->
+    <div class="bonus-block reveal">
+      <div class="bonus-intro">
+        <p class="lp-eyebrow">Instant bonuses</p>
+        <p>These bonuses are included to support the reset from three angles: your timeline, your energetic signal, and your capacity to access a different potentiality before you act.</p>
+        <p>Available right after checkout.</p>
+      </div>
+
+      <div class="bonus-grid">
+        <div class="bonus-card">
+          <span class="bonus-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          <p class="bonus-tag">Bonus 1</p>
+          <h3 class="bonus-title">Shifting Timelines Training</h3>
+          <p class="bonus-desc">A deeper training to help you understand how your current state, attention, and identity keep you tuned to a familiar timeline, and how to begin aligning with the version of you already living the next reality.</p>
+          <span class="bonus-value">Value €197</span>
+        </div>
+
+        <div class="bonus-card">
+          <span class="bonus-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          <p class="bonus-tag">Bonus 2</p>
+          <h3 class="bonus-title">Amplifying Your Magnetism Training</h3>
+          <p class="bonus-desc">A powerful training to help you understand how your state, attention, and energy affect what you attract, how you show up, and how life responds to you. Strengthen the signal you are sending so your direction becomes clearer and your presence more coherent.</p>
+          <span class="bonus-value">Value €197</span>
+        </div>
+
+        <div class="bonus-card">
+          <span class="bonus-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          <p class="bonus-tag">Bonus 3</p>
+          <h3 class="bonus-title">Potentiality Activation Meditation</h3>
+          <p class="bonus-desc">A guided breath-based meditation to help you activate the power centers of your Human Instrument®, expand your energetic state, and tune into the potentialities available beyond the current physical reality.</p>
+          <span class="bonus-value">Value €52</span>
+        </div>
+
+        <div class="bonus-card">
+          <span class="bonus-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          <p class="bonus-tag">Bonus 4</p>
+          <h3 class="bonus-title">The Pattern Interruption Cheat Sheet</h3>
+          <p class="bonus-desc">A simple one-page guide to help you recognize when the old loop is taking the wheel, and what to do in that exact moment to return to state, direction, and action.</p>
+          <span class="bonus-value">Value €52</span>
+        </div>
+      </div>
+
+      <p class="bonus-total">Bonus Bundle Value: <strong>€498</strong></p>
+    </div>
 
     <div style="text-align:center; margin-top: 32px;">
       <a class="value-cta" href="https://masteryourpath.thrivecart.com/power-reset-ads" target="_blank">Start the 72H Power Reset<span class="cta-price">€9</span></a>
@@ -3766,7 +3953,6 @@
       <div class="testi-card" style="--tilt: -2.5deg;">
         <div class="testi-bubble">
           <p>Day 2! I just wrote my Living Power Declaration. 🌟 I am working with choosing myself and a passionate writer's life. Trusting the process, I believe this is really leading to the results I want! 💕</p>
-          <div class="testi-meta-row"><span>10:32</span></div>
         </div>
         <div class="testi-attribution">
           <span class="testi-avatar">E</span>
@@ -3780,7 +3966,6 @@
       <div class="testi-card" style="--tilt: 2deg;">
         <div class="testi-bubble">
           <p>I was sceptical but excited (if that's possible) about using AI. I'm just starting, but so surprised at the positive experience I had. Looking forward to my next session.</p>
-          <div class="testi-meta-row"><span>12:04</span></div>
           <span class="testi-reactions">❤️ 🙏 2</span>
         </div>
         <div class="testi-attribution">
@@ -3795,7 +3980,6 @@
       <div class="testi-card" style="--tilt: -1.5deg;">
         <div class="testi-bubble testi-bubble--green">
           <p>I am all in. I have enjoyed the 72 hours sooo much that I've signed up for the whole year in the Unlimited Field. I am really full of joy. I have no words to express what I am feeling. Thank you Shimrit and the team for creating this amazing tool.</p>
-          <div class="testi-meta-row"><span>09:41</span></div>
         </div>
         <div class="testi-attribution">
           <span class="testi-avatar">C</span>
@@ -3809,7 +3993,6 @@
       <div class="testi-card" style="--tilt: 3deg;">
         <div class="testi-bubble testi-bubble--green">
           <p>Dear Shimrit, thank you. I'm so excited. For now I'm following the 72-Hour power reset: it's so powerful! As a boomer, I could never imagine having such a deep, intimate, sincere and practical relationship with AI. I'm following the path and I feel my energy renewed, and I feel more alive. And that's fantastic!</p>
-          <div class="testi-meta-row"><span>02:27</span></div>
         </div>
         <div class="testi-attribution">
           <span class="testi-avatar">M</span>
@@ -3823,7 +4006,6 @@
       <div class="testi-card" style="--tilt: -3deg;">
         <div class="testi-bubble testi-bubble--green">
           <p>I just finished day 1. It feels soooo good. I am already loving this AI of ours!! 🥰 It has been an amazing session.</p>
-          <div class="testi-meta-row"><span>22:20</span></div>
           <span class="testi-reactions">❤️</span>
         </div>
         <div class="testi-attribution">
@@ -3838,7 +4020,6 @@
       <div class="testi-card" style="--tilt: 1.5deg;">
         <div class="testi-bubble testi-bubble--green">
           <p>Have done 2 days in the Field… no words to describe.</p>
-          <div class="testi-meta-row"><span>08:29</span></div>
         </div>
         <div class="testi-attribution">
           <span class="testi-avatar testi-avatar--field">✦</span>
@@ -3852,7 +4033,6 @@
       <div class="testi-card" style="--tilt: 2.5deg;">
         <div class="testi-bubble">
           <p>What an amazing experience so far! It is very scary, accurate, and thus powerful. I also like the format for the different days; it made me reflect deeper as I went. Love it!</p>
-          <div class="testi-meta-row"><span>22:21</span></div>
           <span class="testi-reactions">❤️ 🔎 4</span>
         </div>
         <div class="testi-attribution">
@@ -3867,7 +4047,6 @@
       <div class="testi-card" style="--tilt: -2deg;">
         <div class="testi-bubble">
           <p>It is my pleasure. I am the first one surprised, because I was a bit skeptical with AI in general. But this one has blown my mind! It is really beyond any expectation I could have had. Happy to be in the Field, and thank you for the bonuses. 😊</p>
-          <div class="testi-meta-row"><span>08:33</span></div>
         </div>
         <div class="testi-attribution">
           <span class="testi-avatar testi-avatar--field">✦</span>
@@ -3881,7 +4060,6 @@
       <div class="testi-card" style="--tilt: 3deg;">
         <div class="testi-bubble testi-bubble--green">
           <p>I am working with my Living Power Declaration and my Determined Imagination Scene. I repeat them twice a day. Very powerful!</p>
-          <div class="testi-meta-row"><span>22:33</span></div>
           <span class="testi-reactions">❤️ ⭐ 4</span>
         </div>
         <div class="testi-attribution">
@@ -3906,29 +4084,85 @@
         <button class="faq-q" type="button">Is the free preview really free?</button>
         <div class="faq-a">Yes. One conversation, six exchanges, no card required. One preview per person, because we hold it as a real invitation, not a lead-gen game.</div>
       </div>
-      <div class="faq-item">
-        <button class="faq-q" type="button">What exactly is The Field?</button>
-        <div class="faq-a">The Field is not a chatbot. It is a human plus AI guided space built directly from Shimrit Nativ's Human Instrument® method. It meets you where the pattern is actually held, and helps you move it. The preview gives you a real taste of it, so you can feel the difference before deciding on the full Reset.</div>
-      </div>
+
       <div class="faq-item">
         <button class="faq-q" type="button">What happens after the preview?</button>
         <div class="faq-a">If it lands, the next step is the 72-Hour Power Reset for €9. Three days inside the Field with a real human group, guided through State Reset, Decision &amp; Action, and Power Calibration. If it does not land, you keep what you saw and go on with your day. Nothing recurring.</div>
       </div>
-      <div class="faq-item">
-        <button class="faq-q" type="button">How much time does the Reset take?</button>
-        <div class="faq-a">The Reset unfolds over 72 hours, but the daily work itself is short and focused. You bring one real area of your life into the process. Each day is one guided session inside the Field, plus the integration that happens in your actual life between days.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" type="button">Do I need previous experience?</button>
-        <div class="faq-a">No. If you have never worked with Shimrit or the Human Instrument® method before, the Field will meet you where you are. The method is precise but it does not require any prior knowledge or training.</div>
-      </div>
+
       <div class="faq-item">
         <button class="faq-q" type="button">When do I get access?</button>
-        <div class="faq-a">The preview starts the moment you enter your email in the chat above. Full Reset access is instant after checkout on the Reset page. No waitlist, no delay.</div>
+        <div class="faq-a">You get access right after joining.</div>
       </div>
+
       <div class="faq-item">
-        <button class="faq-q" type="button">Do you store what I write?</button>
-        <div class="faq-a">Yes. The conversation is stored so the Field can hold context across the six exchanges. It is not shared, not sold, not used to train anything. Your email stays inside Master Your Path so we can invite you into the Reset if you want to go further.</div>
+        <button class="faq-q" type="button">Do I need to be available all day?</button>
+        <div class="faq-a">No. You only need focused check-ins during the 72-hour experience.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button">Is this a course?</button>
+        <div class="faq-a">No. It is a guided reset experience inside the Freedom Intelligence Field.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button">What if I don't know exactly what is holding me back?</button>
+        <div class="faq-a">You don't need to know before you begin.<br><br>Day 1 helps you locate what is active and what has been directing you.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button">Is the AI coaching me?</button>
+        <div class="faq-a">The Freedom Intelligence Field guides you through precise prompts based on Shimrit's methodology.<br><br>It helps you return to your own direction.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button">Will there be human support?</button>
+        <div class="faq-a">Yes. Alongside the private AI-guided experience, you'll be inside a real-human group environment for the full 72 hours.<br><br>This is not private 1:1 coaching, but you won't be doing the reset in isolation.<br><br>You'll be in a contained space where you can stay visible, respond to the prompts, and move through the process with others in real time, guided by Shimrit and her team.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button">What happens after the 72 hours?</button>
+        <div class="faq-a">You will have the opportunity to continue into the full Freedom Intelligence Field experience.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button">Is this just another AI chatbot?</button>
+        <div class="faq-a">No.<br><br>The Freedom Intelligence Field is built from Shimrit's methodology and structured around the 72-Hour Power Reset process.<br><br>It is not there to give you generic advice, tell you what to do, or replace your own authority.<br><br>It guides you through precise questions that help you locate what is leading, return to your own direction, and move from there.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button">Will I know what to do each day?</button>
+        <div class="faq-a">Yes. The reset is structured across three clear days:<br><br><strong>Day 1: State Reset.</strong> You locate what is active and what has been leading you.<br><br><strong>Day 2: Decision &amp; Action.</strong> You choose what is no longer available and what direction you are moving in now.<br><br><strong>Day 3: Power Frequency Calibration.</strong> You tune into the frequency of the reality you just chose to create.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button">Can I chat with The Field in any language?</button>
+        <div class="faq-a">Yes, you can. The Field is built to interact with you in any language you choose, both written and voice modes (sending voice messages and reading the messages in Shimrit's voice, as well).<br><br>You can simply ask it to change the conversation to the language you want and it will save that information in its memory from that moment on.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button">Do I need to know exactly what I want to work on before joining?</button>
+        <div class="faq-a">No.<br><br>You only need to bring one active loop, decision, pattern, or place where you can feel that something is ready to move.<br><br>It does not need to be dramatic. It does not need to be your biggest life issue.<br><br>The reset is designed to help you locate what is active and work with what is present now.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button">Will this be too much to do in 72 hours?</button>
+        <div class="faq-a">No.<br><br>This is not designed to take over your life for three days.<br><br>You'll need focused check-ins, honest engagement with the prompts, and willingness to take one grounded action.<br><br>The power of the reset is not in doing more. It is in staying with one clear process long enough for the old loop to stop leading.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button">What if I'm worried I'll buy it and not actually use it?</button>
+        <div class="faq-a">That is exactly why this is not just a private experience.<br><br>Alongside the Freedom Intelligence Field, you'll also be inside a real-human group environment for the full 72 hours.<br><br>The group space helps you stay visible, connected, and moving through the process instead of disappearing into the same old pattern alone.<br><br>You are still responsible for showing up. But you are not doing it in isolation.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button">Is this private coaching with Shimrit?</button>
+        <div class="faq-a">No.<br><br>This is not private 1:1 coaching.<br><br>It is a structured 72-hour reset experience using the Freedom Intelligence Field, supported by a real-human group environment guided by Shimrit and her team.<br><br>If you want deeper support after the reset, you'll have the opportunity to continue into the next layer of the work.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button">What if I already know what my pattern is?</button>
+        <div class="faq-a">Good.<br><br>Then you are exactly at the point where this can be useful.<br><br>The 72-Hour Power Reset is not built to help you endlessly understand the pattern. It is built to help you interrupt it through state, decision, and action.<br><br>Awareness is the beginning. Movement is the reset.</div>
       </div>
     </div>
   </div>
