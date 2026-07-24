@@ -93,7 +93,7 @@ export default async function handler(req, res) {
           prior_scenario: priorTrial.scenario,
           prior_scenario_label: priorLabel,
           reset_link: RESET_LINK,
-          message: "If what opened in the preview is still with you, that is the signal. It means the pattern is asking to move. The 72-Hour Power Reset is the walk-through: three days inside the Field with real-human support, guided through State Reset, Decision & Action, and Power Frequency Calibration. Plus lifetime bonuses.",
+          message: "You already spent a few minutes with a real pattern. If it is still with you, that is worth paying attention to. For €9, you get the complete Power Reset: three days of real work inside the Field, the guided process, real-human support, and the space to actually shift the pattern. Plus a bonus fourth day featuring The Architecture of Freedom, a free masterclass.",
         });
       }
     }
