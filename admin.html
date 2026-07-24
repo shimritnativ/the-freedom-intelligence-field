@@ -6763,8 +6763,10 @@
     let _perAdFilterCampaign = 'all';
     let _perAdFilterGeo = 'all';
     let _perAdFilterStatus = 'all';
-    // LP variant filter — matches the utm_content suffix (_newlp / _ghl / _ads).
-    // 'all' shows every ad regardless of LP variant.
+    // LP variant filter — matches the utm_content suffix (_newlp / _ghl /
+    // _ads / _try). 'all' shows every ad regardless of LP variant. The
+    // _try suffix was added 2026-07-24 in prep for advertising the /try
+    // preview LP (thefieldai.app/try).
     let _perAdFilterLp = 'all';
     let _perAdHidePaused = true;
 
@@ -7223,6 +7225,7 @@
           if (n.endsWith('_newlp')) return 'newlp';
           if (n.endsWith('_ghl'))   return 'ghl';
           if (n.endsWith('_ads'))   return 'ads';
+          if (n.endsWith('_try'))   return 'try';
           return 'other';
         };
         const filteredRows = rows.filter(a => {
@@ -7373,6 +7376,7 @@
             'lp|newlp':        { on: '#8a6ec0', onFg: '#ffffff', off: '#8a6ec0' },
             'lp|ghl':          { on: '#8a6ec0', onFg: '#ffffff', off: '#8a6ec0' },
             'lp|ads':          { on: '#8a6ec0', onFg: '#ffffff', off: '#8a6ec0' },
+            'lp|try':          { on: '#c9a84c', onFg: '#1a1408', off: '#c9a84c' },
           };
           return map[`${filterKey}|${value}`] || { on: 'var(--gold)', onFg: '#1a1408', off: 'var(--text-dim)' };
         };
@@ -7392,7 +7396,7 @@
         const knownStatus = statusBuckets.has('active') || statusBuckets.has('paused');
         // LP variant chips only appear when data has that LP suffix
         const lpBuckets = new Set(rows.map(r => lpBucket(r.ad_name)));
-        const knownLp = lpBuckets.has('newlp') || lpBuckets.has('ghl') || lpBuckets.has('ads');
+        const knownLp = lpBuckets.has('newlp') || lpBuckets.has('ghl') || lpBuckets.has('ads') || lpBuckets.has('try');
 
         return `
           <div style="background: var(--bg-warm); border: 1px solid var(--gold-line); border-radius: 12px; padding: 18px 22px; margin-bottom: 22px;">
@@ -7425,6 +7429,7 @@
                 ${lpBuckets.has('newlp') ? filterChip('New LP', 'newlp', _perAdFilterLp, 'lp') : ''}
                 ${lpBuckets.has('ghl')   ? filterChip('GHL LP', 'ghl',   _perAdFilterLp, 'lp') : ''}
                 ${lpBuckets.has('ads')   ? filterChip('Ads LP', 'ads',   _perAdFilterLp, 'lp') : ''}
+                ${lpBuckets.has('try')   ? filterChip('Try LP', 'try',   _perAdFilterLp, 'lp') : ''}
               </div>` : ''}
               ${knownStatus ? `
               <div style="display: flex; align-items: center; gap: 6px;">
