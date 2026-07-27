@@ -4333,6 +4333,12 @@
   // separately as `already_used_card` in api/free-trial/start.js).
   const RESET_LINK = "https://masteryourpath.thrivecart.com/power-reset-ads?utm_source=try_lp&utm_medium=cta&utm_campaign=try_preview&utm_content=closing_card";
   const COOKIE_KEY = "tfif_try_cookie_v1";
+  // Bridge text — rendered as a second assistant bubble immediately
+  // after the model's final reflection. Injected client-side (not by
+  // the model) so we control the wording deterministically and never
+  // risk the model outputting it prematurely on a non-final turn.
+  // Approved by Shimrit 2026-07-27.
+  const BRIDGE_TEXT = "This was a sample of the full 72 Hour Power Reset.\n\nIn the full three-day process you will shift the pattern step by step. On Day 1 you reset your inner state. On Day 2 you align a decision and lock in the action that makes it real. On Day 3 you calibrate to the frequency of the outcome and reality you choose.\n\nAt the end of the three days you will download your work and the personalised MP3s of your Power Declaration and Future Snapshot of your desired reality.";
 
   function getCookieId() {
     try {
@@ -4750,7 +4756,15 @@
       updateProgress();
       if (state.isFinal) {
         state.phase = "final";
-        renderClosingCard(data.reset_link || RESET_LINK);
+        // Bridge bubble — the stable "This was a sample..." template.
+        // Injected here (not in the model output) so we control the
+        // wording and eliminate any risk of the model leaking bridge
+        // content on non-final exchanges. Shimrit's preferred design:
+        // reflection → bridge bubble → closing card + button.
+        setTimeout(() => {
+          addBubble("assistant", BRIDGE_TEXT, { final: true });
+          setTimeout(() => renderClosingCard(data.reset_link || RESET_LINK), 350);
+        }, 400);
       } else {
         send.disabled = false;
         send.textContent = "Send";
