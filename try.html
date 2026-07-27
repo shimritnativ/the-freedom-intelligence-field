@@ -5215,30 +5215,35 @@
   track("try_page_view");
 
   function attach() {
-    // Reset CTAs — any anchor whose href points to the ThriveCart
-    // checkout gets tracked. Label = utm_content value from the URL
-    // (maximized_chat_top, value_stack, after_testimonials, etc.),
-    // so we don't need to hand-mark each CTA in HTML.
-    document.querySelectorAll('a[href*="thrivecart.com"]').forEach(function (a) {
-      a.addEventListener("click", function () {
-        var url;
-        try { url = new URL(a.href); } catch (e) { return; }
-        var label = url.searchParams.get("utm_content") || "unlabeled";
-        track("try_cta_click", label);
-      });
+    // Reset CTAs — DELEGATED click listener on document so it also
+    // catches CTAs added dynamically after page load. Critical for
+    // the post-preview closing card and the "already used" dedup
+    // card, both of which are injected into the chat widget AFTER
+    // DOMContentLoaded (so a static querySelectorAll would miss them
+    // and their clicks would go untracked). Label = utm_content
+    // value from the URL — no HTML annotation needed.
+    document.addEventListener("click", function (e) {
+      var a = e.target && e.target.closest ? e.target.closest('a[href*="thrivecart.com"]') : null;
+      if (!a) return;
+      var url;
+      try { url = new URL(a.href); } catch (err) { return; }
+      var label = url.searchParams.get("utm_content") || "unlabeled";
+      track("try_cta_click", label);
     });
 
-    // Free preview CTAs — three distinct positions on the page:
+    // Free preview CTAs — three distinct positions on the page.
+    // Also delegated so any future dynamically-added #free-preview
+    // anchor is tracked without needing to re-run attach().
     //   • #float-cta                    → floating_pill  (sticky bottom)
     //   • .pre-hero-cta                 → pre_hero_button (top, next to video)
     //   • any other a[href="#free-preview"] → bottom_link  (final CTA small-print)
-    document.querySelectorAll('a[href="#free-preview"]').forEach(function (a) {
-      a.addEventListener("click", function () {
-        var label = "bottom_link";
-        if (a.id === "float-cta") label = "floating_pill";
-        else if (a.classList && a.classList.contains("pre-hero-cta")) label = "pre_hero_button";
-        track("try_free_cta_click", label);
-      });
+    document.addEventListener("click", function (e) {
+      var a = e.target && e.target.closest ? e.target.closest('a[href="#free-preview"]') : null;
+      if (!a) return;
+      var label = "bottom_link";
+      if (a.id === "float-cta") label = "floating_pill";
+      else if (a.classList && a.classList.contains("pre-hero-cta")) label = "pre_hero_button";
+      track("try_free_cta_click", label);
     });
 
     // Doorway chip clicks — delegated because the chips are rendered
