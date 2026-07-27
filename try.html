@@ -4308,7 +4308,11 @@
       hint: "When you can see the next step clearly and still stay exactly where you are." }
   ];
 
-  const MAX_EXCHANGES = 5;
+  // Kept in sync with FREE_TRIAL_MAX_EXCHANGES in
+  // lib/prompts/free-trial.js. Reduced from 5 → 4 on 2026-07-27
+  // to match the actual script arc (4 questions, 4 user answers,
+  // closing reflection on the fourth).
+  const MAX_EXCHANGES = 4;
   // Send all "buy the Reset" CTAs straight to the ads-funnel ThriveCart
   // checkout so attribution stays clean and there's no LP hop.
   // UTM tagged as `closing_card` since this constant is used by the
@@ -4385,6 +4389,29 @@
     return escaped
       .replace(/\*\*([^*\n]+?)\*\*/g, "<strong>$1</strong>")   // **bold**
       .replace(/\*([^*\n]+?)\*/g, "<strong>$1</strong>");       // *bold*
+  }
+
+  // Belt-and-suspenders cleanup on model output. The prompt tells the
+  // model not to emit CTA button placeholders or the bridge template,
+  // but if it drifts we strip the obvious junk here so users never
+  // see raw "[Button: ...]" text or a markdown link that renders as
+  // literal brackets. On the final exchange we also hard-truncate at
+  // the "That is what is available to you..." closing line so any
+  // leaked bridge prose after it gets clipped.
+  function sanitizeAssistantReply(text, isFinal) {
+    let out = String(text || "")
+      // Markdown link: [label](url) -> label
+      .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, "$1")
+      // [Button: X] placeholder -> remove entirely
+      .replace(/\[Button:[^\]]*\]/gi, "")
+      // Collapse triple+ newlines
+      .replace(/[\r\n]{3,}/g, "\n\n")
+      .trim();
+    if (isFinal) {
+      const match = out.match(/^([\s\S]*?That is what is available to you[^.!?]*[.!?])/i);
+      if (match) out = match[1].trim();
+    }
+    return out;
   }
 
   // ── Bubble helpers
@@ -4699,7 +4726,7 @@
       }
       state.exchangeCount = data.exchange_number || (state.exchangeCount + 1);
       state.isFinal = !!data.is_final;
-      addBubble("assistant", data.reply, { final: state.isFinal });
+      addBubble("assistant", sanitizeAssistantReply(data.reply, state.isFinal), { final: state.isFinal });
       updateProgress();
       if (state.isFinal) {
         state.phase = "final";
