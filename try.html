@@ -4679,9 +4679,17 @@
       state.trialId = data.trial_id;
       state.email = email;
       state.phase = "active";
-      // Remove the email input, add the Field's opening
+      // Remove the email input, add a short warm confirmation
+      // ("Held, [First Name].") before the doorway opening. Mirrors
+      // the "container" language from the email prompt and keeps the
+      // flow from jumping cold-to-question without acknowledgement.
       const wrap = $("email-inline");
       if (wrap) wrap.remove();
+      const firstNameForBubble = firstName ? firstName.split(/\s+/)[0] : "";
+      const confirmation = firstNameForBubble
+        ? `You're in, ${firstNameForBubble}. Your space is ready.`
+        : "You're in. Your space is ready.";
+      addBubble("assistant", confirmation);
       addBubble("assistant", data.opening);
       // Enable typing input (already visible) + reveal progress meter
       setInputState("active");
