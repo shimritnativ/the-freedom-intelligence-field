@@ -209,20 +209,12 @@
       background: var(--bg);
       pointer-events: none;
     }
-    /* Same trick for the gap BELOW the filters — between the sticky
-       filters bar and the sticky column-headers row. Without this,
-       rows scroll through the 12px margin gap. Extends 14px so a
-       hairline border on the header row is still covered. */
-    .filters::after {
-      content: "";
-      position: absolute;
-      left: -1px;
-      right: -1px;
-      bottom: -14px;
-      height: 14px;
-      background: var(--bg);
-      pointer-events: none;
-    }
+    /* NOTE: previously .filters::after painted a 14px cream strip
+       below the filters bar to cover the gap between filters and the
+       sticky column headers. That gap has been eliminated (the thead
+       now pins flush against filters bottom), so no cover is needed.
+       Removed 2026-07-27 to avoid painting over the top edge of the
+       sticky thead. */
     .filter-chip {
       background: transparent;
       color: var(--text-mid);
@@ -355,12 +347,14 @@
       text-transform: uppercase;
       color: var(--text-dim);
       white-space: nowrap;
-      /* Sticky column headers — pinned below topbar + filter toolbar.
-         --topbar-h and --filters-h are measured in JS on load/resize so
-         the offset is exact regardless of wrapping. Lower z-index than
-         both so they always cover this row visually. */
+      /* Sticky column headers — pinned directly below the filter
+         toolbar (no gap). Previously had a +12px offset to match the
+         natural margin between filters and table, but that gap let
+         tbody rows peek through when scrolled. The pseudo-element
+         cover was unreliable across browsers, so we remove the gap
+         entirely: sticky thead pins flush against filters bottom. */
       position: sticky;
-      top: calc(var(--topbar-h, 64px) + var(--filters-h, 60px) + 12px);
+      top: calc(var(--topbar-h, 64px) + var(--filters-h, 60px));
       z-index: 20;
       box-shadow: 0 1px 0 var(--border);
     }
