@@ -63,11 +63,15 @@ export default async function handler(req, res) {
     const total = trial.max_exchanges || FREE_TRIAL_MAX_EXCHANGES;
     const isFinal = nextExchange >= total;
 
-    // ── Save the user's message first (so if Anthropic errors, we still have it)
-    await sql`
+    // ── Save the user's message first (so if Anthropic errors, we still have it).
+    // Captures the row id so we can retro-fix exchange_number if the
+    // model detects this was a clarification request (not an answer).
+    const { rows: userMsgRows } = await sql`
       INSERT INTO free_trial_messages (trial_id, role, content, exchange_number)
       VALUES (${trialId}::uuid, 'user', ${userContent}, ${nextExchange})
+      RETURNING id
     `;
+    const userMsgId = userMsgRows[0].id;
 
     // ── Reload full conversation history for Claude
     const { rows: msgs } = await sql`
@@ -112,7 +116,7 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: "ai_unavailable", message: "The Field is briefly quiet. Try again in a moment." });
     }
 
-    const reply =
+    const rawReply =
       (anthropicResult.content || [])
         .filter((c) => c.type === "text")
         .map((c) => c.text)
@@ -121,35 +125,73 @@ export default async function handler(req, res) {
     const inputTokens = anthropicResult.usage?.input_tokens || null;
     const outputTokens = anthropicResult.usage?.output_tokens || null;
 
-    if (!reply) {
+    if (!rawReply) {
       return res.status(502).json({ error: "empty_ai_reply" });
     }
 
-    // ── Save assistant reply, advance exchange count, mark ended if final
+    // ── Clarification handling: if the model ends the reply with
+    // [[CLARIFY]], the participant asked for the question to be
+    // repeated/reformulated instead of answering. The prompt tells
+    // the model to reformulate + append the marker. When we see it:
+    //   1. Strip the marker before saving/returning
+    //   2. Skip the exchange_count increment (the arc doesn't advance)
+    //   3. Return is_final: false + the unchanged exchange number
+    // Net effect: user keeps their remaining reflection budget intact
+    // and just gets a clearer version of the same question.
+    const CLARIFY_MARKER = "[[CLARIFY]]";
+    const isClarification = rawReply.endsWith(CLARIFY_MARKER);
+    const reply = isClarification
+      ? rawReply.slice(0, -CLARIFY_MARKER.length).trimEnd()
+      : rawReply;
+    // Effective exchange number for this turn — unchanged on clarify,
+    // otherwise advances to the newly-computed nextExchange.
+    const effectiveExchange = isClarification ? trial.exchange_count : nextExchange;
+    const effectiveIsFinal = isClarification ? false : isFinal;
+
+    // ── Save assistant reply. exchange_number ties the message to
+    // whichever arc turn it belongs to (clarifications share the
+    // number of the un-advanced question they're re-asking).
     await sql`
       INSERT INTO free_trial_messages (
         trial_id, role, content, exchange_number, tokens_in, tokens_out
       ) VALUES (
-        ${trialId}::uuid, 'assistant', ${reply}, ${nextExchange}, ${inputTokens}, ${outputTokens}
+        ${trialId}::uuid, 'assistant', ${reply}, ${effectiveExchange}, ${inputTokens}, ${outputTokens}
       )
     `;
 
-    await sql`
-      UPDATE free_trials
-      SET exchange_count = ${nextExchange},
-          ended_at = CASE WHEN ${isFinal} THEN NOW() ELSE ended_at END,
-          outcome  = CASE WHEN ${isFinal} THEN 'completed' ELSE outcome END,
-          last_activity_at = NOW()
-      WHERE id = ${trialId}::uuid
-    `;
+    if (isClarification) {
+      // Clarification: retro-fix the user message's exchange_number to
+      // match the un-advanced arc position, then just refresh
+      // last_activity_at without touching exchange_count.
+      await sql`
+        UPDATE free_trial_messages
+        SET exchange_number = ${trial.exchange_count}
+        WHERE id = ${userMsgId}
+      `;
+      await sql`
+        UPDATE free_trials
+        SET last_activity_at = NOW()
+        WHERE id = ${trialId}::uuid
+      `;
+    } else {
+      await sql`
+        UPDATE free_trials
+        SET exchange_count = ${nextExchange},
+            ended_at = CASE WHEN ${isFinal} THEN NOW() ELSE ended_at END,
+            outcome  = CASE WHEN ${isFinal} THEN 'completed' ELSE outcome END,
+            last_activity_at = NOW()
+        WHERE id = ${trialId}::uuid
+      `;
+    }
 
     return res.status(200).json({
       ok: true,
       reply,
-      exchange_number: nextExchange,
-      exchanges_remaining: Math.max(0, total - nextExchange),
-      is_final: isFinal,
-      reset_link: isFinal ? RESET_LINK : null,
+      exchange_number: effectiveExchange,
+      exchanges_remaining: Math.max(0, total - effectiveExchange),
+      is_final: effectiveIsFinal,
+      is_clarification: isClarification,
+      reset_link: effectiveIsFinal ? RESET_LINK : null,
     });
   } catch (e) {
     console.error("free_trial_message_failed", e);
