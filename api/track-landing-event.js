@@ -82,18 +82,42 @@ export default async function handler(req, res) {
     if (!eventType || !sessionId) {
       return res.status(400).json({ error: "missing_required_fields" });
     }
-    if (!["page_view", "checkout_scroll", "power_reset_cta_click"].includes(eventType)) {
+    // Whitelist of accepted event types. Extend here when adding new
+    // trackable interactions on any landing page. Try LP events are
+    // prefixed `try_` so they never collide with reset LP events.
+    const VALID_EVENT_TYPES = [
+      // Reset LP (go.shimritnativ.com)
+      "page_view",
+      "checkout_scroll",
+      "power_reset_cta_click",
+      // Try LP (thefieldai.app/try) — added 2026-07-27 per Geo for
+      // the Free Trial Landing Page analytics section in admin.
+      "try_page_view",
+      "try_cta_click",         // Reset CTA click (label = utm_content position)
+      "try_free_cta_click",    // "Try it for free" CTA click (floating pill etc.)
+      "try_form_start",        // User clicked a doorway chip (label = scenario id)
+      "try_video_play",        // Pre-hero video started playing
+      "try_video_watch_25",
+      "try_video_watch_50",
+      "try_video_watch_75",
+      "try_video_complete",    // Video hit 95%+ of duration
+      "try_audio_unmute",      // "Tap for sound" button clicked
+    ];
+    if (!VALID_EVENT_TYPES.includes(eventType)) {
       return res.status(400).json({ error: "invalid_event_type" });
     }
-    // Optional CTA label (e.g. "instant_access", "start_72hr"). The
-    // landing_events table doesn't have a `label` column yet, so we
-    // can't store it. Instead we encode it into event_type so per-
-    // button breakdowns are still possible: a session that clicks two
-    // different CTAs writes two rows (instead of one, since the unique
-    // index keys on session_id + event_type). Capped at 30 chars to
-    // keep the composite event_type readable.
+    // Optional label — encoded into event_type since the table has no
+    // dedicated label column. Only event types that carry a label
+    // dimension get the suffix; page views etc. stay as bare types.
+    // Capped at 30 chars, alphanumeric + underscore only.
+    const LABELED_EVENT_TYPES = new Set([
+      "power_reset_cta_click",
+      "try_cta_click",          // utm_content position (maximized_chat_top / value_stack / etc.)
+      "try_free_cta_click",     // floating_pill / bottom_link
+      "try_form_start",         // results / relationships / decisions
+    ]);
     const rawLabel = body.label ? String(body.label).trim().slice(0, 30).replace(/[^a-z0-9_]/gi, "") : "";
-    const storedEventType = (eventType === "power_reset_cta_click" && rawLabel)
+    const storedEventType = (LABELED_EVENT_TYPES.has(eventType) && rawLabel)
       ? eventType + ":" + rawLabel
       : eventType;
 
