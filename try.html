@@ -3003,6 +3003,18 @@
     transform: translateY(-1px);
     box-shadow: 0 16px 36px rgba(201, 168, 76, 0.35), 0 6px 14px rgba(0, 0, 0, 0.18);
   }
+  /* Price pill inside .final-cta-btn: default state has a dark button
+     background, so the price needs light text (the shared .cta-price
+     rule below hardcodes dark for the gold CTAs). On hover the button
+     turns gold, so we flip price + divider back to dark. */
+  .final-cta-btn .cta-price {
+    color: var(--text-inverse);
+    border-left-color: rgba(255, 255, 255, 0.28);
+  }
+  .final-cta-btn:hover .cta-price {
+    color: #1a1410;
+    border-left-color: rgba(0, 0, 0, 0.18);
+  }
 
   /* Floating "Start the Reset · €9" shortcut pill. Invisible above the
      fold — appears only after the user has scrolled past the chat
