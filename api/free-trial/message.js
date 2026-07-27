@@ -77,12 +77,14 @@ export default async function handler(req, res) {
       ORDER BY created_at ASC
     `;
 
-    // ── Build the turn context (exchange marker + scenario)
+    // ── Build the turn context (exchange marker + scenario).
+    // resetLink no longer passed: the prompt no longer instructs the
+    // model to inline a CTA link. The frontend renders the closing
+    // card with the real CTA button when is_final=true.
     const turnContext = buildTurnContext({
       exchangeNumber: nextExchange,
       totalExchanges: total,
       scenarioId: trial.scenario,
-      resetLink: RESET_LINK,
     });
 
     // Anthropic expects strict user/assistant alternation. Our first row
