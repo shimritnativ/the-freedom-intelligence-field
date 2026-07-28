@@ -11,6 +11,24 @@
 <meta property="og:description" content="A real taste of The Field. One conversation. No fluff. Just precision." />
 <meta property="og:url" content="https://thefieldai.app/try" />
 <link rel="icon" type="image/png" href="https://kajabi-storefronts-production.kajabi-cdn.com/kajabi-storefronts-production/file-uploads/themes/2161454568/settings_images/d2126ef-2bee-6f2c-8c2-d1357db52300_myp_logo.png">
+
+<!-- Meta Pixel Code — matches the pixel already on reset.html so Meta
+     unifies signals across both LPs. PageView fires immediately;
+     Lead + InitiateCheckout are fired later by the chat widget JS. -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1084277818620919');
+fbq('track', 'PageView');
+fbq('track', 'ViewContent', {content_name: 'The Field Free Preview', content_category: 'try_lp'});
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></noscript>
+<!-- End Meta Pixel Code -->
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- Cormorant Garamond dropped 2026-07-23 per Geo: she preferred
@@ -4687,6 +4705,20 @@
       state.trialId = data.trial_id;
       state.email = email;
       state.phase = "active";
+      // Meta Pixel Lead event — fires when the free trial signup
+      // completes successfully. This is the primary conversion event
+      // Meta will optimize against (from Ads Manager → conversion event
+      // = Lead). Value: 0 EUR since the trial itself is free, but
+      // Meta uses the event count for optimization regardless.
+      try {
+        if (typeof fbq === "function") {
+          fbq("track", "Lead", {
+            content_name: "Free Preview Signup",
+            content_category: "try_lp",
+            content_ids: [state.scenario || "unknown"],
+          });
+        }
+      } catch (_) {}
       // Remove the email input, add a short warm confirmation
       // ("Held, [First Name].") before the doorway opening. Mirrors
       // the "container" language from the email prompt and keeps the
@@ -5238,6 +5270,7 @@
     // DOMContentLoaded (so a static querySelectorAll would miss them
     // and their clicks would go untracked). Label = utm_content
     // value from the URL — no HTML annotation needed.
+    // Also fires Meta Pixel InitiateCheckout for ad optimization.
     document.addEventListener("click", function (e) {
       var a = e.target && e.target.closest ? e.target.closest('a[href*="thrivecart.com"]') : null;
       if (!a) return;
@@ -5245,6 +5278,20 @@
       try { url = new URL(a.href); } catch (err) { return; }
       var label = url.searchParams.get("utm_content") || "unlabeled";
       track("try_cta_click", label);
+      // Meta Pixel: fire InitiateCheckout since the user is about to
+      // hit the ThriveCart checkout page. Value = 9.00 EUR to match
+      // the €9 Reset offer, so Meta reports meaningful ROAS.
+      try {
+        if (typeof fbq === "function") {
+          fbq("track", "InitiateCheckout", {
+            content_name: "72-Hour Power Reset",
+            content_category: "try_lp",
+            content_ids: [label],
+            value: 9.00,
+            currency: "EUR",
+          });
+        }
+      } catch (_) {}
     });
 
     // Free preview CTAs — three distinct positions on the page.
