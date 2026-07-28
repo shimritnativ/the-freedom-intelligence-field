@@ -768,9 +768,11 @@
     transition: background 180ms ease, border-color 180ms ease, transform 100ms ease;
     flex-shrink: 0;
   }
-  @media (max-width: 720px) {
-    .cw-expand-btn { display: inline-flex; }
-  }
+  /* Mobile expand button removed 2026-07-27 per Shimrit — accidental
+     taps were creating a confusing full-screen jump. The chat still
+     auto-expands to full-screen on first send via autoExpandIfMobile()
+     (predictable, not tap-triggered), and users can dismiss it with
+     the X button that appears in the maximized state. */
   .cw-expand-btn:hover {
     background: rgba(201, 168, 76, 0.20);
     border-color: var(--gold);
