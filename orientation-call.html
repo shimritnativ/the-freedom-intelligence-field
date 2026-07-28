@@ -127,9 +127,64 @@
     display: block;
     border-radius: 10px;
   }
+  /* Fallback card — shown below the calendar for anyone who couldn't
+     find a time that works. Warm gold-tinted background so it feels
+     like an invitation, not an error state. */
+  .fallback-card {
+    background: rgba(201, 168, 76, 0.08);
+    border: 1px solid var(--gold-line);
+    border-radius: 14px;
+    padding: 28px 26px;
+    margin: 28px auto 0;
+    max-width: 560px;
+    text-align: center;
+  }
+  .fallback-title {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 20px;
+    color: var(--text);
+    margin: 0 0 8px;
+    font-weight: 500;
+  }
+  .fallback-body {
+    font-size: 14.5px;
+    color: var(--text-dim);
+    line-height: 1.55;
+    margin: 0 0 18px;
+  }
+  .wa-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 26px;
+    background: var(--gold);
+    color: #1a1410;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    text-decoration: none;
+    box-shadow: 0 10px 24px rgba(201, 168, 76, 0.28);
+    transition: background 180ms ease, transform 100ms ease, box-shadow 220ms ease;
+  }
+  .wa-btn:hover {
+    background: var(--gold-warm);
+    transform: translateY(-1px);
+    box-shadow: 0 14px 32px rgba(201, 168, 76, 0.38);
+  }
+  .wa-btn:active { transform: translateY(0); }
+  .wa-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: #1a1410;
+    flex-shrink: 0;
+  }
   .footer {
     text-align: center;
-    padding: 32px 0 12px;
+    padding: 40px 0 12px;
     font-family: var(--font-serif);
     font-style: italic;
     font-size: 13px;
@@ -168,6 +223,21 @@
         allow="payment"
         scrolling="no"
         id="lXfp7EmS1V7QMUO2Yi5k_1785245166506"></iframe>
+    </div>
+
+    <div class="fallback-card">
+      <p class="fallback-title">Didn't find a time that works?</p>
+      <p class="fallback-body">Message us on WhatsApp and we'll figure it out together.</p>
+      <a class="wa-btn"
+         href="https://wa.me/14256007890?text=Hi%2C%20I%27d%20like%20to%20book%20an%20orientation%20call%20but%20I%20couldn%27t%20find%20a%20time%20slot%20that%20works%20for%20me.%20Can%20we%20find%20another%20time%3F"
+         target="_blank"
+         rel="noopener">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+          <path d="M20.52 3.449C18.24 1.245 15.24 0 12.045 0 5.463 0 .104 5.334.101 11.892c0 2.096.549 4.14 1.593 5.945L0 24l6.335-1.652a12.062 12.062 0 005.71 1.447h.006c6.585 0 11.946-5.336 11.949-11.896 0-3.176-1.24-6.165-3.495-8.411zM12.05 21.785h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.978.999-3.648-.235-.374a9.83 9.83 0 01-1.51-5.26c.002-5.45 4.455-9.883 9.945-9.883 2.654 0 5.147 1.032 7.021 2.906a9.816 9.816 0 012.909 6.99c-.003 5.45-4.457 9.883-9.945 9.883z"/>
+        </svg>
+        Message us on WhatsApp
+      </a>
     </div>
 
     <div class="footer">
