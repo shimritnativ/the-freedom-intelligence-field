@@ -52,6 +52,10 @@
       "destination": "/try.html"
     },
     {
+      "source": "/orientation-call",
+      "destination": "/orientation-call.html"
+    },
+    {
       "source": "/terms",
       "destination": "/terms.html"
     },
@@ -119,7 +123,7 @@
   ],
   "headers": [
     {
-      "source": "/(app|admin|demo|embed|launch-tracker|the-field-website|reset|try)\\.html",
+      "source": "/(app|admin|demo|embed|launch-tracker|the-field-website|reset|try|orientation-call)\\.html",
       "headers": [
         {
           "key": "Cache-Control",
