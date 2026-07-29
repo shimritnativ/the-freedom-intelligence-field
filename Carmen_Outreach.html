@@ -1131,6 +1131,7 @@
       <button class="filter-chip active" data-filter="all" type="button">All</button>
       <button class="filter-chip" data-filter="uncontacted" type="button">Not called yet</button>
       <button class="filter-chip" data-filter="newly_engaged" type="button">Newly engaged</button>
+      <button class="filter-chip" data-filter="not_engaged" type="button">Not engaged</button>
       <div class="more-filters" id="more-filters" data-more-filters>
         <button class="more-filters-btn" id="more-filters-btn" type="button" aria-haspopup="dialog" aria-expanded="false">
           <span id="more-filters-label">More filters</span>
@@ -1334,6 +1335,7 @@
         case "tier_reset":        return m.tier === "preview";
         case "tier_unlimited":    return m.tier === "full";
         case "newly_engaged":     return !!m.is_newly_engaged;
+        case "not_engaged":       return !m.is_newly_engaged;
         case "is_rise_current":   return !!m.is_rise_current;
         case "is_rise_past":      return !!m.is_rise_past;
         case "is_certification":  return !!m.is_certification;
