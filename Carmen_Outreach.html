@@ -128,7 +128,10 @@
        the intro card, and lets .table-wrap absorb any overflow with
        horizontal scroll rather than clipping the last column. */
     html.is-embedded body { font-size: 13px; }
-    html.is-embedded main { max-width: none; padding: 14px; }
+    /* Reduced main padding from 14px → 8px so the table has more room
+       horizontally when embedded. The iframe already gives us tight
+       real estate; every pixel saved here goes to the OUTCOME column. */
+    html.is-embedded main { max-width: none; padding: 8px 8px 14px; }
     html.is-embedded .intro { padding: 14px 18px; margin-bottom: 12px; }
     html.is-embedded .topbar { padding: 12px 18px; }
     html.is-embedded .brand-title { font-size: 17px; }
@@ -142,8 +145,16 @@
       -webkit-overflow-scrolling: touch;
     }
     html.is-embedded table th,
-    html.is-embedded table td { padding: 12px 8px; }
-    html.is-embedded .outcome-trigger { min-width: 92px; padding: 6px 22px 6px 10px; font-size: 10.5px; }
+    html.is-embedded table td { padding: 12px 6px; }
+    /* First + last cells get slightly more edge padding so content
+       doesn't hug the table border. */
+    html.is-embedded table th:first-child,
+    html.is-embedded table td:first-child { padding-left: 14px; }
+    html.is-embedded table th:last-child,
+    html.is-embedded table td:last-child { padding-right: 14px; text-align: right; }
+    /* Outcome pill (last column) — pushed further inward so it sits
+       away from the right edge with breathing room. */
+    html.is-embedded .outcome-trigger { min-width: 86px; padding: 6px 20px 6px 10px; font-size: 10.5px; }
     html.is-embedded .outcome-trigger::after { right: 8px; }
     .intro {
       background: var(--bg-card);
