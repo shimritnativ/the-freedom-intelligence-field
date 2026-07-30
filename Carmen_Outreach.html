@@ -131,31 +131,35 @@
     /* Reduced main padding from 14px → 8px so the table has more room
        horizontally when embedded. The iframe already gives us tight
        real estate; every pixel saved here goes to the OUTCOME column. */
-    html.is-embedded main { max-width: none; padding: 8px 8px 14px; }
+    html.is-embedded main { max-width: none !important; padding: 8px 8px 14px !important; }
     html.is-embedded .intro { padding: 14px 18px; margin-bottom: 12px; }
     html.is-embedded .topbar { padding: 12px 18px; }
     html.is-embedded .brand-title { font-size: 17px; }
-    /* Overflow-x on the table wrap gives users a horizontal scrollbar
-       when the 13-column table exceeds the iframe width. Also tighten
-       cell padding + outcome pill width when embedded so more columns
-       fit before overflow. Fixes OUTCOME column being clipped off the
-       right edge in admin's Lead Nurture tab (per Geo 2026-07-28). */
     html.is-embedded .table-wrap {
-      overflow-x: auto;
+      overflow-x: auto !important;
       -webkit-overflow-scrolling: touch;
     }
     html.is-embedded table th,
-    html.is-embedded table td { padding: 12px 6px; }
-    /* First + last cells get slightly more edge padding so content
-       doesn't hug the table border. */
+    html.is-embedded table td { padding: 12px 6px !important; }
     html.is-embedded table th:first-child,
-    html.is-embedded table td:first-child { padding-left: 14px; }
+    html.is-embedded table td:first-child { padding-left: 14px !important; }
     html.is-embedded table th:last-child,
-    html.is-embedded table td:last-child { padding-right: 14px; text-align: right; }
-    /* Outcome pill (last column) — pushed further inward so it sits
-       away from the right edge with breathing room. */
-    html.is-embedded .outcome-trigger { min-width: 86px; padding: 6px 20px 6px 10px; font-size: 10.5px; }
-    html.is-embedded .outcome-trigger::after { right: 8px; }
+    html.is-embedded table td:last-child { padding-right: 20px !important; text-align: right !important; }
+    /* NUCLEAR FIX 2026-07-28 — hide LAST DM column when embedded.
+       It's redundant with LAST ACTIVE (both track member activity)
+       and its removal frees ~100px of horizontal room, letting the
+       OUTCOME column sit comfortably inside the visible area with
+       proper breathing room instead of hugging the right edge. */
+    html.is-embedded table th:nth-child(10),
+    html.is-embedded table td:nth-child(10) { display: none !important; }
+    /* Outcome pill — locked width and positioning so it never gets
+       squeezed by the column auto-sizing algorithm. */
+    html.is-embedded .outcome-trigger {
+      min-width: 90px !important;
+      padding: 6px 22px 6px 10px !important;
+      font-size: 10.5px !important;
+    }
+    html.is-embedded .outcome-trigger::after { right: 8px !important; }
     .intro {
       background: var(--bg-card);
       border: 1px solid var(--border);
