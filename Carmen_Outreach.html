@@ -132,7 +132,19 @@
     html.is-embedded .intro { padding: 14px 18px; margin-bottom: 12px; }
     html.is-embedded .topbar { padding: 12px 18px; }
     html.is-embedded .brand-title { font-size: 17px; }
-    html.is-embedded .table-wrap { overflow-x: auto; }
+    /* Overflow-x on the table wrap gives users a horizontal scrollbar
+       when the 13-column table exceeds the iframe width. Also tighten
+       cell padding + outcome pill width when embedded so more columns
+       fit before overflow. Fixes OUTCOME column being clipped off the
+       right edge in admin's Lead Nurture tab (per Geo 2026-07-28). */
+    html.is-embedded .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    html.is-embedded table th,
+    html.is-embedded table td { padding: 12px 8px; }
+    html.is-embedded .outcome-trigger { min-width: 92px; padding: 6px 22px 6px 10px; font-size: 10.5px; }
+    html.is-embedded .outcome-trigger::after { right: 8px; }
     .intro {
       background: var(--bg-card);
       border: 1px solid var(--border);
