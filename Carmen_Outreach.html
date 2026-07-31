@@ -1179,6 +1179,14 @@
         </button>
         <div class="more-filters-popover" role="dialog" aria-label="More filters">
           <div class="mf-group">
+            <div class="mf-group-label">By phone region</div>
+            <div class="mf-group-chips">
+              <button class="filter-chip" data-filter="phone_us" type="button">US / Canada (+1)</button>
+              <button class="filter-chip" data-filter="phone_eu" type="button">European (others)</button>
+              <button class="filter-chip" data-filter="phone_none" type="button">No phone on file</button>
+            </div>
+          </div>
+          <div class="mf-group">
             <div class="mf-group-label">By tier</div>
             <div class="mf-group-chips">
               <button class="filter-chip" data-filter="tier_reset" type="button">Reset</button>
@@ -1369,6 +1377,27 @@
     function isStalledDay(m, day) {
       return !!m.first_login_at && (m.last_completed_day || 0) === day;
     }
+    // Normalize phone string for region check: strip everything except
+    // digits and leading +. GHL stores raw formats sometimes; this makes
+    // '+1 425-600-7890', '14256007890', '+14256007890' all match consistently.
+    function normalizePhone(p) {
+      if (!p) return "";
+      const s = String(p).trim();
+      // Keep leading + then strip non-digits
+      const hasPlus = s.startsWith("+");
+      const digits = s.replace(/\D+/g, "");
+      return (hasPlus ? "+" : "") + digits;
+    }
+    // US/Canada = country code +1 (starts with +1 OR bare 1 followed
+    // by 10 digits which is the NANP length).
+    function isUsPhone(m) {
+      const p = normalizePhone(m.phone);
+      if (!p) return false;
+      if (p.startsWith("+1")) return true;
+      // Bare "1XXXXXXXXXX" (11 digits starting with 1) = NANP
+      const digits = p.replace(/\D+/g, "");
+      return digits.length === 11 && digits.startsWith("1");
+    }
     function passesFilter(m) {
       switch (currentFilter) {
         case "uncontacted":       return !m.contacted;
@@ -1376,6 +1405,9 @@
         case "tier_unlimited":    return m.tier === "full";
         case "newly_engaged":     return !!m.is_newly_engaged;
         case "not_engaged":       return !m.is_newly_engaged;
+        case "phone_us":          return isUsPhone(m);
+        case "phone_eu":          return !!m.phone && !isUsPhone(m);
+        case "phone_none":        return !m.phone;
         case "is_rise_current":   return !!m.is_rise_current;
         case "is_rise_past":      return !!m.is_rise_past;
         case "is_certification":  return !!m.is_certification;
