@@ -1546,12 +1546,18 @@
             <button type="button" class="outcome-trigger program-trigger" aria-haspopup="listbox" aria-expanded="false" title="Program flags — click to add/remove"><span class="prog-chip-row">${progTrigger}</span><span class="prog-caret" aria-hidden="true">▾</span></button>
             <div class="outcome-menu" role="listbox">${progMenu}</div>
           </div>`;
+        // GHL link: direct to contact record if we have the ID (captured
+        // from WhatsApp events), otherwise fall back to a GHL search
+        // URL filtered by email. Every member has a GHL contact because
+        // that's the CRM of record; the search URL guarantees Carmen
+        // reaches them in one click even when we don't have the direct ID.
         const ghlUrl = m.ghl_contact_id
           ? `https://app.gohighlevel.com/v2/location/${GHL_LOCATION_ID}/contacts/detail/${encodeURIComponent(m.ghl_contact_id)}`
-          : null;
-        const ghlCell = ghlUrl
-          ? `<a class="ghl-btn" href="${esc(ghlUrl)}" target="_blank" rel="noopener noreferrer" title="Open ${esc(nameForDisplay(m))} in GoHighLevel" aria-label="Open in GHL"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></a>`
-          : `<span class="ghl-none" title="No GHL contact linked">—</span>`;
+          : `https://app.gohighlevel.com/v2/location/${GHL_LOCATION_ID}/contacts?query=${encodeURIComponent(m.email)}`;
+        const ghlTitle = m.ghl_contact_id
+          ? `Open ${nameForDisplay(m)} in GoHighLevel`
+          : `Search ${m.email} in GoHighLevel`;
+        const ghlCell = `<a class="ghl-btn" href="${esc(ghlUrl)}" target="_blank" rel="noopener noreferrer" title="${esc(ghlTitle)}" aria-label="Open in GHL"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></a>`;
 
         return `
           <tr class="${m.contacted ? 'contacted' : ''}" data-email="${esc(m.email)}">
