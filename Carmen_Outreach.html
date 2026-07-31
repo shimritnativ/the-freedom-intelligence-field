@@ -118,7 +118,13 @@
     }
     .btn-primary:hover:not(:disabled) { background: #a68a52; border-color: #a68a52; }
     main {
-      max-width: 1400px;
+      /* Widened from 1400px → 1700px 2026-07-28 so the 13-column
+         table fits inside the same container as the intro card, stats
+         cards, and filter bar. Before this, the table's minimum
+         content width exceeded 1400px and rows visually extended
+         past the other elements (creating an "everything is a
+         different width" look on wide screens). */
+      max-width: 1700px;
       margin: 0 auto;
       padding: 24px;
     }
