@@ -359,12 +359,25 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 12.5px;
+      background: var(--bg-card);
+    }
+    /* Give each row its own white background 2026-07-28. Fixes the
+       "OUTCOME pill sitting on cream instead of white card" bug when
+       the table's minimum content width exceeds the wrapper width.
+       Without this, cells that overflow the wrapper render on the
+       page background instead of the card, creating a broken visual
+       right-edge. Since overflow:visible is required for the sticky
+       thead, we can't clip; instead we paint each row so overflow
+       always looks intentional. */
+    tr {
+      background: var(--bg-card);
     }
     th, td {
       padding: 14px 12px;
       text-align: left;
       border-bottom: 1px solid var(--border);
       vertical-align: middle;
+      background: var(--bg-card);
     }
     th {
       background: var(--bg-warm);
