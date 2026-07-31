@@ -7441,15 +7441,14 @@
                 ${geoBuckets.has('europe') ? filterChip('Europe', 'europe', _perAdFilterGeo, 'geo') : ''}
                 ${geoBuckets.has('other') ? filterChip('Other', 'other', _perAdFilterGeo, 'geo') : ''}
               </div>
-              ${knownLp ? `
               <div style="display: flex; align-items: center; gap: 6px;">
                 <span style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-mute); margin-right: 2px;">LP</span>
                 ${filterChip('All', 'all', _perAdFilterLp, 'lp')}
-                ${lpBuckets.has('newlp') ? filterChip('New LP', 'newlp', _perAdFilterLp, 'lp') : ''}
-                ${lpBuckets.has('ghl')   ? filterChip('GHL LP', 'ghl',   _perAdFilterLp, 'lp') : ''}
-                ${lpBuckets.has('ads')   ? filterChip('Ads LP', 'ads',   _perAdFilterLp, 'lp') : ''}
-                ${lpBuckets.has('try')   ? filterChip('Try LP', 'try',   _perAdFilterLp, 'lp') : ''}
-              </div>` : ''}
+                ${filterChip('New LP', 'newlp', _perAdFilterLp, 'lp')}
+                ${filterChip('GHL LP', 'ghl',   _perAdFilterLp, 'lp')}
+                ${filterChip('Ads LP', 'ads',   _perAdFilterLp, 'lp')}
+                ${filterChip('Try LP', 'try',   _perAdFilterLp, 'lp')}
+              </div>
               ${knownStatus ? `
               <div style="display: flex; align-items: center; gap: 6px;">
                 <span style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-mute); margin-right: 2px;">Status</span>
