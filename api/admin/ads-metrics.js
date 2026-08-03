@@ -1065,8 +1065,15 @@ async function loadWhatsappCampaignBreakdown(from, to) {
       WITH visits_by_campaign AS (
         SELECT
           utm_campaign AS campaign,
-          COUNT(*) FILTER (WHERE event_type = 'page_view')::int AS visits,
-          COUNT(DISTINCT session_id) FILTER (WHERE event_type LIKE 'power_reset_cta_click%')::int AS cta_clicks
+          -- Count visits + CTA clicks across BOTH landing pages: the ads LP
+          -- (page_view / power_reset_cta_click) AND the try LP (try_page_view
+          -- / try_cta_click). Extended 2026-07-28 so WhatsApp broadcasts
+          -- pointing at /try (e.g., utm_campaign=trylp_1) show up here.
+          COUNT(*) FILTER (WHERE event_type IN ('page_view', 'try_page_view'))::int AS visits,
+          COUNT(DISTINCT session_id) FILTER (
+            WHERE event_type LIKE 'power_reset_cta_click%'
+               OR event_type LIKE 'try_cta_click%'
+          )::int AS cta_clicks
         FROM landing_events
         WHERE created_at >= ${from}::date
           AND created_at < (${to}::date + INTERVAL '1 day')
