@@ -238,6 +238,18 @@ export default async function handler(req, res) {
       "120245165620580144", // 72-Hour Power Reset | Warm Audience
       "120246503400350144", // Try LP Cold Audience
     ];
+    // Explicit utm_campaign → Meta campaign mapping. When a campaign is
+    // listed here, ONLY these exact utm_campaign values (normalized) are
+    // attributed to it — no lenient substring fallback. Prevents generic
+    // short values like "cold" or "reset" from being over-attributed to
+    // multiple campaigns whose names happen to contain the substring.
+    // Added 2026-07-28 after Try LP showed 8 signups when only 2 existed.
+    const CAMPAIGN_UTM_MAP = {
+      "120246503400350144": ["try_lp_reset"], // Try LP Cold Audience
+      // Add mappings for the other campaigns here when Geo confirms their
+      // utm_campaign values. Until then they fall through to substring
+      // matching against the Meta name.
+    };
     const idAllowlist = new Set(
       (process.env.META_ADS_CAMPAIGN_IDS || DEFAULT_CAMPAIGN_IDS.join(","))
         .split(",")
@@ -298,12 +310,23 @@ export default async function handler(req, res) {
       // Daniel Egan + Liliana Hill purchases weren't being attributed.
       const normalizeForMatch = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
       const nameNorm = normalizeForMatch(name);
+      // If this campaign has an explicit utm mapping, match ONLY those
+      // values exactly (normalized). Otherwise fall back to substring
+      // matching against the Meta name. Prevents cross-campaign leakage.
+      const explicitUtms = CAMPAIGN_UTM_MAP[id];
+      const acceptedUtmSet = explicitUtms
+        ? new Set(explicitUtms.map((u) => normalizeForMatch(u)))
+        : null;
       const matchUtm = (map) => {
         let sum = 0;
         for (const utmCampaign of Object.keys(map)) {
           if (!utmCampaign) continue;
           const utmNorm = normalizeForMatch(utmCampaign);
-          if (utmNorm && nameNorm.includes(utmNorm)) {
+          if (!utmNorm) continue;
+          const matched = acceptedUtmSet
+            ? acceptedUtmSet.has(utmNorm)
+            : nameNorm.includes(utmNorm);
+          if (matched) {
             sum += Number(map[utmCampaign] || 0);
           }
         }
