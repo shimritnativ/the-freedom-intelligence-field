@@ -586,23 +586,39 @@ async function fetchCampaignList({ accessToken, accountId, apiVersion }) {
   const cacheKey = `campaigns:${accountId}`;
   const cached = metaCacheGet(cacheKey);
   if (cached) return cached;
+  // Explicit effective_status filter to include EVERY deliverable state:
+  // ACTIVE + PAUSED + still-in-review states. Without this, Meta may omit
+  // freshly-launched campaigns that are still in learning/review from the
+  // default list. Extended 2026-07-28 per Geo (new campaign wasn't showing).
+  const statusList = [
+    "ACTIVE","PAUSED","PENDING_REVIEW","DISAPPROVED","PREAPPROVED",
+    "PENDING_BILLING_INFO","CAMPAIGN_PAUSED","ARCHIVED",
+    "ADSET_PAUSED","IN_PROCESS","WITH_ISSUES"
+  ];
   const params = new URLSearchParams({
     access_token: accessToken,
-    fields: "id,name,status",
-    limit: "100",
+    fields: "id,name,status,effective_status",
+    limit: "200",
+    effective_status: JSON.stringify(statusList),
   });
-  const url = `https://graph.facebook.com/${apiVersion}/${accountId}/campaigns?${params.toString()}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`meta_campaigns_${res.status}: ${body.slice(0, 200)}`);
+  // Paginate through all pages so accounts with >200 campaigns are covered.
+  let url = `https://graph.facebook.com/${apiVersion}/${accountId}/campaigns?${params.toString()}`;
+  const list = [];
+  let pageCount = 0;
+  while (url && pageCount < 10) {
+    const res = await fetch(url);
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`meta_campaigns_${res.status}: ${body.slice(0, 200)}`);
+    }
+    const json = await res.json();
+    for (const c of (json.data || [])) {
+      list.push({ id: c.id, name: c.name, status: c.status || c.effective_status });
+    }
+    url = json.paging?.next || null;
+    pageCount++;
   }
-  const json = await res.json();
-  const list = (json.data || []).map((c) => ({
-    id: c.id,
-    name: c.name,
-    status: c.status,
-  }));
+  console.log("meta_campaigns_fetched", { count: list.length, pages: pageCount });
   metaCacheSet(cacheKey, list);
   return list;
 }
