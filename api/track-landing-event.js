@@ -96,6 +96,7 @@ export default async function handler(req, res) {
       "try_cta_click",         // Reset CTA click (label = utm_content position)
       "try_free_cta_click",    // "Try it for free" CTA click (floating pill etc.)
       "try_form_start",        // User clicked a doorway chip (label = scenario id)
+      "try_form_complete",     // Email + first name submitted — free trial started. Carries UTMs so ads-attributed conversions are countable. Added 2026-07-28.
       "try_video_play",        // Pre-hero video started playing
       "try_video_watch_25",
       "try_video_watch_50",
@@ -115,6 +116,7 @@ export default async function handler(req, res) {
       "try_cta_click",          // utm_content position (maximized_chat_top / value_stack / etc.)
       "try_free_cta_click",     // floating_pill / bottom_link
       "try_form_start",         // results / relationships / decisions
+      "try_form_complete",      // scenario id (results / relationships / decisions)
     ]);
     const rawLabel = body.label ? String(body.label).trim().slice(0, 30).replace(/[^a-z0-9_]/gi, "") : "";
     const storedEventType = (LABELED_EVENT_TYPES.has(eventType) && rawLabel)
