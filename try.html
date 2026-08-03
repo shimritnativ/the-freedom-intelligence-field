@@ -4719,6 +4719,14 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
           });
         }
       } catch (_) {}
+      // Our own analytics event — carries the page's UTMs so the admin
+      // "From Ads" card can attribute conversions to ads traffic.
+      // Fires at the same moment as Meta's Lead pixel above.
+      try {
+        if (typeof window._trackLandingEvent === "function") {
+          window._trackLandingEvent("try_form_complete", state.scenario || null);
+        }
+      } catch (_) {}
       // Remove the email input, add a short warm confirmation
       // ("Held, [First Name].") before the doorway opening. Mirrors
       // the "container" language from the email prompt and keeps the
