@@ -245,9 +245,16 @@ export default async function handler(req, res) {
         .filter(Boolean)
     );
     const passesFilter = (name, id) => {
-      // ID whitelist is authoritative when we have an ID. If the id isn't
-      // in the allowlist, drop the campaign — no matter what its name is.
-      if (id && idAllowlist.size > 0 && !idAllowlist.has(String(id))) return false;
+      // ID whitelist is TRULY authoritative: if we have both an ID and an
+      // allowlist, decide purely on the ID and skip name filters entirely.
+      // Without this, a stale META_ADS_CAMPAIGN_INCLUDE env var (e.g. "power
+      // reset") would drop new whitelisted campaigns whose names don't happen
+      // to match the old pattern (e.g. "Try LP - Reset | Cold Audience"
+      // doesn't contain "power reset"). Fixed 2026-07-28.
+      if (id && idAllowlist.size > 0) {
+        return idAllowlist.has(String(id));
+      }
+      // Fall through to name-based filters only when ID/allowlist isn't set.
       const lower = String(name || "").toLowerCase();
       if (excludePatterns.some((p) => lower.includes(p))) return false;
       if (includePatterns.length > 0 && !includePatterns.some((p) => lower.includes(p))) return false;
