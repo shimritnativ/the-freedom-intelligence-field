@@ -52,9 +52,14 @@ export default async function handler(req, res) {
         u.first_login_at,
         u.preview_ends_at,
         u.last_completed_day,
-        wa.contact_phone   AS phone,
-        wa.contact_name    AS wa_name,
-        wa.ghl_contact_id  AS ghl_contact_id,
+        -- Phone + GHL contact ID: prefer whatsapp_message_events (freshest
+        -- since it's updated on every WhatsApp interaction), fall back to
+        -- member_ghl_tags for members who've never messaged the business
+        -- WhatsApp number but ARE in GHL (populated by ghl-tags-sync via
+        -- email lookup). Extended 2026-07-28.
+        COALESCE(wa.contact_phone, mgt.phone)         AS phone,
+        wa.contact_name                                AS wa_name,
+        COALESCE(wa.ghl_contact_id, mgt.ghl_contact_id) AS ghl_contact_id,
         msg.last_user_message_at,
         cc.contacted_at    AS contacted_at,
         cc.contacted_by    AS contacted_by,
