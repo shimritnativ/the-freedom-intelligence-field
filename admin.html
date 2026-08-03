@@ -4520,6 +4520,13 @@
                 </div>
                 <div id="memory-backfill-status" style="margin-top: 10px; font-size: 12px; color: var(--text-dim); font-style: italic;">Click Preview first to see how much it'll process without spending anything.</div>
               </div>
+              <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);">
+                <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px;">
+                  <strong style="color: var(--text);">GHL sync</strong> — Pull every member's tags, custom fields, and phone number from GoHighLevel. Populates Carmen's WhatsApp column for members who haven't messaged the business number yet.
+                </div>
+                <button class="preset-btn" onclick="runGhlSync()" id="ghl-sync-btn" style="background: var(--gold); color: var(--dark); border-color: var(--gold);">Sync GHL now</button>
+                <div id="ghl-sync-status" style="margin-top: 10px; font-size: 12px; color: var(--text-dim); font-style: italic;">Takes ~30-60s depending on member count. Safe to re-run.</div>
+              </div>
             </div>
             <div class="section" id="panel-tier-mix">
               <h2><span class="h2-eyebrow">Tier mix</span>Members by tier &amp; plan</h2>
@@ -6624,6 +6631,43 @@
       }
     }
     window.runBackfill = runBackfill;
+
+    // Trigger a GHL sync — pulls tags, custom fields, and phone for every
+    // Kajabi-entitled member. Adds phones for members who've never
+    // messaged the business WhatsApp so Carmen's WhatsApp icon appears.
+    async function runGhlSync() {
+      const status = document.getElementById("ghl-sync-status");
+      const btn = document.getElementById("ghl-sync-btn");
+      const token = localStorage.getItem(STORAGE_KEY);
+      if (!token) {
+        status.textContent = "Session expired. Refresh the page and try again.";
+        return;
+      }
+      btn.disabled = true;
+      status.textContent = "Syncing GHL contacts… this may take 30-60s.";
+      try {
+        const r = await fetch("/api/admin/ghl-tags-sync", {
+          method: "POST",
+          headers: { "x-session-token": token },
+        });
+        if (!r.ok) {
+          const err = await r.text().catch(() => "");
+          status.textContent = "Failed: HTTP " + r.status + " " + err.slice(0, 120);
+          return;
+        }
+        const data = await r.json();
+        const phonesSynced = (data.results || []).filter(x => x && x.ok && x.phone_synced).length;
+        status.innerHTML =
+          "Done. Synced <strong>" + (data.synced || 0) + "</strong> members. " +
+          "<strong>" + phonesSynced + "</strong> phones captured from GHL. " +
+          "Refresh Carmen's page to see updated WhatsApp icons.";
+      } catch (err) {
+        status.textContent = "Network error: " + (err.message || err);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+    window.runGhlSync = runGhlSync;
 
     // Trigger the memory backfill endpoint. Loops chunks until the
     // server reports `complete: true` so even multi-thousand-message
