@@ -326,6 +326,60 @@ export default async function handler(req, res) {
       };
     });
 
+    // UTM-only fallback. If a utm_campaign value in landing_events doesn't
+    // substring-match ANY Meta campaign name we just built above, add it
+    // as a synthetic chip so freshly-launched campaigns still appear even
+    // when Meta's /campaigns endpoint hasn't returned the new campaign yet
+    // (Meta API sync lag can be 30+ min after campaign creation) OR when
+    // the campaign is on an ad account other than META_ADS_ACCOUNT_ID.
+    // Added 2026-07-28 for Geo's `try_lp_reset` new campaign.
+    const knownCampaignNames = campaigns.map((c) => String(c.name || "").toLowerCase());
+    const utmSet = new Set([
+      ...Object.keys(funnelByCampaign || {}),
+      ...Object.keys(signupsByCampaign || {}),
+      ...Object.keys(revenueByCampaign || {}),
+    ]);
+    for (const utmCampaign of utmSet) {
+      if (!utmCampaign) continue;
+      const utmLower = String(utmCampaign).toLowerCase();
+      // Skip if any existing Meta campaign name already contains this UTM
+      // as a substring (existing attribution logic would already claim it).
+      if (knownCampaignNames.some((n) => n.includes(utmLower))) continue;
+      const funnel = funnelByCampaign[utmCampaign] || { visits: 0, cta_clicks: 0, checkout_scrolls: 0 };
+      const signups = Number(signupsByCampaign[utmCampaign] || 0);
+      const revenueCents = Number(revenueByCampaign[utmCampaign] || 0);
+      const visits = Number(funnel.visits || 0);
+      const ctaClicks = Number(funnel.cta_clicks || 0);
+      const checkoutScrolls = Number(funnel.checkout_scrolls || 0);
+      // Only synthesize if there's actually traffic — don't clutter chips
+      // with dead utm_campaign values (e.g., old test tags).
+      if (visits === 0 && ctaClicks === 0 && signups === 0) continue;
+      campaigns.push({
+        id: `utm:${utmCampaign}`,
+        name: utmCampaign, // exact UTM string as the chip label
+        status: "UTM_ONLY", // frontend can style this differently
+        utm_only: true,
+        spend: 0,
+        impressions: 0,
+        clicks: 0,
+        ctr: 0,
+        cpc: 0,
+        cpm: 0,
+        signups_attributed: signups,
+        cost_per_signup: null,
+        revenue_attributed_cents: revenueCents,
+        roas: null,
+        visits,
+        cta_clicks: ctaClicks,
+        checkout_scrolls: checkoutScrolls,
+        cta_to_visit_rate: visits > 0 ? (ctaClicks / visits) * 100 : null,
+        purchase_to_cta_rate: ctaClicks > 0 ? (signups / ctaClicks) * 100 : null,
+        scroll_to_visit_rate: visits > 0 ? (checkoutScrolls / visits) * 100 : null,
+        purchase_to_scroll_rate: checkoutScrolls > 0 ? (signups / checkoutScrolls) * 100 : null,
+        abandoned_cart: Math.max(0, ctaClicks - signups),
+      });
+    }
+
     // Totals — sum each metric across campaigns. CPC/CTR/CPM recomputed
     // from totals (not averaged) so they're correct weighted values.
     const totalSpend = campaigns.reduce((s, c) => s + c.spend, 0);
