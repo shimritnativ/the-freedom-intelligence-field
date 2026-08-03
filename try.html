@@ -5286,6 +5286,26 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
       try { url = new URL(a.href); } catch (err) { return; }
       var label = url.searchParams.get("utm_content") || "unlabeled";
       track("try_cta_click", label);
+      // Inject the ORIGINAL landing UTMs (from the ad click, captured in
+      // basePayload) as passthrough[] params on the ThriveCart URL so
+      // ThriveCart exposes them to Zapier, and Zapier maps them to
+      // utm_source / utm_campaign / utm_content on the purchase record.
+      // Without this the ad attribution dies at ThriveCart — bare
+      // ?utm_source=X is used by ThriveCart's own tracking but not
+      // forwarded to webhooks. Fixed 2026-07-28 after Daniel Egan +
+      // Liliana Hill purchases came in with blank utm_source/campaign.
+      // Priority: original URL UTM (from the ad) > CTA's hardcoded UTM.
+      try {
+        var passthroughFields = ["utm_source","utm_medium","utm_campaign","utm_content","utm_term"];
+        for (var i = 0; i < passthroughFields.length; i++) {
+          var key = passthroughFields[i];
+          var value = basePayload[key] || url.searchParams.get(key) || null;
+          if (value) {
+            url.searchParams.set("passthrough[" + key + "]", value);
+          }
+        }
+        a.href = url.toString();
+      } catch (_) {}
       // Meta Pixel: fire InitiateCheckout since the user is about to
       // hit the ThriveCart checkout page. Value = 9.00 EUR to match
       // the €9 Reset offer, so Meta reports meaningful ROAS.
