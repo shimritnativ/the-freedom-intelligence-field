@@ -720,9 +720,11 @@ async function loadPerAdBreakdown(from, to) {
   try {
     // Ads-LP URL pattern. Used to isolate untagged (pre-per-ad-tracking)
     // clicks to the ads landing page so they can be shown as their own
-    // "untagged (pre-tracking)" bucket in the table. Without this filter
-    // organic LP events (which also carry NULL utm_content) would leak in.
+    // "untagged (pre-tracking)" bucket in the table. Includes both the
+    // reset LP (/the-power-reset-ads) and the try LP (/try) since both
+    // receive paid traffic. Extended 2026-07-28 to include try LP.
     const ADS_URL_PATTERN = '%/the-power-reset-ads%';
+    const TRY_URL_PATTERN = '%/try%';
     const { rows } = await sql`
       WITH visits_by_ad AS (
         SELECT
@@ -741,8 +743,14 @@ async function loadPerAdBreakdown(from, to) {
                AND le2.created_at >= ${from}::date
                AND le2.created_at < (${to}::date + INTERVAL '1 day')
              GROUP BY utm_term ORDER BY COUNT(*) DESC LIMIT 1) AS geo,
-          COUNT(*) FILTER (WHERE event_type = 'page_view')::int AS visits,
-          COUNT(DISTINCT session_id) FILTER (WHERE event_type LIKE 'power_reset_cta_click%')::int AS cta_clicks
+          -- Count page views from BOTH reset LP (page_view) and try LP
+          -- (try_page_view). Same for CTA clicks. Extended 2026-07-28
+          -- so try-LP ads' traffic shows up in the per-ad table.
+          COUNT(*) FILTER (WHERE event_type IN ('page_view', 'try_page_view'))::int AS visits,
+          COUNT(DISTINCT session_id) FILTER (
+            WHERE event_type LIKE 'power_reset_cta_click%'
+               OR event_type LIKE 'try_cta_click%'
+          )::int AS cta_clicks
         FROM landing_events
         WHERE created_at >= ${from}::date
           AND created_at < (${to}::date + INTERVAL '1 day')
@@ -766,16 +774,22 @@ async function loadPerAdBreakdown(from, to) {
           'untagged (pre-tracking)'::text AS ad_name,
           NULL::text AS campaign,
           NULL::text AS geo,
-          COUNT(*) FILTER (WHERE event_type = 'page_view')::int AS visits,
-          COUNT(DISTINCT session_id) FILTER (WHERE event_type LIKE 'power_reset_cta_click%')::int AS cta_clicks
+          COUNT(*) FILTER (WHERE event_type IN ('page_view', 'try_page_view'))::int AS visits,
+          COUNT(DISTINCT session_id) FILTER (
+            WHERE event_type LIKE 'power_reset_cta_click%'
+               OR event_type LIKE 'try_cta_click%'
+          )::int AS cta_clicks
         FROM landing_events
         WHERE created_at >= ${from}::date
           AND created_at < (${to}::date + INTERVAL '1 day')
           AND (utm_content IS NULL OR utm_content = '')
-          AND page_url LIKE ${ADS_URL_PATTERN}
+          AND (page_url LIKE ${ADS_URL_PATTERN} OR page_url LIKE ${TRY_URL_PATTERN})
         HAVING
-          COUNT(*) FILTER (WHERE event_type = 'page_view') > 0
-          OR COUNT(DISTINCT session_id) FILTER (WHERE event_type LIKE 'power_reset_cta_click%') > 0
+          COUNT(*) FILTER (WHERE event_type IN ('page_view', 'try_page_view')) > 0
+          OR COUNT(DISTINCT session_id) FILTER (
+            WHERE event_type LIKE 'power_reset_cta_click%'
+               OR event_type LIKE 'try_cta_click%'
+          ) > 0
       ),
       visits_all AS (
         SELECT ad_name, campaign, geo, visits, cta_clicks FROM visits_by_ad
@@ -859,9 +873,12 @@ async function loadFunnelByCampaign(from, to) {
     // treating retroactively-added purchase markers as real clicks/visits.
     const { rows } = await sql`
       SELECT utm_campaign,
-             COUNT(*) FILTER (WHERE event_type = 'page_view')::int                                   AS visits,
-             COUNT(*) FILTER (WHERE event_type = 'checkout_scroll')::int                             AS checkout_scrolls,
-             COUNT(DISTINCT session_id) FILTER (WHERE event_type LIKE 'power_reset_cta_click%')::int AS cta_clicks
+             COUNT(*) FILTER (WHERE event_type IN ('page_view', 'try_page_view'))::int             AS visits,
+             COUNT(*) FILTER (WHERE event_type = 'checkout_scroll')::int                            AS checkout_scrolls,
+             COUNT(DISTINCT session_id) FILTER (
+               WHERE event_type LIKE 'power_reset_cta_click%'
+                  OR event_type LIKE 'try_cta_click%'
+             )::int AS cta_clicks
       FROM landing_events
       WHERE created_at >= ${from}::date
         AND created_at < (${to}::date + INTERVAL '1 day')
