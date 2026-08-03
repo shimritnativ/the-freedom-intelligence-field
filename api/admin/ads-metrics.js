@@ -816,6 +816,11 @@ async function loadPerAdBreakdown(from, to) {
           -- (from earlier Zap misconfigurations that stored full label blobs)
           AND utm_content NOT ILIKE '%utm_source:%'
           AND utm_content NOT ILIKE '%utm_campaign:%'
+          -- Exclude utm_content values that look like raw Meta IDs (15+
+          -- digits). These come from Meta's dynamic-creative auto-tagging
+          -- when the ad name isn't set explicitly. Filter added 2026-07-28
+          -- per Geo — "120246507094310144" was polluting the per-ad table.
+          AND utm_content !~ '^\d{15,}$'
         GROUP BY utm_content
       ),
       -- Synthetic "untagged" bucket for ads LP clicks that happened before
