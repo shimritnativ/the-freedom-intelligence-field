@@ -289,15 +289,21 @@ export default async function handler(req, res) {
       // carried in their URL rarely equals the Meta campaign name byte-
       // for-byte (the Meta name is usually longer / more descriptive).
       // So we sum signups from any utm_campaign value that appears as
-      // a substring of the Meta campaign name (case-insensitive).
-      // Example: utm_campaign="cold" matches Meta campaign
-      // "72-Hour Power Reset | Cold | Purchase Test | Jun 2026".
-      const nameLower = String(name || "").toLowerCase();
+      // a substring of the Meta campaign name.
+      //
+      // Both sides are NORMALIZED (lowercased + separators stripped) so
+      // utm_campaign="try_lp_reset" matches Meta campaign
+      // "Try LP - Reset | Cold Audience" even though one uses underscores
+      // and the other uses spaces/dashes/pipes. Fixed 2026-07-28 after
+      // Daniel Egan + Liliana Hill purchases weren't being attributed.
+      const normalizeForMatch = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const nameNorm = normalizeForMatch(name);
       const matchUtm = (map) => {
         let sum = 0;
         for (const utmCampaign of Object.keys(map)) {
           if (!utmCampaign) continue;
-          if (nameLower.includes(String(utmCampaign).toLowerCase())) {
+          const utmNorm = normalizeForMatch(utmCampaign);
+          if (utmNorm && nameNorm.includes(utmNorm)) {
             sum += Number(map[utmCampaign] || 0);
           }
         }
@@ -314,7 +320,8 @@ export default async function handler(req, res) {
       let ctaClicks = 0;
       for (const utmCampaign of Object.keys(funnelByCampaign)) {
         if (!utmCampaign) continue;
-        if (nameLower.includes(String(utmCampaign).toLowerCase())) {
+        const utmNorm = normalizeForMatch(utmCampaign);
+        if (utmNorm && nameNorm.includes(utmNorm)) {
           checkoutScrolls += Number(funnelByCampaign[utmCampaign].checkout_scrolls || 0);
           ctaClicks       += Number(funnelByCampaign[utmCampaign].cta_clicks || 0);
         }
