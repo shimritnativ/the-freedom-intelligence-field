@@ -7281,14 +7281,21 @@
           if (v === 'DELETED' || v === 'ARCHIVED') return 'archived';
           return 'other';
         };
-        // Parse the LP suffix directly from utm_content (no need to hoist
-        // parseAdName up here — the suffix check is a simple ends-with).
-        const lpBucket = (adName) => {
+        // Classify an ad by its landing-page target. Primary signal is the
+        // utm_content suffix (`_try`, `_ads`, `_ghl`, `_newlp`) but the
+        // Try LP ads set up in Jul 2026 use bare names (`video1`, `video2`,
+        // etc.) so we also fall back to the utm_campaign name. Add new
+        // campaign→LP mappings here when new campaigns are launched.
+        const lpBucket = (adName, campaign) => {
           const n = String(adName || '').toLowerCase();
           if (n.endsWith('_newlp')) return 'newlp';
           if (n.endsWith('_ghl'))   return 'ghl';
           if (n.endsWith('_ads'))   return 'ads';
           if (n.endsWith('_try'))   return 'try';
+          // Campaign fallback — normalize and check against known LPs.
+          const cNorm = String(campaign || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (cNorm.startsWith('trylp')) return 'try';    // try_lp_reset etc.
+          if (cNorm === 'cold' || cNorm === 'warm') return 'ads'; // old Reset ads
           return 'other';
         };
         const filteredRows = rows.filter(a => {
@@ -7298,7 +7305,7 @@
           }
           if (_perAdFilterGeo !== 'all' && geoBucket(a.geo) !== _perAdFilterGeo) return false;
           if (_perAdFilterStatus !== 'all' && statusBucket(a.status) !== _perAdFilterStatus) return false;
-          if (_perAdFilterLp !== 'all' && lpBucket(a.ad_name) !== _perAdFilterLp) return false;
+          if (_perAdFilterLp !== 'all' && lpBucket(a.ad_name, a.campaign) !== _perAdFilterLp) return false;
           // Hide paused shortcut: overrides when checked, hides anything
           // in the paused bucket. Applied after the status chip so users
           // can still explicitly select "Paused" chip to see them if needed.
@@ -7458,7 +7465,7 @@
         const statusBuckets = new Set(rows.map(r => statusBucket(r.status)));
         const knownStatus = statusBuckets.has('active') || statusBuckets.has('paused');
         // LP variant chips only appear when data has that LP suffix
-        const lpBuckets = new Set(rows.map(r => lpBucket(r.ad_name)));
+        const lpBuckets = new Set(rows.map(r => lpBucket(r.ad_name, r.campaign)));
         const knownLp = lpBuckets.has('newlp') || lpBuckets.has('ghl') || lpBuckets.has('ads') || lpBuckets.has('try');
 
         return `
