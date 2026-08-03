@@ -89,7 +89,38 @@ async function fetchContactTags(ghlContactId, apiKey, fieldNameById) {
       }
     }
 
-    return { ok: true, tags, source: contact?.source || null, customFields: cfByName };
+    // Standard fields we want alongside tags. phone is the big one —
+    // Carmen's dashboard uses it to open WhatsApp Web directly.
+    // GHL exposes phone with country code (e.g. "+351914308424").
+    const phone = contact?.phone || null;
+    const contactId = contact?.id || ghlContactId;
+
+    return { ok: true, tags, source: contact?.source || null, customFields: cfByName, phone, contactId };
+  } catch (e) {
+    clearTimeout(timer);
+    return { ok: false, status: 0, error: e.name === "AbortError" ? "timeout" : e.message };
+  }
+}
+
+// Look up a GHL contact by email. Returns { ok, contactId } on success.
+// Used to find contacts for members who have never messaged via WhatsApp
+// (so we don't have their ghl_contact_id in whatsapp_message_events yet).
+async function lookupContactByEmail(email, apiKey) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const url = `${V1_BASE}/contacts/lookup?email=${encodeURIComponent(email)}`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!res.ok) return { ok: false, status: res.status };
+    const data = await res.json();
+    const list = Array.isArray(data?.contacts) ? data.contacts : (data?.contact ? [data.contact] : []);
+    const match = list[0];
+    if (!match || !match.id) return { ok: false, status: 404 };
+    return { ok: true, contactId: match.id };
   } catch (e) {
     clearTimeout(timer);
     return { ok: false, status: 0, error: e.name === "AbortError" ? "timeout" : e.message };
@@ -136,13 +167,15 @@ export default async function handler(req, res) {
   // fetch reuses this to convert opaque IDs into names like "Last DM Date".
   const fieldNameById = await fetchCustomFieldMap(apiKey);
 
-  // Fetch the roster: every active member who has a GHL contact ID we
-  // can look up. The LATERAL matches the pattern carmen-list uses, so we
-  // sync exactly the set of contacts Carmen sees.
+  // Fetch the roster: every active member. If we have their
+  // ghl_contact_id (from wa_message_events or a previous sync), use
+  // it directly. Otherwise the worker below looks them up by email.
+  // Extended 2026-07-28 so members who never messaged WhatsApp also
+  // get their phone + tags synced from GHL.
   const { rows: members } = await sql`
     SELECT DISTINCT ON (LOWER(u.email))
       LOWER(u.email) AS email,
-      wa.ghl_contact_id
+      COALESCE(wa.ghl_contact_id, mgt_existing.ghl_contact_id) AS ghl_contact_id
     FROM users u
     LEFT JOIN LATERAL (
       SELECT ghl_contact_id
@@ -152,8 +185,11 @@ export default async function handler(req, res) {
       ORDER BY event_at DESC NULLS LAST, created_at DESC
       LIMIT 1
     ) wa ON true
+    LEFT JOIN member_ghl_tags mgt_existing
+      ON LOWER(mgt_existing.email) = LOWER(u.email)
     WHERE u.kajabi_entitled = true
-      AND wa.ghl_contact_id IS NOT NULL
+      AND u.email NOT ILIKE '%@shimritnativ.com'
+      AND u.email NOT ILIKE '%@masteryourpath.%'
     ORDER BY LOWER(u.email)
   `;
 
@@ -161,7 +197,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       synced: 0,
-      note: "No members with a ghl_contact_id found. Run the CSV import + manual backfill first.",
+      note: "No active Kajabi-entitled members found.",
       elapsed_ms: Date.now() - startedAt,
     });
   }
@@ -170,30 +206,48 @@ export default async function handler(req, res) {
   const results = await runWithConcurrency(
     members,
     async (m) => {
-      const r = await fetchContactTags(m.ghl_contact_id, apiKey, fieldNameById);
+      // Resolve GHL contact ID. If we don't have one stored, look up
+      // the member by email in GHL (new since 2026-07-28 so members
+      // who never messaged WhatsApp also get their phone synced).
+      let ghlContactId = m.ghl_contact_id;
+      if (!ghlContactId) {
+        const lookup = await lookupContactByEmail(m.email, apiKey);
+        if (!lookup.ok) {
+          return { email: m.email, ok: false, status: lookup.status, error: "email_lookup_failed" };
+        }
+        ghlContactId = lookup.contactId;
+      }
+
+      const r = await fetchContactTags(ghlContactId, apiKey, fieldNameById);
       if (!r.ok) return { email: m.email, ok: false, status: r.status, error: r.error };
-      // Upsert the tags + custom fields into Neon.
+      // Upsert the tags + custom fields + phone + contact_id into Neon.
       try {
         await sql`
-          INSERT INTO member_ghl_tags (email, tags, source, custom_fields, updated_at)
+          INSERT INTO member_ghl_tags (email, tags, source, custom_fields, phone, ghl_contact_id, updated_at)
           VALUES (
             ${m.email},
             ${JSON.stringify(r.tags)}::jsonb,
             ${r.source},
             ${JSON.stringify(r.customFields || {})}::jsonb,
+            ${r.phone},
+            ${r.contactId || ghlContactId},
             NOW()
           )
           ON CONFLICT (email) DO UPDATE SET
-            tags          = EXCLUDED.tags,
-            source        = EXCLUDED.source,
-            custom_fields = EXCLUDED.custom_fields,
-            updated_at    = NOW()
+            tags           = EXCLUDED.tags,
+            source         = EXCLUDED.source,
+            custom_fields  = EXCLUDED.custom_fields,
+            phone          = COALESCE(EXCLUDED.phone, member_ghl_tags.phone),
+            ghl_contact_id = COALESCE(EXCLUDED.ghl_contact_id, member_ghl_tags.ghl_contact_id),
+            updated_at     = NOW()
         `;
         return {
           email: m.email,
           ok: true,
           tag_count: r.tags.length,
           custom_field_count: Object.keys(r.customFields || {}).length,
+          phone_synced: !!r.phone,
+          via_email_lookup: !m.ghl_contact_id,
         };
       } catch (e) {
         return { email: m.email, ok: false, error: "db_write_failed: " + e.message };
@@ -235,6 +289,14 @@ CREATE TABLE IF NOT EXISTS member_ghl_tags (
 -- column non-destructively:
 ALTER TABLE member_ghl_tags
   ADD COLUMN IF NOT EXISTS custom_fields JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+-- Added 2026-07-28: phone (from GHL contact.phone) + ghl_contact_id
+-- (captured via email lookup if not from wa_events). Used by
+-- carmen-list.js to show WhatsApp icon for members who have never
+-- messaged the business number.
+ALTER TABLE member_ghl_tags
+  ADD COLUMN IF NOT EXISTS phone TEXT,
+  ADD COLUMN IF NOT EXISTS ghl_contact_id TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_member_ghl_tags_updated
   ON member_ghl_tags (updated_at DESC);
