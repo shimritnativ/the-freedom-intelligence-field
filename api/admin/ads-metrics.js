@@ -235,7 +235,12 @@ export default async function handler(req, res) {
       return true;
     };
 
-    const campaigns = (campaignInsights || []).filter((c) => passesFilter(c.campaign_name)).map((c) => {
+    // Use mergedInsights (all campaigns, including zero-spend ones) so
+    // freshly-launched campaigns still appear in the chip filter row.
+    // Was `campaignInsights` — that only returns campaigns with activity,
+    // so new campaigns with €0 spend were invisible even though the merge
+    // code above explicitly built the list to include them (Geo 2026-07-28).
+    const campaigns = (mergedInsights || []).filter((c) => passesFilter(c.campaign_name)).map((c) => {
       const id = c.campaign_id;
       const name = c.campaign_name || "(unnamed campaign)";
       const spend = Number(c.spend || 0);
