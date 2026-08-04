@@ -84,6 +84,10 @@
     {
       "path": "/api/admin/daily-summary",
       "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/cron/aira-checklist-archive",
+      "schedule": "0 22 * * *"
     }
   ],
   "redirects": [
