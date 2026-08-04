@@ -72,12 +72,15 @@
     --bg: #FAF6EE;
     --panel: #FFFFFF;
     --panel-2: #F5EFE0;
-    /* Sidebar + modal background. Was #EBE1C8 (yellow-saturated beige)
-       which made the sidebar + Your Account modal read as one big yellow
-       blob. Shifted to a warm taupe with the yellow saturation pulled
-       down — still cream-family and in-brand, but reads as a calm darker
-       neutral instead of a highlight. Adjusted 2026-08-04 per Geo. */
-    --sidebar-bg: #DFD6C1;
+    /* Sidebar + modal background. Iterated 2026-08-04:
+         #EBE1C8 (original) → too yellow-saturated, made sidebar+modal
+                              read as one big yellow blob.
+         #DFD6C1 (attempt 1) → still too dark + yellow per Geo.
+         #E5DED0 (current)   → light warm cream in-family with the main
+                              bg (#FAF6EE) and panel-2 (#F5EFE0), enough
+                              contrast to still read as "sidebar surface"
+                              but calm rather than a yellow highlight. */
+    --sidebar-bg: #E5DED0;
     --text: #2B2318;
     --text-dim: #6B5D48;
     --text-mute: #8B7E66;
