@@ -10749,56 +10749,79 @@ Begin.` },
 
 <script>
 (function () {
-  // maybeShowTermsModal — called from initApp() after loadFullState().
-  // Skips if the member has already accepted (server-side timestamp
-  // stored in state.termsAcceptedAt via /api/state). Otherwise reveals
-  // the modal + wires up the checkbox → button → POST /api/accept-terms
-  // flow. Idempotent — safe to call multiple times.
-  window.maybeShowTermsModal = function () {
+  // Self-contained modal script. Reads the session token directly from
+  // localStorage (same key the main app uses) so it does not depend on
+  // the main app's `state` object being exposed globally. Called from
+  // initApp() after loadFullState(), but also safe to call anytime.
+  var TOKEN_KEY = "tfif_session_v1";
+  function getToken() {
+    try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (e) { return ""; }
+  }
+  window.maybeShowTermsModal = async function () {
     try {
-      if (!window.state || !state.sessionToken) return;
-      // Preview members inside the free-trial LP already ticked a
-      // consent box on the form; skip the modal there. app.html is
-      // only reached by real members with a session, so this is safe.
-      if (state.termsAcceptedAt) return;
-      const root = document.getElementById("tfif-terms-root");
+      var token = getToken();
+      if (!token) return; // not logged in — nothing to show
+      // Fetch acceptance status directly. Keeping this decoupled from
+      // /api/state means the modal works even if the main app didn't
+      // populate state.termsAcceptedAt for whatever reason (scope,
+      // race condition, cache).
+      var res = await fetch("/api/accept-terms", {
+        method: "GET",
+        headers: { "x-session-token": token },
+      });
+      if (!res.ok) return; // 401 (bad token) etc — silent no-op
+      var data = await res.json();
+      if (data && data.accepted_at) return; // already accepted
+      // Show modal.
+      var root = document.getElementById("tfif-terms-root");
       if (!root) return;
-      const cb   = document.getElementById("tfif-terms-consent-cb");
-      const btn  = document.getElementById("tfif-terms-cta-btn");
+      var cb   = document.getElementById("tfif-terms-consent-cb");
+      var btn  = document.getElementById("tfif-terms-cta-btn");
       if (!cb || !btn) return;
       root.classList.add("tfif-terms-open");
       root.setAttribute("aria-hidden", "false");
-      // Block scroll on the app underneath while the modal is up.
-      const prevBodyOverflow = document.body.style.overflow;
+      var prevBodyOverflow = document.body.style.overflow;
       document.body.style.overflow = "hidden";
       cb.checked = false;
       btn.disabled = true;
-      cb.addEventListener("change", function () {
-        btn.disabled = !cb.checked;
+      // Wire once — replace nodes to strip any prior listeners (safe
+      // even on first call).
+      var newCb = cb.cloneNode(true);
+      var newBtn = btn.cloneNode(true);
+      cb.parentNode.replaceChild(newCb, cb);
+      btn.parentNode.replaceChild(newBtn, btn);
+      newCb.addEventListener("change", function () {
+        newBtn.disabled = !newCb.checked;
       });
-      btn.addEventListener("click", async function () {
-        if (btn.disabled) return;
-        btn.disabled = true;
-        const originalLabel = btn.textContent;
-        btn.textContent = "Saving…";
+      newBtn.addEventListener("click", async function () {
+        if (newBtn.disabled) return;
+        newBtn.disabled = true;
+        var originalLabel = newBtn.textContent;
+        newBtn.textContent = "Saving…";
         try {
-          const res = await fetch("/api/accept-terms", {
+          var saveRes = await fetch("/api/accept-terms", {
             method: "POST",
-            headers: { "x-session-token": state.sessionToken },
+            headers: { "x-session-token": token },
           });
-          if (!res.ok) throw new Error("save_failed_" + res.status);
-          const data = await res.json();
-          state.termsAcceptedAt = data.accepted_at || new Date().toISOString();
+          if (!saveRes.ok) throw new Error("save_failed_" + saveRes.status);
+          var saved = await saveRes.json();
+          // Also sync into the main app state if it happens to be exposed
+          // globally, so subsequent code paths see the fresh value.
+          try {
+            if (window.state) {
+              window.state.termsAcceptedAt = saved.accepted_at || new Date().toISOString();
+            }
+          } catch (_) {}
           root.classList.remove("tfif-terms-open");
           root.setAttribute("aria-hidden", "true");
           document.body.style.overflow = prevBodyOverflow || "";
         } catch (e) {
           console.error("accept_terms_failed", e);
-          btn.textContent = originalLabel;
-          btn.disabled = false;
+          newBtn.textContent = originalLabel;
+          newBtn.disabled = false;
           alert("Could not save your acceptance. Please try again.");
         }
-      }, { once: false });
+      });
     } catch (e) {
       console.warn("maybeShowTermsModal_error", e);
     }
