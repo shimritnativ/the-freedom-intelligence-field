@@ -1206,6 +1206,7 @@
               <button class="filter-chip" data-filter="never_logged_in" type="button">Never logged in</button>
               <button class="filter-chip" data-filter="stuck_day_0" type="button">Stalled Day 0</button>
               <button class="filter-chip" data-filter="stuck_day_1" type="button">Stalled Day 1</button>
+              <button class="filter-chip" data-filter="completed_all_days" type="button">Completed all days</button>
             </div>
           </div>
           <div class="mf-group">
@@ -1413,6 +1414,10 @@
         case "never_logged_in":   return isNeverLoggedIn(m);
         case "stuck_day_0":       return isStalledDay(m, 0);
         case "stuck_day_1":       return isStalledDay(m, 1);
+        // Members who finished the full 3-day Reset (Day 3+). Bonus Day 4
+        // and future extensions still count as "completed all". Added
+        // 2026-08-04 per Geo — same filter mirrored on admin > Members.
+        case "completed_all_days": return (Number(m.last_completed_day) || 0) >= 3;
         // Outcome filters — match the outcome column values written by
         // the outcome dropdown. "outcome_reached" for a legacy contacted
         // row without an outcome (e.g. old checkbox ticks) also counts.
@@ -1826,6 +1831,7 @@
       never_logged_in: "Never logged in",
       stuck_day_0: "Stalled Day 0",
       stuck_day_1: "Stalled Day 1",
+      completed_all_days: "Completed all days",
       outcome_reached: "Call held",
       outcome_no_answer: "Attempted",
       outcome_declined: "Declined",
