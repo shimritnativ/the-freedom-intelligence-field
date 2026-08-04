@@ -87,7 +87,7 @@
     },
     {
       "path": "/api/cron/aira-checklist-archive",
-      "schedule": "0 22 * * *"
+      "schedule": "0 20 * * *"
     }
   ],
   "redirects": [
