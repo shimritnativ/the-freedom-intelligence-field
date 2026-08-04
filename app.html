@@ -4160,6 +4160,11 @@ Begin.` },
     previewEndsAt: null,
     displayName: "",
     userEmail: "",
+    // Timestamp the member accepted the T&C + Privacy modal. Null until
+    // they tick the box + click "I understand — begin". Rehydrated from
+    // /api/state on every load. If null after login, the first-login
+    // modal is shown and blocks the app until accepted.
+    termsAcceptedAt: null,
     messages: [],
     loading: false,
     error: null,
@@ -9727,6 +9732,7 @@ Begin.` },
       state.previewEndsAt = data.previewEndsAt || state.previewEndsAt;
       state.displayName = data.displayName || state.displayName;
       state.userEmail = data.email || state.userEmail;
+      state.termsAcceptedAt = data.termsAcceptedAt || null;
       // CRITICAL: rehydrate tier from the server on every page open.
       // Without this, state.tier resets to its default ("preview") on every
       // page load and never reflects entitlement changes (e.g. a customer
@@ -9793,6 +9799,10 @@ Begin.` },
       state.sessionToken = existing;
       loadFullState().then(() => loadUnlimitedSessions().then(() => {
         render();
+        // First-login T&C + Privacy acceptance gate. Blocks the app until
+        // the member ticks the checkbox + clicks "I understand — begin".
+        // No-op for members who've already accepted (server-side timestamp).
+        maybeShowTermsModal();
         // After the dashboard is loaded, decide whether to show the
         // notification opt-in pre-prompt. No-op for members who've already
         // granted, blocked, or dismissed it.
@@ -10538,5 +10548,263 @@ Begin.` },
   });
 })();
 </script>
+
+<!-- ─────────────────────────────────────────────────────────────
+     T&C + PRIVACY FIRST-LOGIN MODAL
+     Copied structurally from public/terms-preview.html so Shimrit's
+     approved design flows straight into production. Injection order:
+     modal is HIDDEN by default (display:none). maybeShowTermsModal()
+     in app.js decides whether to show it after loadFullState().
+     Once shown, the app is fully blocked (backdrop + scroll lock)
+     until the member ticks the box + clicks accept.
+     Added 2026-08-04.
+     ───────────────────────────────────────────────────────────── -->
+<style>
+  #tfif-terms-root { display: none; }
+  #tfif-terms-root.tfif-terms-open { display: block; }
+  #tfif-terms-root .tfif-terms-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(14, 11, 7, 0.72);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 9000;
+    animation: tfifTermsFade 320ms ease-out;
+  }
+  @keyframes tfifTermsFade { from { opacity: 0; } to { opacity: 1; } }
+  #tfif-terms-root .tfif-terms-modal {
+    position: fixed; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(560px, calc(100% - 40px));
+    max-height: calc(100vh - 40px);
+    background: #FFFDF6;
+    border-radius: 22px;
+    box-shadow: 0 50px 120px rgba(0, 0, 0, 0.55),
+                0 0 0 1px rgba(201, 168, 76, 0.28);
+    overflow: hidden;
+    z-index: 9001;
+    animation: tfifTermsRise 480ms cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex; flex-direction: column;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: #1F1810;
+  }
+  @keyframes tfifTermsRise {
+    from { opacity: 0; transform: translate(-50%, calc(-50% + 20px)); }
+    to   { opacity: 1; transform: translate(-50%, -50%); }
+  }
+  #tfif-terms-root .tfif-terms-header {
+    padding: 34px 40px 24px;
+    text-align: center;
+    border-bottom: 1px solid rgba(201, 168, 76, 0.16);
+    background: radial-gradient(ellipse 340px 120px at 50% 100%, rgba(201, 168, 76, 0.08), transparent 60%), #FFFDF6;
+    flex-shrink: 0;
+  }
+  #tfif-terms-root .tfif-terms-mark {
+    width: 48px; height: 48px; border-radius: 50%;
+    border: 1.5px solid #C9A84C; background: rgba(201, 168, 76, 0.10);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #C9A84C; margin-bottom: 14px;
+  }
+  #tfif-terms-root .tfif-terms-mark svg { width: 22px; height: 22px; }
+  #tfif-terms-root .tfif-terms-eyebrow {
+    font-size: 10.5px; letter-spacing: 0.28em; color: #C9A84C;
+    text-transform: uppercase; font-weight: 700; margin: 0 0 8px;
+  }
+  #tfif-terms-root .tfif-terms-title {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-style: italic; font-size: 32px; font-weight: 500;
+    margin: 0 0 6px; line-height: 1.12; letter-spacing: -0.01em;
+    color: #1F1810;
+  }
+  #tfif-terms-root .tfif-terms-sub {
+    font-size: 13.5px; color: #6B5D48; margin: 0; line-height: 1.55;
+  }
+  #tfif-terms-root .tfif-terms-body {
+    padding: 24px 40px 22px;
+    overflow-y: auto; flex: 1;
+  }
+  #tfif-terms-root .tfif-terms-lead {
+    font-family: Georgia, serif; font-style: italic; font-size: 15.5px;
+    color: #4A4030; line-height: 1.6; margin: 0 0 24px;
+    padding: 14px 16px; background: rgba(201, 168, 76, 0.06);
+    border-left: 2px solid #C9A84C; border-radius: 0 8px 8px 0;
+  }
+  #tfif-terms-root .tfif-terms-point {
+    display: flex; gap: 14px; align-items: flex-start; margin-bottom: 16px;
+  }
+  #tfif-terms-root .tfif-terms-point:last-child { margin-bottom: 0; }
+  #tfif-terms-root .tfif-terms-point-num {
+    flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+    background: #C9A84C; color: #1a1410;
+    font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic;
+    font-weight: 600; font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #tfif-terms-root .tfif-terms-point-body {
+    flex: 1; font-size: 14px; line-height: 1.6; color: #1F1810;
+  }
+  #tfif-terms-root .tfif-terms-point-body strong { font-weight: 700; }
+  #tfif-terms-root .tfif-terms-point-body a {
+    color: #C9A84C; font-weight: 600; text-decoration: underline;
+    text-underline-offset: 2px; text-decoration-color: rgba(201, 168, 76, 0.5);
+  }
+  #tfif-terms-root .tfif-terms-point-body a:hover { text-decoration-color: #C9A84C; }
+  #tfif-terms-root .tfif-terms-crisis {
+    margin-top: 22px; padding: 14px 16px;
+    background: rgba(178, 34, 34, 0.05);
+    border-left: 2px solid #B22222; border-radius: 0 8px 8px 0;
+    font-size: 13px; line-height: 1.55; color: #5A2020;
+  }
+  #tfif-terms-root .tfif-terms-crisis strong { color: #8A2020; font-weight: 700; }
+  #tfif-terms-root .tfif-terms-footer {
+    padding: 20px 40px 28px;
+    background: rgba(201, 168, 76, 0.05);
+    border-top: 1px solid rgba(201, 168, 76, 0.18);
+    flex-shrink: 0;
+  }
+  #tfif-terms-root .tfif-terms-consent {
+    display: flex; align-items: flex-start; gap: 12px;
+    margin-bottom: 18px; font-size: 13px; color: #4A4030;
+    line-height: 1.55; cursor: pointer; user-select: none;
+  }
+  #tfif-terms-root .tfif-terms-consent input[type="checkbox"] {
+    flex-shrink: 0; width: 18px; height: 18px; margin-top: 2px;
+    accent-color: #C9A84C; cursor: pointer;
+  }
+  #tfif-terms-root .tfif-terms-consent a {
+    color: #C9A84C; text-decoration: underline;
+    text-underline-offset: 2px; font-weight: 600;
+  }
+  #tfif-terms-root .tfif-terms-cta {
+    display: block; width: 100%; padding: 15px 22px;
+    background: #C9A84C; color: #1a1410;
+    font-size: 13.5px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    border: none; border-radius: 999px; cursor: pointer;
+    box-shadow: 0 8px 24px rgba(201, 168, 76, 0.28), 0 0 30px rgba(201, 168, 76, 0.2);
+    transition: transform 150ms ease, background 180ms ease;
+  }
+  #tfif-terms-root .tfif-terms-cta:hover:not(:disabled) {
+    transform: translateY(-1px); background: #B99A5C;
+  }
+  #tfif-terms-root .tfif-terms-cta:disabled {
+    opacity: 0.45; cursor: not-allowed; box-shadow: none;
+  }
+  @media (max-width: 560px) {
+    #tfif-terms-root .tfif-terms-modal { width: calc(100% - 24px); border-radius: 18px; }
+    #tfif-terms-root .tfif-terms-header { padding: 26px 24px 20px; }
+    #tfif-terms-root .tfif-terms-body { padding: 20px 24px 18px; }
+    #tfif-terms-root .tfif-terms-footer { padding: 18px 24px 24px; }
+    #tfif-terms-root .tfif-terms-title { font-size: 26px; }
+  }
+</style>
+
+<div id="tfif-terms-root" aria-hidden="true">
+  <div class="tfif-terms-backdrop"></div>
+  <div class="tfif-terms-modal" role="dialog" aria-modal="true" aria-labelledby="tfif-terms-title">
+    <div class="tfif-terms-header">
+      <span class="tfif-terms-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 8l10 6 10-6-10-6z"/>
+          <path d="M2 15l10 6 10-6"/>
+          <path d="M2 11l10 6 10-6"/>
+        </svg>
+      </span>
+      <p class="tfif-terms-eyebrow">Before we begin</p>
+      <h2 class="tfif-terms-title" id="tfif-terms-title">Welcome to The Field.</h2>
+      <p class="tfif-terms-sub">Please take a moment to read this before we begin.</p>
+    </div>
+    <div class="tfif-terms-body">
+      <p class="tfif-terms-lead">The Field is a coaching-adjacent AI experience built on Shimrit Nativ's Human Instrument® method. It is designed to support you in your inner work.</p>
+      <div class="tfif-terms-point">
+        <span class="tfif-terms-point-num">1</span>
+        <div class="tfif-terms-point-body">
+          <strong>Not medical or mental-health care.</strong> The Field is not therapy, medical advice, or a substitute for a licensed professional. Use your own judgment before acting on anything it says.
+        </div>
+      </div>
+      <div class="tfif-terms-point">
+        <span class="tfif-terms-point-num">2</span>
+        <div class="tfif-terms-point-body">
+          <strong>Your conversations are private.</strong> No one on our team reads your sessions unless you ask us to. Full details in our <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.
+        </div>
+      </div>
+      <div class="tfif-terms-point">
+        <span class="tfif-terms-point-num">3</span>
+        <div class="tfif-terms-point-body">
+          <strong>The Field can be wrong.</strong> It's AI. Bring your own discernment, especially before making real-world decisions.
+        </div>
+      </div>
+      <div class="tfif-terms-crisis">
+        <strong>If you are in crisis</strong> or having thoughts of self-harm, please contact a human crisis line or emergency service in your country. The Field cannot help in an emergency.
+      </div>
+    </div>
+    <div class="tfif-terms-footer">
+      <label class="tfif-terms-consent">
+        <input type="checkbox" id="tfif-terms-consent-cb" />
+        <span>I have read and agree to the <a href="/terms" target="_blank" rel="noopener">Terms &amp; Conditions</a> and the <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>. I confirm I am 18 or over.</span>
+      </label>
+      <button class="tfif-terms-cta" id="tfif-terms-cta-btn" disabled>I understand — begin</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // maybeShowTermsModal — called from initApp() after loadFullState().
+  // Skips if the member has already accepted (server-side timestamp
+  // stored in state.termsAcceptedAt via /api/state). Otherwise reveals
+  // the modal + wires up the checkbox → button → POST /api/accept-terms
+  // flow. Idempotent — safe to call multiple times.
+  window.maybeShowTermsModal = function () {
+    try {
+      if (!window.state || !state.sessionToken) return;
+      // Preview members inside the free-trial LP already ticked a
+      // consent box on the form; skip the modal there. app.html is
+      // only reached by real members with a session, so this is safe.
+      if (state.termsAcceptedAt) return;
+      const root = document.getElementById("tfif-terms-root");
+      if (!root) return;
+      const cb   = document.getElementById("tfif-terms-consent-cb");
+      const btn  = document.getElementById("tfif-terms-cta-btn");
+      if (!cb || !btn) return;
+      root.classList.add("tfif-terms-open");
+      root.setAttribute("aria-hidden", "false");
+      // Block scroll on the app underneath while the modal is up.
+      const prevBodyOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      cb.checked = false;
+      btn.disabled = true;
+      cb.addEventListener("change", function () {
+        btn.disabled = !cb.checked;
+      });
+      btn.addEventListener("click", async function () {
+        if (btn.disabled) return;
+        btn.disabled = true;
+        const originalLabel = btn.textContent;
+        btn.textContent = "Saving…";
+        try {
+          const res = await fetch("/api/accept-terms", {
+            method: "POST",
+            headers: { "x-session-token": state.sessionToken },
+          });
+          if (!res.ok) throw new Error("save_failed_" + res.status);
+          const data = await res.json();
+          state.termsAcceptedAt = data.accepted_at || new Date().toISOString();
+          root.classList.remove("tfif-terms-open");
+          root.setAttribute("aria-hidden", "true");
+          document.body.style.overflow = prevBodyOverflow || "";
+        } catch (e) {
+          console.error("accept_terms_failed", e);
+          btn.textContent = originalLabel;
+          btn.disabled = false;
+          alert("Could not save your acceptance. Please try again.");
+        }
+      }, { once: false });
+    } catch (e) {
+      console.warn("maybeShowTermsModal_error", e);
+    }
+  };
+})();
+</script>
+
 </body>
 </html>
