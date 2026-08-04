@@ -16,14 +16,25 @@
 import { sql } from "@vercel/postgres";
 
 export default async function handler(req, res) {
-  // Vercel cron sends this header. If someone hits the URL without it
-  // (or with a wrong secret), refuse — resetting state is destructive.
+  // Accept a request as "authorized cron trigger" via ANY of these paths:
+  //   1. Valid CRON_SECRET Bearer token (recommended for production — set
+  //      CRON_SECRET as a Vercel env var to enable).
+  //   2. Vercel's built-in cron User-Agent header (vercel-cron/*). This is
+  //      always present when Vercel's scheduler invokes the endpoint, so
+  //      it's the safety net when CRON_SECRET isn't configured.
+  //   3. ?source=manual (for hitting the URL manually to force-archive).
+  // Reason for the multi-path check: my earlier version required only #1
+  // and rejected Vercel's cron because CRON_SECRET wasn't set → daily
+  // archive silently failed. Fixed 2026-08-04.
   const cronSecret = process.env.CRON_SECRET;
   const auth = req.headers.authorization || "";
+  const userAgent = String(req.headers["user-agent"] || "").toLowerCase();
   const source = String(req.query?.source || "");
-  const isCron = auth === `Bearer ${cronSecret}` || req.headers["x-vercel-cron"] === "1";
-  if (!isCron && source !== "manual") {
-    return res.status(401).json({ error: "unauthorized" });
+  const hasValidSecret = !!cronSecret && auth === `Bearer ${cronSecret}`;
+  const isVercelCronUa = userAgent.includes("vercel-cron");
+  const isManual = source === "manual";
+  if (!hasValidSecret && !isVercelCronUa && !isManual) {
+    return res.status(401).json({ error: "unauthorized", hint: "cron only" });
   }
 
   try {
