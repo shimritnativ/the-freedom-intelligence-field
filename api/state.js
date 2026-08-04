@@ -79,6 +79,7 @@ export default async function handler(req, res) {
       previewEndsAt: user.preview_ends_at,
       displayName: user.display_name || null,
       email: user.email,
+      termsAcceptedAt: user.terms_accepted_at || null,
       messages: messages.map((m) => ({
         role: m.role,
         content: m.content,
