@@ -1894,7 +1894,31 @@
   }
   :root[data-theme="dark"] .support-msg.user {
     background: rgba(217, 167, 78, 0.30);
-    color: var(--text, #F0EAD6);
+    color: #F0EAD6;
+  }
+  /* Dark mode explicit overrides — Katrine Kovacs reported the support
+     chat was almost unreadable in dark mode (light text on a light-cream
+     bubble). Root cause: the bot bubble was using `var(--panel, #FAF5E6)`
+     as background and `var(--text, #1A1612)` as color; in dark mode the
+     variables produced dark-on-dark (near-invisible), and in light-mode
+     edge cases the fallback #FAF5E6 background + light text also failed.
+     Fixed 2026-08-05 by hardcoding a contrast-safe dark bubble with cream
+     text so it meets WCAG 4.5:1 regardless of CSS-var cascade.  */
+  :root[data-theme="dark"] #support-panel {
+    background: #1a1612;
+    border-color: rgba(201, 168, 76, 0.28);
+  }
+  :root[data-theme="dark"] .support-messages {
+    background: rgba(201, 168, 76, 0.03);
+  }
+  :root[data-theme="dark"] .support-msg.bot {
+    background: #2a2318;
+    color: #F0EAD6;
+    border-color: rgba(201, 168, 76, 0.22);
+  }
+  :root[data-theme="dark"] .support-msg code {
+    background: rgba(240, 234, 214, 0.08);
+    color: #F0EAD6;
   }
   /* Inline markdown formatting that renderMessages() converts on bot
      replies. Keeps bold + italic + line breaks readable. */
@@ -6398,6 +6422,20 @@ Begin.` },
             </div>
           </div>
 
+          ${(state.tier === "preview" && (Number(state.lastCompletedDay) || 0) >= 1) ? `
+          <div class="acct-section">
+            <div class="acct-section-label">Need to redo a day?</div>
+            <div class="acct-name-help" style="margin-bottom: 10px; line-height: 1.5;">
+              Sometimes a day gets marked complete before you actually finished the work — a fragmented answer, a stalled process, or an interruption you couldn't come back from. Use this to reopen a day and start fresh. Reopening a day also clears any later days you'd started (so you can walk the sequence in order again).
+            </div>
+            ${[1, 2, 3].filter(d => d <= (Number(state.lastCompletedDay) || 0)).map(d => `
+              <button class="acct-link" type="button" data-restart-day="${d}" style="cursor: pointer; font-family: inherit; text-align: left; width: 100%;">
+                Restart Day ${d} <span class="acct-link-arrow" aria-hidden="true">↺</span>
+              </button>
+            `).join("")}
+          </div>
+          ` : ""}
+
           <div class="acct-section" id="acct-section-prefs">
             <div class="acct-section-label">Preferences</div>
             <div class="pref-card" id="pref-notif-card">
@@ -7210,6 +7248,46 @@ Begin.` },
     if (acctExportBtn) acctExportBtn.addEventListener("click", onExportWorkClick);
     const acctExportUnlimitedBtn = document.getElementById("acct-export-unlimited-btn");
     if (acctExportUnlimitedBtn) acctExportUnlimitedBtn.addEventListener("click", onExportAllUnlimitedClick);
+    // "Restart Day N" buttons (Reset tier only, shown for each completed day).
+    // Confirms before wiping the completion + walking last_completed_day back.
+    // Added 2026-08-05 after Katrine Kovacs's stuck-on-Day-1 feedback.
+    document.querySelectorAll("[data-restart-day]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const day = Number(btn.getAttribute("data-restart-day")) || 0;
+        if (!day) return;
+        const confirmed = window.confirm(
+          `Restart Day ${day}?\n\nThis will reopen Day ${day} so you can walk through it again. Any later days you'd already opened will also be reset so you can walk the Reset in order.\n\nYour past chat messages stay saved — you can still see them and export them anytime.`
+        );
+        if (!confirmed) return;
+        const originalLabel = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `Restarting Day ${day}…`;
+        try {
+          const res = await fetch("/api/reset-day", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-session-token": state.sessionToken,
+            },
+            body: JSON.stringify({ day }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data?.message || data?.error || "reset_failed");
+          // Update local state so the UI reflects the new day immediately.
+          state.lastCompletedDay = data.last_completed_day || 0;
+          state.currentDay = data.current_day || 1;
+          state.dayUnlocks = data.day_unlocks || state.dayUnlocks;
+          state.accountMenuOpen = false;
+          render();
+          alert(`Day ${day} is open again. Start whenever you're ready.`);
+        } catch (err) {
+          console.error("restart_day_failed", err);
+          btn.disabled = false;
+          btn.innerHTML = originalLabel;
+          alert("Could not restart the day. Please try again in a moment, or email support@shimritnativ.com.");
+        }
+      });
+    });
     const acctInstallBtn = document.getElementById("acct-install-btn");
     if (acctInstallBtn) acctInstallBtn.addEventListener("click", onInstallOpen);
     // Preferences → Day 2 & 3 reminders card. Only clickable when permission
