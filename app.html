@@ -7863,10 +7863,11 @@ Begin.` },
     try { localStorage.setItem(day1IntroStorageKey(), step); } catch (e) {}
   }
   function renderDay1WelcomeCards() {
-    // Only for Reset (preview) members on Day 1. Unlimited or other tiers
-    // never see this.
+    // Shows on Day 1 view for anyone — Reset AND Unlimited members. An
+    // Unlimited member who wants to walk through the 72-hour Reset should
+    // get the same welcome flow as a Reset buyer. Only excluded: non-Day-1
+    // views. Tier check was removed 2026-08-05 per Geo.
     if (state.currentDay !== 1) return "";
-    if (state.tier === "full") return "";
     const step = day1IntroReadStep();
     // Skip for members who ALREADY have Day 1 chat history but never went
     // through the new welcome-cards flow. These are existing members who
