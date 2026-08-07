@@ -49,7 +49,8 @@ export default async function handler(req, res) {
           started_at,
           last_message_at,
           metadata,
-          pinned_at
+          pinned_at,
+          folder_id
         FROM sessions
         WHERE user_id = ${user.id} AND session_type = 'unlimited'
         ORDER BY
@@ -65,6 +66,7 @@ export default async function handler(req, res) {
           lastMessageAt: r.last_message_at,
           metadata: r.metadata || {},
           pinnedAt: r.pinned_at,
+          folderId: r.folder_id || null,
         })),
       });
     }
