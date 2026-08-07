@@ -7895,6 +7895,7 @@ Begin.` },
   // click. Kept in one const so it's easy to update alongside prompt
   // changes in lib/prompts/day1.js.
   const DAY1_INTRO_PROMPT_TEXT = "Freedom Intelligence Field, I am entering Day 1 of my 72 Hour Power Reset.\nToday is the State Reset.\nI am here to locate what is currently active in my inner system,\nsee what has been directing me, and return to self-led orientation\nand my power.\nGuide me through the State Reset now.\nBegin.";
+  const DAY2_INTRO_PROMPT_TEXT = "Freedom Intelligence Field, I am entering Day 2 of my 72 Hour Power Reset.\nToday is the Decision & Action Alignment.\nI have reset my state. I am here to make the decision, lock in the action, and produce my Living Power Declaration. Guide me through Day 2 now.\nBegin.";
   function day1IntroStorageKey() {
     const email = (state.userEmail || "").toLowerCase().trim();
     return email ? `tfif_day1_intro__${email}` : "tfif_day1_intro";
@@ -8044,6 +8045,80 @@ Begin.` },
     }
   }
 
+  // ===== Day 2 welcome card =====
+  // Single-card variant of the Day 1 flow: video + short intro copy +
+  // "Begin Day 2 Now" button that auto-fills the Day 2 prompt into the
+  // composer. Same skip-for-existing-members protection, same cinematic
+  // animations (reuses the .day1-welcome-* CSS classes), same per-user
+  // localStorage flag.
+  function day2IntroStorageKey() {
+    const email = (state.userEmail || "").toLowerCase().trim();
+    return email ? `tfif_day2_intro__${email}` : "tfif_day2_intro";
+  }
+  function day2IntroReadStep() {
+    try { return localStorage.getItem(day2IntroStorageKey()) || null; }
+    catch (e) { return null; }
+  }
+  function day2IntroWriteStep(step) {
+    try { localStorage.setItem(day2IntroStorageKey(), step); } catch (e) {}
+  }
+  function renderDay2WelcomeCard() {
+    if (state.currentDay !== 2) return "";
+    // Testing override — ?day2_intro_test=1 to force-show even for
+    // members with existing Day 2 history.
+    let force = false;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("day2_intro_test") === "1") {
+        force = true;
+        try { localStorage.removeItem(day2IntroStorageKey()); } catch (_) {}
+      }
+    } catch (_) {}
+    const step = day2IntroReadStep();
+    // Skip existing members who already engaged with Day 2 before this
+    // feature shipped (same protection as Day 1).
+    const hasUserMessages = (state.messages || []).some(m => m && m.role === "user");
+    if (hasUserMessages && step === null && !force) return "";
+    const btnDone = step === "done";
+    return `
+      <div class="day1-welcome-card" data-day-intro="2">
+        <p class="day1-welcome-eyebrow">Day 2 · Decision &amp; Action Alignment</p>
+        <div class="day1-welcome-video">
+          <iframe src="https://fast.wistia.net/embed/iframe/9smawlijma" allow="autoplay; fullscreen" allowfullscreen title="Day 2 · Decision &amp; Action Alignment"></iframe>
+        </div>
+        <div class="day1-welcome-body">
+          <p>Welcome to Day 2 of your 72 Hour Power Reset.</p>
+          <p>Today is the Decision &amp; Action Alignment. Yesterday you reset your state, and you can return to that reset any day you wish. Today you take the statement you set yesterday, anchor it into your being, and from that place make a clear, aligned decision and turn it into one real action taken from your power.</p>
+          <p>Your instrument has three centers: mind, heart, and body. When all three come into alignment around a decision, a goal, or a next move, that move becomes empowered, by allowing the energy that everything is created from to move to and through you into manifestation. That is what today is about.</p>
+        </div>
+        <button class="day1-welcome-cta" id="day2-cta" type="button" ${btnDone ? "disabled" : ""}>
+          ${btnDone ? '<span class="day1-check">✓</span>Prompt inserted' : 'Begin Day 2 Now'}
+        </button>
+      </div>
+    `;
+  }
+  function wireDay2WelcomeCard() {
+    const btn = document.getElementById("day2-cta");
+    if (btn && !btn.disabled) {
+      btn.addEventListener("click", () => {
+        day2IntroWriteStep("done");
+        btn.disabled = true;
+        btn.classList.add("day1-welcome-cta-just-done");
+        btn.innerHTML = '<span class="day1-check">✓</span>Prompt inserted';
+        setTimeout(() => {
+          const inputEl = document.getElementById("input");
+          if (inputEl) {
+            inputEl.value = DAY2_INTRO_PROMPT_TEXT;
+            inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+            inputEl.focus();
+            try { inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length); } catch (_) {}
+            inputEl.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }, 420);
+      });
+    }
+  }
+
   function renderMessages() {
     const wrap = document.getElementById("messages");
     if (!wrap) return;
@@ -8063,9 +8138,13 @@ Begin.` },
     // legacy pre-populated welcome never surfaces.
     let messagesToRender = state.messages;
     const day1CardsWillShow = renderDay1WelcomeCards() !== "";
-    const day1Step = day1CardsWillShow ? day1IntroReadStep() : null;
-    if (day1CardsWillShow) {
-      if (day1Step !== "done") {
+    const day2CardWillShow = renderDay2WelcomeCard() !== "";
+    const dayCardsWillShow = day1CardsWillShow || day2CardWillShow;
+    const dayIntroStep = day1CardsWillShow
+      ? day1IntroReadStep()
+      : (day2CardWillShow ? day2IntroReadStep() : null);
+    if (dayCardsWillShow) {
+      if (dayIntroStep !== "done") {
         // Cards are up, member is still walking through the intro — hide
         // everything below them so nothing competes for attention.
         messagesToRender = [];
@@ -8111,19 +8190,22 @@ Begin.` },
     if (isResetExpired()) {
       html = renderExpiredBanner() + html;
     }
-    // Prepend the Day 1 welcome cards (welcome video + Day 1 video) at
-    // the very top of the message thread on Day 1. Returns "" for other
-    // days or Unlimited members. See renderDay1WelcomeCards for details.
+    // Prepend the day intro card(s) at the very top of the message
+    // thread. Day 1 renders two cards (welcome video + Day 1 video),
+    // Day 2 renders one card. Both return "" for other days or when
+    // suppressed (existing members). See render*WelcomeCard* for details.
     const day1Cards = renderDay1WelcomeCards();
+    const day2Card = renderDay2WelcomeCard();
     if (day1Cards) html = day1Cards + html;
+    if (day2Card) html = day2Card + html;
     wrap.innerHTML = html;
     const wrapper = document.getElementById("messages-wrap");
     if (wrapper) {
       // Default: scroll to bottom so newest message is in view. Override
-      // for the Day 1 welcome-card flow: scroll to the TOP so the video
-      // is the first thing a member sees on load. Uses smooth scroll for
-      // the intro path so it feels considered instead of snap-jumping.
-      if (day1CardsWillShow && day1Step !== "done") {
+      // for any day intro flow: scroll to the TOP so the video is the
+      // first thing a member sees on load. Smooth scroll so it feels
+      // considered rather than snap-jumping.
+      if (dayCardsWillShow && dayIntroStep !== "done") {
         try {
           wrapper.scrollTo({ top: 0, behavior: "smooth" });
         } catch (_) {
@@ -8135,8 +8217,9 @@ Begin.` },
     }
     // Scan any newly rendered [[mp3:...]] cards and start audio generation.
     processMp3Cards();
-    // Bind click handlers on the Day 1 welcome-card buttons (idempotent).
+    // Bind click handlers on the day intro card buttons (idempotent).
     wireDay1WelcomeCards();
+    wireDay2WelcomeCard();
   }
 
   // ===== Mobile chrome handlers =====
