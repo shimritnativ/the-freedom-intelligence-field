@@ -2465,6 +2465,73 @@
     .welcome-quote-source { margin-bottom: 40px; }
   }
   .unl-chat-empty { padding: 10px 8px; font-size: 11px; color: var(--text-mute); font-style: italic; font-family: Georgia, serif; }
+
+  /* ===== Folders in the sidebar ===== */
+  .unl-folder-list { display: flex; flex-direction: column; margin-bottom: 4px; }
+  .unl-folder { position: relative; }
+  .unl-folder-head {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text);
+    transition: background 0.15s ease;
+    user-select: none;
+  }
+  .unl-folder-head:hover { background: var(--gold-soft); }
+  .unl-folder-caret { color: var(--text-mute); font-size: 10px; width: 12px; text-align: center; flex-shrink: 0; }
+  .unl-folder-icon { color: var(--gold); display: inline-flex; }
+  .unl-folder-icon svg { width: 14px; height: 14px; }
+  .unl-folder-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .unl-folder-count {
+    font-size: 10px; font-weight: 700;
+    color: var(--text-mute);
+    padding: 2px 7px;
+    background: rgba(201, 168, 76, 0.10);
+    border-radius: 999px;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+  .unl-folder-menu-btn {
+    opacity: 0;
+    background: transparent; border: 0; padding: 4px;
+    color: var(--text-dim); cursor: pointer; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.15s ease, background 0.15s ease;
+  }
+  .unl-folder-menu-btn svg { width: 14px; height: 14px; }
+  .unl-folder-head:hover .unl-folder-menu-btn { opacity: 1; }
+  .unl-folder-menu-btn:hover { background: var(--gold-soft); color: var(--text); }
+  .unl-folder-chats {
+    padding-left: 16px;
+    border-left: 1px solid var(--gold-line);
+    margin-left: 12px;
+    padding-top: 2px;
+    padding-bottom: 4px;
+  }
+  .unl-folder-empty {
+    padding: 6px 8px;
+    font-size: 11px;
+    color: var(--text-mute);
+    font-style: italic;
+    font-family: Georgia, serif;
+  }
+  .chat-menu-section-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.18em;
+    color: var(--text-mute); text-transform: uppercase;
+    padding: 8px 12px 4px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  .chat-menu-divider {
+    height: 1px; background: var(--border);
+    margin: 4px 6px;
+  }
+  .chat-menu-subitem { font-size: 12.5px; padding-top: 6px; padding-bottom: 6px; }
+  .chat-menu-item.active { background: var(--gold-soft); }
+  .chat-menu-item.active span:not(.chat-menu-icon) { font-weight: 700; }
   .unl-pin-limit-error { margin-top: 6px; padding: 8px 10px; background: rgba(220, 80, 80, 0.12); border: 1px solid rgba(220, 80, 80, 0.4); border-radius: 6px; color: #C03A2B; font-size: 10px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-style: italic; }
 
   /* 3-dot menu trigger button (sidebar). Always visible on mobile so long-press
@@ -4431,6 +4498,15 @@ Begin.` },
     })(),
     // ===== Unlimited demo state =====
     unlimitedSessions: [],
+    // User-created folders for organizing Unlimited chats. Loaded from
+    // /api/folders alongside sessions. Each: { id, name, sortOrder,
+    // createdAt, chatCount }. Expansion state kept per-folder in a map
+    // (id → true/false) so collapsing a folder persists during navigation.
+    folders: [],
+    foldersExpanded: {},
+    // Which folder's action menu is open (rename / delete). Only one at
+    // a time. null = closed.
+    openFolderMenuId: null,
     activeUnlimitedId: null,
     unlimitedMessages: [],
     searchOpen: false,
@@ -5294,6 +5370,44 @@ Begin.` },
     if (!session) return "";
     const pos = state.menuPosition || { top: 100, left: 100 };
     const isPinned = !!session.pinnedAt;
+    // Move-to-folder submenu — folders (if any) + Remove + New folder.
+    const folders = state.folders || [];
+    const inFolderId = session.folderId || null;
+    let moveHtml = "";
+    if (folders.length === 0) {
+      moveHtml = `
+        <div class="chat-menu-section-label">FOLDERS</div>
+        <button class="chat-menu-item" data-menu-action="new-folder-from-chat" data-chat-id="${session.id}" type="button">
+          <span class="chat-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></span>
+          <span>New folder…</span>
+        </button>
+      `;
+    } else {
+      const items = folders.map(f => `
+        <button class="chat-menu-item chat-menu-subitem${f.id === inFolderId ? " active" : ""}" data-menu-action="move-to-folder" data-chat-id="${session.id}" data-target-folder-id="${f.id}" type="button">
+          <span class="chat-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg></span>
+          <span>${escapeHtml(f.name)}${f.id === inFolderId ? "  ✓" : ""}</span>
+        </button>
+      `).join("");
+      const removeItem = inFolderId ? `
+        <button class="chat-menu-item chat-menu-subitem" data-menu-action="move-to-folder" data-chat-id="${session.id}" data-target-folder-id="" type="button">
+          <span class="chat-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="6" y1="12" x2="18" y2="12"/></svg></span>
+          <span>Remove from folder</span>
+        </button>
+      ` : "";
+      const newFolderItem = `
+        <button class="chat-menu-item chat-menu-subitem" data-menu-action="new-folder-from-chat" data-chat-id="${session.id}" type="button">
+          <span class="chat-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></svg></span>
+          <span>New folder…</span>
+        </button>
+      `;
+      moveHtml = `
+        <div class="chat-menu-section-label">MOVE TO FOLDER</div>
+        ${items}
+        ${removeItem}
+        ${newFolderItem}
+      `;
+    }
     return `
       <div class="floating-chat-menu" style="top: ${pos.top}px; left: ${pos.left}px;" data-menu-dropdown="1">
         <button class="chat-menu-item" data-menu-action="rename" data-chat-id="${session.id}" type="button">
@@ -5308,6 +5422,9 @@ Begin.` },
           <span class="chat-menu-icon">${downloadIconSvg()}</span>
           <span>Export</span>
         </button>
+        <div class="chat-menu-divider"></div>
+        ${moveHtml}
+        <div class="chat-menu-divider"></div>
         <button class="chat-menu-item chat-menu-item--danger" data-menu-action="delete" data-chat-id="${session.id}" type="button">
           <span class="chat-menu-icon">${trashIconSvg()}</span>
           <span>Delete</span>
@@ -5524,6 +5641,47 @@ Begin.` },
   // class so the dropdown anchors next to the right trigger.
   function renderChatMenuDropdown(session, origin) {
     const isPinned = !!session.pinnedAt;
+    // Build the "Move to folder" submenu inline. Shows every folder the
+    // user has, marking the current one (if any). "Remove from folder"
+    // appears when the chat is currently in one. When there are no
+    // folders, we show a "Create folder first" affordance that opens the
+    // new-folder prompt.
+    const folders = state.folders || [];
+    const inFolderId = session.folderId || null;
+    let moveHtml = "";
+    if (folders.length === 0) {
+      moveHtml = `
+        <button class="chat-menu-item" data-menu-action="new-folder-from-chat" data-chat-id="${session.id}" type="button">
+          <span class="chat-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></span>
+          <span>New folder…</span>
+        </button>
+      `;
+    } else {
+      const items = folders.map(f => `
+        <button class="chat-menu-item chat-menu-subitem${f.id === inFolderId ? " active" : ""}" data-menu-action="move-to-folder" data-chat-id="${session.id}" data-target-folder-id="${f.id}" type="button">
+          <span class="chat-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg></span>
+          <span>${escapeHtml(f.name)}${f.id === inFolderId ? " ✓" : ""}</span>
+        </button>
+      `).join("");
+      const removeItem = inFolderId ? `
+        <button class="chat-menu-item chat-menu-subitem" data-menu-action="move-to-folder" data-chat-id="${session.id}" data-target-folder-id="" type="button">
+          <span class="chat-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="6" y1="12" x2="18" y2="12"/></svg></span>
+          <span>Remove from folder</span>
+        </button>
+      ` : "";
+      const newFolderItem = `
+        <button class="chat-menu-item chat-menu-subitem" data-menu-action="new-folder-from-chat" data-chat-id="${session.id}" type="button">
+          <span class="chat-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></svg></span>
+          <span>New folder…</span>
+        </button>
+      `;
+      moveHtml = `
+        <div class="chat-menu-section-label">MOVE TO FOLDER</div>
+        ${items}
+        ${removeItem}
+        ${newFolderItem}
+      `;
+    }
     return `
       <div class="chat-menu-dropdown chat-menu-dropdown--${origin}" data-menu-dropdown="1">
         <button class="chat-menu-item" data-menu-action="rename" data-chat-id="${session.id}" type="button">
@@ -5534,6 +5692,9 @@ Begin.` },
           <span class="chat-menu-icon">${pinIconSvg()}</span>
           <span>${isPinned ? "Unpin" : "Pin"}</span>
         </button>
+        <div class="chat-menu-divider"></div>
+        ${moveHtml}
+        <div class="chat-menu-divider"></div>
         <button class="chat-menu-item chat-menu-item--danger" data-menu-action="delete" data-chat-id="${session.id}" type="button">
           <span class="chat-menu-icon">${trashIconSvg()}</span>
           <span>Delete</span>
@@ -5662,6 +5823,9 @@ Begin.` },
           <button class="new-chat-btn" id="new-chat-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             New chat
+          </button>
+          <button class="magnifier-btn" id="new-folder-btn" title="New folder" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
           </button>
           <button class="magnifier-btn ${state.searchOpen ? "active" : ""}" id="magnifier-btn" title="Search conversations">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -7548,11 +7712,7 @@ Begin.` },
     const filtered = state.searchQuery
       ? state.unlimitedSessions.filter(s => (s.title || "").toLowerCase().includes(state.searchQuery.toLowerCase()))
       : state.unlimitedSessions;
-    if (filtered.length === 0) {
-      return '<div class="unl-chat-empty">' + (state.searchQuery ? "No matches." : "No conversations yet.") + '</div>';
-    }
-    const pinned = filtered.filter(s => !!s.pinnedAt);
-    const recent = filtered.filter(s => !s.pinnedAt);
+
     const renderItem = (s) => {
       const isActive = s.id === state.activeUnlimitedId;
       return `
@@ -7568,13 +7728,78 @@ Begin.` },
         </div>
       `;
     };
+
     let html = "";
+
+    // ===== Folders section =====
+    // Small "+" trigger to create a new folder always visible above the
+    // folder list. Folder sections render as collapsible groups with a
+    // chat count badge; expanded folders show their chats indented.
+    // Search mode suppresses folder grouping — matches surface in the
+    // recent list regardless of folder so members can find things fast.
+    const folders = state.folders || [];
+    if (!state.searchQuery && folders.length > 0) {
+      const foldersHtml = folders.map((f) => {
+        const isExpanded = !!state.foldersExpanded[f.id];
+        const menuOpen = state.openFolderMenuId === f.id;
+        const chatsInFolder = state.unlimitedSessions.filter(s => s.folderId === f.id);
+        const chatsHtml = isExpanded
+          ? (chatsInFolder.length === 0
+              ? '<div class="unl-folder-empty">Empty. Move chats here from the menu.</div>'
+              : chatsInFolder.map(renderItem).join(""))
+          : "";
+        return `
+          <div class="unl-folder ${isExpanded ? "expanded" : ""}" data-folder-id="${f.id}">
+            <div class="unl-folder-head" data-folder-toggle="${f.id}">
+              <span class="unl-folder-caret">${isExpanded ? "▾" : "▸"}</span>
+              <span class="unl-folder-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+              </span>
+              <span class="unl-folder-name">${escapeHtml(f.name)}</span>
+              <span class="unl-folder-count">${chatsInFolder.length}</span>
+              <button class="unl-folder-menu-btn" data-folder-menu-id="${f.id}" type="button" aria-label="Folder options">${dotsIconSvg()}</button>
+              ${menuOpen ? `
+                <div class="chat-menu-dropdown chat-menu-dropdown--sidebar" data-folder-menu-dropdown="${f.id}">
+                  <button class="chat-menu-item" data-folder-action="rename" data-folder-id="${f.id}" type="button">
+                    <span class="chat-menu-icon">${pencilIconSvg()}</span><span>Rename</span>
+                  </button>
+                  <button class="chat-menu-item chat-menu-item--danger" data-folder-action="delete" data-folder-id="${f.id}" type="button">
+                    <span class="chat-menu-icon">${trashIconSvg()}</span><span>Delete folder</span>
+                  </button>
+                </div>` : ""}
+            </div>
+            ${isExpanded ? `<div class="unl-folder-chats">${chatsHtml}</div>` : ""}
+          </div>
+        `;
+      }).join("");
+      html += `<div class="unl-folder-list">${foldersHtml}</div>`;
+    }
+
+    // ===== Uncategorized / recent chats =====
+    // When searching, show all matches flat. Otherwise show only chats
+    // NOT inside a folder in the recent list (folder chats live inside
+    // their folder above).
+    const flatChats = state.searchQuery
+      ? filtered
+      : filtered.filter(s => !s.folderId);
+
+    if (flatChats.length === 0 && folders.length === 0) {
+      return html + '<div class="unl-chat-empty">' + (state.searchQuery ? "No matches." : "No conversations yet.") + '</div>';
+    }
+    if (flatChats.length === 0 && !state.searchQuery) {
+      // Folders exist, but nothing uncategorized. Show a hint below the folders.
+      html += '<div class="unl-chat-empty">All chats are inside folders.</div>';
+      return html;
+    }
+
+    const pinned = flatChats.filter(s => !!s.pinnedAt);
+    const recent = flatChats.filter(s => !s.pinnedAt);
     if (pinned.length > 0) {
       html += '<div class="unl-chat-section-label">PINNED</div>';
       html += pinned.map(renderItem).join("");
     }
     if (recent.length > 0) {
-      if (pinned.length > 0) html += '<div class="unl-chat-section-label">RECENT</div>';
+      if (pinned.length > 0 || folders.length > 0) html += '<div class="unl-chat-section-label">' + (folders.length > 0 ? "CHATS" : "RECENT") + '</div>';
       html += recent.map(renderItem).join("");
     }
     return html;
@@ -7673,8 +7898,139 @@ Begin.` },
         else if (action === "unpin") onChatPinToggle(id, false);
         else if (action === "export") onExportUnlimitedChatClick(id);
         else if (action === "delete") onChatDeleteRequest(id);
+        else if (action === "move-to-folder") {
+          const folderId = btn.dataset.targetFolderId || null;
+          onChatMoveToFolder(id, folderId);
+        } else if (action === "new-folder-from-chat") {
+          onNewFolderFromChat(id);
+        }
       });
     });
+
+    // Folder-level: expand/collapse, open menu, rename, delete.
+    document.querySelectorAll("[data-folder-toggle]").forEach(el => {
+      el.addEventListener("click", (e) => {
+        // Ignore clicks that landed on the folder's own menu button — those
+        // are handled below and should NOT also toggle expand.
+        if (e.target.closest("[data-folder-menu-id]")) return;
+        if (e.target.closest("[data-folder-menu-dropdown]")) return;
+        const fid = el.dataset.folderToggle;
+        onFolderToggleExpand(fid);
+      });
+    });
+    document.querySelectorAll("[data-folder-menu-id]").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const fid = btn.dataset.folderMenuId;
+        state.openFolderMenuId = state.openFolderMenuId === fid ? null : fid;
+        state.openChatMenuId = null;
+        render();
+      });
+    });
+    document.querySelectorAll("[data-folder-action]").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const action = btn.dataset.folderAction;
+        const fid = btn.dataset.folderId;
+        state.openFolderMenuId = null;
+        if (action === "rename") onFolderRename(fid);
+        else if (action === "delete") onFolderDelete(fid);
+      });
+    });
+    // "New folder" button in the sidebar toolbar
+    const newFolderBtn = document.getElementById("new-folder-btn");
+    if (newFolderBtn) newFolderBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      onNewFolder();
+    });
+  }
+
+  // ===== Folder click handlers =====
+  function onFolderToggleExpand(fid) {
+    state.foldersExpanded[fid] = !state.foldersExpanded[fid];
+    render();
+  }
+  async function onNewFolder() {
+    const name = (window.prompt("Name your new folder", "") || "").trim();
+    if (!name) return;
+    try {
+      const folder = await apiCreateFolder(name);
+      state.folders.push(folder);
+      state.foldersExpanded[folder.id] = true;
+      render();
+    } catch (err) {
+      console.error("new_folder_failed", err);
+      alert("Could not create the folder. " + (err.message || "Please try again."));
+    }
+  }
+  async function onNewFolderFromChat(chatId) {
+    const name = (window.prompt("Name your new folder", "") || "").trim();
+    if (!name) return;
+    try {
+      const folder = await apiCreateFolder(name);
+      state.folders.push(folder);
+      state.foldersExpanded[folder.id] = true;
+      // Immediately move the chat into the new folder.
+      await apiMoveChatToFolder(chatId, folder.id);
+      const chat = state.unlimitedSessions.find(s => s.id === chatId);
+      if (chat) chat.folderId = folder.id;
+      state.openChatMenuId = null;
+      render();
+    } catch (err) {
+      console.error("new_folder_from_chat_failed", err);
+      alert("Could not create the folder. " + (err.message || "Please try again."));
+    }
+  }
+  async function onFolderRename(fid) {
+    const folder = state.folders.find(f => f.id === fid);
+    if (!folder) return;
+    const name = (window.prompt("Rename folder", folder.name) || "").trim();
+    if (!name || name === folder.name) return;
+    try {
+      await apiRenameFolder(fid, name);
+      folder.name = name;
+      render();
+    } catch (err) {
+      console.error("folder_rename_failed", err);
+      alert("Could not rename the folder. " + (err.message || "Please try again."));
+    }
+  }
+  async function onFolderDelete(fid) {
+    const folder = state.folders.find(f => f.id === fid);
+    if (!folder) return;
+    const chatsInside = state.unlimitedSessions.filter(s => s.folderId === fid).length;
+    const suffix = chatsInside > 0
+      ? `\n\nThe ${chatsInside} chat${chatsInside === 1 ? "" : "s"} inside will move back to your uncategorized list (nothing is deleted).`
+      : "";
+    if (!window.confirm(`Delete folder "${folder.name}"?${suffix}`)) return;
+    try {
+      await apiDeleteFolder(fid);
+      state.folders = state.folders.filter(f => f.id !== fid);
+      delete state.foldersExpanded[fid];
+      // Uncategorize any chats that were inside.
+      state.unlimitedSessions.forEach(s => { if (s.folderId === fid) s.folderId = null; });
+      render();
+    } catch (err) {
+      console.error("folder_delete_failed", err);
+      alert("Could not delete the folder. " + (err.message || "Please try again."));
+    }
+  }
+  async function onChatMoveToFolder(chatId, folderId) {
+    const chat = state.unlimitedSessions.find(s => s.id === chatId);
+    if (!chat) return;
+    try {
+      await apiMoveChatToFolder(chatId, folderId);
+      chat.folderId = folderId || null;
+      state.openChatMenuId = null;
+      // Auto-expand the target folder so the moved chat is visible.
+      if (folderId) state.foldersExpanded[folderId] = true;
+      render();
+    } catch (err) {
+      console.error("move_chat_failed", err);
+      alert("Could not move the chat. " + (err.message || "Please try again."));
+    }
   }
 
   // Rename modal wiring. Enter saves, Escape cancels, click on the dim
@@ -8440,7 +8796,7 @@ Begin.` },
       state.loginLoading = false;
       state.loginStep = "email";
       state.loginError = "";
-      loadFullState().then(() => loadUnlimitedSessions().then(() => {
+      loadFullState().then(() => Promise.all([loadUnlimitedSessions(), loadFolders()]).then(() => {
         render();
         // Fresh login — check whether to surface the notification opt-in,
         // and self-heal any stale push subscription state.
@@ -10521,6 +10877,66 @@ Begin.` },
     catch (e) { console.warn("could_not_load_unlimited_sessions", e?.message); state.unlimitedSessions = []; }
   }
 
+  // ===== Folders API =====
+  // Custom folders for organizing Unlimited chats. Members create their
+  // own (e.g., "Business", "Relationships", "Deep work"). Each chat can
+  // sit in at most one folder. Folders are Unlimited-tier only.
+  async function apiListFolders() {
+    const res = await fetch(API_BASE + "/folders", {
+      headers: { "x-session-token": state.sessionToken },
+    });
+    if (!res.ok) throw new Error("folders_list_" + res.status);
+    const data = await res.json();
+    return data.folders || [];
+  }
+  async function apiCreateFolder(name) {
+    const res = await fetch(API_BASE + "/folders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken },
+      body: JSON.stringify({ name }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || data.error || "folder_create_failed");
+    return data.folder;
+  }
+  async function apiRenameFolder(id, name) {
+    const res = await fetch(API_BASE + "/folders", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken },
+      body: JSON.stringify({ id, name }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.message || data.error || "folder_rename_failed");
+    }
+  }
+  async function apiDeleteFolder(id) {
+    const res = await fetch(API_BASE + "/folders", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken },
+      body: JSON.stringify({ id }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.message || data.error || "folder_delete_failed");
+    }
+  }
+  async function apiMoveChatToFolder(sessionId, folderId) {
+    const res = await fetch(API_BASE + "/unlimited/move-to-folder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken },
+      body: JSON.stringify({ sessionId, folderId: folderId || null }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.message || data.error || "move_failed");
+    }
+  }
+  async function loadFolders() {
+    try { state.folders = await apiListFolders(); }
+    catch (e) { console.warn("could_not_load_folders", e?.message); state.folders = []; }
+  }
+
   // The normal app startup. In embed mode this runs only AFTER the identity
   // gate has verified the member.
   function initApp() {
@@ -10536,7 +10952,7 @@ Begin.` },
     const existing = EMBED_MODE ? null : loadToken();
     if (existing) {
       state.sessionToken = existing;
-      loadFullState().then(() => loadUnlimitedSessions().then(() => {
+      loadFullState().then(() => Promise.all([loadUnlimitedSessions(), loadFolders()]).then(() => {
         render();
         // First-login T&C + Privacy acceptance gate. Blocks the app until
         // the member ticks the checkbox + clicks "I understand — begin".
