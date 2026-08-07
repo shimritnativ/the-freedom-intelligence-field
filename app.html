@@ -1936,6 +1936,25 @@
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     color: var(--text, #1F1810);
+    /* Cinematic entry — every card slides up + fades in with a soft
+       easing curve so the moment feels intentional, not popped in. */
+    animation: day1CardEnter 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  /* Stagger Card 2 slightly behind Card 1 so they don't both burst in
+     at the exact same instant on first Day 1 load. */
+  .day1-welcome-card[data-day1-card="2"] { animation-delay: 140ms; }
+  /* When Card 2 is revealed after a click (not on initial load), replay
+     the entry animation from its resting position. */
+  .day1-welcome-card.day1-welcome-reveal {
+    animation: day1CardEnter 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: 0ms;
+  }
+  @keyframes day1CardEnter {
+    from { opacity: 0; transform: translateY(18px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .day1-welcome-card { animation: none; }
   }
   .day1-welcome-eyebrow {
     font-size: 10.5px;
@@ -2019,11 +2038,31 @@
     transform: translateY(-1px);
     box-shadow: 0 6px 18px rgba(201, 168, 76, 0.32);
   }
+  .day1-welcome-cta:active:not(:disabled) {
+    transform: scale(0.97);
+    box-shadow: 0 2px 8px rgba(201, 168, 76, 0.20);
+  }
   .day1-welcome-cta:disabled {
     background: rgba(201, 168, 76, 0.18);
     color: var(--text-mute, #6B5D48);
     cursor: default;
     box-shadow: none;
+    transition: background 380ms cubic-bezier(0.4, 0, 0.2, 1),
+                color 380ms cubic-bezier(0.4, 0, 0.2, 1),
+                transform 260ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  /* Soft bloom when the button transitions to "done" state — subtle
+     scale bounce that signals completion without being showy. */
+  .day1-welcome-cta.day1-welcome-cta-just-done {
+    animation: day1CtaDone 520ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes day1CtaDone {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.04); }
+    100% { transform: scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .day1-welcome-cta.day1-welcome-cta-just-done { animation: none; }
   }
   .day1-welcome-cta .day1-check {
     display: inline-block;
@@ -7958,30 +7997,49 @@ Begin.` },
     if (btn1 && !btn1.disabled) {
       btn1.addEventListener("click", () => {
         day1IntroWriteStep("begin1");
-        // Reveal Card 2 with a soft slide + fade.
-        if (card2) {
-          card2.classList.remove("day1-welcome-hidden");
-          card2.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-        // Grey Card 1's button.
+        // Animate button into "done" state first so the confirmation
+        // registers before the reveal of Card 2 pulls attention away.
         btn1.disabled = true;
+        btn1.classList.add("day1-welcome-cta-just-done");
         btn1.innerHTML = '<span class="day1-check">✓</span>Started';
+        // Reveal Card 2 with the same cinematic enter animation Card 1
+        // used on load. Slight delay after the button state settles.
+        if (card2) {
+          setTimeout(() => {
+            card2.classList.remove("day1-welcome-hidden");
+            // Trigger a fresh CSS animation run by re-adding the reveal
+            // class on the next frame (removing the class alone won't
+            // replay the animation if it never started).
+            requestAnimationFrame(() => {
+              card2.classList.add("day1-welcome-reveal");
+              // Smooth scroll after the card has begun its entry so the
+              // motion of the card matches the motion of the scroll.
+              setTimeout(() => {
+                card2.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 120);
+            });
+          }, 240);
+        }
       });
     }
     if (btn2 && !btn2.disabled) {
       btn2.addEventListener("click", () => {
         day1IntroWriteStep("done");
-        // Auto-fill the composer + focus so member just hits Send.
-        const inputEl = document.getElementById("input");
-        if (inputEl) {
-          inputEl.value = DAY1_INTRO_PROMPT_TEXT;
-          inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-          inputEl.focus();
-          try { inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length); } catch (_) {}
-          inputEl.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
+        // Fire the button "done" bloom first, then fill + focus after a
+        // short beat so the moment feels considered instead of instant.
         btn2.disabled = true;
+        btn2.classList.add("day1-welcome-cta-just-done");
         btn2.innerHTML = '<span class="day1-check">✓</span>Prompt inserted';
+        setTimeout(() => {
+          const inputEl = document.getElementById("input");
+          if (inputEl) {
+            inputEl.value = DAY1_INTRO_PROMPT_TEXT;
+            inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+            inputEl.focus();
+            try { inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length); } catch (_) {}
+            inputEl.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }, 420);
       });
     }
   }
@@ -8062,11 +8120,15 @@ Begin.` },
     const wrapper = document.getElementById("messages-wrap");
     if (wrapper) {
       // Default: scroll to bottom so newest message is in view. Override
-      // for the Day 1 welcome-card flow: when the video card is the first
-      // thing a member should see, scroll to the TOP so it's in view on
-      // load rather than the input at the bottom.
+      // for the Day 1 welcome-card flow: scroll to the TOP so the video
+      // is the first thing a member sees on load. Uses smooth scroll for
+      // the intro path so it feels considered instead of snap-jumping.
       if (day1CardsWillShow && day1Step !== "done") {
-        wrapper.scrollTop = 0;
+        try {
+          wrapper.scrollTo({ top: 0, behavior: "smooth" });
+        } catch (_) {
+          wrapper.scrollTop = 0;
+        }
       } else {
         wrapper.scrollTop = wrapper.scrollHeight;
       }
