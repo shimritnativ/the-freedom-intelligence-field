@@ -7868,6 +7868,15 @@ Begin.` },
     if (state.currentDay !== 1) return "";
     if (state.tier === "full") return "";
     const step = day1IntroReadStep();
+    // Skip for members who ALREADY have Day 1 chat history but never went
+    // through the new welcome-cards flow. These are existing members who
+    // completed Day 1 before this feature shipped — showing them a fresh
+    // "Begin Day 1" UI now would be jarring. Detection: any user message
+    // exists AND no localStorage flag from the new flow. Once a member
+    // has clicked through the new flow at least once (step !== null),
+    // the cards stay in scrollback so they can rewatch.
+    const hasUserMessages = (state.messages || []).some(m => m && m.role === "user");
+    if (hasUserMessages && step === null) return "";
     // Determine each card's state:
     //   card1 button: active if step is null, "started ✓" if not null
     //   card2 visible: only if step is "begin1" or "done"
