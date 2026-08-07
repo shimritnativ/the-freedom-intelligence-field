@@ -8133,16 +8133,6 @@ Begin.` },
               <span class="unl-folder-count">${chatsInFolder.length}</span>
               <button class="unl-folder-menu-btn" data-folder-menu-id="${f.id}" type="button" aria-label="Folder options">${dotsIconSvg()}</button>
             </div>
-            ${menuOpen ? `
-              <div class="folder-action-menu" data-folder-menu-dropdown="${f.id}">
-                <button class="chat-menu-item" data-folder-action="rename" data-folder-id="${f.id}" type="button">
-                  <span class="chat-menu-icon">${pencilIconSvg()}</span><span>Rename</span>
-                </button>
-                <button class="chat-menu-item chat-menu-item--danger" data-folder-action="delete" data-folder-id="${f.id}" type="button">
-                  <span class="chat-menu-icon">${trashIconSvg()}</span><span>Delete folder</span>
-                </button>
-              </div>
-            ` : ""}
             ${isExpanded ? `<div class="unl-folder-chats">${chatsHtml}</div>` : ""}
           </div>
         `;
@@ -8312,25 +8302,64 @@ Begin.` },
         onFolderToggleExpand(fid);
       });
     });
+    // Folder 3-dot menu — bypass render() entirely to avoid flickering
+    // the main app content on every open/close. Inject the dropdown
+    // directly into DOM, remove on outside click. Also click-toggle
+    // closes an already-open menu.
     document.querySelectorAll("[data-folder-menu-id]").forEach(btn => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         e.preventDefault();
         const fid = btn.dataset.folderMenuId;
-        state.openFolderMenuId = state.openFolderMenuId === fid ? null : fid;
-        state.openChatMenuId = null;
-        render();
-      });
-    });
-    document.querySelectorAll("[data-folder-action]").forEach(btn => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        const action = btn.dataset.folderAction;
-        const fid = btn.dataset.folderId;
-        state.openFolderMenuId = null;
-        if (action === "rename") onFolderRename(fid);
-        else if (action === "delete") onFolderDelete(fid);
+        // Remove any existing folder menu first
+        document.querySelectorAll(".folder-action-menu").forEach(el => el.remove());
+        // If it was ours (toggle-off), we're done
+        if (state.openFolderMenuId === fid) {
+          state.openFolderMenuId = null;
+          return;
+        }
+        state.openFolderMenuId = fid;
+        // Build + append the menu into the folder container
+        const folderEl = btn.closest(".unl-folder");
+        if (!folderEl) return;
+        const menuHtml = `
+          <div class="folder-action-menu" data-folder-menu-dropdown="${fid}">
+            <button class="chat-menu-item" data-folder-action="rename" data-folder-id="${fid}" type="button">
+              <span class="chat-menu-icon">${pencilIconSvg()}</span><span>Rename</span>
+            </button>
+            <button class="chat-menu-item chat-menu-item--danger" data-folder-action="delete" data-folder-id="${fid}" type="button">
+              <span class="chat-menu-icon">${trashIconSvg()}</span><span>Delete folder</span>
+            </button>
+          </div>
+        `;
+        folderEl.insertAdjacentHTML("beforeend", menuHtml);
+        // Wire the action buttons on the freshly-inserted menu (they
+        // aren't part of the original render, so the earlier forEach
+        // wiring pass missed them).
+        folderEl.querySelectorAll("[data-folder-action]").forEach(actionBtn => {
+          actionBtn.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            ev.preventDefault();
+            const action = actionBtn.dataset.folderAction;
+            const targetFid = actionBtn.dataset.folderId;
+            document.querySelectorAll(".folder-action-menu").forEach(el => el.remove());
+            state.openFolderMenuId = null;
+            if (action === "rename") onFolderRename(targetFid);
+            else if (action === "delete") onFolderDelete(targetFid);
+          });
+        });
+        // Outside-click closes. Attach on next tick so this same click
+        // doesn't immediately close it. Removes itself after firing.
+        setTimeout(() => {
+          const closer = (ev) => {
+            if (ev.target.closest(".folder-action-menu")) return;
+            if (ev.target.closest("[data-folder-menu-id]")) return;
+            document.querySelectorAll(".folder-action-menu").forEach(el => el.remove());
+            state.openFolderMenuId = null;
+            document.removeEventListener("click", closer);
+          };
+          document.addEventListener("click", closer);
+        }, 50);
       });
     });
     // "New folder" button in the sidebar toolbar
