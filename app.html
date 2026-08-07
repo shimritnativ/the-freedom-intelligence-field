@@ -332,6 +332,35 @@
   }
   .acct-signed-in-email { color: var(--text); font-weight: 600; word-break: break-all; opacity: 0.9; }
   .acct-signout-row { display: flex; justify-content: center; margin-top: 8px; }
+  /* Legal links — tucked under the Useful Links section as understated
+     text-only footer so they don't compete with the primary actions.
+     Matches the login page footer style. */
+  .acct-legal-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 6px 10px;
+    padding: 18px 0 12px;
+    margin-top: 10px;
+    border-top: 1px solid var(--border);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 11.5px;
+    color: var(--text-mute);
+    letter-spacing: 0.02em;
+  }
+  .acct-legal-links a {
+    color: var(--text-mute);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-color: var(--gold-line);
+    transition: color 0.15s ease, text-decoration-color 0.15s ease;
+  }
+  .acct-legal-links a:hover {
+    color: var(--gold-warm);
+    text-decoration-color: var(--gold);
+  }
+  .acct-legal-sep { color: var(--text-mute); opacity: 0.5; }
   .acct-signout-btn {
     background: transparent;
     color: var(--text-dim);
@@ -2539,9 +2568,84 @@
     height: 1px; background: var(--border);
     margin: 4px 6px;
   }
-  .chat-menu-subitem { font-size: 12.5px; padding-top: 6px; padding-bottom: 6px; }
   .chat-menu-item.active { background: var(--gold-soft); }
   .chat-menu-item.active span:not(.chat-menu-icon) { font-weight: 700; }
+
+  /* ===== Add-to-folder submenu (Claude-style flyout) ===== */
+  .chat-menu-parent { position: relative; }
+  .chat-menu-parent-btn { width: 100%; }
+  .chat-menu-parent-label { flex: 1; text-align: left; }
+  .chat-menu-parent-caret {
+    color: var(--text-mute); font-size: 10px; margin-left: 8px;
+    transition: transform 0.18s ease, color 0.18s ease;
+  }
+  .chat-menu-parent.submenu-open .chat-menu-parent-caret,
+  .chat-menu-parent:hover .chat-menu-parent-caret {
+    color: var(--gold);
+    transform: translateX(2px);
+  }
+  .chat-menu-parent:hover > .chat-menu-parent-btn,
+  .chat-menu-parent.submenu-open > .chat-menu-parent-btn {
+    background: var(--gold-soft);
+  }
+  .chat-submenu {
+    position: absolute;
+    left: calc(100% + 4px);
+    top: -4px;
+    min-width: 200px;
+    max-width: 260px;
+    background: var(--panel, #FFFDF6);
+    border: 1px solid var(--gold-line);
+    border-radius: 10px;
+    padding: 6px 0;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14),
+                0 2px 6px rgba(0, 0, 0, 0.06);
+    z-index: 10;
+    display: none;
+    animation: chatSubmenuIn 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .chat-menu-parent.submenu-open > .chat-submenu,
+  .chat-menu-parent:hover > .chat-submenu {
+    display: block;
+  }
+  @keyframes chatSubmenuIn {
+    from { opacity: 0; transform: translateX(-6px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .chat-submenu { animation: none; }
+    .chat-menu-parent-caret { transition: none; }
+  }
+  .chat-submenu-item {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%;
+    padding: 9px 14px;
+    background: transparent; border: 0;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.12s ease;
+  }
+  .chat-submenu-item:hover { background: var(--gold-soft); }
+  .chat-submenu-item.active { color: var(--text); }
+  .chat-submenu-item.active .chat-submenu-label { font-weight: 700; }
+  .chat-submenu-icon { color: var(--gold); display: inline-flex; flex-shrink: 0; }
+  .chat-submenu-icon svg { width: 14px; height: 14px; }
+  .chat-submenu-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chat-submenu-check { color: var(--gold); font-weight: 700; margin-left: 6px; }
+  .chat-submenu-divider { height: 1px; background: var(--border); margin: 4px 8px; }
+  /* When there's not enough room to the right, flip to the left. Kept
+     out of pure CSS since we don't know viewport width at render time
+     without JS; fall back to the default right-side placement which
+     works for the vast majority of chat menus. */
+  @media (max-width: 520px) {
+    .chat-submenu { position: static; box-shadow: none; border: 0; padding-left: 22px; margin-top: 2px; }
+    .chat-menu-parent-caret { transform: rotate(90deg); }
+    .chat-menu-parent.submenu-open .chat-menu-parent-caret { transform: rotate(90deg); }
+  }
   .unl-pin-limit-error { margin-top: 6px; padding: 8px 10px; background: rgba(220, 80, 80, 0.12); border: 1px solid rgba(220, 80, 80, 0.4); border-radius: 6px; color: #C03A2B; font-size: 10px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-style: italic; }
 
   /* 3-dot menu trigger button (sidebar). Always visible on mobile so long-press
@@ -4521,6 +4625,9 @@ Begin.` },
     //   { mode, folderId?, currentName?, chatId?, draft, saving }
     // mode is one of: "create" | "create-from-chat" | "rename" | "delete"
     folderModal: null,
+    // Hover / tap submenu inside the chat 3-dot menu. Currently just
+    // "folders" (the Add-to-folder → folder-list flyout). null = closed.
+    openChatSubmenu: null,
     activeUnlimitedId: null,
     unlimitedMessages: [],
     searchOpen: false,
@@ -5384,44 +5491,46 @@ Begin.` },
     if (!session) return "";
     const pos = state.menuPosition || { top: 100, left: 100 };
     const isPinned = !!session.pinnedAt;
-    // Move-to-folder submenu — folders (if any) + Remove + New folder.
+    // Add-to-folder parent → flyout submenu on hover / tap (Claude-style).
+    // Contents: folder list + Remove (if inside one) + New folder…
     const folders = state.folders || [];
     const inFolderId = session.folderId || null;
-    let moveHtml = "";
-    if (folders.length === 0) {
-      moveHtml = `
-        <div class="chat-menu-section-label">FOLDERS</div>
-        <button class="chat-menu-item" data-menu-action="new-folder-from-chat" data-chat-id="${session.id}" type="button">
-          <span class="chat-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></span>
-          <span>New folder…</span>
-        </button>
-      `;
-    } else {
+    const submenuOpen = state.openChatSubmenu === "folders";
+    const submenuInner = (() => {
       const items = folders.map(f => `
-        <button class="chat-menu-item chat-menu-subitem${f.id === inFolderId ? " active" : ""}" data-menu-action="move-to-folder" data-chat-id="${session.id}" data-target-folder-id="${f.id}" type="button">
-          <span class="chat-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg></span>
-          <span>${escapeHtml(f.name)}${f.id === inFolderId ? "  ✓" : ""}</span>
+        <button class="chat-submenu-item${f.id === inFolderId ? " active" : ""}" data-menu-action="move-to-folder" data-chat-id="${session.id}" data-target-folder-id="${f.id}" type="button">
+          <span class="chat-submenu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg></span>
+          <span class="chat-submenu-label">${escapeHtml(f.name)}</span>
+          ${f.id === inFolderId ? '<span class="chat-submenu-check">✓</span>' : ""}
         </button>
       `).join("");
       const removeItem = inFolderId ? `
-        <button class="chat-menu-item chat-menu-subitem" data-menu-action="move-to-folder" data-chat-id="${session.id}" data-target-folder-id="" type="button">
-          <span class="chat-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="6" y1="12" x2="18" y2="12"/></svg></span>
-          <span>Remove from folder</span>
+        <div class="chat-submenu-divider"></div>
+        <button class="chat-submenu-item" data-menu-action="move-to-folder" data-chat-id="${session.id}" data-target-folder-id="" type="button">
+          <span class="chat-submenu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="6" y1="12" x2="18" y2="12"/></svg></span>
+          <span class="chat-submenu-label">Remove from folder</span>
         </button>
       ` : "";
+      const separatorBeforeNew = (folders.length > 0 && !inFolderId) ? '<div class="chat-submenu-divider"></div>' : "";
       const newFolderItem = `
-        <button class="chat-menu-item chat-menu-subitem" data-menu-action="new-folder-from-chat" data-chat-id="${session.id}" type="button">
-          <span class="chat-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></svg></span>
-          <span>New folder…</span>
+        ${separatorBeforeNew}
+        <button class="chat-submenu-item" data-menu-action="new-folder-from-chat" data-chat-id="${session.id}" type="button">
+          <span class="chat-submenu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></svg></span>
+          <span class="chat-submenu-label">New folder…</span>
         </button>
       `;
-      moveHtml = `
-        <div class="chat-menu-section-label">MOVE TO FOLDER</div>
-        ${items}
-        ${removeItem}
-        ${newFolderItem}
-      `;
-    }
+      return items + removeItem + newFolderItem;
+    })();
+    const moveHtml = `
+      <div class="chat-menu-parent ${submenuOpen ? "submenu-open" : ""}" data-chat-submenu-parent="folders">
+        <button class="chat-menu-item chat-menu-parent-btn" data-chat-submenu-toggle="folders" type="button">
+          <span class="chat-menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg></span>
+          <span class="chat-menu-parent-label">Add to folder</span>
+          <span class="chat-menu-parent-caret" aria-hidden="true">▸</span>
+        </button>
+        <div class="chat-submenu" role="menu">${submenuInner}</div>
+      </div>
+    `;
     return `
       <div class="floating-chat-menu" style="top: ${pos.top}px; left: ${pos.left}px;" data-menu-dropdown="1">
         <button class="chat-menu-item" data-menu-action="rename" data-chat-id="${session.id}" type="button">
@@ -6884,7 +6993,11 @@ Begin.` },
     const isYearly = state.subscriptionPlan === "yearly";
     const planLabel = isYearly ? "Yearly · Active" : "Monthly · Active";
     const unlimitedOwnedActions = isYearly
-      ? `<a class="acct-btn subtle" href="${CANCEL_BILLING_URL}" target="_blank" rel="noopener noreferrer">Manage subscription ↗</a>`
+      // Yearly subscribers see ONE action here: manage their subscription.
+      // Use the primary solid-gold style so it reads as an actual button,
+      // not a link. The subtle ghost variant is reserved for secondary
+      // actions that sit next to a primary (e.g. Cancel next to Upgrade).
+      ? `<a class="acct-btn" href="${CANCEL_BILLING_URL}" target="_blank" rel="noopener noreferrer">Manage subscription ↗</a>`
       : `<a class="acct-btn" href="${YEARLY_UPGRADE_URL}" target="_blank" rel="noopener noreferrer">Upgrade to Yearly ↗</a>
          <a class="acct-btn subtle" href="${CANCEL_BILLING_URL}" target="_blank" rel="noopener noreferrer">Cancel</a>`;
     const unlimitedBlock = isFull
@@ -7034,15 +7147,14 @@ Begin.` },
               </span>
               <span class="acct-link-arrow" aria-hidden="true">↓</span>
             </button>
-            <a class="acct-link" href="/terms" target="_blank" rel="noopener noreferrer">
-              Terms &amp; Conditions <span class="acct-link-arrow" aria-hidden="true">↗</span>
-            </a>
-            <a class="acct-link" href="/privacy" target="_blank" rel="noopener noreferrer">
-              Privacy Policy <span class="acct-link-arrow" aria-hidden="true">↗</span>
-            </a>
-            <a class="acct-link" href="/impressum" target="_blank" rel="noopener noreferrer">
-              Impressum <span class="acct-link-arrow" aria-hidden="true">↗</span>
-            </a>
+          </div>
+
+          <div class="acct-legal-links">
+            <a href="/terms" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a>
+            <span class="acct-legal-sep">·</span>
+            <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+            <span class="acct-legal-sep">·</span>
+            <a href="/impressum" target="_blank" rel="noopener noreferrer">Impressum</a>
           </div>
 
           <div class="acct-signout-row">
@@ -8110,7 +8222,50 @@ Begin.` },
         } else if (action === "new-folder-from-chat") {
           onNewFolderFromChat(id);
         }
+        // Clear the submenu open state after any action fires so the
+        // next menu opens fresh, not with the folder submenu already open.
+        state.openChatSubmenu = null;
       });
+    });
+
+    // ===== Chat menu submenu (Add to folder flyout) =====
+    // Hover on desktop, tap on mobile. Uses a debounced close so the
+    // cursor can travel from the parent row across the tiny gap to the
+    // submenu without collapsing it mid-way.
+    let __submenuCloseTimer = null;
+    const openSub = (name) => {
+      if (__submenuCloseTimer) { clearTimeout(__submenuCloseTimer); __submenuCloseTimer = null; }
+      if (state.openChatSubmenu === name) return;
+      state.openChatSubmenu = name;
+      render();
+    };
+    const scheduleCloseSub = () => {
+      if (__submenuCloseTimer) clearTimeout(__submenuCloseTimer);
+      __submenuCloseTimer = setTimeout(() => {
+        if (state.openChatSubmenu !== null) {
+          state.openChatSubmenu = null;
+          render();
+        }
+      }, 220);
+    };
+    // Parent button — hover opens, tap toggles (for touch users).
+    document.querySelectorAll("[data-chat-submenu-toggle]").forEach(btn => {
+      const name = btn.dataset.chatSubmenuToggle;
+      btn.addEventListener("mouseenter", () => openSub(name));
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        state.openChatSubmenu = state.openChatSubmenu === name ? null : name;
+        render();
+      });
+    });
+    // Parent CONTAINER — cancel close if hovering back over the parent
+    // row or moving into the submenu itself.
+    document.querySelectorAll("[data-chat-submenu-parent]").forEach(parent => {
+      parent.addEventListener("mouseenter", () => {
+        if (__submenuCloseTimer) { clearTimeout(__submenuCloseTimer); __submenuCloseTimer = null; }
+      });
+      parent.addEventListener("mouseleave", scheduleCloseSub);
     });
 
     // Folder-level: expand/collapse, open menu, rename, delete.
