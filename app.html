@@ -7896,6 +7896,7 @@ Begin.` },
   // changes in lib/prompts/day1.js.
   const DAY1_INTRO_PROMPT_TEXT = "Freedom Intelligence Field, I am entering Day 1 of my 72 Hour Power Reset.\nToday is the State Reset.\nI am here to locate what is currently active in my inner system,\nsee what has been directing me, and return to self-led orientation\nand my power.\nGuide me through the State Reset now.\nBegin.";
   const DAY2_INTRO_PROMPT_TEXT = "Freedom Intelligence Field, I am entering Day 2 of my 72 Hour Power Reset.\nToday is the Decision & Action Alignment.\nI have reset my state. I am here to make the decision, lock in the action, and produce my Living Power Declaration. Guide me through Day 2 now.\nBegin.";
+  const DAY3_INTRO_PROMPT_TEXT = "Freedom Intelligence Field, I am entering Day 3 of the 72 Hour Power Reset, Power Frequency Calibration.\nI have reset my state. I have made my decision and locked in my action.\nGuide me through Day 3 now.\nBegin.";
   function day1IntroStorageKey() {
     const email = (state.userEmail || "").toLowerCase().trim();
     return email ? `tfif_day1_intro__${email}` : "tfif_day1_intro";
@@ -8119,6 +8120,72 @@ Begin.` },
     }
   }
 
+  // ===== Day 3 welcome card =====
+  // Same pattern as Day 2. Peak of the Reset — Power Frequency Calibration.
+  function day3IntroStorageKey() {
+    const email = (state.userEmail || "").toLowerCase().trim();
+    return email ? `tfif_day3_intro__${email}` : "tfif_day3_intro";
+  }
+  function day3IntroReadStep() {
+    try { return localStorage.getItem(day3IntroStorageKey()) || null; }
+    catch (e) { return null; }
+  }
+  function day3IntroWriteStep(step) {
+    try { localStorage.setItem(day3IntroStorageKey(), step); } catch (e) {}
+  }
+  function renderDay3WelcomeCard() {
+    if (state.currentDay !== 3) return "";
+    let force = false;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("day3_intro_test") === "1") {
+        force = true;
+        try { localStorage.removeItem(day3IntroStorageKey()); } catch (_) {}
+      }
+    } catch (_) {}
+    const step = day3IntroReadStep();
+    const hasUserMessages = (state.messages || []).some(m => m && m.role === "user");
+    if (hasUserMessages && step === null && !force) return "";
+    const btnDone = step === "done";
+    return `
+      <div class="day1-welcome-card" data-day-intro="3">
+        <p class="day1-welcome-eyebrow">Day 3 · Power Frequency Calibration</p>
+        <div class="day1-welcome-video">
+          <iframe src="https://fast.wistia.net/embed/iframe/dwymoptfjp" allow="autoplay; fullscreen" allowfullscreen title="Day 3 · Power Frequency Calibration"></iframe>
+        </div>
+        <div class="day1-welcome-body">
+          <p>Welcome to Day 3 of your 72 Hour Power Reset.</p>
+          <p>Today is the peak experience of the entire three-day journey. You have reset your state and aligned your decision. Today you step into the frequency of the reality you just decided to create and tuning to it.</p>
+          <p>The Field will guide you to build a Determined Imagination scene: a specific, sensory, alive picture of your desired reality, and then step inside it and feel it as already real.</p>
+        </div>
+        <button class="day1-welcome-cta" id="day3-cta" type="button" ${btnDone ? "disabled" : ""}>
+          ${btnDone ? '<span class="day1-check">✓</span>Prompt inserted' : 'Begin Day 3 Now'}
+        </button>
+      </div>
+    `;
+  }
+  function wireDay3WelcomeCard() {
+    const btn = document.getElementById("day3-cta");
+    if (btn && !btn.disabled) {
+      btn.addEventListener("click", () => {
+        day3IntroWriteStep("done");
+        btn.disabled = true;
+        btn.classList.add("day1-welcome-cta-just-done");
+        btn.innerHTML = '<span class="day1-check">✓</span>Prompt inserted';
+        setTimeout(() => {
+          const inputEl = document.getElementById("input");
+          if (inputEl) {
+            inputEl.value = DAY3_INTRO_PROMPT_TEXT;
+            inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+            inputEl.focus();
+            try { inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length); } catch (_) {}
+            inputEl.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }, 420);
+      });
+    }
+  }
+
   function renderMessages() {
     const wrap = document.getElementById("messages");
     if (!wrap) return;
@@ -8139,10 +8206,12 @@ Begin.` },
     let messagesToRender = state.messages;
     const day1CardsWillShow = renderDay1WelcomeCards() !== "";
     const day2CardWillShow = renderDay2WelcomeCard() !== "";
-    const dayCardsWillShow = day1CardsWillShow || day2CardWillShow;
+    const day3CardWillShow = renderDay3WelcomeCard() !== "";
+    const dayCardsWillShow = day1CardsWillShow || day2CardWillShow || day3CardWillShow;
     const dayIntroStep = day1CardsWillShow
       ? day1IntroReadStep()
-      : (day2CardWillShow ? day2IntroReadStep() : null);
+      : (day2CardWillShow ? day2IntroReadStep()
+      : (day3CardWillShow ? day3IntroReadStep() : null));
     if (dayCardsWillShow) {
       if (dayIntroStep !== "done") {
         // Cards are up, member is still walking through the intro — hide
@@ -8196,8 +8265,10 @@ Begin.` },
     // suppressed (existing members). See render*WelcomeCard* for details.
     const day1Cards = renderDay1WelcomeCards();
     const day2Card = renderDay2WelcomeCard();
+    const day3Card = renderDay3WelcomeCard();
     if (day1Cards) html = day1Cards + html;
     if (day2Card) html = day2Card + html;
+    if (day3Card) html = day3Card + html;
     wrap.innerHTML = html;
     const wrapper = document.getElementById("messages-wrap");
     if (wrapper) {
@@ -8220,6 +8291,7 @@ Begin.` },
     // Bind click handlers on the day intro card buttons (idempotent).
     wireDay1WelcomeCards();
     wireDay2WelcomeCard();
+    wireDay3WelcomeCard();
   }
 
   // ===== Mobile chrome handlers =====
