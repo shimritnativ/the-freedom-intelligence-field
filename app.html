@@ -8277,17 +8277,20 @@ Begin.` },
 
     // ===== Chat menu submenu (Add to folder flyout) =====
     // Hover behavior is 100% CSS — no JS state, no re-render needed. JS
-    // handles ONLY the tap-to-toggle for mobile/touch. Earlier attempts
-    // called render() on mouseenter which flashed the whole app on every
-    // hover; that was very not-Claude-like. Now: CSS does the hover, JS
-    // does the tap.
+    // handles ONLY the tap-to-toggle for mobile/touch. Pure DOM class
+    // toggle — no render() call, so the main content area doesn't flash.
     document.querySelectorAll("[data-chat-submenu-toggle]").forEach(btn => {
-      const name = btn.dataset.chatSubmenuToggle;
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         e.preventDefault();
-        state.openChatSubmenu = state.openChatSubmenu === name ? null : name;
-        render();
+        const parent = btn.closest(".chat-menu-parent");
+        if (!parent) return;
+        const wasOpen = parent.classList.contains("submenu-open");
+        // Close any other open submenu siblings within the same menu.
+        const root = parent.parentElement || document;
+        root.querySelectorAll(".chat-menu-parent.submenu-open").forEach(p => p.classList.remove("submenu-open"));
+        if (!wasOpen) parent.classList.add("submenu-open");
+        state.openChatSubmenu = wasOpen ? null : (btn.dataset.chatSubmenuToggle || null);
       });
     });
 
@@ -10916,41 +10919,102 @@ Begin.` },
   // Clicking the dots toggles the dropdown. Clicking anywhere else closes it.
   // triggerEl is the button that was clicked; used to position the floating
   // dropdown next to it using getBoundingClientRect().
+  // Chat 3-dot menu open/close — bypasses render() entirely to avoid
+  // flickering the main app content. Menu HTML is injected directly
+  // into #app on open, removed on close. State stays authoritative so
+  // that if render() runs for another reason, renderFloatingChatMenu
+  // rebuilds the menu at the right spot.
   function onChatMenuToggle(chatId, origin, evt, triggerEl) {
     if (evt) { evt.stopPropagation(); evt.preventDefault(); }
-    if (state.openChatMenuId === chatId && state.openChatMenuOrigin === origin) {
+    const wasOpen = state.openChatMenuId === chatId && state.openChatMenuOrigin === origin;
+    // Always clear any existing floating menu from DOM first — even if
+    // we're opening a different chat's menu, we want a single dropdown.
+    document.querySelectorAll(".floating-chat-menu").forEach(el => el.remove());
+    if (wasOpen) {
       state.openChatMenuId = null;
       state.openChatMenuOrigin = null;
-    } else {
-      state.openChatMenuId = chatId;
-      state.openChatMenuOrigin = origin;
-      // Calculate where to anchor the floating dropdown.
-      const btn = triggerEl || (evt && evt.currentTarget);
-      if (btn && btn.getBoundingClientRect) {
-        const rect = btn.getBoundingClientRect();
-        const menuWidth = 180;
-        const menuHeight = 144; // approx — 3 items at ~48px each
-        // Default: drop below + align right edge of menu with right edge of trigger
-        let top = rect.bottom + 4;
-        let left = rect.right - menuWidth;
-        // Flip up if too close to viewport bottom
-        if (top + menuHeight > window.innerHeight - 10) {
-          top = rect.top - menuHeight - 4;
-        }
-        // Clamp left so menu never bleeds off-screen
-        if (left < 10) left = 10;
-        if (left + menuWidth > window.innerWidth - 10) left = window.innerWidth - menuWidth - 10;
-        state.menuPosition = { top: top, left: left };
-      }
+      state.openChatSubmenu = null;
+      return;
     }
-    render();
+    state.openChatMenuId = chatId;
+    state.openChatMenuOrigin = origin;
+    state.openChatSubmenu = null;
+    // Calculate where to anchor the floating dropdown.
+    const btn = triggerEl || (evt && evt.currentTarget);
+    if (btn && btn.getBoundingClientRect) {
+      const rect = btn.getBoundingClientRect();
+      const menuWidth = 180;
+      const menuHeight = 144; // approx — 3 items at ~48px each
+      // Default: drop below + align right edge of menu with right edge of trigger
+      let top = rect.bottom + 4;
+      let left = rect.right - menuWidth;
+      // Flip up if too close to viewport bottom
+      if (top + menuHeight > window.innerHeight - 10) {
+        top = rect.top - menuHeight - 4;
+      }
+      // Clamp left so menu never bleeds off-screen
+      if (left < 10) left = 10;
+      if (left + menuWidth > window.innerWidth - 10) left = window.innerWidth - menuWidth - 10;
+      state.menuPosition = { top: top, left: left };
+    }
+    // Inject the menu HTML directly, then wire ONLY the new menu's
+    // action buttons (avoid wiring the trigger buttons again, which
+    // would attach a second listener and break toggle behavior).
+    const appEl = document.getElementById("app");
+    const menuHtml = renderFloatingChatMenu();
+    if (appEl && menuHtml) {
+      appEl.insertAdjacentHTML("beforeend", menuHtml);
+      const newMenu = appEl.querySelector(".floating-chat-menu");
+      if (newMenu) wireFloatingChatMenuActions(newMenu);
+      wireOutsideMenuClose();
+    }
   }
   function closeAllChatMenus() {
     if (state.openChatMenuId || state.openChatMenuOrigin) {
       state.openChatMenuId = null;
       state.openChatMenuOrigin = null;
-      render();
+      state.openChatSubmenu = null;
+      document.querySelectorAll(".floating-chat-menu").forEach(el => el.remove());
     }
+  }
+  // Wire action buttons + submenu toggle on a freshly-injected menu.
+  // Scoped to the given root so we don't attach duplicate listeners
+  // to any earlier-rendered menus still hanging around in DOM.
+  function wireFloatingChatMenuActions(root) {
+    root.querySelectorAll("[data-menu-action]").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const action = btn.dataset.menuAction;
+        const id = btn.dataset.chatId;
+        if (action === "rename") onChatRenameStart(id);
+        else if (action === "pin") onChatPinToggle(id, true);
+        else if (action === "unpin") onChatPinToggle(id, false);
+        else if (action === "export") onExportUnlimitedChatClick(id);
+        else if (action === "delete") onChatDeleteRequest(id);
+        else if (action === "move-to-folder") {
+          const folderId = btn.dataset.targetFolderId || null;
+          onChatMoveToFolder(id, folderId);
+        } else if (action === "new-folder-from-chat") {
+          onNewFolderFromChat(id);
+        }
+        state.openChatSubmenu = null;
+      });
+    });
+    // Submenu toggle (Add-to-folder flyout) — pure DOM class toggle
+    // on mobile tap. Hover behavior is 100% CSS, no JS needed.
+    root.querySelectorAll("[data-chat-submenu-toggle]").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const parent = btn.closest(".chat-menu-parent");
+        if (!parent) return;
+        const wasOpen = parent.classList.contains("submenu-open");
+        root.querySelectorAll(".chat-menu-parent.submenu-open").forEach(p => p.classList.remove("submenu-open"));
+        if (!wasOpen) parent.classList.add("submenu-open");
+        state.openChatSubmenu = wasOpen ? null : (btn.dataset.chatSubmenuToggle || null);
+      });
+    });
   }
 
   // ===== Rename (modal) =====
