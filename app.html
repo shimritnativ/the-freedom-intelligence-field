@@ -2511,6 +2511,16 @@
     margin-left: 12px;
     padding-top: 2px;
     padding-bottom: 4px;
+    /* Soft entry so the folder feels like it "opens" instead of pops
+       when a chat drops in or the folder expands. */
+    animation: unlFolderReveal 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes unlFolderReveal {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .unl-folder-chats { animation: none; }
   }
   .unl-folder-empty {
     padding: 6px 8px;
@@ -5579,20 +5589,38 @@ Begin.` },
     }
     const submit = async () => {
       if (m.saving) return;
-      // Delete flow: no input, just confirm.
+      // Delete flow: apply optimistically — close modal + remove folder
+      // from the sidebar right away, then fire the API in the background.
+      // Revert on failure.
       if (m.mode === "delete") {
-        m.saving = true;
+        const deletedFolder = state.folders.find(f => f.id === m.folderId);
+        if (!deletedFolder) { state.folderModal = null; render(); return; }
+        const deletedIdx = state.folders.indexOf(deletedFolder);
+        const restoredChats = [];
+        // Snapshot current chat.folderId for anything in this folder so
+        // we can restore if the API fails.
+        state.unlimitedSessions.forEach(s => {
+          if (s.folderId === m.folderId) {
+            restoredChats.push(s.id);
+            s.folderId = null;
+          }
+        });
+        state.folders.splice(deletedIdx, 1);
+        const wasExpanded = state.foldersExpanded[m.folderId];
+        delete state.foldersExpanded[m.folderId];
+        state.folderModal = null;
         render();
         try {
-          await apiDeleteFolder(m.folderId);
-          state.folders = state.folders.filter(f => f.id !== m.folderId);
-          delete state.foldersExpanded[m.folderId];
-          state.unlimitedSessions.forEach(s => { if (s.folderId === m.folderId) s.folderId = null; });
-          state.folderModal = null;
-          render();
+          await apiDeleteFolder(deletedFolder.id);
         } catch (err) {
           console.error("folder_delete_failed", err);
-          m.saving = false;
+          // Revert
+          state.folders.splice(deletedIdx, 0, deletedFolder);
+          if (wasExpanded) state.foldersExpanded[deletedFolder.id] = true;
+          restoredChats.forEach(id => {
+            const s = state.unlimitedSessions.find(x => x.id === id);
+            if (s) s.folderId = deletedFolder.id;
+          });
           render();
           alert("Could not delete the folder. " + (err.message || "Please try again."));
         }
@@ -5601,25 +5629,51 @@ Begin.` },
       // Create / rename flows: need a valid non-empty name.
       const name = String(m.draft || "").trim();
       if (!name) { if (input) input.focus(); return; }
+      // Rename: optimistic — apply new name + close modal instantly.
+      if (m.mode === "rename") {
+        const folder = state.folders.find(f => f.id === m.folderId);
+        if (!folder) { state.folderModal = null; render(); return; }
+        const previousName = folder.name;
+        if (previousName === name) { state.folderModal = null; render(); return; }
+        folder.name = name;
+        state.folderModal = null;
+        render();
+        try {
+          await apiRenameFolder(m.folderId, name);
+        } catch (err) {
+          console.error("folder_rename_failed", err);
+          folder.name = previousName;
+          render();
+          alert("Could not rename the folder. " + (err.message || "Please try again."));
+        }
+        return;
+      }
+      // Create (with or without follow-up chat move) — needs the server
+      // to hand back the folder ID, so we keep the modal in a compact
+      // "Creating…" state until the request resolves. Kept short so it
+      // feels responsive without pretending we know the ID before we do.
       m.saving = true;
       render();
       try {
-        if (m.mode === "rename") {
-          await apiRenameFolder(m.folderId, name);
-          const folder = state.folders.find(f => f.id === m.folderId);
-          if (folder) folder.name = name;
+        const folder = await apiCreateFolder(name);
+        state.folders.push(folder);
+        state.foldersExpanded[folder.id] = true;
+        if (m.mode === "create-from-chat" && m.chatId) {
+          // Optimistically move the chat into the new folder — no need
+          // to block the modal on the second call.
+          const chat = state.unlimitedSessions.find(s => s.id === m.chatId);
+          if (chat) chat.folderId = folder.id;
+          state.folderModal = null;
+          render();
+          apiMoveChatToFolder(m.chatId, folder.id).catch(err => {
+            console.warn("move_after_create_failed", err);
+            if (chat) chat.folderId = null;
+            render();
+          });
         } else {
-          const folder = await apiCreateFolder(name);
-          state.folders.push(folder);
-          state.foldersExpanded[folder.id] = true;
-          if (m.mode === "create-from-chat" && m.chatId) {
-            await apiMoveChatToFolder(m.chatId, folder.id);
-            const chat = state.unlimitedSessions.find(s => s.id === m.chatId);
-            if (chat) chat.folderId = folder.id;
-          }
+          state.folderModal = null;
+          render();
         }
-        state.folderModal = null;
-        render();
       } catch (err) {
         console.error("folder_modal_save_failed", err);
         m.saving = false;
@@ -8129,15 +8183,32 @@ Begin.` },
   async function onChatMoveToFolder(chatId, folderId) {
     const chat = state.unlimitedSessions.find(s => s.id === chatId);
     if (!chat) return;
-    try {
-      await apiMoveChatToFolder(chatId, folderId);
-      chat.folderId = folderId || null;
+    // Optimistic: apply the move to local state + close the menu + expand
+    // the target folder INSTANTLY, then let the API call happen in the
+    // background. Members see the chat move the moment they click,
+    // which is what makes this feel Claude-fast instead of laggy.
+    const previousFolderId = chat.folderId || null;
+    const newFolderId = folderId || null;
+    if (previousFolderId === newFolderId) {
+      // No-op — clicking the folder the chat is already in. Just close
+      // the menu without a needless API round-trip.
       state.openChatMenuId = null;
-      // Auto-expand the target folder so the moved chat is visible.
-      if (folderId) state.foldersExpanded[folderId] = true;
       render();
+      return;
+    }
+    chat.folderId = newFolderId;
+    state.openChatMenuId = null;
+    if (newFolderId) state.foldersExpanded[newFolderId] = true;
+    render();
+    // Fire the network call in the background. On failure, revert the
+    // local move and surface the error so the user knows something went
+    // wrong instead of the state silently drifting from the server.
+    try {
+      await apiMoveChatToFolder(chatId, newFolderId);
     } catch (err) {
       console.error("move_chat_failed", err);
+      chat.folderId = previousFolderId;
+      render();
       alert("Could not move the chat. " + (err.message || "Please try again."));
     }
   }
