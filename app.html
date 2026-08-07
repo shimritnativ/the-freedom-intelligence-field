@@ -1988,13 +1988,18 @@
     font-size: 12.5px;
     color: var(--text-mute, #6B5D48);
     line-height: 1.55;
-    padding-top: 12px;
+    padding-top: 14px;
     border-top: 1px solid var(--gold-line, rgba(201, 168, 76, 0.18));
-    margin-top: 12px;
+    margin-top: 16px;
+    margin-bottom: 8px;
   }
   .day1-welcome-cta {
     display: block;
+    /* Comfortable pill width — full-width made it look stretched and
+       cheapened the moment. Fixed max-width, centered. */
+    max-width: 260px;
     width: 100%;
+    margin: 24px auto 0;
     padding: 14px 22px;
     background: var(--gold, #C9A84C);
     color: #1a1410;
@@ -7868,6 +7873,19 @@ Begin.` },
     // get the same welcome flow as a Reset buyer. Only excluded: non-Day-1
     // views. Tier check was removed 2026-08-05 per Geo.
     if (state.currentDay !== 1) return "";
+    // Testing override: append ?day1_intro_test=1 to the URL to force-show
+    // the welcome cards even if this account has existing Day 1 history.
+    // Lets Geo (and future admins) preview the flow without needing a
+    // fresh preview-tier account. Also wipes the localStorage flag so the
+    // cards render in step 1. Removed 2026-08-05.
+    let force = false;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("day1_intro_test") === "1") {
+        force = true;
+        try { localStorage.removeItem(day1IntroStorageKey()); } catch (_) {}
+      }
+    } catch (_) {}
     const step = day1IntroReadStep();
     // Skip for members who ALREADY have Day 1 chat history but never went
     // through the new welcome-cards flow. These are existing members who
@@ -7877,7 +7895,7 @@ Begin.` },
     // has clicked through the new flow at least once (step !== null),
     // the cards stay in scrollback so they can rewatch.
     const hasUserMessages = (state.messages || []).some(m => m && m.role === "user");
-    if (hasUserMessages && step === null) return "";
+    if (hasUserMessages && step === null && !force) return "";
     // Determine each card's state:
     //   card1 button: active if step is null, "started ✓" if not null
     //   card2 visible: only if step is "begin1" or "done"
@@ -7978,7 +7996,29 @@ Begin.` },
       wrap.innerHTML = renderSkeletonLoading();
       return;
     }
-    let html = state.messages.map((m, i) => {
+    // Day 1 welcome-card flow: when the cards are showing and the member
+    // hasn't finished the intro yet (step !== "done"), we hide any
+    // pre-populated assistant welcome messages that would otherwise show
+    // below Card 1 and confuse the flow. Once the member clicks "Begin
+    // Day 1 Now" (step === "done") and starts a real conversation, we
+    // show only messages that came AFTER their first user message so the
+    // legacy pre-populated welcome never surfaces.
+    let messagesToRender = state.messages;
+    const day1CardsWillShow = renderDay1WelcomeCards() !== "";
+    const day1Step = day1CardsWillShow ? day1IntroReadStep() : null;
+    if (day1CardsWillShow) {
+      if (day1Step !== "done") {
+        // Cards are up, member is still walking through the intro — hide
+        // everything below them so nothing competes for attention.
+        messagesToRender = [];
+      } else {
+        // Intro is complete. Show only messages starting from the member's
+        // first real user turn, so pre-populated legacy welcomes stay hidden.
+        const firstUserIdx = state.messages.findIndex(m => m && m.role === "user");
+        messagesToRender = firstUserIdx >= 0 ? state.messages.slice(firstUserIdx) : [];
+      }
+    }
+    let html = messagesToRender.map((m, i) => {
       if (m.role === "user") {
         return `
           <div class="msg-row ${m.role}">
@@ -8020,7 +8060,17 @@ Begin.` },
     if (day1Cards) html = day1Cards + html;
     wrap.innerHTML = html;
     const wrapper = document.getElementById("messages-wrap");
-    if (wrapper) wrapper.scrollTop = wrapper.scrollHeight;
+    if (wrapper) {
+      // Default: scroll to bottom so newest message is in view. Override
+      // for the Day 1 welcome-card flow: when the video card is the first
+      // thing a member should see, scroll to the TOP so it's in view on
+      // load rather than the input at the bottom.
+      if (day1CardsWillShow && day1Step !== "done") {
+        wrapper.scrollTop = 0;
+      } else {
+        wrapper.scrollTop = wrapper.scrollHeight;
+      }
+    }
     // Scan any newly rendered [[mp3:...]] cards and start audio generation.
     processMp3Cards();
     // Bind click handlers on the Day 1 welcome-card buttons (idempotent).
