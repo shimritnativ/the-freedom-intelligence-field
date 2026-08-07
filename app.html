@@ -4507,6 +4507,10 @@ Begin.` },
     // Which folder's action menu is open (rename / delete). Only one at
     // a time. null = closed.
     openFolderMenuId: null,
+    // Branded modal for folder actions. null = closed. When open, holds:
+    //   { mode, folderId?, currentName?, chatId?, draft, saving }
+    // mode is one of: "create" | "create-from-chat" | "rename" | "delete"
+    folderModal: null,
     activeUnlimitedId: null,
     unlimitedMessages: [],
     searchOpen: false,
@@ -5484,6 +5488,147 @@ Begin.` },
   }
   function dotsIconSvg() {
     return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+  }
+  // ===== Folder modal (branded) =====
+  // One modal handles four flows: create a new folder, create a new
+  // folder AND move a chat into it, rename an existing folder, and
+  // delete a folder. Reuses the .rename-* / .confirm-* styles so the
+  // look matches the chat rename + delete-confirmation modals members
+  // already know. Never uses window.prompt/confirm.
+  function renderFolderModal() {
+    const m = state.folderModal;
+    if (!m) return "";
+    const isDelete = m.mode === "delete";
+    if (isDelete) {
+      const folder = (state.folders || []).find(f => f.id === m.folderId);
+      const name = folder ? folder.name : "this folder";
+      const chatsInside = state.unlimitedSessions.filter(s => s.folderId === m.folderId).length;
+      const chatsLine = chatsInside > 0
+        ? `The ${chatsInside} chat${chatsInside === 1 ? "" : "s"} inside will move back to your uncategorized list. Nothing is deleted.`
+        : "This folder is empty.";
+      return `
+        <div class="rename-overlay" id="folder-modal-overlay">
+          <div class="rename-modal" role="dialog" aria-modal="true" aria-labelledby="folder-modal-title">
+            <div class="rename-eyebrow" style="color: #8A2020;">DELETE FOLDER</div>
+            <div class="rename-title" id="folder-modal-title">${escapeHtml(name)}</div>
+            <div style="font-family: Georgia, serif; font-size: 14.5px; color: var(--text-dim); line-height: 1.55; margin-bottom: 22px;">${escapeHtml(chatsLine)}</div>
+            <div class="rename-actions">
+              <button class="rename-btn rename-btn--cancel" id="folder-modal-cancel" type="button">Cancel</button>
+              <button class="rename-btn rename-btn--save" id="folder-modal-save" type="button" style="background: #8A2020; border-color: #8A2020; color: #fff;" ${m.saving ? "disabled" : ""}>${m.saving ? "Deleting…" : "Delete"}</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    const isRename = m.mode === "rename";
+    const eyebrow = isRename ? "RENAME" : "NEW FOLDER";
+    const title = isRename
+      ? (m.currentName || "this folder")
+      : (m.mode === "create-from-chat" ? "Name your folder" : "Name your folder");
+    const placeholder = isRename ? "Rename this folder" : "e.g. Business, Deep work, Family…";
+    const saveLabel = isRename ? "Save" : "Create";
+    return `
+      <div class="rename-overlay" id="folder-modal-overlay">
+        <div class="rename-modal" role="dialog" aria-modal="true" aria-labelledby="folder-modal-title">
+          <div class="rename-eyebrow">${eyebrow}</div>
+          <div class="rename-title" id="folder-modal-title">${escapeHtml(title)}</div>
+          <form id="folder-modal-form" autocomplete="off">
+            <input
+              id="folder-modal-input"
+              class="rename-input"
+              type="text"
+              value="${escapeHtml(m.draft || "")}"
+              maxlength="60"
+              autocomplete="off"
+              autocapitalize="sentences"
+              placeholder="${escapeHtml(placeholder)}"
+            />
+            <div class="rename-actions">
+              <button class="rename-btn rename-btn--cancel" id="folder-modal-cancel" type="button">Cancel</button>
+              <button class="rename-btn rename-btn--save" id="folder-modal-save" type="submit" ${m.saving ? "disabled" : ""}>${m.saving ? "Saving…" : saveLabel}</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+  }
+  function wireFolderModal() {
+    const m = state.folderModal;
+    if (!m) return;
+    const overlay = document.getElementById("folder-modal-overlay");
+    const cancelBtn = document.getElementById("folder-modal-cancel");
+    const saveBtn = document.getElementById("folder-modal-save");
+    const input = document.getElementById("folder-modal-input");
+    const form = document.getElementById("folder-modal-form");
+    const closeModal = () => { state.folderModal = null; render(); };
+    if (overlay) overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeModal();
+    });
+    if (cancelBtn) cancelBtn.addEventListener("click", closeModal);
+    if (input) {
+      input.addEventListener("input", (e) => { m.draft = e.target.value; });
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") { e.preventDefault(); closeModal(); }
+      });
+      // Autofocus + select-all so rename lets you start typing to replace
+      // without pre-selecting manually.
+      setTimeout(() => {
+        input.focus();
+        if (m.mode === "rename") input.select();
+      }, 30);
+    }
+    const submit = async () => {
+      if (m.saving) return;
+      // Delete flow: no input, just confirm.
+      if (m.mode === "delete") {
+        m.saving = true;
+        render();
+        try {
+          await apiDeleteFolder(m.folderId);
+          state.folders = state.folders.filter(f => f.id !== m.folderId);
+          delete state.foldersExpanded[m.folderId];
+          state.unlimitedSessions.forEach(s => { if (s.folderId === m.folderId) s.folderId = null; });
+          state.folderModal = null;
+          render();
+        } catch (err) {
+          console.error("folder_delete_failed", err);
+          m.saving = false;
+          render();
+          alert("Could not delete the folder. " + (err.message || "Please try again."));
+        }
+        return;
+      }
+      // Create / rename flows: need a valid non-empty name.
+      const name = String(m.draft || "").trim();
+      if (!name) { if (input) input.focus(); return; }
+      m.saving = true;
+      render();
+      try {
+        if (m.mode === "rename") {
+          await apiRenameFolder(m.folderId, name);
+          const folder = state.folders.find(f => f.id === m.folderId);
+          if (folder) folder.name = name;
+        } else {
+          const folder = await apiCreateFolder(name);
+          state.folders.push(folder);
+          state.foldersExpanded[folder.id] = true;
+          if (m.mode === "create-from-chat" && m.chatId) {
+            await apiMoveChatToFolder(m.chatId, folder.id);
+            const chat = state.unlimitedSessions.find(s => s.id === m.chatId);
+            if (chat) chat.folderId = folder.id;
+          }
+        }
+        state.folderModal = null;
+        render();
+      } catch (err) {
+        console.error("folder_modal_save_failed", err);
+        m.saving = false;
+        render();
+        alert("Could not save the folder. " + (err.message || "Please try again."));
+      }
+    };
+    if (saveBtn && m.mode === "delete") saveBtn.addEventListener("click", submit);
+    if (form) form.addEventListener("submit", (e) => { e.preventDefault(); submit(); });
   }
   // ===== Install on iPhone modal =====
   // iOS doesn't expose a JavaScript API to trigger "Add to Home Screen"
@@ -7192,6 +7337,7 @@ Begin.` },
         ${renderAccountModal()}
         ${renderDeleteConfirmModal()}
         ${renderRenameModal()}
+        ${renderFolderModal()}
         ${renderFloatingChatMenu()}
         ${renderInstallModal()}
         ${renderNotifPromptModal()}
@@ -7261,6 +7407,7 @@ Begin.` },
         ${renderAccountModal()}
         ${renderDeleteConfirmModal()}
         ${renderRenameModal()}
+        ${renderFolderModal()}
         ${renderFloatingChatMenu()}
         ${renderInstallModal()}
         ${renderNotifPromptModal()}
@@ -7303,6 +7450,7 @@ Begin.` },
         ${renderAccountModal()}
         ${renderDeleteConfirmModal()}
         ${renderRenameModal()}
+        ${renderFolderModal()}
         ${renderFloatingChatMenu()}
         ${renderInstallModal()}
         ${renderNotifPromptModal()}
@@ -7329,6 +7477,7 @@ Begin.` },
         ${renderAccountModal()}
         ${renderDeleteConfirmModal()}
         ${renderRenameModal()}
+        ${renderFolderModal()}
         ${renderFloatingChatMenu()}
         ${renderInstallModal()}
         ${renderNotifPromptModal()}
@@ -7411,6 +7560,7 @@ Begin.` },
         ${renderAccountModal()}
         ${renderDeleteConfirmModal()}
         ${renderRenameModal()}
+        ${renderFolderModal()}
         ${renderFloatingChatMenu()}
         ${renderInstallModal()}
         ${renderNotifPromptModal()}
@@ -7503,6 +7653,7 @@ Begin.` },
         ${renderAccountModal()}
         ${renderDeleteConfirmModal()}
         ${renderRenameModal()}
+        ${renderFolderModal()}
         ${renderFloatingChatMenu()}
         ${renderInstallModal()}
         ${renderNotifPromptModal()}
@@ -7700,6 +7851,7 @@ Begin.` },
     wireChatMenus();
     wireDeleteConfirm();
     wireRenameModal();
+    wireFolderModal();
     wireOutsideMenuClose();
   }
 
@@ -7952,70 +8104,27 @@ Begin.` },
     state.foldersExpanded[fid] = !state.foldersExpanded[fid];
     render();
   }
-  async function onNewFolder() {
-    const name = (window.prompt("Name your new folder", "") || "").trim();
-    if (!name) return;
-    try {
-      const folder = await apiCreateFolder(name);
-      state.folders.push(folder);
-      state.foldersExpanded[folder.id] = true;
-      render();
-    } catch (err) {
-      console.error("new_folder_failed", err);
-      alert("Could not create the folder. " + (err.message || "Please try again."));
-    }
+  // All four folder actions open the branded folder modal. Actual API
+  // work happens inside wireFolderModal on submit, so these handlers are
+  // just "open the modal in the right mode."
+  function onNewFolder() {
+    state.folderModal = { mode: "create", draft: "", saving: false };
+    render();
   }
-  async function onNewFolderFromChat(chatId) {
-    const name = (window.prompt("Name your new folder", "") || "").trim();
-    if (!name) return;
-    try {
-      const folder = await apiCreateFolder(name);
-      state.folders.push(folder);
-      state.foldersExpanded[folder.id] = true;
-      // Immediately move the chat into the new folder.
-      await apiMoveChatToFolder(chatId, folder.id);
-      const chat = state.unlimitedSessions.find(s => s.id === chatId);
-      if (chat) chat.folderId = folder.id;
-      state.openChatMenuId = null;
-      render();
-    } catch (err) {
-      console.error("new_folder_from_chat_failed", err);
-      alert("Could not create the folder. " + (err.message || "Please try again."));
-    }
+  function onNewFolderFromChat(chatId) {
+    state.openChatMenuId = null;
+    state.folderModal = { mode: "create-from-chat", chatId, draft: "", saving: false };
+    render();
   }
-  async function onFolderRename(fid) {
+  function onFolderRename(fid) {
     const folder = state.folders.find(f => f.id === fid);
     if (!folder) return;
-    const name = (window.prompt("Rename folder", folder.name) || "").trim();
-    if (!name || name === folder.name) return;
-    try {
-      await apiRenameFolder(fid, name);
-      folder.name = name;
-      render();
-    } catch (err) {
-      console.error("folder_rename_failed", err);
-      alert("Could not rename the folder. " + (err.message || "Please try again."));
-    }
+    state.folderModal = { mode: "rename", folderId: fid, currentName: folder.name, draft: folder.name, saving: false };
+    render();
   }
-  async function onFolderDelete(fid) {
-    const folder = state.folders.find(f => f.id === fid);
-    if (!folder) return;
-    const chatsInside = state.unlimitedSessions.filter(s => s.folderId === fid).length;
-    const suffix = chatsInside > 0
-      ? `\n\nThe ${chatsInside} chat${chatsInside === 1 ? "" : "s"} inside will move back to your uncategorized list (nothing is deleted).`
-      : "";
-    if (!window.confirm(`Delete folder "${folder.name}"?${suffix}`)) return;
-    try {
-      await apiDeleteFolder(fid);
-      state.folders = state.folders.filter(f => f.id !== fid);
-      delete state.foldersExpanded[fid];
-      // Uncategorize any chats that were inside.
-      state.unlimitedSessions.forEach(s => { if (s.folderId === fid) s.folderId = null; });
-      render();
-    } catch (err) {
-      console.error("folder_delete_failed", err);
-      alert("Could not delete the folder. " + (err.message || "Please try again."));
-    }
+  function onFolderDelete(fid) {
+    state.folderModal = { mode: "delete", folderId: fid, saving: false };
+    render();
   }
   async function onChatMoveToFolder(chatId, folderId) {
     const chat = state.unlimitedSessions.find(s => s.id === chatId);
