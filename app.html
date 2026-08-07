@@ -1920,6 +1920,118 @@
     background: rgba(240, 234, 214, 0.08);
     color: #F0EAD6;
   }
+
+  /* ===== Day 1 welcome cards =====
+     Two-step in-chat onboarding at the top of Day 1. Injected by
+     renderMessages() when state.currentDay === 1. Card 1 always visible;
+     Card 2 only after the member clicks "Begin Day 1" on Card 1. State
+     persists across sessions via localStorage (per-user email key). */
+  .day1-welcome-card {
+    background: var(--panel, #FFFDF6);
+    border: 1px solid var(--gold-line, rgba(201, 168, 76, 0.28));
+    border-radius: 18px;
+    padding: 22px 26px 24px;
+    margin: 0 0 20px 0;
+    max-width: 640px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--text, #1F1810);
+  }
+  .day1-welcome-eyebrow {
+    font-size: 10.5px;
+    letter-spacing: 0.28em;
+    color: var(--gold, #C9A84C);
+    text-transform: uppercase;
+    font-weight: 700;
+    margin: 0 0 12px;
+    text-align: center;
+  }
+  .day1-welcome-video {
+    position: relative;
+    padding-bottom: 56.25%;
+    background: #0E0B07;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 0 0 18px;
+  }
+  .day1-welcome-video iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+  .day1-welcome-body {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--text-dim, #4A4030);
+  }
+  .day1-welcome-body p { margin: 0 0 12px; }
+  .day1-welcome-body p:last-of-type { margin-bottom: 16px; }
+  .day1-welcome-body strong { color: var(--text, #1F1810); font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+  .day1-welcome-body a {
+    color: var(--gold-warm, #B99A5C);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .day1-welcome-body a:hover { color: var(--gold, #C9A84C); }
+  .day1-welcome-body ul {
+    padding-left: 22px;
+    margin: 0 0 14px;
+  }
+  .day1-welcome-body li { margin-bottom: 8px; }
+  .day1-welcome-body li::marker { color: var(--gold, #C9A84C); }
+  .day1-welcome-body .day1-welcome-footnote {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 12.5px;
+    color: var(--text-mute, #6B5D48);
+    line-height: 1.55;
+    padding-top: 12px;
+    border-top: 1px solid var(--gold-line, rgba(201, 168, 76, 0.18));
+    margin-top: 12px;
+  }
+  .day1-welcome-cta {
+    display: block;
+    width: 100%;
+    padding: 14px 22px;
+    background: var(--gold, #C9A84C);
+    color: #1a1410;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(201, 168, 76, 0.25);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.18s ease;
+  }
+  .day1-welcome-cta:hover:not(:disabled) {
+    background: var(--gold-warm, #B99A5C);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(201, 168, 76, 0.32);
+  }
+  .day1-welcome-cta:disabled {
+    background: rgba(201, 168, 76, 0.18);
+    color: var(--text-mute, #6B5D48);
+    cursor: default;
+    box-shadow: none;
+  }
+  .day1-welcome-cta .day1-check {
+    display: inline-block;
+    margin-right: 6px;
+    color: var(--gold, #C9A84C);
+    font-weight: 700;
+  }
+  .day1-welcome-hidden { display: none; }
+  @media (max-width: 640px) {
+    .day1-welcome-card { padding: 18px 18px 20px; border-radius: 14px; }
+    .day1-welcome-body { font-size: 14.5px; }
+  }
+
   /* Inline markdown formatting that renderMessages() converts on bot
      replies. Keeps bold + italic + line breaks readable. */
   .support-msg strong { font-weight: 600; }
@@ -7725,6 +7837,127 @@ Begin.` },
     `;
   }
 
+  // ===== Day 1 welcome cards helpers =====
+  // Two-step in-chat onboarding that shows at the top of Day 1: welcome
+  // video + copy → click BEGIN DAY 1 → Day 1 video + copy → click BEGIN
+  // DAY 1 NOW → auto-fills the Day 1 prompt into the composer.
+  //
+  // State persists per-user across sessions via localStorage. The key
+  // includes the user's email so different logins on the same browser
+  // stay independent. Values: null (never started), "begin1" (Card 2
+  // revealed, hasn't clicked Begin Day 1 Now yet), "done" (finished).
+  //
+  // The full Day 1 prompt is inserted into the chat input on the final
+  // click. Kept in one const so it's easy to update alongside prompt
+  // changes in lib/prompts/day1.js.
+  const DAY1_INTRO_PROMPT_TEXT = "Freedom Intelligence Field, I am entering Day 1 of my 72 Hour Power Reset.\nToday is the State Reset.\nI am here to locate what is currently active in my inner system,\nsee what has been directing me, and return to self-led orientation\nand my power.\nGuide me through the State Reset now.\nBegin.";
+  function day1IntroStorageKey() {
+    const email = (state.userEmail || "").toLowerCase().trim();
+    return email ? `tfif_day1_intro__${email}` : "tfif_day1_intro";
+  }
+  function day1IntroReadStep() {
+    try { return localStorage.getItem(day1IntroStorageKey()) || null; }
+    catch (e) { return null; }
+  }
+  function day1IntroWriteStep(step) {
+    try { localStorage.setItem(day1IntroStorageKey(), step); } catch (e) {}
+  }
+  function renderDay1WelcomeCards() {
+    // Only for Reset (preview) members on Day 1. Unlimited or other tiers
+    // never see this.
+    if (state.currentDay !== 1) return "";
+    if (state.tier === "full") return "";
+    const step = day1IntroReadStep();
+    // Determine each card's state:
+    //   card1 button: active if step is null, "started ✓" if not null
+    //   card2 visible: only if step is "begin1" or "done"
+    //   card2 button: active if step is "begin1", "ready ✓" if "done"
+    const card1BtnDone = step === "begin1" || step === "done";
+    const card2Visible = step === "begin1" || step === "done";
+    const card2BtnDone = step === "done";
+
+    const card1Html = `
+      <div class="day1-welcome-card" data-day1-card="1">
+        <p class="day1-welcome-eyebrow">Master Your Path · Day 1</p>
+        <div class="day1-welcome-video">
+          <iframe src="https://fast.wistia.net/embed/iframe/w9ldl9naxi" allow="autoplay; fullscreen" allowfullscreen title="Welcome to The Field"></iframe>
+        </div>
+        <div class="day1-welcome-body">
+          <p>Welcome. I am so glad you are here.</p>
+          <p>Over the next four days you will reset your power, set a clear direction, and take real action inside The Freedom Intelligence Field, a living space encoded with my full teaching, methodology, and voice.</p>
+          <p>Watch the short video above first. It shows you how the experience works and how to make the most of your days.</p>
+          <p><strong>How it works.</strong> Each day takes 20 to 30 minutes. Day 1 is open now, and each day unlocks the next. Day 4 is your bonus day to integrate everything, save your work, and watch the Architecture of Freedom class.</p>
+          <p><strong>To get the most from this:</strong></p>
+          <ul>
+            <li><a href="https://chat.whatsapp.com/Gf5PKGIYPrIFkhST2iJLoJ" target="_blank" rel="noopener">Join our WhatsApp group</a>. The living heart of the journey, where my team and others walking this path gather. I would love to meet you there.</li>
+            <li><a href="https://links.buildhub.se/widget/bookings/connectcall-masteryourpath" target="_blank" rel="noopener">Book a complimentary orientation call</a>. 15 to 20 minutes with one of my coaches to help you make the most of these days.</li>
+          </ul>
+          <p>I cannot wait to witness you here. Let's begin.</p>
+          <div class="day1-welcome-footnote">All these videos and info stay available in your <a href="https://www.shimritnativ.com/library" target="_blank" rel="noopener">library</a> or through the "Your Account" button here.</div>
+        </div>
+        <button class="day1-welcome-cta" id="day1-cta-1" type="button" ${card1BtnDone ? "disabled" : ""}>
+          ${card1BtnDone ? '<span class="day1-check">✓</span>Started' : 'Begin Day 1'}
+        </button>
+      </div>
+    `;
+
+    const card2Html = `
+      <div class="day1-welcome-card ${card2Visible ? "" : "day1-welcome-hidden"}" id="day1-card-2" data-day1-card="2">
+        <p class="day1-welcome-eyebrow">Day 1 · State Reset</p>
+        <div class="day1-welcome-video">
+          <iframe src="https://fast.wistia.net/embed/iframe/hjjxtvsbvc" allow="autoplay; fullscreen" allowfullscreen title="Day 1 · State Reset"></iframe>
+        </div>
+        <div class="day1-welcome-body">
+          <p>Welcome to Day 1 of your 72-hour power reset.</p>
+          <p>Today is the State Reset. Day 1 locates what state you are operating from, what has been directing your thoughts, decisions, and energy, and returns you to your own power.</p>
+          <p>When you are ready, find a quiet space and give yourself 15 to 20 minutes where you can be fully present.</p>
+        </div>
+        <button class="day1-welcome-cta" id="day1-cta-2" type="button" ${card2BtnDone ? "disabled" : ""}>
+          ${card2BtnDone ? '<span class="day1-check">✓</span>Prompt inserted' : 'Begin Day 1 Now'}
+        </button>
+      </div>
+    `;
+
+    return card1Html + card2Html;
+  }
+  // Wire up the buttons on the welcome cards after renderMessages() has
+  // painted them. Called at the end of renderMessages. Safe to re-call
+  // (idempotent — always re-binds to the fresh DOM nodes).
+  function wireDay1WelcomeCards() {
+    const btn1 = document.getElementById("day1-cta-1");
+    const btn2 = document.getElementById("day1-cta-2");
+    const card2 = document.getElementById("day1-card-2");
+    if (btn1 && !btn1.disabled) {
+      btn1.addEventListener("click", () => {
+        day1IntroWriteStep("begin1");
+        // Reveal Card 2 with a soft slide + fade.
+        if (card2) {
+          card2.classList.remove("day1-welcome-hidden");
+          card2.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        // Grey Card 1's button.
+        btn1.disabled = true;
+        btn1.innerHTML = '<span class="day1-check">✓</span>Started';
+      });
+    }
+    if (btn2 && !btn2.disabled) {
+      btn2.addEventListener("click", () => {
+        day1IntroWriteStep("done");
+        // Auto-fill the composer + focus so member just hits Send.
+        const inputEl = document.getElementById("input");
+        if (inputEl) {
+          inputEl.value = DAY1_INTRO_PROMPT_TEXT;
+          inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+          inputEl.focus();
+          try { inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length); } catch (_) {}
+          inputEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        btn2.disabled = true;
+        btn2.innerHTML = '<span class="day1-check">✓</span>Prompt inserted';
+      });
+    }
+  }
+
   function renderMessages() {
     const wrap = document.getElementById("messages");
     if (!wrap) return;
@@ -7770,11 +8003,18 @@ Begin.` },
     if (isResetExpired()) {
       html = renderExpiredBanner() + html;
     }
+    // Prepend the Day 1 welcome cards (welcome video + Day 1 video) at
+    // the very top of the message thread on Day 1. Returns "" for other
+    // days or Unlimited members. See renderDay1WelcomeCards for details.
+    const day1Cards = renderDay1WelcomeCards();
+    if (day1Cards) html = day1Cards + html;
     wrap.innerHTML = html;
     const wrapper = document.getElementById("messages-wrap");
     if (wrapper) wrapper.scrollTop = wrapper.scrollHeight;
     // Scan any newly rendered [[mp3:...]] cards and start audio generation.
     processMp3Cards();
+    // Bind click handlers on the Day 1 welcome-card buttons (idempotent).
+    wireDay1WelcomeCards();
   }
 
   // ===== Mobile chrome handlers =====
