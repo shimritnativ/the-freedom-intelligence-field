@@ -2558,6 +2558,49 @@
     font-style: italic;
     font-family: Georgia, serif;
   }
+  /* Floating dropdown for folder actions (rename / delete). Positioned
+     absolutely so it doesn't push the folder head layout around. Right-
+     aligned under the 3-dot button. */
+  .folder-action-menu {
+    position: absolute;
+    top: 36px;
+    right: 4px;
+    min-width: 168px;
+    background: var(--panel, #FFFDF6);
+    border: 1px solid var(--gold-line);
+    border-radius: 10px;
+    padding: 6px 0;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14),
+                0 2px 6px rgba(0, 0, 0, 0.06);
+    z-index: 20;
+    animation: folderActionMenuIn 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .folder-action-menu .chat-menu-item {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%;
+    padding: 9px 14px;
+    background: transparent; border: 0;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.12s ease;
+  }
+  .folder-action-menu .chat-menu-item:hover { background: var(--gold-soft); }
+  .folder-action-menu .chat-menu-item--danger { color: #8A2020; }
+  .folder-action-menu .chat-menu-item--danger:hover { background: rgba(178, 34, 34, 0.06); }
+  .folder-action-menu .chat-menu-icon { display: inline-flex; flex-shrink: 0; color: var(--gold); }
+  .folder-action-menu .chat-menu-item--danger .chat-menu-icon { color: #8A2020; }
+  .folder-action-menu .chat-menu-icon svg { width: 14px; height: 14px; }
+  @keyframes folderActionMenuIn {
+    from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .folder-action-menu { animation: none; }
+  }
   .chat-menu-section-label {
     font-size: 9px; font-weight: 700; letter-spacing: 0.18em;
     color: var(--text-mute); text-transform: uppercase;
@@ -2590,8 +2633,12 @@
   }
   .chat-submenu {
     position: absolute;
-    left: calc(100% + 4px);
+    /* Zero horizontal gap so hovering across from parent to submenu
+       doesn't lose the :hover state. The visual spacing lives inside
+       the submenu via margin-left instead. */
+    left: 100%;
     top: -4px;
+    margin-left: 4px;
     min-width: 200px;
     max-width: 260px;
     background: var(--panel, #FFFDF6);
@@ -2603,6 +2650,15 @@
     z-index: 10;
     display: none;
     animation: chatSubmenuIn 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  /* Invisible bridge: fills the 4px gap between parent and submenu so
+     the pointer can cross without triggering :hover loss. */
+  .chat-submenu::before {
+    content: "";
+    position: absolute;
+    left: -8px;
+    top: 0; bottom: 0;
+    width: 8px;
   }
   .chat-menu-parent.submenu-open > .chat-submenu,
   .chat-menu-parent:hover > .chat-submenu {
@@ -8076,16 +8132,17 @@ Begin.` },
               <span class="unl-folder-name">${escapeHtml(f.name)}</span>
               <span class="unl-folder-count">${chatsInFolder.length}</span>
               <button class="unl-folder-menu-btn" data-folder-menu-id="${f.id}" type="button" aria-label="Folder options">${dotsIconSvg()}</button>
-              ${menuOpen ? `
-                <div class="chat-menu-dropdown chat-menu-dropdown--sidebar" data-folder-menu-dropdown="${f.id}">
-                  <button class="chat-menu-item" data-folder-action="rename" data-folder-id="${f.id}" type="button">
-                    <span class="chat-menu-icon">${pencilIconSvg()}</span><span>Rename</span>
-                  </button>
-                  <button class="chat-menu-item chat-menu-item--danger" data-folder-action="delete" data-folder-id="${f.id}" type="button">
-                    <span class="chat-menu-icon">${trashIconSvg()}</span><span>Delete folder</span>
-                  </button>
-                </div>` : ""}
             </div>
+            ${menuOpen ? `
+              <div class="folder-action-menu" data-folder-menu-dropdown="${f.id}">
+                <button class="chat-menu-item" data-folder-action="rename" data-folder-id="${f.id}" type="button">
+                  <span class="chat-menu-icon">${pencilIconSvg()}</span><span>Rename</span>
+                </button>
+                <button class="chat-menu-item chat-menu-item--danger" data-folder-action="delete" data-folder-id="${f.id}" type="button">
+                  <span class="chat-menu-icon">${trashIconSvg()}</span><span>Delete folder</span>
+                </button>
+              </div>
+            ` : ""}
             ${isExpanded ? `<div class="unl-folder-chats">${chatsHtml}</div>` : ""}
           </div>
         `;
@@ -8229,43 +8286,19 @@ Begin.` },
     });
 
     // ===== Chat menu submenu (Add to folder flyout) =====
-    // Hover on desktop, tap on mobile. Uses a debounced close so the
-    // cursor can travel from the parent row across the tiny gap to the
-    // submenu without collapsing it mid-way.
-    let __submenuCloseTimer = null;
-    const openSub = (name) => {
-      if (__submenuCloseTimer) { clearTimeout(__submenuCloseTimer); __submenuCloseTimer = null; }
-      if (state.openChatSubmenu === name) return;
-      state.openChatSubmenu = name;
-      render();
-    };
-    const scheduleCloseSub = () => {
-      if (__submenuCloseTimer) clearTimeout(__submenuCloseTimer);
-      __submenuCloseTimer = setTimeout(() => {
-        if (state.openChatSubmenu !== null) {
-          state.openChatSubmenu = null;
-          render();
-        }
-      }, 220);
-    };
-    // Parent button — hover opens, tap toggles (for touch users).
+    // Hover behavior is 100% CSS — no JS state, no re-render needed. JS
+    // handles ONLY the tap-to-toggle for mobile/touch. Earlier attempts
+    // called render() on mouseenter which flashed the whole app on every
+    // hover; that was very not-Claude-like. Now: CSS does the hover, JS
+    // does the tap.
     document.querySelectorAll("[data-chat-submenu-toggle]").forEach(btn => {
       const name = btn.dataset.chatSubmenuToggle;
-      btn.addEventListener("mouseenter", () => openSub(name));
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         e.preventDefault();
         state.openChatSubmenu = state.openChatSubmenu === name ? null : name;
         render();
       });
-    });
-    // Parent CONTAINER — cancel close if hovering back over the parent
-    // row or moving into the submenu itself.
-    document.querySelectorAll("[data-chat-submenu-parent]").forEach(parent => {
-      parent.addEventListener("mouseenter", () => {
-        if (__submenuCloseTimer) { clearTimeout(__submenuCloseTimer); __submenuCloseTimer = null; }
-      });
-      parent.addEventListener("mouseleave", scheduleCloseSub);
     });
 
     // Folder-level: expand/collapse, open menu, rename, delete.
