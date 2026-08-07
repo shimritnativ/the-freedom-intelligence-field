@@ -8186,6 +8186,30 @@ Begin.` },
     }
   }
 
+  // Day 3 completion card — appears at the BOTTOM of the Day 3 chat once
+  // the member has engaged with the Reset (has at least one user message).
+  // Points to the Kajabi bonus Day 4 integration + Architecture of Freedom
+  // masterclass. Uses an <a> so it opens in a new tab. Shows for both new
+  // members (after they finish the intro + start chatting) and existing
+  // members (who already have Day 3 history).
+  function renderDay3CompletionCard() {
+    if (state.currentDay !== 3) return "";
+    const hasUserMessages = (state.messages || []).some(m => m && m.role === "user");
+    if (!hasUserMessages) return "";
+    return `
+      <div class="day1-welcome-card" data-day-intro="3-complete" style="margin-top: 32px;">
+        <p class="day1-welcome-eyebrow">Day 4 · Bonus Integration Day</p>
+        <div class="day1-welcome-body">
+          <p>You have walked through the three days of the Power Reset. What comes next is integration.</p>
+          <p>Your bonus Day 4 is waiting: a guided integration exercise, plus the <strong>Architecture of Freedom</strong> masterclass — Shimrit's full teaching on how to live from what you have just recalibrated.</p>
+        </div>
+        <a href="https://www.shimritnativ.com/products/the-power-reset/categories/2160088714" target="_blank" rel="noopener" class="day1-welcome-cta" style="text-decoration: none; display: block; box-sizing: border-box;">
+          Continue to Day 4 →
+        </a>
+      </div>
+    `;
+  }
+
   function renderMessages() {
     const wrap = document.getElementById("messages");
     if (!wrap) return;
@@ -8269,6 +8293,10 @@ Begin.` },
     if (day1Cards) html = day1Cards + html;
     if (day2Card) html = day2Card + html;
     if (day3Card) html = day3Card + html;
+    // Day 3 completion CTA — appended at the BOTTOM (after messages) so
+    // members see it once they've done the work, not before.
+    const day3Completion = renderDay3CompletionCard();
+    if (day3Completion) html = html + day3Completion;
     wrap.innerHTML = html;
     const wrapper = document.getElementById("messages-wrap");
     if (wrapper) {
