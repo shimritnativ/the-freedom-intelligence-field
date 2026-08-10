@@ -11,7 +11,8 @@
 // filter them out of analytics + skip the Zapier webhook.
 //
 // POST /api/free-trial/start
-// Body: { email, first_name, last_name, consent, scenario, cookie_id? }
+// Body: { email, first_name, last_name, phone, consent, scenario, cookie_id? }
+// phone must be in E.164 format with country code (e.g. "+34612345678")
 // Returns: { trial_id, opening, exchanges_remaining, expires_at }
 
 import { sql } from "@vercel/postgres";
@@ -46,6 +47,13 @@ export default async function handler(req, res) {
   const email = emailRaw.toLowerCase();
   const firstName = String(body.first_name || "").trim().slice(0, 80);
   const lastName = String(body.last_name || "").trim().slice(0, 80);
+  // Phone — expected in E.164 format from intl-tel-input on the client.
+  // Strip whitespace + common formatting chars before validating so we
+  // accept slight variations ("+34 612 345 678", "+1 (415) 555-1234").
+  // Requirement: leading +, country code, and at least 8 total digits.
+  const phoneRaw = String(body.phone || "").trim().slice(0, 32);
+  const phoneNormalized = phoneRaw.replace(/[\s().-]/g, "");
+  const phoneValid = /^\+\d{8,15}$/.test(phoneNormalized);
   const consent = body.consent === true || body.consent === "true";
   const scenarioId = String(body.scenario || "").trim().toLowerCase();
   const cookieId = String(body.cookie_id || "").trim().slice(0, 128) || null;
@@ -55,6 +63,12 @@ export default async function handler(req, res) {
   }
   if (!firstName) {
     return res.status(400).json({ error: "first_name_required" });
+  }
+  if (!phoneValid) {
+    return res.status(400).json({
+      error: "invalid_phone",
+      message: "Phone number must include country code (e.g. +34612345678).",
+    });
   }
   if (!consent) {
     return res.status(400).json({ error: "consent_required" });
@@ -110,11 +124,11 @@ export default async function handler(req, res) {
       INSERT INTO free_trials (
         email, ip, cookie_id, scenario,
         exchange_count, max_exchanges, expires_at,
-        is_staff_test
+        is_staff_test, phone
       ) VALUES (
         ${email}, ${ip}, ${cookieId}, ${scenarioId},
         0, ${FREE_TRIAL_MAX_EXCHANGES}, ${expiresAt}::timestamptz,
-        ${staff}
+        ${staff}, ${phoneNormalized}
       )
       RETURNING id, expires_at
     `;
@@ -146,6 +160,7 @@ export default async function handler(req, res) {
         email,
         first_name: firstName,
         last_name: lastName || null,
+        phone: phoneNormalized,
         scenario: scenario.id,
         scenario_label: scenario.label,
         consent_given_at: new Date().toISOString(),
