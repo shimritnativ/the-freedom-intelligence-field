@@ -69,6 +69,15 @@ function resolveRange(query) {
   if (range === "lifetime") {
     return { from: "2020-01-01T00:00:00Z", to: toIso(endOfDayUtc(now)), label: "lifetime" };
   }
+  // "since_launch" / "launch" — match ads-metrics.js which anchors to the
+  // ads launch date (2026-06-15). The /try LP went live shortly after, so
+  // this covers the full history of Try LP activity without accidentally
+  // including anything pre-launch. Without this branch, an unknown range
+  // like "since_launch" was silently falling through to the 7-day default,
+  // making the /try LP dashboard undercount lifetime completions.
+  if (range === "since_launch" || range === "launch") {
+    return { from: "2026-06-15T00:00:00Z", to: toIso(endOfDayUtc(now)), label: "since launch" };
+  }
   const daysMap = { "7d": 7, "30d": 30, "90d": 90 };
   const days = daysMap[range] || 7;
   const from = new Date(now);
