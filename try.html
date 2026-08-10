@@ -5378,7 +5378,33 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
       if (!a) return;
       var url;
       try { url = new URL(a.href); } catch (err) { return; }
-      var label = url.searchParams.get("utm_content") || "unlabeled";
+      // Label priority so no Reset CTA click is ever tracked as
+      // generic "unlabeled" again:
+      //   1. utm_content on the URL (canonical, what the admin table displays)
+      //   2. data-cta-position attribute on the anchor (authored override)
+      //   3. Derived: anchor id → anchor class → URL pathname slug
+      //   4. Final fallback: "unlabeled" (should now be effectively unreachable)
+      // Anything derived gets a prefix (id_/cls_/path_) so ops can tell
+      // at a glance which fallback rung fired.
+      function slug(s) {
+        return String(s || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "_")
+          .replace(/^_+|_+$/g, "")
+          .slice(0, 30);
+      }
+      var label = url.searchParams.get("utm_content");
+      if (!label) label = a.getAttribute("data-cta-position") || "";
+      if (!label && a.id) label = "id_" + slug(a.id);
+      if (!label && a.className) {
+        var cls = slug(a.className.toString());
+        if (cls) label = "cls_" + cls;
+      }
+      if (!label && url.pathname) {
+        var p = slug(url.pathname);
+        if (p) label = "path_" + p;
+      }
+      if (!label) label = "unlabeled";
       track("try_cta_click", label);
       // Inject the ORIGINAL landing UTMs (from the ad click, captured in
       // basePayload) as passthrough[] params on the ThriveCart URL so
