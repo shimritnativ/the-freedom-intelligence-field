@@ -37,6 +37,11 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
      most Android WebViews) so it renders instantly without a font
      download. Inter is still loaded for the sans stack. -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- intl-tel-input: phone field with country flag picker + validation.
+     Loaded from cdnjs so no bundler is needed. utils.js provides the
+     isValidNumber() + getNumber(E.164) helpers used at submit time. -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/25.3.1/css/intlTelInput.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/25.3.1/js/intlTelInput.min.js" defer></script>
 <style>
   :root {
     --bg-dark: #0E0B07;
@@ -1300,6 +1305,37 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
     padding: 6px 10px;
     font-size: 12px;
     margin-top: 8px;
+  }
+  /* Phone row — intl-tel-input styles need slight overrides so the
+     field matches the cream/gold visual language of the other inputs
+     rather than the library's default white pill. */
+  .email-inline-phone-row {
+    margin-top: 8px;
+  }
+  .email-inline-phone-row .iti { width: 100%; }
+  .email-inline-phone-row .iti__tel-input,
+  .email-inline-phone-row input[type="tel"] {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    color: var(--text);
+    background: var(--bg-warm);
+    min-width: 0;
+  }
+  .email-inline-phone-row .iti__tel-input:focus {
+    outline: 0;
+    border-color: var(--gold);
+    background: var(--bg-card);
+    box-shadow: 0 0 0 3px var(--gold-soft);
+  }
+  .email-inline-phone-row .iti__country-list {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.12);
   }
   /* Inline Reset CTA card that appears at the end of the chat */
   .cw-closing-card {
@@ -4320,6 +4356,7 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
   <div class="lp-footer-links">
     <a href="/privacy" target="_blank" rel="noopener">Privacy policy</a>
     <a href="/terms" target="_blank" rel="noopener">Terms &amp; conditions</a>
+    <a href="/impressum" target="_blank" rel="noopener">Impressum</a>
   </div>
 
   <p class="lp-footer-copy">© Master Your Path. All rights reserved.</p>
@@ -4377,6 +4414,7 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
     exchangeCount: 0,
     isFinal: false,
     phase: "idle",   // idle | email | active | final | already
+    itiPhone: null,  // intl-tel-input instance, set when the form mounts
   };
 
   // ── DOM helpers
@@ -4580,6 +4618,9 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
         <input class="email-inline-input email-inline-name" id="email-first-name" type="text" placeholder="First name" autocomplete="given-name" required />
         <input class="email-inline-input email-inline-name" id="email-last-name" type="text" placeholder="Last name" autocomplete="family-name" />
       </div>
+      <div class="email-inline-phone-row">
+        <input id="email-inline-phone" type="tel" placeholder="Phone number" autocomplete="tel" required />
+      </div>
       <div class="email-inline-row">
         <input class="email-inline-input" id="email-inline-input" type="email" placeholder="your@email.com" autocomplete="email" required />
         <button class="email-inline-submit" id="email-inline-submit" type="button">Enter →</button>
@@ -4593,6 +4634,30 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
     `;
     body.appendChild(wrap);
     scrollChatToBottom();
+
+    // Initialize intl-tel-input on the phone field. Handles country
+    // code picker, IP-based country detection, and validation. Stored
+    // on state.itiPhone so submitInlineEmail can call getNumber() for
+    // E.164 formatting. Guarded so a CDN blip doesn't break the form —
+    // if the library didn't load, we fall back to a naive tel input
+    // and let the server accept whatever the user typed.
+    const phoneInputEl = $("email-inline-phone");
+    if (phoneInputEl && typeof window.intlTelInput === "function") {
+      state.itiPhone = window.intlTelInput(phoneInputEl, {
+        initialCountry: "auto",
+        // Free geoip service used by the library's docs. Fails-open —
+        // if it 500s, defaults to US (fine since users can still pick).
+        geoIpLookup: (success) => {
+          fetch("https://ipapi.co/json")
+            .then(r => r.json())
+            .then(d => success((d && d.country_code) || "us"))
+            .catch(() => success("us"));
+        },
+        separateDialCode: true,
+        utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/25.3.1/js/utils.min.js",
+      });
+    }
+
     // Focus the first-name field first — that's the natural first thing
     // to fill in. Previously landed on the email, which meant the name
     // fields felt like an afterthought and got skipped visually.
@@ -4616,6 +4681,11 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
         if (e.key === "Enter") { e.preventDefault(); submitInlineEmail(); }
       });
     }
+    if (phoneInputEl) {
+      phoneInputEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); submitInlineEmail(); }
+      });
+    }
     $("email-inline-submit").addEventListener("click", submitInlineEmail);
     $("chip-back").addEventListener("click", resetToDoorways);
   }
@@ -4624,6 +4694,7 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
     const input = $("email-inline-input");
     const firstNameEl = $("email-first-name");
     const lastNameEl = $("email-last-name");
+    const phoneEl = $("email-inline-phone");
     const consentEl = $("email-consent-checkbox");
     const btn = $("email-inline-submit");
     const errBox = $("email-inline-error");
@@ -4631,10 +4702,32 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
     const firstName = (firstNameEl && firstNameEl.value || "").trim();
     const lastName = (lastNameEl && lastNameEl.value || "").trim();
     const consent = !!(consentEl && consentEl.checked);
+
+    // Phone — prefer the intl-tel-input formatted E.164 number when the
+    // library is initialized; fall back to the raw value if it isn't.
+    // isValidNumber() gives us proper per-country validation for free.
+    let phoneE164 = "";
+    let phoneIsValid = false;
+    if (state.itiPhone && typeof state.itiPhone.getNumber === "function") {
+      phoneE164 = state.itiPhone.getNumber() || "";
+      phoneIsValid = typeof state.itiPhone.isValidNumber === "function"
+        ? state.itiPhone.isValidNumber()
+        : phoneE164.length >= 8;
+    } else {
+      phoneE164 = (phoneEl && phoneEl.value || "").trim();
+      phoneIsValid = /^\+?\d[\d\s().-]{6,}$/.test(phoneE164);
+    }
+
     errBox.style.display = "none";
     if (!firstName) {
       errBox.textContent = "Please enter your first name.";
       errBox.style.display = "block";
+      return;
+    }
+    if (!phoneIsValid) {
+      errBox.textContent = "Please enter a valid phone number with country code.";
+      errBox.style.display = "block";
+      if (phoneEl) phoneEl.focus();
       return;
     }
     if (!email || !email.includes("@")) {
@@ -4657,6 +4750,7 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
           email,
           first_name: firstName,
           last_name: lastName,
+          phone: phoneE164,
           consent: true,
           scenario: state.scenario,
           cookie_id: getCookieId(),
