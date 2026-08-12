@@ -4636,6 +4636,34 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
     body.appendChild(wrap);
     scrollChatToBottom();
 
+    // Track form-rendered event. Fires once per session, after the
+    // user's clicked a doorway chip and the form actually appeared
+    // on screen. Closes the diagnostic gap between "clicked Try for
+    // free" and "submitted the form" — without this, we couldn't tell
+    // whether people bailed at the CTA vs mid-form. Added 2026-08-12.
+    try { window._trackLandingEvent && window._trackLandingEvent("try_form_view", state.scenario || null); } catch (_) {}
+
+    // First-focus tracking on the two fields most likely to drop
+    // people. Only fires ONCE per session per field (once() guard) so
+    // dashboard counts stay meaningful even if the user tabs through
+    // multiple times. If phone drop-off is dominant, we know the
+    // required phone field is the culprit and can test optional.
+    (function wireFieldFocusTracking() {
+      const focused = {};
+      const bindOnce = (id, label) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener("focus", () => {
+          if (focused[label]) return;
+          focused[label] = true;
+          try { window._trackLandingEvent && window._trackLandingEvent("try_field_focused", label); } catch (_) {}
+        }, { once: false });
+      };
+      bindOnce("email-first-name", "first_name");
+      bindOnce("email-inline-phone", "phone");
+      bindOnce("email-inline-input", "email");
+    })();
+
     // Initialize intl-tel-input on the phone field. Handles country
     // code picker, IP-based country detection, and validation. Stored
     // on state.itiPhone so submitInlineEmail can call getNumber() for
@@ -4890,6 +4918,16 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
       state.isFinal = !!data.is_final;
       addBubble("assistant", sanitizeAssistantReply(data.reply, state.isFinal), { final: state.isFinal });
       updateProgress();
+
+      // Meaningful engagement marker — fires ONCE when the user
+      // reaches their 3rd exchange. Distinguishes "opened the
+      // preview, sent one thing, bailed" from "actually had a
+      // conversation." Critical for judging whether the mechanism
+      // is landing vs. just being tried. Added 2026-08-12.
+      if (state.exchangeCount === 3 && !state._engagedTracked) {
+        state._engagedTracked = true;
+        try { window._trackLandingEvent && window._trackLandingEvent("try_form_engaged", state.scenario || null); } catch (_) {}
+      }
       if (state.isFinal) {
         state.phase = "final";
         // Bridge bubble — the stable "This was a sample..." template.
