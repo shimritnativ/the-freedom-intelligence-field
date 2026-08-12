@@ -69,14 +69,34 @@ export default async function handler(req, res) {
     const ownedSession = ownershipRows[0];
 
     // ===== GET: full session + messages =====
+    // Fetch the MOST RECENT N messages, then re-order chronologically
+    // for display. The old query used `ORDER BY created_at ASC LIMIT 500`
+    // which returned the OLDEST 500 messages once a chat exceeded 500
+    // total. That silently truncated the newest days of activity, which
+    // is exactly the bug Elena Cantarone reported 2026-08-12 ("the last
+    // two or three days of conversation were lost"). New behavior: grab
+    // the 2000 most recent messages so long-term users still see their
+    // recent conversation, and return a total_count + has_more flag so
+    // the frontend can add "load older" pagination later if needed.
+    const MESSAGE_LIMIT = 2000;
     if (req.method === "GET") {
       const { rows: messageRows } = await sql`
         SELECT id, role, content, created_at
+          FROM (
+            SELECT id, role, content, created_at
+              FROM messages
+             WHERE session_id = ${sessionId}
+             ORDER BY created_at DESC
+             LIMIT ${MESSAGE_LIMIT}
+          ) AS recent
+         ORDER BY created_at ASC
+      `;
+      const { rows: countRows } = await sql`
+        SELECT COUNT(*)::int AS total
           FROM messages
          WHERE session_id = ${sessionId}
-         ORDER BY created_at ASC
-         LIMIT 500
       `;
+      const total = countRows[0]?.total || messageRows.length;
       return res.status(200).json({
         session: serializeSession(ownedSession),
         messages: messageRows.map((m) => ({
@@ -85,6 +105,8 @@ export default async function handler(req, res) {
           content: m.content,
           createdAt: m.created_at,
         })),
+        message_total: total,
+        has_more_older: total > messageRows.length,
       });
     }
 
