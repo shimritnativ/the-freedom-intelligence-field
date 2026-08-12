@@ -96,7 +96,10 @@ export default async function handler(req, res) {
       "try_cta_click",         // Reset CTA click (label = utm_content position)
       "try_free_cta_click",    // "Try it for free" CTA click (floating pill etc.)
       "try_form_start",        // User clicked a doorway chip (label = scenario id)
+      "try_form_view",         // Form actually rendered on screen (label = scenario id). Diagnostic — closes gap between CTA click and form_start. Added 2026-08-12.
+      "try_field_focused",     // User first-focused a specific form field (label = first_name | phone | email). Once per session per field. Reveals which field causes hesitation. Added 2026-08-12.
       "try_form_complete",     // Email + first name submitted — free trial started. Carries UTMs so ads-attributed conversions are countable. Added 2026-07-28.
+      "try_form_engaged",      // User reached 3+ exchanges in the preview (label = scenario id). Meaningful engagement, not bail. Added 2026-08-12.
       "try_video_play",        // Pre-hero video started playing
       "try_video_watch_25",
       "try_video_watch_50",
@@ -116,7 +119,10 @@ export default async function handler(req, res) {
       "try_cta_click",          // utm_content position (maximized_chat_top / value_stack / etc.)
       "try_free_cta_click",     // floating_pill / bottom_link
       "try_form_start",         // results / relationships / decisions
+      "try_form_view",          // scenario id
+      "try_field_focused",      // first_name / phone / email
       "try_form_complete",      // scenario id (results / relationships / decisions)
+      "try_form_engaged",       // scenario id — 3+ exchanges reached
     ]);
     const rawLabel = body.label ? String(body.label).trim().slice(0, 30).replace(/[^a-z0-9_]/gi, "") : "";
     const storedEventType = (LABELED_EVENT_TYPES.has(eventType) && rawLabel)
