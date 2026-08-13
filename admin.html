@@ -4587,6 +4587,7 @@
                   <option value="1">Day 1</option>
                   <option value="2">Day 2</option>
                   <option value="3">Day 3 (complete)</option>
+                  <option value="completed_all">Completed all days</option>
                 </select>
                 <select id="roster-filter-login" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;">
                   <option value="">Logged in or not</option>
@@ -8235,7 +8236,17 @@
         }
         if (f.spent === "paid" && !(Number(u.total_spent_cents || 0) > 0)) return false;
         if (f.spent === "unpaid" && Number(u.total_spent_cents || 0) > 0) return false;
-        if (f.day !== "" && String(u.last_completed_day || 0) !== f.day) return false;
+        if (f.day !== "") {
+          const memberDay = Number(u.last_completed_day || 0);
+          if (f.day === "completed_all") {
+            // "Completed all days" = anyone who finished the full Reset
+            // (Day 3+). Uses >= 3 so future extensions (bonus Day 4 etc.)
+            // still count as "completed the core Reset". Added 2026-08-04.
+            if (memberDay < 3) return false;
+          } else if (String(memberDay) !== f.day) {
+            return false;
+          }
+        }
         if (f.login === "logged_in" && !u.first_login_at) return false;
         if (f.login === "never" && u.first_login_at) return false;
         return true;
@@ -8384,9 +8395,33 @@
               ? `<span style="text-decoration: line-through; color: var(--text-mute);">${fmtRev(spent)}</span>`
               : fmtRev(spent))
           : null;
+        // When spent is 0 but the member has a purchase on file, they got
+        // in via a 100% coupon (LAUNCHTEAM, LAUNCHTEAMUNLIMITED, POWER100,
+        // etc.). Show the coupon code in a small gold pill instead of a
+        // bare em dash so Geo can tell at a glance WHY the amount is zero.
+        // Falls back to the em dash only if there's truly no purchase.
+        let freeCouponPill = '';
+        if (!spentDisplay) {
+          try {
+            let purchases = u.purchases_json;
+            if (typeof purchases === 'string') purchases = JSON.parse(purchases);
+            if (Array.isArray(purchases) && purchases.length > 0) {
+              // Prefer a coupon from a zero-amount purchase; else fall back
+              // to the first purchase's coupon (edge case: refunded row).
+              const zeroFree = purchases.find(p => Number(p.amount_cents || 0) === 0 && p.coupon);
+              const anyWithCoupon = purchases.find(p => p.coupon);
+              const chosen = (zeroFree && zeroFree.coupon) || (anyWithCoupon && anyWithCoupon.coupon) || null;
+              if (chosen) {
+                freeCouponPill = `<span style="display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.10em; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; background: var(--gold-soft, rgba(201,168,76,0.14)); color: var(--gold, #C9A84C); border: 1px solid var(--gold-line, rgba(201,168,76,0.28)); white-space: nowrap;" title="Got in via ${escapeHtml(chosen)} coupon (100% off)">${escapeHtml(chosen)}</span>`;
+              }
+            }
+          } catch (_) { /* silent, fall back to em dash */ }
+        }
         const spentCell = spentDisplay
           ? `${spentDisplay}${ordersBadge}${refundPill}`
-          : '<span style="color: var(--text-mute);">—</span>';
+          : (freeCouponPill
+              ? `${freeCouponPill}${ordersBadge}`
+              : '<span style="color: var(--text-mute);">—</span>');
         // Each <td> has an explicit data-label so the mobile stacked-card
         // layout shows the column name in front of each value. (Without
         // this, the CSS ::before { content: attr(data-label) } renders
