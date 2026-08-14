@@ -2850,7 +2850,9 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
     gap: 10px;
     padding: 14px 6px 4px;
     border-top: 1px solid rgba(201, 168, 76, 0.28);
-    margin-top: 4px;
+    /* Push to the bottom of the card so attributions align across
+       cards even when the pullquotes have different line counts. */
+    margin-top: auto;
   }
   .video-testi-initial {
     width: 34px;
@@ -3790,7 +3792,6 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
   </div>
 </section>
 
-
 <!-- ═══════════════════════════════════════════════════════════════
      LONG-FORM LP SECTIONS
      ═══════════════════════════════════════════════════════════════ -->
@@ -3981,6 +3982,58 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
 
     <div style="text-align:center; margin-top: 40px;">
       <a class="value-cta" href="https://masteryourpath.thrivecart.com/power-reset-ads?utm_source=try_lp&utm_medium=cta&utm_campaign=try_preview&utm_content=after_3day_breakdown" target="_blank">Start the 72H Power Reset<span class="cta-price">€9</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- Video testimonials — two vertical Wistia clips from real members
+     (Carmen, Gabrielle). Placed between the "Three days. One reset."
+     breakdown and the "Meet Shimrit" section. Dark background (same
+     .lp-section--dark used by the constellation section above) so it
+     visually separates from the cream sections on either side and
+     reads cinematic against the white video cards. Added 2026-08-13
+     per Geo. -->
+<section class="lp-section lp-section--dark">
+  <div class="lp-container reveal" style="text-align: center; max-width: 900px;">
+    <p class="lp-eyebrow">Real people. Real experience.</p>
+    <h2 class="lp-h2" style="margin-bottom: 44px;">See what real experiences with The Field look like</h2>
+
+    <div class="video-testis-grid">
+
+      <!-- Carmen (Wistia z37xy0wwxl) -->
+      <div class="video-testi-card">
+        <div class="video-testi-frame">
+          <wistia-player media-id="z37xy0wwxl" aspect="0.5625"></wistia-player>
+        </div>
+        <blockquote class="video-testi-quote">
+          The questions totally got me and turned the whole situation around. I was so surprised of the outcome.
+        </blockquote>
+        <div class="video-testi-attrib">
+          <div class="video-testi-initial">C</div>
+          <div>
+            <div class="video-testi-name">Carmen</div>
+            <div class="video-testi-role">The Field Member</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gabrielle (Wistia bxi98mcqk8) -->
+      <div class="video-testi-card">
+        <div class="video-testi-frame">
+          <wistia-player media-id="bxi98mcqk8" aspect="0.5625"></wistia-player>
+        </div>
+        <blockquote class="video-testi-quote">
+          Within a few minutes talking to The Field, I usually see something I couldn't see before.
+        </blockquote>
+        <div class="video-testi-attrib">
+          <div class="video-testi-initial">G</div>
+          <div>
+            <div class="video-testi-name">Gabrielle</div>
+            <div class="video-testi-role">The Field Member</div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </section>
@@ -4187,55 +4240,6 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
     <div style="text-align:center; margin-top: 32px;">
       <a class="value-cta" href="https://masteryourpath.thrivecart.com/power-reset-ads?utm_source=try_lp&utm_medium=cta&utm_campaign=try_preview&utm_content=value_stack" target="_blank">Start the 72H Power Reset<span class="cta-price">€9</span></a>
       <p style="font-size: 12px; color: var(--text-mute); margin: 12px 0 0;">Instant access · secure checkout · includes bonuses</p>
-    </div>
-  </div>
-</section>
-
-<!-- Video testimonials — two vertical Wistia clips from real members
-     (Carmen, Gabrielle) placed just above the written testimonial wall
-     so video builds the "feel it" moment first, then the written wall
-     validates it at scale. Added 2026-08-13 per Geo. -->
-<section class="lp-section lp-section--warm">
-  <div class="lp-container reveal" style="text-align: center; max-width: 900px;">
-    <p class="lp-eyebrow">Real people. Real experience.</p>
-    <h2 class="lp-h2" style="margin-bottom: 44px;">See what real experiences with The Field look like</h2>
-
-    <div class="video-testis-grid">
-
-      <!-- Carmen (Wistia z37xy0wwxl) -->
-      <div class="video-testi-card">
-        <div class="video-testi-frame">
-          <wistia-player media-id="z37xy0wwxl" aspect="0.5625"></wistia-player>
-        </div>
-        <blockquote class="video-testi-quote">
-          The questions totally got me and turned the whole situation around. I was so surprised of the outcome.
-        </blockquote>
-        <div class="video-testi-attrib">
-          <div class="video-testi-initial">C</div>
-          <div>
-            <div class="video-testi-name">Carmen</div>
-            <div class="video-testi-role">The Field Member</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Gabrielle (Wistia bxi98mcqk8) -->
-      <div class="video-testi-card">
-        <div class="video-testi-frame">
-          <wistia-player media-id="bxi98mcqk8" aspect="0.5625"></wistia-player>
-        </div>
-        <blockquote class="video-testi-quote">
-          Within a few minutes talking to The Field, I usually see something I couldn't see before.
-        </blockquote>
-        <div class="video-testi-attrib">
-          <div class="video-testi-initial">G</div>
-          <div>
-            <div class="video-testi-name">Gabrielle</div>
-            <div class="video-testi-role">The Field Member</div>
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
 </section>
