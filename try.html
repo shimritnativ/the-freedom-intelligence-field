@@ -42,6 +42,23 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
      isValidNumber() + getNumber(E.164) helpers used at submit time. -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/25.3.1/css/intlTelInput.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/25.3.1/js/intlTelInput.min.js" defer></script>
+<!-- Wistia player runtime + per-video registrations for the two vertical
+     testimonial videos (Carmen z37xy0wwxl, Gabrielle bxi98mcqk8) that
+     appear in the video-testimonials section further down the page.
+     Blurred swatch placeholders show while each player hydrates. -->
+<script src="https://fast.wistia.com/player.js" async></script>
+<script src="https://fast.wistia.com/embed/z37xy0wwxl.js" async type="module"></script>
+<script src="https://fast.wistia.com/embed/bxi98mcqk8.js" async type="module"></script>
+<style>
+  wistia-player[media-id='z37xy0wwxl']:not(:defined) {
+    background: center / contain no-repeat url('https://fast.wistia.com/embed/medias/z37xy0wwxl/swatch');
+    display: block; filter: blur(5px); padding-top: 177.78%;
+  }
+  wistia-player[media-id='bxi98mcqk8']:not(:defined) {
+    background: center / contain no-repeat url('https://fast.wistia.com/embed/medias/bxi98mcqk8/swatch');
+    display: block; filter: blur(5px); padding-top: 177.78%;
+  }
+</style>
 <style>
   :root {
     --bg-dark: #0E0B07;
@@ -2773,6 +2790,95 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
      card); on hover they animate to 0deg + a soft lift.
      ═════════════════════════════════════════════════════════════ */
   .lp-section--testimonial-wall { background: #ECE4CE; }
+
+  /* Video testimonials section — two vertical Wistia videos side by
+     side on desktop, stacked on mobile. Placed just above the written
+     testimonial wall so video (feel) leads into text (proof at scale). */
+  .video-testis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  @media (max-width: 720px) {
+    .video-testis-grid { grid-template-columns: 1fr; gap: 32px; max-width: 420px; }
+  }
+  .video-testi-card {
+    background: var(--bg-card, #FFFFFF);
+    border: 1px solid rgba(201, 168, 76, 0.28);
+    border-radius: 20px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 12px 32px rgba(43, 35, 24, 0.05);
+    text-align: left;
+  }
+  .video-testi-frame {
+    background: #000;
+    border-radius: 14px;
+    overflow: hidden;
+    aspect-ratio: 9 / 16;
+    position: relative;
+  }
+  .video-testi-frame wistia-player {
+    width: 100%;
+    height: 100%;
+    display: block;
+    background: #000;
+  }
+  .video-testi-quote {
+    font-family: var(--font-serif, Georgia, serif);
+    font-style: italic;
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--text, #1F1810);
+    padding: 22px 6px 12px;
+  }
+  .video-testi-quote::before {
+    content: '"';
+    font-family: var(--font-serif, Georgia, serif);
+    font-size: 44px;
+    color: var(--gold, #C9A84C);
+    line-height: 0.6;
+    display: block;
+    margin-bottom: 6px;
+  }
+  .video-testi-attrib {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 6px 4px;
+    border-top: 1px solid rgba(201, 168, 76, 0.28);
+    margin-top: 4px;
+  }
+  .video-testi-initial {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(201, 168, 76, 0.14);
+    color: var(--gold, #C9A84C);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    border: 1px solid rgba(201, 168, 76, 0.28);
+    flex-shrink: 0;
+  }
+  .video-testi-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text, #1F1810);
+    letter-spacing: 0.01em;
+  }
+  .video-testi-role {
+    font-size: 11px;
+    color: var(--text-mute, #A8997E);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
   .testimonial-wall {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -4081,6 +4187,55 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
     <div style="text-align:center; margin-top: 32px;">
       <a class="value-cta" href="https://masteryourpath.thrivecart.com/power-reset-ads?utm_source=try_lp&utm_medium=cta&utm_campaign=try_preview&utm_content=value_stack" target="_blank">Start the 72H Power Reset<span class="cta-price">€9</span></a>
       <p style="font-size: 12px; color: var(--text-mute); margin: 12px 0 0;">Instant access · secure checkout · includes bonuses</p>
+    </div>
+  </div>
+</section>
+
+<!-- Video testimonials — two vertical Wistia clips from real members
+     (Carmen, Gabrielle) placed just above the written testimonial wall
+     so video builds the "feel it" moment first, then the written wall
+     validates it at scale. Added 2026-08-13 per Geo. -->
+<section class="lp-section lp-section--warm">
+  <div class="lp-container reveal" style="text-align: center; max-width: 900px;">
+    <p class="lp-eyebrow">Real people. Real experience.</p>
+    <h2 class="lp-h2" style="margin-bottom: 44px;">See what real experiences with The Field look like</h2>
+
+    <div class="video-testis-grid">
+
+      <!-- Carmen (Wistia z37xy0wwxl) -->
+      <div class="video-testi-card">
+        <div class="video-testi-frame">
+          <wistia-player media-id="z37xy0wwxl" aspect="0.5625"></wistia-player>
+        </div>
+        <blockquote class="video-testi-quote">
+          The questions totally got me and turned the whole situation around. I was so surprised of the outcome.
+        </blockquote>
+        <div class="video-testi-attrib">
+          <div class="video-testi-initial">C</div>
+          <div>
+            <div class="video-testi-name">Carmen</div>
+            <div class="video-testi-role">The Field Member</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gabrielle (Wistia bxi98mcqk8) -->
+      <div class="video-testi-card">
+        <div class="video-testi-frame">
+          <wistia-player media-id="bxi98mcqk8" aspect="0.5625"></wistia-player>
+        </div>
+        <blockquote class="video-testi-quote">
+          Within a few minutes talking to The Field, I usually see something I couldn't see before.
+        </blockquote>
+        <div class="video-testi-attrib">
+          <div class="video-testi-initial">G</div>
+          <div>
+            <div class="video-testi-name">Gabrielle</div>
+            <div class="video-testi-role">The Field Member</div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </section>
