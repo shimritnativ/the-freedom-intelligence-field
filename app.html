@@ -8556,7 +8556,7 @@ Begin.` },
 
     const card1Html = `
       <div class="day1-welcome-card" data-day1-card="1">
-        <p class="day1-welcome-eyebrow">Master Your Path · Day 1</p>
+        <p class="day1-welcome-eyebrow">Start Here · Day 1</p>
         <div class="day1-welcome-video">
           <iframe src="https://fast.wistia.net/embed/iframe/w9ldl9naxi" allow="autoplay; fullscreen" allowfullscreen title="Welcome to The Field"></iframe>
         </div>
@@ -8589,6 +8589,7 @@ Begin.` },
           <p>Welcome to Day 1 of your 72-hour power reset.</p>
           <p>Today is the State Reset. Day 1 locates what state you are operating from, what has been directing your thoughts, decisions, and energy, and returns you to your own power.</p>
           <p>When you are ready, find a quiet space and give yourself 15 to 20 minutes where you can be fully present.</p>
+          <p><a href="https://drive.google.com/file/d/1x7z9dQrA-rY7UcCjgE97-weXOUaNIIYl/view?usp=sharing" target="_blank" rel="noopener">Open the Day 1 companion PDF ↗</a><br><span style="font-size: 13px; color: var(--text-dim, #6B5F4C);">Below this video you will find the PDF with some more material you can use to complement this day.</span></p>
         </div>
         <button class="day1-welcome-cta" id="day1-cta-2" type="button" ${card2BtnDone ? "disabled" : ""}>
           ${card2BtnDone ? '<span class="day1-check">✓</span>Prompt inserted' : 'Begin Day 1 Now'}
@@ -8685,10 +8686,11 @@ Begin.` },
       }
     } catch (_) {}
     const step = day2IntroReadStep();
-    // Skip existing members who already engaged with Day 2 before this
-    // feature shipped (same protection as Day 1).
-    const hasUserMessages = (state.messages || []).some(m => m && m.role === "user");
-    if (hasUserMessages && step === null && !force) return "";
+    // Video always shows on Day 2 regardless of message history so members
+    // can rewatch the intro and access the companion PDF whenever they
+    // land on Day 2. The button state (btnDone) still reflects whether
+    // they've already used it to auto-insert the Day 2 prompt.
+    // Existing-member skip was removed 2026-08-13 per Geo.
     const btnDone = step === "done";
     return `
       <div class="day1-welcome-card" data-day-intro="2">
@@ -8700,6 +8702,7 @@ Begin.` },
           <p>Welcome to Day 2 of your 72 Hour Power Reset.</p>
           <p>Today is the Decision &amp; Action Alignment. Yesterday you reset your state, and you can return to that reset any day you wish. Today you take the statement you set yesterday, anchor it into your being, and from that place make a clear, aligned decision and turn it into one real action taken from your power.</p>
           <p>Your instrument has three centers: mind, heart, and body. When all three come into alignment around a decision, a goal, or a next move, that move becomes empowered, by allowing the energy that everything is created from to move to and through you into manifestation. That is what today is about.</p>
+          <p><a href="https://drive.google.com/file/d/1QiA4emMS1-bv9F3TwJiLREQ0WUOYs81U/view?usp=sharing" target="_blank" rel="noopener">Open the Day 2 companion PDF ↗</a><br><span style="font-size: 13px; color: var(--text-dim, #6B5F4C);">Below this video you will find the PDF with some more material you can use to complement this day.</span></p>
         </div>
         <button class="day1-welcome-cta" id="day2-cta" type="button" ${btnDone ? "disabled" : ""}>
           ${btnDone ? '<span class="day1-check">✓</span>Prompt inserted' : 'Begin Day 2 Now'}
@@ -8753,8 +8756,9 @@ Begin.` },
       }
     } catch (_) {}
     const step = day3IntroReadStep();
-    const hasUserMessages = (state.messages || []).some(m => m && m.role === "user");
-    if (hasUserMessages && step === null && !force) return "";
+    // Video always shows on Day 3 regardless of message history so members
+    // can rewatch the intro and access the companion PDF whenever they
+    // land on Day 3. Same rationale as Day 2 (2026-08-13 per Geo).
     const btnDone = step === "done";
     return `
       <div class="day1-welcome-card" data-day-intro="3">
@@ -8766,6 +8770,7 @@ Begin.` },
           <p>Welcome to Day 3 of your 72 Hour Power Reset.</p>
           <p>Today is the peak experience of the entire three-day journey. You have reset your state and aligned your decision. Today you step into the frequency of the reality you just decided to create and tuning to it.</p>
           <p>The Field will guide you to build a Determined Imagination scene: a specific, sensory, alive picture of your desired reality, and then step inside it and feel it as already real.</p>
+          <p><a href="https://drive.google.com/file/d/1Zhjf7NyeLo1tWco_G8KBs2R1UKRFtodv/view?usp=sharing" target="_blank" rel="noopener">Open the Day 3 companion PDF ↗</a><br><span style="font-size: 13px; color: var(--text-dim, #6B5F4C);">Below this video you will find the PDF with some more material you can use to complement this day.</span></p>
         </div>
         <button class="day1-welcome-cta" id="day3-cta" type="button" ${btnDone ? "disabled" : ""}>
           ${btnDone ? '<span class="day1-check">✓</span>Prompt inserted' : 'Begin Day 3 Now'}
@@ -8846,13 +8851,19 @@ Begin.` },
       : (day2CardWillShow ? day2IntroReadStep()
       : (day3CardWillShow ? day3IntroReadStep() : null));
     if (dayCardsWillShow) {
-      if (dayIntroStep !== "done") {
-        // Cards are up, member is still walking through the intro — hide
-        // everything below them so nothing competes for attention.
+      // Treat existing members with real message history as effectively
+      // "done" with the intro so their session doesn't get hidden below
+      // the card when they revisit Day 2 or Day 3. Only truly first-time
+      // members (no user messages yet, no completed intro) get the
+      // hide-everything-below-the-card treatment.
+      const hasUserHistory = (state.messages || []).some(m => m && m.role === "user");
+      const introEffectivelyDone = dayIntroStep === "done" || hasUserHistory;
+      if (!introEffectivelyDone) {
         messagesToRender = [];
       } else {
-        // Intro is complete. Show only messages starting from the member's
-        // first real user turn, so pre-populated legacy welcomes stay hidden.
+        // Intro complete OR member has real prior history. Show only
+        // messages starting from their first real user turn so pre-
+        // populated legacy welcomes stay hidden.
         const firstUserIdx = state.messages.findIndex(m => m && m.role === "user");
         messagesToRender = firstUserIdx >= 0 ? state.messages.slice(firstUserIdx) : [];
       }
