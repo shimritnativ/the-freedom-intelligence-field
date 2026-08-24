@@ -5026,6 +5026,19 @@ Begin.` },
         + '<span class="msg-cta-arrow" aria-hidden="true">→</span></a>';
     });
 
+    // In-app day-switch button syntax: [[go:Label|dayN]] where N is 1-3.
+    // Renders as an in-brand gold button that switches the app to that
+    // day's chat via onDayClick(N), no external navigation. Used by the
+    // day prompts to give members a one-tap way to move to the next day
+    // once the current one is complete. Whitelisted so the AI cannot use
+    // it to jump around arbitrarily; only valid day numbers render.
+    html = html.replace(/\[\[go:([^|\]]+)\|day([123])\]\]/g, function (m, label, dayNum) {
+      const n = parseInt(dayNum, 10);
+      return '<button type="button" class="msg-cta-btn" data-go-day="' + n + '">'
+        + label.trim()
+        + '<span class="msg-cta-arrow" aria-hidden="true">→</span></button>';
+    });
+
     // MP3 audio download syntax: [[mp3:Title|Text to speak]] -> audio card.
     // Renders a loading card that auto-fires generation via /api/speak (which
     // uses Shimrit's ElevenLabs cloned voice). The text portion may span
@@ -5125,6 +5138,23 @@ Begin.` },
   // pointing at the same text share one request.
   const mp3BlobCache = new Map(); // b64Text -> { url, duration, title }
   const mp3InFlight = new Map(); // b64Text -> Promise<{ url, duration, title }>
+
+  // Wire the [[go:Label|dayN]] buttons that the Field can drop into a
+  // message to send the member straight to Day N in a single tap. Runs
+  // after every render (same pattern as processMp3Cards). Idempotent
+  // via the .go-day-wired flag so we don't attach duplicate listeners
+  // when messages re-render.
+  function wireGoDayButtons() {
+    document.querySelectorAll("[data-go-day]:not(.go-day-wired)").forEach(btn => {
+      btn.classList.add("go-day-wired");
+      const n = parseInt(btn.getAttribute("data-go-day") || "0", 10);
+      if (![1, 2, 3].includes(n)) return;
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        try { onDayClick(n); } catch (err) { console.warn("go_day_click_failed", err); }
+      });
+    });
+  }
 
   function processMp3Cards() {
     document.querySelectorAll(".mp3-card:not(.mp3-processed)").forEach(card => {
@@ -8936,6 +8966,9 @@ Begin.` },
     }
     // Scan any newly rendered [[mp3:...]] cards and start audio generation.
     processMp3Cards();
+    // Wire in-app [[go:Label|dayN]] day-switch buttons dropped in by the
+    // Field's closing responses (idempotent).
+    wireGoDayButtons();
     // Bind click handlers on the day intro card buttons (idempotent).
     wireDay1WelcomeCards();
     wireDay2WelcomeCard();
@@ -11054,6 +11087,8 @@ Begin.` },
     // call to actually fire /api/speak — without it the card sits in loading
     // state forever.
     processMp3Cards();
+    // Same wiring for in-app [[go:Label|dayN]] buttons (idempotent).
+    wireGoDayButtons();
   }
 
   function onUnlimitedKeyDown(e) {
