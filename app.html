@@ -9800,9 +9800,16 @@ Begin.` },
         }
       }
       voiceState.mimeType = mimeType || "audio/webm";
-      voiceState.mediaRecorder = mimeType
-        ? new MediaRecorder(voiceState.stream, { mimeType })
-        : new MediaRecorder(voiceState.stream);
+      // 32 kbps opus is speech-perfect for Whisper (higher bitrates just
+      // waste bytes on speech). Without this, browsers default to
+      // ~128 kbps and a 2-minute clip already hits Vercel's 4.5MB
+      // request-body limit after base64 inflation, which is exactly the
+      // "recordings over 2 minutes fail" bug members reported.
+      // 32 kbps × 12.5 minutes ≈ 3MB raw ≈ 4MB base64, safely under Vercel.
+      const recorderOptions = mimeType
+        ? { mimeType, audioBitsPerSecond: 32000 }
+        : { audioBitsPerSecond: 32000 };
+      voiceState.mediaRecorder = new MediaRecorder(voiceState.stream, recorderOptions);
       voiceState.audioChunks = [];
       voiceState.mediaRecorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) voiceState.audioChunks.push(e.data);
@@ -9822,7 +9829,13 @@ Begin.` },
         }
         await transcribeBlob(blob, voiceState.mimeType);
       };
-      voiceState.mediaRecorder.start();
+      // Chunk every 1 second so ondataavailable fires incrementally.
+      // Without a timeslice, the entire recording sits in a single
+      // browser-managed buffer until stop() fires. Safari and some
+      // Android browsers silently drop that buffer or return an empty
+      // blob for recordings over ~2 minutes. Chunking bypasses this by
+      // streaming data out of the browser into our own array as we go.
+      voiceState.mediaRecorder.start(1000);
       voiceState.startedAt = Date.now();
       micBtn.classList.add("recording");
       showRecordingIndicator();
