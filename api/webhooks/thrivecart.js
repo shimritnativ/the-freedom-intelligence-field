@@ -21,6 +21,18 @@
 
 import { sql } from "@vercel/postgres";
 import { notifyAdmins } from "../../lib/adminNotify.js";
+import { grantWorkshopEntitlement } from "../../lib/db.js";
+
+// ThriveCart product IDs that map to a workshop-tier entitlement rather
+// than a normal Kajabi-driven grant. Keeping this as a constant so we
+// can add future workshops without editing the flow logic.
+const WORKSHOP_PRODUCT_IDS = new Set([
+  "153", // All The Way To The Top & Beyond VIP · Sep 21-23, 2026
+]);
+// Access closes on Oct 2, 2026 for the September 2026 workshop cohort.
+// If the workshop is re-run later, add a new product ID with its own
+// expiry above and switch on productId to pick the right date.
+const WORKSHOP_EXPIRES_AT = new Date("2026-10-02T23:59:59Z");
 
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -211,6 +223,36 @@ export default async function handler(req, res) {
             )
           )
       `;
+    }
+
+    // Workshop-tier grant. If the purchased product is one of our
+    // workshop VIP products (currently just ThriveCart 153), stamp
+    // this user with tier='workshop' + workshop_expires_at. Runs on
+    // order.success only, protected by the same idempotency guarantee
+    // as the purchase INSERT (a ThriveCart retry hits ON CONFLICT DO
+    // NOTHING on purchases and we still re-run this grant, which is
+    // itself idempotent via ON CONFLICT DO UPDATE inside
+    // grantWorkshopEntitlement).
+    if (event === "order.success" && email && WORKSHOP_PRODUCT_IDS.has(String(productId))) {
+      try {
+        await grantWorkshopEntitlement({
+          email,
+          expiresAt: WORKSHOP_EXPIRES_AT,
+          utm: {
+            source:   body.passthrough_utm_source   || body.utm_source   || null,
+            medium:   body.passthrough_utm_medium   || body.utm_medium   || null,
+            campaign: body.passthrough_utm_campaign || body.utm_campaign || null,
+            content:  body.passthrough_utm_content  || body.utm_content  || null,
+            term:     body.passthrough_utm_term     || body.utm_term     || null,
+          },
+        });
+        console.log("workshop_grant_ok", { email, productId, expiresAt: WORKSHOP_EXPIRES_AT.toISOString() });
+      } catch (grantErr) {
+        // Log but do NOT fail the webhook — ThriveCart's retry would loop
+        // and the admin can hand-grant if needed. Priority is not blocking
+        // the sale record.
+        console.error("workshop_grant_failed", { email, productId, message: grantErr?.message });
+      }
     }
 
     // Push notification on real successful sales. Skip rebills, refunds,
