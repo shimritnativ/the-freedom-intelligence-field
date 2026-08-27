@@ -7024,14 +7024,18 @@ Begin.` },
   function renderAccountModal() {
     if (!state.accountMenuOpen) return "";
     const isFull = state.tier === "full";
+    const isWorkshop = state.tier === "workshop";
     const displayName = state.displayName || "";
     const previewActive = state.previewEndsAt && new Date(state.previewEndsAt).getTime() > Date.now();
     const previewRemainingMs = state.previewEndsAt
       ? Math.max(0, new Date(state.previewEndsAt).getTime() - Date.now())
       : 0;
-    // Reset card only shows for preview-tier members (Unlimited members
-    // don't need the Reset countdown — they have permanent access).
-    const showResetCard = !isFull && (state.firstLoginAt || state.previewEndsAt);
+    // Reset card only shows for preview-tier members. Full-tier members
+    // have permanent access (no countdown needed). Workshop-tier members
+    // (VIP €47 workshop) don't have the 72-hour Reset window — they have
+    // their own workshop_expires_at date — so the Reset card would show
+    // stale/misleading "Window complete" copy if we included them here.
+    const showResetCard = !isFull && !isWorkshop && (state.firstLoginAt || state.previewEndsAt);
 
     // Unlimited block: subscription state if owned, CTA if not.
     // For owned: yearly subscribers see "Yearly · Active" with one Manage
@@ -7535,19 +7539,19 @@ Begin.` },
             <div class="main-header">
               <div>
                 <div class="main-header-title">Welcome to The Field</div>
-                <div class="main-header-sub">72-Hour Power Reset</div>
+                <div class="main-header-sub">${state.tier === "workshop" ? "Power Reset" : "72-Hour Power Reset"}</div>
               </div>
             </div>
             <div class="entry-screen">
               <div class="entry-card">
                 <div class="entry-label">The Freedom Intelligence Field</div>
-                <div class="entry-title">Welcome to the Freedom Intelligence Field<br/>Day 1: State Reset</div>
+                <div class="entry-title">Welcome to the Freedom Intelligence Field<br/>${dayLabel(1)}: State Reset</div>
                 <div class="entry-sub">Drop your prompt and I'll guide you through a powerful process.</div>
                 <form id="entry-form">
                   <input class="entry-input" id="name-input" type="text" placeholder="Your name (optional)" autocomplete="given-name" />
-                  <textarea class="entry-input" id="opening-input" rows="4" placeholder="Paste your Day 1 prompt here and let's begin." required style="font-family: Georgia, 'Times New Roman', serif; line-height: 1.6;"></textarea>
+                  <textarea class="entry-input" id="opening-input" rows="4" placeholder="Paste your ${dayLabel(1)} prompt here and let's begin." required style="font-family: Georgia, 'Times New Roman', serif; line-height: 1.6;"></textarea>
                   ${state.error ? `<div class="error-text">${escapeHtml(state.error)}</div>` : ""}
-                  <button class="btn-primary" type="submit">Begin Day 1</button>
+                  <button class="btn-primary" type="submit">Begin ${dayLabel(1)}</button>
                 </form>
               </div>
             </div>
@@ -7585,11 +7589,11 @@ Begin.` },
           <main class="main">
             <div class="main-header">
               <div>
-                <div class="main-header-title">${DAY_META[state.currentDay - 1].label} · ${DAY_META[state.currentDay - 1].theme}</div>
-                <div class="main-header-sub">72-Hour Power Reset</div>
+                <div class="main-header-title">${dayLabel(state.currentDay)} · ${DAY_META[state.currentDay - 1].theme}</div>
+                <div class="main-header-sub">${state.tier === "workshop" ? "Power Reset" : "72-Hour Power Reset"}</div>
               </div>
               <div>
-                <div class="day-chip">${DAY_META[state.currentDay - 1].label} · ${DAY_META[state.currentDay - 1].theme}</div>
+                <div class="day-chip">${dayLabel(state.currentDay)} · ${DAY_META[state.currentDay - 1].theme}</div>
                 ${(function () {
                   // Reset window countdown — preview-tier only, only when the
                   // window has started. Gives members a permanent "how much
@@ -8719,7 +8723,7 @@ Begin.` },
           <div class="day1-welcome-footnote">All these videos and info stay available in your <a href="https://www.shimritnativ.com/library" target="_blank" rel="noopener">library</a> or through the "Your Account" button here.</div>
         </div>
         <button class="day1-welcome-cta" id="day1-cta-1" type="button" ${card1BtnDone ? "disabled" : ""}>
-          ${card1BtnDone ? '<span class="day1-check">✓</span>Started' : 'Begin Day 1'}
+          ${card1BtnDone ? '<span class="day1-check">✓</span>Started' : `Begin ${dayLabel(1)}`}
         </button>
       </div>
     `;
@@ -8737,7 +8741,7 @@ Begin.` },
           <p><a href="https://drive.google.com/file/d/1x7z9dQrA-rY7UcCjgE97-weXOUaNIIYl/view?usp=sharing" target="_blank" rel="noopener">Open the Day 1 companion PDF ↗</a><br><span style="font-size: 13px; color: var(--text-dim, #6B5F4C);">Below this video you will find the PDF with some more material you can use to complement this day.</span></p>
         </div>
         <button class="day1-welcome-cta" id="day1-cta-2" type="button" ${card2BtnDone ? "disabled" : ""}>
-          ${card2BtnDone ? '<span class="day1-check">✓</span>Prompt inserted' : 'Begin Day 1 Now'}
+          ${card2BtnDone ? '<span class="day1-check">✓</span>Prompt inserted' : `Begin ${dayLabel(1)} Now`}
         </button>
       </div>
     `;
@@ -8850,7 +8854,7 @@ Begin.` },
           <p><a href="https://drive.google.com/file/d/1QiA4emMS1-bv9F3TwJiLREQ0WUOYs81U/view?usp=sharing" target="_blank" rel="noopener">Open the Day 2 companion PDF ↗</a><br><span style="font-size: 13px; color: var(--text-dim, #6B5F4C);">Below this video you will find the PDF with some more material you can use to complement this day.</span></p>
         </div>
         <button class="day1-welcome-cta" id="day2-cta" type="button" ${btnDone ? "disabled" : ""}>
-          ${btnDone ? '<span class="day1-check">✓</span>Prompt inserted' : 'Begin Day 2 Now'}
+          ${btnDone ? '<span class="day1-check">✓</span>Prompt inserted' : `Begin ${dayLabel(2)} Now`}
         </button>
       </div>
     `;
@@ -8918,7 +8922,7 @@ Begin.` },
           <p><a href="https://drive.google.com/file/d/1Zhjf7NyeLo1tWco_G8KBs2R1UKRFtodv/view?usp=sharing" target="_blank" rel="noopener">Open the Day 3 companion PDF ↗</a><br><span style="font-size: 13px; color: var(--text-dim, #6B5F4C);">Below this video you will find the PDF with some more material you can use to complement this day.</span></p>
         </div>
         <button class="day1-welcome-cta" id="day3-cta" type="button" ${btnDone ? "disabled" : ""}>
-          ${btnDone ? '<span class="day1-check">✓</span>Prompt inserted' : 'Begin Day 3 Now'}
+          ${btnDone ? '<span class="day1-check">✓</span>Prompt inserted' : `Begin ${dayLabel(3)} Now`}
         </button>
       </div>
     `;
