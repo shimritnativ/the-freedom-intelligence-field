@@ -9719,12 +9719,15 @@ Begin.` },
       state.currentDay = data.currentDay || 1;
       state.timeRemainingMs = data.timeRemainingMs;
       if (EMBED_MODE) {
-        // Tier was set from the verified Kajabi message; a 'full' from the
-        // backend (once the webhook feeds it) also promotes.
-        if (data.tier === "full") state.tier = "full";
+        // Tier was set from the verified Kajabi message; a 'full' or
+        // 'workshop' from the backend (once the webhook feeds it) also
+        // promotes. Workshop is the VIP workshop entitlement and must
+        // propagate here or the sidebar falls back to reset-tier UI.
+        if (data.tier === "full" || data.tier === "workshop") state.tier = data.tier;
       } else {
         state.tier = URL_TIER || data.tier || "preview";
       }
+      state.workshopExpiresAt = data.workshopExpiresAt || null;
       state.view = "chat";
       state.messages = [{ role: "user", content: opening }];
       state.loading = true;
@@ -11323,9 +11326,14 @@ Begin.` },
       // expired Reset state until they manually logged out and back in).
       // Trust whatever the server says: if data.tier is missing, fall back
       // to the existing client value rather than silently downgrading.
-      if (data.tier === "full" || data.tier === "preview") {
+      // Workshop is the €47 VIP tier for the September 2026 workshop and
+      // must rehydrate on every page load exactly like full and preview,
+      // otherwise the sidebar renders reset-tier UI ("The 72-Hour Power
+      // Reset" + Unlimited upsell) instead of the workshop UI.
+      if (data.tier === "full" || data.tier === "preview" || data.tier === "workshop") {
         state.tier = data.tier;
       }
+      state.workshopExpiresAt = data.workshopExpiresAt || null;
       // Same rehydration discipline for subscription plan so the Your
       // Account modal shows the right copy after a monthly to yearly upgrade.
       if (data.subscriptionPlan === "monthly" || data.subscriptionPlan === "yearly") {
