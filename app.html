@@ -7225,16 +7225,21 @@ Begin.` },
     // user is viewing an Unlimited chat.
 
     // Default = entry view (about to start Day 1).
-    let title = "Day 1: State Reset";
-    let subtitle = "72-Hour Power Reset";
-    let pillLabel = "DAY 1";
+    // Workshop tier renders the Reset as "Steps" and drops the "72-Hour"
+    // framing to match the VIP LP product language.
+    const isWorkshopMember = state.tier === "workshop";
+    const stepWord = isWorkshopMember ? "Step" : "Day";
+    const resetName = isWorkshopMember ? "Power Reset" : "72-Hour Power Reset";
+    let title = `${stepWord} 1: State Reset`;
+    let subtitle = resetName;
+    let pillLabel = `${stepWord.toUpperCase()} 1`;
     let pillStyle = "reset";
 
     if (state.view === "chat") {
       const d = DAY_META[state.currentDay - 1];
-      title = `Day ${state.currentDay} · ${d.theme}`;
-      subtitle = "72-Hour Power Reset";
-      pillLabel = `DAY ${state.currentDay}`;
+      title = `${stepWord} ${state.currentDay} · ${d.theme}`;
+      subtitle = resetName;
+      pillLabel = `${stepWord.toUpperCase()} ${state.currentDay}`;
       pillStyle = "reset";
     } else if (state.view === "unlimited-chat") {
       const active = state.unlimitedSessions.find(s => s.id === state.activeUnlimitedId);
@@ -7335,10 +7340,10 @@ Begin.` },
           const unlocked = isDayUnlocked(n);
           if (!unlocked) {
             // Locked: dimmed chip, no data-mobile-day so it isn't wired up.
-            return `<button class="mobile-day-chip locked" type="button" disabled aria-disabled="true">Day ${n} · 🔒</button>`;
+            return `<button class="mobile-day-chip locked" type="button" disabled aria-disabled="true">${dayLabel(n)} · 🔒</button>`;
           }
           const isActive = n === state.currentDay && state.view === "chat";
-          return `<button class="mobile-day-chip ${isActive ? "active" : ""}" data-mobile-day="${n}" type="button">Day ${n} · ${escapeHtml(d.theme)}</button>`;
+          return `<button class="mobile-day-chip ${isActive ? "active" : ""}" data-mobile-day="${n}" type="button">${dayLabel(n)} · ${escapeHtml(d.theme)}</button>`;
         }).join("")}
       </div>
     `;
@@ -8696,7 +8701,7 @@ Begin.` },
 
     const card1Html = `
       <div class="day1-welcome-card" data-day1-card="1">
-        <p class="day1-welcome-eyebrow">Start Here · Day 1</p>
+        <p class="day1-welcome-eyebrow">Start Here · ${state.tier === "workshop" ? "Step 1" : "Day 1"}</p>
         <div class="day1-welcome-video">
           <iframe src="https://fast.wistia.net/embed/iframe/w9ldl9naxi" allow="autoplay; fullscreen" allowfullscreen title="Welcome to The Field"></iframe>
         </div>
@@ -8721,12 +8726,12 @@ Begin.` },
 
     const card2Html = `
       <div class="day1-welcome-card ${card2Visible ? "" : "day1-welcome-hidden"}" id="day1-card-2" data-day1-card="2">
-        <p class="day1-welcome-eyebrow">Day 1 · State Reset</p>
+        <p class="day1-welcome-eyebrow">${state.tier === "workshop" ? "Step 1" : "Day 1"} · State Reset</p>
         <div class="day1-welcome-video">
           <iframe src="https://fast.wistia.net/embed/iframe/hjjxtvsbvc" allow="autoplay; fullscreen" allowfullscreen title="Day 1 · State Reset"></iframe>
         </div>
         <div class="day1-welcome-body">
-          <p>Welcome to Day 1 of your 72-hour power reset.</p>
+          <p>Welcome to ${state.tier === "workshop" ? "Step 1 of your Power Reset" : "Day 1 of your 72-hour power reset"}.</p>
           <p>Today is the State Reset. Day 1 locates what state you are operating from, what has been directing your thoughts, decisions, and energy, and returns you to your own power.</p>
           <p>When you are ready, find a quiet space and give yourself 15 to 20 minutes where you can be fully present.</p>
           <p><a href="https://drive.google.com/file/d/1x7z9dQrA-rY7UcCjgE97-weXOUaNIIYl/view?usp=sharing" target="_blank" rel="noopener">Open the Day 1 companion PDF ↗</a><br><span style="font-size: 13px; color: var(--text-dim, #6B5F4C);">Below this video you will find the PDF with some more material you can use to complement this day.</span></p>
@@ -8834,12 +8839,12 @@ Begin.` },
     const btnDone = step === "done";
     return `
       <div class="day1-welcome-card" data-day-intro="2">
-        <p class="day1-welcome-eyebrow">Day 2 · Decision &amp; Action Alignment</p>
+        <p class="day1-welcome-eyebrow">${state.tier === "workshop" ? "Step 2" : "Day 2"} · Decision &amp; Action Alignment</p>
         <div class="day1-welcome-video">
           <iframe src="https://fast.wistia.net/embed/iframe/9smawlijma" allow="autoplay; fullscreen" allowfullscreen title="Day 2 · Decision &amp; Action Alignment"></iframe>
         </div>
         <div class="day1-welcome-body">
-          <p>Welcome to Day 2 of your 72 Hour Power Reset.</p>
+          <p>Welcome to ${state.tier === "workshop" ? "Step 2 of your Power Reset" : "Day 2 of your 72 Hour Power Reset"}.</p>
           <p>Today is the Decision &amp; Action Alignment. Yesterday you reset your state, and you can return to that reset any day you wish. Today you take the statement you set yesterday, anchor it into your being, and from that place make a clear, aligned decision and turn it into one real action taken from your power.</p>
           <p>Your instrument has three centers: mind, heart, and body. When all three come into alignment around a decision, a goal, or a next move, that move becomes empowered, by allowing the energy that everything is created from to move to and through you into manifestation. That is what today is about.</p>
           <p><a href="https://drive.google.com/file/d/1QiA4emMS1-bv9F3TwJiLREQ0WUOYs81U/view?usp=sharing" target="_blank" rel="noopener">Open the Day 2 companion PDF ↗</a><br><span style="font-size: 13px; color: var(--text-dim, #6B5F4C);">Below this video you will find the PDF with some more material you can use to complement this day.</span></p>
@@ -8902,12 +8907,12 @@ Begin.` },
     const btnDone = step === "done";
     return `
       <div class="day1-welcome-card" data-day-intro="3">
-        <p class="day1-welcome-eyebrow">Day 3 · Power Frequency Calibration</p>
+        <p class="day1-welcome-eyebrow">${state.tier === "workshop" ? "Step 3" : "Day 3"} · Power Frequency Calibration</p>
         <div class="day1-welcome-video">
           <iframe src="https://fast.wistia.net/embed/iframe/dwymoptfjp" allow="autoplay; fullscreen" allowfullscreen title="Day 3 · Power Frequency Calibration"></iframe>
         </div>
         <div class="day1-welcome-body">
-          <p>Welcome to Day 3 of your 72 Hour Power Reset.</p>
+          <p>Welcome to ${state.tier === "workshop" ? "Step 3 of your Power Reset" : "Day 3 of your 72 Hour Power Reset"}.</p>
           <p>Today is the peak experience of the entire three-day journey. You have reset your state and aligned your decision. Today you step into the frequency of the reality you just decided to create and tuning to it.</p>
           <p>The Field will guide you to build a Determined Imagination scene: a specific, sensory, alive picture of your desired reality, and then step inside it and feel it as already real.</p>
           <p><a href="https://drive.google.com/file/d/1Zhjf7NyeLo1tWco_G8KBs2R1UKRFtodv/view?usp=sharing" target="_blank" rel="noopener">Open the Day 3 companion PDF ↗</a><br><span style="font-size: 13px; color: var(--text-dim, #6B5F4C);">Below this video you will find the PDF with some more material you can use to complement this day.</span></p>
