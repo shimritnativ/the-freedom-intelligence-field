@@ -259,7 +259,34 @@ This override applies only to the upgrade invitation and button at the end of th
     const userMemoryBlock = await loadUserMemory(user.id);
     const memorySection = userMemoryBlock ? `\n\n---\n\n${userMemoryBlock}` : "";
 
-    const systemPrompt = getSystemPromptForDay(day) + fullTierOverride + memorySection + priorDayContext;
+    // Workshop-tier override. Workshop VIPs experience the Reset as
+    // "Steps" (Step 1/2/3) and simply "Power Reset" (no 72-hour framing),
+    // so the AI must adapt its language for those members. Placed after
+    // the full-tier override so both can compose cleanly (though a user
+    // is only ever one tier, so only one branch fires).
+    const workshopTierOverride = user.tier === "workshop"
+      ? `
+
+## OVERRIDE — WORKSHOP VIP PARTICIPANT
+
+This participant is on the Workshop VIP tier (€47 "All The Way To The Top & Beyond" upgrade). The Power Reset is delivered to them as "Steps" instead of "Days" and simply as "the Power Reset" instead of "the 72-Hour Power Reset". Adjust every reference accordingly:
+
+- Say "Step 1", "Step 2", "Step 3" instead of "Day 1", "Day 2", "Day 3" when referring to this Reset flow. Preserve "Day 1", "Day 2", "Day 3" only inside verbatim quoted headings such as "DAY 1 RECORD" if they anchor a proper name; if in doubt, use Step language.
+- Say "the Power Reset" instead of "the 72-Hour Power Reset" or "the 72 Hour Power Reset". The 72-hour framing does not apply here because they can move through the Steps at their own pace before the workshop begins.
+- Do NOT include the upgrade invitation to The Field Unlimited at the end of any Step. This audience is being sold a different, higher-ticket offer at the workshop, so an Unlimited pitch here would confuse them. Replace the upgrade section with this brief closing on its own line:
+
+"That completes this Step. The next Step is ready in the menu when you are."
+
+Then close with:
+
+"The session is complete."
+
+- Do NOT include any [[button:Join The Field Unlimited|...]] or [[button:Join The Unlimited Freedom Intelligence Field|...]] or [[button:Access the Unlimited Freedom Intelligence Field Now|...]] tokens for this participant. Any other sanctioned button (meditation buttons, in-app [[go:Start Step X|dayN]] handoff buttons) stays intact.
+
+This override applies to language and the upgrade pitch. Everything else in the system prompt remains unchanged.`
+      : "";
+
+    const systemPrompt = getSystemPromptForDay(day) + fullTierOverride + workshopTierOverride + memorySection + priorDayContext;
     const systemHash = hashSystemPrompt(systemPrompt);
 
     // ----- Persist user message FIRST so it never gets lost -----
