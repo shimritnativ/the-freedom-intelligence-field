@@ -4235,6 +4235,49 @@
     { label: "Day 2", theme: "Decision & Action" },
     { label: "Day 3", theme: "Frequency Calibration" }
   ];
+  // Workshop tier renders the Reset as "Steps" instead of "Days" per the
+  // VIP LP product framing. Callers use dayLabel(n) instead of
+  // DAY_META[n-1].label to get the right word without duplicating the
+  // tier check everywhere.
+  function dayLabel(n) {
+    if (state && state.tier === "workshop") return "Step " + n;
+    return "Day " + n;
+  }
+
+  // Workshop-tier integration processes. These are the three placeholder
+  // processes that unlock on the three workshop days for the €47 VIP
+  // audience of "All The Way To The Top & Beyond" (September 21-23, 2026).
+  // Real content and system prompts land closer to the workshop; for now
+  // the sidebar renders each entry with its unlock date so members know
+  // when it goes live. processKey values match placeholder entries in
+  // lib/prompts/processes/index.js that will be swapped for real content
+  // before Sep 21.
+  const WORKSHOP_PROCESSES = [
+    {
+      processKey: "workshop-integration-1",
+      name: "Integration Work · Day 1",
+      unlockAt: "2026-09-21T14:00:00Z",  // 4pm CET on workshop Day 1
+      desc: "Anchor what opened on Day 1 of the workshop into your instrument.",
+    },
+    {
+      processKey: "workshop-integration-2",
+      name: "Integration Work · Day 2",
+      unlockAt: "2026-09-22T14:00:00Z",  // 4pm CET on workshop Day 2
+      desc: "Integrate Day 2's teaching through guided reflection with the Field.",
+    },
+    {
+      processKey: "workshop-integration-3",
+      name: "Integration Work · Day 3",
+      unlockAt: "2026-09-23T14:00:00Z",  // 4pm CET on workshop Day 3
+      desc: "Close the loop from the workshop and calibrate for what comes next.",
+    },
+  ];
+  // Is a specific workshop-integration process currently unlocked?
+  // Purely time-based, matches the drip schedule on the LP.
+  function isWorkshopProcessUnlocked(unlockIso) {
+    if (!unlockIso) return true;
+    return new Date(unlockIso).getTime() <= Date.now();
+  }
 
   // ===== Daily quotes =====
   // 30 curated lines pulled from Shimrit's voice anchors and the methodology.
@@ -5956,11 +5999,25 @@ Begin.` },
   // null means "unlocked now". A timestamp means "unlocks at that time".
   // Unlimited (full-tier) members are exempt — Reset gating doesn't apply.
   function isDayUnlocked(dayNum) {
-    if (state.tier === "full") return true;
+    // Full-tier (Unlimited) and workshop-tier members bypass the Reset
+    // 24h gate. Workshop tier is the €47 VIP access for the workshop:
+    // all three steps are open immediately from purchase.
+    if (state.tier === "full" || state.tier === "workshop") return true;
     const unlocks = state.dayUnlocks || {};
     const at = unlocks[dayNum];
     if (!at) return true;
     return new Date(at).getTime() <= Date.now();
+  }
+  // Helper used by the sidebar + a handful of gating checks to know
+  // whether the current member is on the temporary workshop VIP access.
+  // Kept as a function (not a constant) because state.tier can drift
+  // during login/state fetch and callers may query it before the fetch
+  // has completed.
+  function isWorkshopTier() { return state.tier === "workshop"; }
+  // True whenever the member is entitled to work with the Reset days
+  // (or Steps) at all. Preview, full, and workshop qualify.
+  function hasResetAccess() {
+    return state.tier === "full" || state.tier === "workshop" || state.tier === "preview";
   }
   // Friendly "Unlocks in 14h 32m" formatter. Less than a minute -> "any
   // moment now" (avoids the awkward "0m" state on the verge of unlock).
@@ -6006,7 +6063,17 @@ Begin.` },
           // their existing label (the Days are their current work, so the
           // label IS their section header).
           const isFullTier = state.tier === "full";
+          const isWorkshop = state.tier === "workshop";
           const expanded = !isFullTier || state.resetSectionExpanded;
+          // Workshop tier: the Reset is delivered as "Steps" (Step 1, Step 2,
+          // Step 3) with no time gate, so the section title changes to
+          // match the product framing on the VIP LP.
+          if (isWorkshop) {
+            return `
+              <div class="sidebar-section-eyebrow">YOUR POWER RESET STEPS</div>
+              <div class="sidebar-label">Move through at your own pace</div>
+            `;
+          }
           if (isFullTier) {
             return `
               <div class="sidebar-section-eyebrow">YOUR 72-HOUR JOURNEY</div>
@@ -6024,6 +6091,12 @@ Begin.` },
           // full-tier members (they have permanent access) and for members
           // whose window hasn't started yet (no first_login_at).
           if (state.tier === "full") return "";
+          // Workshop tier uses its own expiry (workshop_expires_at, e.g.
+          // Oct 2 for the Sep 2026 workshop). The preview 72-hour window
+          // line does not apply, so we skip it here. A dedicated
+          // "workshop access closes on {date}" line could be added later
+          // if members find the open-ended access confusing.
+          if (state.tier === "workshop") return "";
           if (!state.previewEndsAt) return "";
           const ms = Math.max(0, new Date(state.previewEndsAt).getTime() - Date.now());
           return `<div class="sidebar-window-line">Reset window: <strong data-window-countdown>${escapeHtml(formatTimeRemaining(ms))}</strong> left</div>`;
@@ -6042,7 +6115,7 @@ Begin.` },
                 <div class="day-item locked" data-locked-day="${dayNum}">
                   <div class="day-num">${dayNum}</div>
                   <div class="day-info">
-                    <div class="day-title">${d.label}</div>
+                    <div class="day-title">${dayLabel(dayNum)}</div>
                     <div class="day-theme">${d.theme}</div>
                     <div class="day-countdown" data-day-countdown="${dayNum}">${formatUnlockCountdown(unlockAt)}</div>
                   </div>
@@ -6054,7 +6127,7 @@ Begin.` },
               <div class="day-item ${isCurrent ? "active" : ""}" data-day="${dayNum}">
                 <div class="day-num">${dayNum}</div>
                 <div class="day-info">
-                  <div class="day-title">${d.label}</div>
+                  <div class="day-title">${dayLabel(dayNum)}</div>
                   <div class="day-theme">${d.theme}</div>
                 </div>
               </div>
@@ -6062,6 +6135,40 @@ Begin.` },
           }).join("")}
         </div>
 
+        ${state.tier === "workshop" ? `
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section-eyebrow">WORKSHOP INTEGRATION WORK</div>
+        <div class="sidebar-label" style="font-size: 13px; opacity: 0.75;">Opens each day of the workshop</div>
+        <div class="day-list" style="margin-top: 12px;">
+          ${WORKSHOP_PROCESSES.map((p, i) => {
+            const unlocked = isWorkshopProcessUnlocked(p.unlockAt);
+            const n = i + 1;
+            if (!unlocked) {
+              return `
+                <div class="day-item locked" title="Opens ${new Date(p.unlockAt).toLocaleString(undefined, { month: 'short', day: 'numeric' })}">
+                  <div class="day-num">${n}</div>
+                  <div class="day-info">
+                    <div class="day-title">${escapeHtml(p.name)}</div>
+                    <div class="day-theme">Opens ${new Date(p.unlockAt).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</div>
+                  </div>
+                  <span class="day-lock" aria-hidden="true">${lockIconSvg()}</span>
+                </div>
+              `;
+            }
+            return `
+              <div class="day-item" data-process-key="${p.processKey}">
+                <div class="day-num">${n}</div>
+                <div class="day-info">
+                  <div class="day-title">${escapeHtml(p.name)}</div>
+                  <div class="day-theme">${escapeHtml(p.desc || "")}</div>
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+        ` : ""}
+
+        ${state.tier !== "workshop" ? `
         <div class="sidebar-divider"></div>
         <div class="sidebar-label">The Field — Unlimited</div>
 
@@ -6110,6 +6217,7 @@ Begin.` },
           <a class="unlimited-btn" href="${UNLIMITED_URL}" target="_blank" rel="noopener noreferrer">Unlock The Field <span class="unlimited-btn-arrow" aria-hidden="true">↗</span></a>
         </div>
         `}
+        ` : ""}
 
         <div class="sidebar-cta">
           ${(function () {
@@ -6121,7 +6229,9 @@ Begin.` },
             // call to Kajabi, so we use tier as the proxy: full == Unlimited.
             const portalUrl = state.tier === "full"
               ? "https://www.shimritnativ.com/products/the-freedom-intelligence-field"
-              : "https://www.shimritnativ.com/products/the-power-reset";
+              : state.tier === "workshop"
+                ? "https://go.shimritnativ.com/atttbeyond-vip"
+                : "https://www.shimritnativ.com/products/the-power-reset";
             return `
               <a class="sidebar-cta-btn" href="${portalUrl}" target="_blank" rel="noopener noreferrer">
                 <span>Access Portal</span>
