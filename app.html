@@ -6071,7 +6071,7 @@ Begin.` },
           if (isWorkshop) {
             return `
               <div class="sidebar-section-eyebrow">YOUR POWER RESET STEPS</div>
-              <div class="sidebar-label">Move through at your own pace</div>
+              <div style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 13px; color: var(--text-mute, rgba(31, 24, 16, 0.55)); margin: 2px 0 10px; line-height: 1.4;">Move through at your own pace</div>
             `;
           }
           if (isFullTier) {
@@ -6138,7 +6138,7 @@ Begin.` },
         ${state.tier === "workshop" ? `
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-eyebrow">WORKSHOP INTEGRATION WORK</div>
-        <div class="sidebar-label" style="font-size: 13px; opacity: 0.75;">Opens each day of the workshop</div>
+        <div style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 13px; color: var(--text-mute, rgba(31, 24, 16, 0.55)); margin: 2px 0 10px; line-height: 1.4;">Unlocks on September 21</div>
         <div class="day-list" style="margin-top: 12px;">
           ${WORKSHOP_PROCESSES.map((p, i) => {
             const unlocked = isWorkshopProcessUnlocked(p.unlockAt);
