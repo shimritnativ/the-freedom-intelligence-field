@@ -24,15 +24,31 @@ import { notifyAdmins } from "../../lib/adminNotify.js";
 import { grantWorkshopEntitlement } from "../../lib/db.js";
 
 // ThriveCart product IDs that map to a workshop-tier entitlement rather
-// than a normal Kajabi-driven grant. Keeping this as a constant so we
-// can add future workshops without editing the flow logic.
+// than a normal Kajabi-driven grant. product_id is often empty in
+// ThriveCart webhook payloads (all recent MYP orders show a blank
+// product_id column), so we also match on product_name substrings as
+// a fallback. Either match triggers the workshop grant.
 const WORKSHOP_PRODUCT_IDS = new Set([
   "153", // All The Way To The Top & Beyond VIP · Sep 21-23, 2026
 ]);
+const WORKSHOP_PRODUCT_NAME_PATTERNS = [
+  "all the way to the top",   // Matches "All The Way To The Top - VIP Access" and future variants
+];
 // Access closes on Oct 2, 2026 for the September 2026 workshop cohort.
-// If the workshop is re-run later, add a new product ID with its own
-// expiry above and switch on productId to pick the right date.
+// If the workshop is re-run later, add a new product ID or name pattern
+// above with its own expiry and switch on the match to pick the right date.
 const WORKSHOP_EXPIRES_AT = new Date("2026-10-02T23:59:59Z");
+
+// Helper: does this ThriveCart order look like a workshop VIP purchase?
+// Checks both product_id (exact match) and product_name (case-insensitive
+// substring) so a missing/blank product_id can't silently swallow a
+// legitimate purchase.
+function isWorkshopProduct(productId, productName) {
+  if (productId && WORKSHOP_PRODUCT_IDS.has(String(productId))) return true;
+  const nameLower = String(productName || "").toLowerCase();
+  if (!nameLower) return false;
+  return WORKSHOP_PRODUCT_NAME_PATTERNS.some((p) => nameLower.includes(p));
+}
 
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -233,7 +249,7 @@ export default async function handler(req, res) {
     // NOTHING on purchases and we still re-run this grant, which is
     // itself idempotent via ON CONFLICT DO UPDATE inside
     // grantWorkshopEntitlement).
-    if (event === "order.success" && email && WORKSHOP_PRODUCT_IDS.has(String(productId))) {
+    if (event === "order.success" && email && isWorkshopProduct(productId, productName)) {
       try {
         await grantWorkshopEntitlement({
           email,
