@@ -108,21 +108,37 @@ export default async function handler(req, res) {
     // automatically when no language parameter is provided. This lets the
     // Field support clients in any language they speak naturally.
     //
-    // Bias the transcription toward our domain vocabulary to reduce
-    // mishears of terms like "Human Instrument", "Master Your Path", etc.
-    // WARNING — Whisper prompt biasing leaks: if the prompt contains
-    // repetitive patterns like "Day 1: X. Day 2: Y. Day 3: Z.", Whisper
-    // will hallucinate that pattern into low-confidence transcription
-    // windows (silences, quiet openings, accented speech). Root-caused
-    // 2026-07-23 when Antonella's recording of her anchor sentence was
-    // prepended with a fabricated "Day 4. Decision. Day 5. Decision.
-    // Day 6. Decision. Day 7. Decision." because the old prompt taught
-    // Whisper that pattern. Keep the vocabulary here as PROSE, never
-    // as a list of "Day N: X" pairs.
-    formData.append(
-      "prompt",
-      "Master Your Path. The Freedom Intelligence Field. Human Instrument method by Shimrit Nativ. The 72-Hour Power Reset guides members through a state reset, an aligned decision, and calibrated action."
-    );
+    // Whisper prompt bias intentionally OFF.
+    //
+    // History: we used to pass a domain-vocabulary prompt here
+    // ("Master Your Path. The Freedom Intelligence Field. Human
+    // Instrument method by Shimrit Nativ. The 72-Hour Power Reset
+    // guides members through a state reset, an aligned decision,
+    // and calibrated action.") to reduce mishears of terms like
+    // "Human Instrument" and "Master Your Path".
+    //
+    // The bias LEAKED into low-confidence windows — silences,
+    // quiet openings, soft speech, non-English audio, Danish
+    // accented English — and Whisper output the prompt VERBATIM
+    // or in garbled form as if the member had spoken it.
+    //   - 2026-07-23: Antonella's anchor recording got a
+    //     fabricated "Day 4. Decision. Day 5. Decision. Day 6.
+    //     Decision. Day 7. Decision." prepended (list-pattern
+    //     prompt taught Whisper that structure).
+    //   - 2026-08-28: Susse (Danish) had multiple recordings
+    //     transcribed as literal "The 72-Hour Power Reset guides
+    //     members through a state reset, an aligned decision, and
+    //     calibrated action." and as garbled "A security measure
+    //     is used to align with the state reserve conductors."
+    //
+    // Prose alone did not solve it — Whisper hallucinates prompts
+    // from any format when the audio has room. Only reliable fix
+    // is no prompt at all. We accept occasional mistranscription
+    // of "Human Instrument" as "human instructor" in exchange for
+    // zero fabricated marketing copy in members' journals.
+    //
+    // Do NOT add a `prompt` field back without a proven mitigation
+    // (e.g. VAD trimming of silence, per-language separate paths).
 
     const openaiRes = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
