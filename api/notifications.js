@@ -56,13 +56,23 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
-    // Which audience values THIS member is allowed to see. Everyone sees
-    // 'all'. Beyond that, a member also sees notifications whose audience
-    // matches their tier (preview/full/workshop). This lets the workshop
-    // (€47 VIP September 2026) cohort get their own drops without the
-    // regular Reset/Unlimited membership seeing them, and vice versa.
+    // Which audience values THIS member is allowed to see.
+    //
+    // Preview and full tiers get the shared broadcast stream: 'all' plus
+    // whatever is scoped to their tier. That preserves the old behavior
+    // for existing Reset/Unlimited members.
+    //
+    // Workshop tier is DIFFERENT: the €47 VIP workshop cohort has its own
+    // notification stream so they don't see broadcasts about Unlimited
+    // pricing, weekly identity-upgrade nudges, etc. that were written for
+    // the main membership. Only rows explicitly sent with
+    // audience='workshop' show up in a workshop member's inbox.
     const tier = String(user.tier || "").toLowerCase();
-    const allowedAudiences = tier ? ["all", tier] : ["all"];
+    const allowedAudiences = tier === "workshop"
+      ? ["workshop"]
+      : tier
+        ? ["all", tier]
+        : ["all"];
 
     if (req.method === "GET") {
       // Pull the latest 50 announcements the user is allowed to see.
