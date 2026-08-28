@@ -209,10 +209,15 @@ async function handleSend(req, res) {
   }
 
   // Write the announcement to the notifications inbox so members without
-  // active push subscriptions still see the message. audience='all' for
-  // now — future scoping (e.g. only Reset members) can use a different
-  // value. We don't filter by userIds here; the inbox is intentionally
-  // visible to everyone so members on a fresh device still see history.
+  // active push subscriptions still see the message. Audience defaults to
+  // 'all' when unspecified, but the admin wizard passes a tier-scoped
+  // value ('preview' / 'full' / 'workshop') when the send is meant only
+  // for that cohort — this keeps workshop-only announcements out of the
+  // Reset/Unlimited membership's inbox and vice versa. Reader-side gating
+  // lives in /api/notifications.
+  const ALLOWED_AUDIENCES = new Set(["all", "preview", "full", "workshop"]);
+  const requestedAudience = String(body.audience || "all").toLowerCase();
+  const audience = ALLOWED_AUDIENCES.has(requestedAudience) ? requestedAudience : "all";
   let inboxId = null;
   if (alsoSaveToInbox) {
     try {
@@ -226,7 +231,7 @@ async function handleSend(req, res) {
       const ctaLabel = body.ctaLabel ? String(body.ctaLabel).slice(0, 40) : null;
       const ins = await sql`
         INSERT INTO notifications (title, body, audience, sent_by_email, cta_url, cta_label)
-        VALUES (${payload.title}, ${payload.body || ""}, 'all', ${senderEmail}, ${ctaUrl}, ${ctaLabel})
+        VALUES (${payload.title}, ${payload.body || ""}, ${audience}, ${senderEmail}, ${ctaUrl}, ${ctaLabel})
         RETURNING id
       `;
       inboxId = ins.rows[0]?.id || null;
