@@ -6261,7 +6261,7 @@ Begin.` },
         </div>
         `}
 
-        <div class="sidebar-aux">
+        <div class="sidebar-aux"${isWorkshopTier() ? ' style="margin-top: auto;"' : ''}>
           <button id="notif-btn" type="button" title="Notifications from the Field" aria-label="Notifications">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
@@ -6290,7 +6290,7 @@ Begin.` },
           </ul>
         </div>
 
-        <div class="sidebar-footer">
+        <div class="sidebar-footer"${isWorkshopTier() ? ' style="margin-top: 4px; padding-top: 10px; border-top: none;"' : ''}>
           <div class="footer-text">The Field</div>
           <div class="footer-actions">
             <button class="font-btn font-smaller" id="font-smaller" type="button" title="Smaller text" aria-label="Smaller text"${state.fontScale <= 0.85 ? " disabled" : ""}>A−</button>
