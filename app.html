@@ -8659,6 +8659,23 @@ Begin.` },
   const DAY1_INTRO_PROMPT_TEXT = "Freedom Intelligence Field, I am entering Day 1 of my 72 Hour Power Reset.\nToday is the State Reset.\nI am here to locate what is currently active in my inner system,\nsee what has been directing me, and return to self-led orientation\nand my power.\nGuide me through the State Reset now.\nBegin.";
   const DAY2_INTRO_PROMPT_TEXT = "Freedom Intelligence Field, I am entering Day 2 of my 72 Hour Power Reset.\nToday is the Decision & Action Alignment.\nI have reset my state. I am here to make the decision, lock in the action, and produce my Living Power Declaration. Guide me through Day 2 now.\nBegin.";
   const DAY3_INTRO_PROMPT_TEXT = "Freedom Intelligence Field, I am entering Day 3 of the 72 Hour Power Reset, Power Frequency Calibration.\nI have reset my state. I have made my decision and locked in my action.\nGuide me through Day 3 now.\nBegin.";
+  // Workshop-tier intro prompts. Same activation intent as the default
+  // Day 1/2/3 prompts, but reframed to "Step" and "Power Reset" so a
+  // workshop VIP member's chat log doesn't read "Day 1 of my 72 Hour
+  // Power Reset" when they've never bought the 72-Hour Reset. The
+  // backend activation detector (api/chat.js) accepts both wordings so
+  // day routing keeps working.
+  const WORKSHOP_STEP1_INTRO_PROMPT_TEXT = "Freedom Intelligence Field, I am entering Step 1 of my Power Reset.\nToday is the State Reset.\nI am here to locate what is currently active in my inner system,\nsee what has been directing me, and return to self-led orientation\nand my power.\nGuide me through the State Reset now.\nBegin.";
+  const WORKSHOP_STEP2_INTRO_PROMPT_TEXT = "Freedom Intelligence Field, I am entering Step 2 of my Power Reset.\nToday is the Decision & Action Alignment.\nI have reset my state. I am here to make the decision, lock in the action, and produce my Living Power Declaration. Guide me through Step 2 now.\nBegin.";
+  const WORKSHOP_STEP3_INTRO_PROMPT_TEXT = "Freedom Intelligence Field, I am entering Step 3 of the Power Reset, Power Frequency Calibration.\nI have reset my state. I have made my decision and locked in my action.\nGuide me through Step 3 now.\nBegin.";
+  // Pick the right intro prompt for the current tier. Preview/full stay
+  // on the classic Day-based wording; workshop gets the Step wording.
+  function introPromptFor(dayNumber) {
+    const isWorkshop = state && state.tier === "workshop";
+    if (dayNumber === 1) return isWorkshop ? WORKSHOP_STEP1_INTRO_PROMPT_TEXT : DAY1_INTRO_PROMPT_TEXT;
+    if (dayNumber === 2) return isWorkshop ? WORKSHOP_STEP2_INTRO_PROMPT_TEXT : DAY2_INTRO_PROMPT_TEXT;
+    return isWorkshop ? WORKSHOP_STEP3_INTRO_PROMPT_TEXT : DAY3_INTRO_PROMPT_TEXT;
+  }
   function day1IntroStorageKey() {
     const email = (state.userEmail || "").toLowerCase().trim();
     return email ? `tfif_day1_intro__${email}` : "tfif_day1_intro";
@@ -8750,9 +8767,9 @@ Begin.` },
         </div>
         <div class="day1-welcome-body">
           <p>Welcome to ${state.tier === "workshop" ? "Step 1 of your Power Reset" : "Day 1 of your 72-hour power reset"}.</p>
-          <p>Today is the State Reset. Day 1 locates what state you are operating from, what has been directing your thoughts, decisions, and energy, and returns you to your own power.</p>
+          <p>Today is the State Reset. ${state.tier === "workshop" ? "Step 1" : "Day 1"} locates what state you are operating from, what has been directing your thoughts, decisions, and energy, and returns you to your own power.</p>
           <p>When you are ready, find a quiet space and give yourself 15 to 20 minutes where you can be fully present.</p>
-          <p><a href="https://drive.google.com/file/d/1x7z9dQrA-rY7UcCjgE97-weXOUaNIIYl/view?usp=sharing" target="_blank" rel="noopener">Open the ${dayLabel(1)} companion PDF ↗</a><br><span style="font-size: 13px; color: var(--text-dim, #6B5F4C);">Below this video you will find the PDF with some more material you can use to complement this ${state.tier === "workshop" ? "step" : "day"}.</span></p>
+          <p><a href="https://drive.google.com/file/d/1x7z9dQrA-rY7UcCjgE97-weXOUaNIIYl/view?usp=sharing" target="_blank" rel="noopener">Open the ${dayLabel(1)} companion PDF ↗</a></p>
         </div>
         <button class="day1-welcome-cta" id="day1-cta-2" type="button" ${card2BtnDone ? "disabled" : ""}>
           ${card2BtnDone ? '<span class="day1-check">✓</span>Prompt inserted' : `Begin ${dayLabel(1)} Now`}
@@ -8808,7 +8825,7 @@ Begin.` },
         setTimeout(() => {
           const inputEl = document.getElementById("input");
           if (inputEl) {
-            inputEl.value = DAY1_INTRO_PROMPT_TEXT;
+            inputEl.value = introPromptFor(1);
             inputEl.dispatchEvent(new Event("input", { bubbles: true }));
             inputEl.focus();
             try { inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length); } catch (_) {}
@@ -8865,7 +8882,7 @@ Begin.` },
           <p>Welcome to ${state.tier === "workshop" ? "Step 2 of your Power Reset" : "Day 2 of your 72 Hour Power Reset"}.</p>
           <p>Today is the Decision &amp; Action Alignment. Yesterday you reset your state, and you can return to that reset any day you wish. Today you take the statement you set yesterday, anchor it into your being, and from that place make a clear, aligned decision and turn it into one real action taken from your power.</p>
           <p>Your instrument has three centers: mind, heart, and body. When all three come into alignment around a decision, a goal, or a next move, that move becomes empowered, by allowing the energy that everything is created from to move to and through you into manifestation. That is what today is about.</p>
-          <p><a href="https://drive.google.com/file/d/1QiA4emMS1-bv9F3TwJiLREQ0WUOYs81U/view?usp=sharing" target="_blank" rel="noopener">Open the ${dayLabel(2)} companion PDF ↗</a><br><span style="font-size: 13px; color: var(--text-dim, #6B5F4C);">Below this video you will find the PDF with some more material you can use to complement this ${state.tier === "workshop" ? "step" : "day"}.</span></p>
+          <p><a href="https://drive.google.com/file/d/1QiA4emMS1-bv9F3TwJiLREQ0WUOYs81U/view?usp=sharing" target="_blank" rel="noopener">Open the ${dayLabel(2)} companion PDF ↗</a></p>
         </div>
         <button class="day1-welcome-cta" id="day2-cta" type="button" ${btnDone ? "disabled" : ""}>
           ${btnDone ? '<span class="day1-check">✓</span>Prompt inserted' : `Begin ${dayLabel(2)} Now`}
@@ -8884,7 +8901,7 @@ Begin.` },
         setTimeout(() => {
           const inputEl = document.getElementById("input");
           if (inputEl) {
-            inputEl.value = DAY2_INTRO_PROMPT_TEXT;
+            inputEl.value = introPromptFor(2);
             inputEl.dispatchEvent(new Event("input", { bubbles: true }));
             inputEl.focus();
             try { inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length); } catch (_) {}
@@ -8933,7 +8950,7 @@ Begin.` },
           <p>Welcome to ${state.tier === "workshop" ? "Step 3 of your Power Reset" : "Day 3 of your 72 Hour Power Reset"}.</p>
           <p>Today is the peak experience of the entire three-day journey. You have reset your state and aligned your decision. Today you step into the frequency of the reality you just decided to create and tuning to it.</p>
           <p>The Field will guide you to build a Determined Imagination scene: a specific, sensory, alive picture of your desired reality, and then step inside it and feel it as already real.</p>
-          <p><a href="https://drive.google.com/file/d/1Zhjf7NyeLo1tWco_G8KBs2R1UKRFtodv/view?usp=sharing" target="_blank" rel="noopener">Open the ${dayLabel(3)} companion PDF ↗</a><br><span style="font-size: 13px; color: var(--text-dim, #6B5F4C);">Below this video you will find the PDF with some more material you can use to complement this ${state.tier === "workshop" ? "step" : "day"}.</span></p>
+          <p><a href="https://drive.google.com/file/d/1Zhjf7NyeLo1tWco_G8KBs2R1UKRFtodv/view?usp=sharing" target="_blank" rel="noopener">Open the ${dayLabel(3)} companion PDF ↗</a></p>
         </div>
         <button class="day1-welcome-cta" id="day3-cta" type="button" ${btnDone ? "disabled" : ""}>
           ${btnDone ? '<span class="day1-check">✓</span>Prompt inserted' : `Begin ${dayLabel(3)} Now`}
@@ -8952,7 +8969,7 @@ Begin.` },
         setTimeout(() => {
           const inputEl = document.getElementById("input");
           if (inputEl) {
-            inputEl.value = DAY3_INTRO_PROMPT_TEXT;
+            inputEl.value = introPromptFor(3);
             inputEl.dispatchEvent(new Event("input", { bubbles: true }));
             inputEl.focus();
             try { inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length); } catch (_) {}
