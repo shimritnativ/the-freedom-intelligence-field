@@ -450,17 +450,22 @@ This override applies to language and the upgrade pitch. Everything else in the 
 // wrong-day guardrail to prevent users from running Day 3 content
 // inside a Day 2 session by accidentally pasting the wrong prompt.
 //
-// Only triggers when there's BOTH a "Day N" reference AND an
-// activation-y verb nearby (entering / guide me through). Plain
+// Only triggers when there's BOTH a "Day N" / "Step N" reference AND
+// an activation-y verb nearby (entering / guide me through). Plain
 // mentions like "I think Day 3 will be interesting" don't trigger.
+//
+// Accepts both wordings because workshop-tier members paste "Step N"
+// prompts ("entering Step 1 of my Power Reset") while preview/full
+// members paste "Day N" prompts ("entering Day 1 of my 72 Hour Power
+// Reset"). Both must route to the same day-N system prompt.
 function detectActivatedDay(message) {
   if (!message) return null;
   // Limit scan to first 500 chars — activation prompts always lead.
   const sample = String(message).slice(0, 500).toLowerCase();
   const hasActivationVerb =
-    /entering day\s*[123]|guide me through day\s*[123]|day\s*[123] of (?:the |my |your )?72/i.test(sample);
+    /entering (?:day|step)\s*[123]|guide me through (?:day|step)\s*[123]|(?:day|step)\s*[123] of (?:the |my |your )?(?:72|power reset)/i.test(sample);
   if (!hasActivationVerb) return null;
-  const match = sample.match(/day\s*([123])/i);
+  const match = sample.match(/(?:day|step)\s*([123])/i);
   return match ? Number(match[1]) : null;
 }
 
