@@ -56,6 +56,14 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    // Which audience values THIS member is allowed to see. Everyone sees
+    // 'all'. Beyond that, a member also sees notifications whose audience
+    // matches their tier (preview/full/workshop). This lets the workshop
+    // (€47 VIP September 2026) cohort get their own drops without the
+    // regular Reset/Unlimited membership seeing them, and vice versa.
+    const tier = String(user.tier || "").toLowerCase();
+    const allowedAudiences = tier ? ["all", tier] : ["all"];
+
     if (req.method === "GET") {
       // Pull the latest 50 announcements the user is allowed to see.
       // LEFT JOIN to notification_reads so we can flag which are unread
@@ -72,7 +80,7 @@ export default async function handler(req, res) {
         FROM notifications n
         LEFT JOIN notification_reads nr
           ON nr.notification_id = n.id AND nr.user_id = ${user.id}
-        WHERE n.audience = 'all'
+        WHERE n.audience = ANY(${allowedAudiences})
         ORDER BY n.created_at DESC
         LIMIT 50
       `;
@@ -89,7 +97,7 @@ export default async function handler(req, res) {
           INSERT INTO notification_reads (notification_id, user_id)
           SELECT n.id, ${user.id}
           FROM notifications n
-          WHERE n.audience = 'all'
+          WHERE n.audience = ANY(${allowedAudiences})
           ON CONFLICT (notification_id, user_id) DO NOTHING
         `;
         return res.status(200).json({ ok: true });
