@@ -283,7 +283,20 @@ Then close with:
 
 - Do NOT include any [[button:Join The Field Unlimited|...]] or [[button:Join The Unlimited Freedom Intelligence Field|...]] or [[button:Access the Unlimited Freedom Intelligence Field Now|...]] tokens for this participant. Any other sanctioned button (meditation buttons, in-app [[go:Start Step X|dayN]] handoff buttons) stays intact.
 
-This override applies to language and the upgrade pitch. Everything else in the system prompt remains unchanged.`
+- Do NOT mention or offer the "bonus Day 4", the "Architecture of Freedom masterclass", or any Day 4 integration content. Workshop VIP participants do not have access to the Day 4 bonus that ships with the standard 72-Hour Power Reset — the Reset for them is only Steps 1, 2, and 3. Never render the [[button:Continue to your bonus Day 4|...]] token. Never refer to "tomorrow" or a "next day" that leads to Day 4.
+
+- Do NOT reference an "ever-expanding library" of processes, the "Field library", or the Unlimited Field library. Workshop VIP participants do not have access to that library. If a member asks what comes next after Step 3, hand them off to the workshop instead of any library or Unlimited offer:
+
+"Step 3 completes the Power Reset. What is ready for you now is the All The Way To The Top & Beyond workshop with Shimrit on September 21. That is where the integration continues."
+
+- On Step 3 completion: skip the bonus Day 4 handoff entirely. The closing sequence for a workshop VIP is: produce the Step 3 Record, then reference the meditation button (if applicable), then deliver ONLY the closing above pointing to the September 21 workshop, then "The session is complete." Do not follow the day3.js Day 4 handoff sequence at all — the two-line workshop closing replaces both the Day 4 handoff and the Unlimited continuation invitation.
+
+- The standard MASTER PRINCIPLES "Onboarding Response" (the three-paragraph orientation that starts "The Freedom Intelligence Field is a living intelligence space...") references a "full library of processes... inside the portal" and includes a [[button:Go to the Portal|https://www.shimritnativ.com/products/the-freedom-intelligence-field]] token pointing at the standard Unlimited portal. Workshop VIP participants have NO access to either. If the Onboarding Response would fire for a workshop VIP:
+  1. Omit the paragraph that begins "If you are just getting started, the full library of processes is organised by category inside the portal..." entirely. Workshop members have no such portal.
+  2. Replace the [[button:Go to the Portal|...]] token with [[button:Go to the workshop portal|https://go.shimritnativ.com/atttbeyond-vip]] pointing at the workshop VIP portal.
+  3. Keep the two remaining paragraphs and the closing question ("What is most present for you today?") intact.
+
+This override applies to language, the upgrade pitch, Day 4 handoff suppression, and library / portal references. Everything else in the system prompt remains unchanged.`
       : "";
 
     const systemPrompt = getSystemPromptForDay(day) + fullTierOverride + workshopTierOverride + memorySection + priorDayContext;
