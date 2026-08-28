@@ -4832,6 +4832,7 @@
                   <button type="button" class="aud-chip aud-chip--active" data-audience="all" onclick="setPushAudience('all')">Everyone <span class="aud-cnt" id="aud-cnt-all">0</span></button>
                   <button type="button" class="aud-chip" data-audience="unlimited" onclick="setPushAudience('unlimited')">Unlimited only <span class="aud-cnt" id="aud-cnt-unlimited">0</span></button>
                   <button type="button" class="aud-chip" data-audience="reset" onclick="setPushAudience('reset')">Reset only <span class="aud-cnt" id="aud-cnt-reset">0</span></button>
+                  <button type="button" class="aud-chip" data-audience="workshop" onclick="setPushAudience('workshop')">Workshop VIP only <span class="aud-cnt" id="aud-cnt-workshop">0</span></button>
                   <button type="button" class="aud-chip" data-audience="custom" onclick="setPushAudience('custom')">Custom…</button>
                 </div>
 
@@ -8702,7 +8703,7 @@
         function renderSub(s) {
           return `
             <label style="display: flex; align-items: center; gap: 10px; padding: 6px 4px; cursor: pointer; border-radius: 4px;">
-              <input type="checkbox" class="push-recipient" data-group="${s.tier === 'full' ? 'unlimited' : 'reset'}" value="${escapeHtml(s.id)}" data-email="${escapeHtml(s.email)}" />
+              <input type="checkbox" class="push-recipient" data-group="${s.tier === 'full' ? 'unlimited' : s.tier === 'workshop' ? 'workshop' : 'reset'}" value="${escapeHtml(s.id)}" data-email="${escapeHtml(s.email)}" />
               <div style="flex: 1; min-width: 0;">
                 <div style="font-size: 12.5px; color: var(--text); font-weight: 500;">${escapeHtml(s.email)}${s.display_name ? ' <span style="color: var(--text-dim); font-weight: 400;">(' + escapeHtml(s.display_name) + ')</span>' : ''}</div>
                 <div style="font-size: 11px; color: var(--text-mute);">${s.devices} device${s.devices === 1 ? '' : 's'}${s.last_sent ? ' · last sent ' + fmtRelative(s.last_sent) : ''}</div>
@@ -8762,7 +8763,7 @@
     // preset audience (all/unlimited/reset/custom); custom reveals the
     // full subscriber list and lets the admin cherry-pick.
     let pushWizStep = 1;
-    let pushWizAudience = "all"; // "all" | "unlimited" | "reset" | "custom"
+    let pushWizAudience = "all"; // "all" | "unlimited" | "reset" | "workshop" | "custom"
 
     function pushWizShow(step) {
       pushWizStep = step;
@@ -8821,6 +8822,7 @@
           if (audience === "all") cb.checked = true;
           else if (audience === "unlimited") cb.checked = (group === "unlimited");
           else if (audience === "reset") cb.checked = (group === "reset");
+          else if (audience === "workshop") cb.checked = (group === "workshop");
         });
       }
     }
@@ -8830,11 +8832,13 @@
     function updatePushAudienceCounts() {
       const subs = pushSubscribers || [];
       const unl = subs.filter(s => s.tier === "full").length;
-      const res = subs.filter(s => s.tier !== "full").length;
+      const wsh = subs.filter(s => s.tier === "workshop").length;
+      const res = subs.filter(s => s.tier !== "full" && s.tier !== "workshop").length;
       const setCnt = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n; };
       setCnt("aud-cnt-all", subs.length);
       setCnt("aud-cnt-unlimited", unl);
       setCnt("aud-cnt-reset", res);
+      setCnt("aud-cnt-workshop", wsh);
       // Auto-tick "all" so a new tab load has an audience selected.
       if (pushWizAudience === "all") setPushAudience("all");
     }
@@ -8849,7 +8853,7 @@
         ? "Inbox only (no phone push)"
         : "Push + inbox";
 
-      const audLabel = { all: "Everyone", unlimited: "Unlimited only", reset: "Reset only", custom: "Custom" }[pushWizAudience] || "Everyone";
+      const audLabel = { all: "Everyone", unlimited: "Unlimited only", reset: "Reset only", workshop: "Workshop VIP only", custom: "Custom" }[pushWizAudience] || "Everyone";
       const selectedCount = document.querySelectorAll(".push-recipient:checked").length;
       const sumAud = document.getElementById("wiz-summary-audience");
       if (sumAud) sumAud.textContent = `${audLabel} (${selectedCount} ${selectedCount === 1 ? "person" : "people"})`;
@@ -9164,12 +9168,21 @@
         status.textContent = "Pick a message above.";
         return;
       }
+      // Translate the wizard's audience preset into the inbox `audience`
+      // column value. 'workshop' scopes to VIP workshop members; the older
+      // 'unlimited' / 'reset' presets stay 'all' for inbox visibility so
+      // existing sends keep working like before. Custom sends stay 'all'
+      // because the admin already narrowed by hand-picked userIds.
+      const inboxAudience = pushWizAudience === "workshop" ? "workshop" : "all";
       const body = {
         userIds: mode === "inbox" ? [] : checked.map(cb => cb.value),
         // Always save to inbox — that's the whole point of these team
         // announcements being durable. Inbox-only mode skips push;
         // push+inbox mode does both.
         alsoSaveToInbox: true,
+        // Scope of the inbox row. Read-side gating in /api/notifications
+        // filters by (audience = 'all' OR audience = user.tier).
+        audience: inboxAudience,
         // Optional tap-to-go destination. null when no action is chosen.
         ctaUrl: buildCtaUrl(),
         ctaLabel: buildCtaLabel(),
