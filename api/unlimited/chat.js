@@ -293,7 +293,15 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: ANTHROPIC_MODEL,
-        max_tokens: 1024,
+        // Bumped 2026-08-28 from 1024 → 4096 after Antonella reported
+        // long syntheses (LinkedIn document consolidations, life-domain
+        // summaries) getting truncated mid-sentence. 1024 tokens ≈ 750
+        // English words, which the Field routinely exceeds on any
+        // request to "put these pieces together" or "give me the full
+        // version". Sonnet handles 4096 without latency or cost pain
+        // and the vast majority of turns still finish well under 1000
+        // tokens, so this is a ceiling raise, not a length change.
+        max_tokens: 4096,
         // Slightly below the default of 1.0 — keeps the voice natural while
         // reducing token-level "language bleed" (stray foreign-script
         // characters appearing mid-sentence).
@@ -317,10 +325,26 @@ export default async function handler(req, res) {
     }
 
     const claudeData = await claudeRes.json();
-    const reply = claudeData?.content?.[0]?.text?.trim();
+    let reply = claudeData?.content?.[0]?.text?.trim();
     if (!reply) {
       console.error("unlimited_chat_empty_reply", claudeData);
       return res.status(502).json({ error: "ai_empty_reply" });
+    }
+
+    // Truncation safety net. If the model hit the max_tokens ceiling
+    // (stop_reason === "max_tokens") the reply cut off mid-sentence —
+    // exactly what happened to Antonella when she asked the Field to
+    // consolidate a long LinkedIn document. Log it so we can watch how
+    // often 4096 gets hit, and append a short honest note so the member
+    // knows what to do rather than assuming the Field itself failed.
+    const stopReason = claudeData?.stop_reason || null;
+    if (stopReason === "max_tokens") {
+      console.warn("unlimited_chat_truncated", {
+        user_id: user.id,
+        session_id: sessionId,
+        reply_length: reply.length,
+      });
+      reply += "\n\n[This response reached its length limit and may be incomplete. Ask me to continue where I left off and I will pick up from the exact word.]";
     }
 
     // Persist the assistant reply.
