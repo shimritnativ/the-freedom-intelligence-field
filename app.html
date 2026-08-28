@@ -6219,6 +6219,7 @@ Begin.` },
         `}
         ` : ""}
 
+        ${isWorkshopTier() ? "" : `
         <div class="sidebar-cta">
           ${(function () {
             // Access Portal links to the member's Kajabi membership site.
@@ -6227,11 +6228,11 @@ Begin.` },
             //   tier=preview  -> 72-Hour Power Reset product page
             // We can't know which one a Reset member is in without an extra
             // call to Kajabi, so we use tier as the proxy: full == Unlimited.
+            // Workshop tier is excluded from this whole block above and never
+            // reaches this switch.
             const portalUrl = state.tier === "full"
               ? "https://www.shimritnativ.com/products/the-freedom-intelligence-field"
-              : state.tier === "workshop"
-                ? "https://go.shimritnativ.com/atttbeyond-vip"
-                : "https://www.shimritnativ.com/products/the-power-reset";
+              : "https://www.shimritnativ.com/products/the-power-reset";
             return `
               <a class="sidebar-cta-btn" href="${portalUrl}" target="_blank" rel="noopener noreferrer">
                 <span>Access Portal</span>
@@ -6258,6 +6259,7 @@ Begin.` },
             <span class="sidebar-cta-arrow" aria-hidden="true">↓</span>
           </button>
         </div>
+        `}
 
         <div class="sidebar-aux">
           <button id="notif-btn" type="button" title="Notifications from the Field" aria-label="Notifications">
@@ -6267,11 +6269,13 @@ Begin.` },
             </svg>
             <span class="notif-btn-badge" id="notif-btn-badge" hidden>0</span>
           </button>
+          ${isWorkshopTier() ? "" : `
           <button id="account-btn" type="button" title="Your account">Your Account</button>
           <button id="logout-btn" type="button" title="Sign out of The Field">Log out</button>
           <button id="support-btn" type="button" title="Need help? Talk to the Field support helper" aria-label="Help" data-open-support="1">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
           </button>
+          `}
         </div>
         <div class="notif-panel" id="notif-panel" role="dialog" aria-labelledby="notif-panel-title" aria-hidden="true">
           <div class="notif-panel-head">
@@ -8711,16 +8715,26 @@ Begin.` },
         </div>
         <div class="day1-welcome-body">
           <p>Welcome. I am so glad you are here.</p>
-          <p>Over the next four days you will reset your power, set a clear direction, and take real action inside The Freedom Intelligence Field, a living space encoded with my full teaching, methodology, and voice.</p>
+          <p>${state.tier === "workshop"
+              ? `Over the next days you will reset your power, set a clear direction, and take real action inside The Freedom Intelligence Field, a living space encoded with my full teaching, methodology, and voice.`
+              : `Over the next four days you will reset your power, set a clear direction, and take real action inside The Freedom Intelligence Field, a living space encoded with my full teaching, methodology, and voice.`}</p>
           <p>Watch the short video above first. It shows you how the experience works and how to make the most of your days.</p>
-          <p><strong>How it works.</strong> Each day takes 20 to 30 minutes. Day 1 is open now, and each day unlocks the next. Day 4 is your bonus day to integrate everything, save your work, and watch the Architecture of Freedom class.</p>
+          <p>${state.tier === "workshop"
+              ? `<strong>How it works:</strong> Each step takes 20 to 30 minutes and you can take your time working on them. The Field will guide you on what to do in the steps.`
+              : `<strong>How it works.</strong> Each day takes 20 to 30 minutes. Day 1 is open now, and each day unlocks the next. Day 4 is your bonus day to integrate everything, save your work, and watch the Architecture of Freedom class.`}</p>
           <p><strong>To get the most from this:</strong></p>
           <ul>
-            <li><a href="https://chat.whatsapp.com/Gf5PKGIYPrIFkhST2iJLoJ" target="_blank" rel="noopener">Join our WhatsApp group</a>. The living heart of the journey, where my team and others walking this path gather. I would love to meet you there.</li>
+            ${state.tier === "workshop"
+              ? `<li><a href="https://chat.whatsapp.com/IxTjoEvWyol3zfjJXJC5gq?mode=gi_t" target="_blank" rel="noopener">Join our WhatsApp group</a>. The living heart of the journey, where my team and others walking this path gather. I would love to meet you there.</li>`
+              : `<li><a href="https://chat.whatsapp.com/Gf5PKGIYPrIFkhST2iJLoJ" target="_blank" rel="noopener">Join our WhatsApp group</a>. The living heart of the journey, where my team and others walking this path gather. I would love to meet you there.</li>`}
             <li><a href="https://links.buildhub.se/widget/bookings/connectcall-masteryourpath" target="_blank" rel="noopener">Book a complimentary orientation call</a>. 15 to 20 minutes with one of my coaches to help you make the most of these days.</li>
           </ul>
-          <p>I cannot wait to witness you here. Let's begin.</p>
-          <div class="day1-welcome-footnote">All these videos and info stay available in your <a href="https://www.shimritnativ.com/library" target="_blank" rel="noopener">library</a> or through the "Your Account" button here.</div>
+          <p>${state.tier === "workshop"
+              ? `I cannot wait to witness you here and see you on September 21st at 6pm CET for the All The Way To The Top Workshop. If you haven't yet, <a href="#TODO-WORKSHOP-CALENDAR-LINK" target="_blank" rel="noopener">add the event to your calendar HERE</a>.`
+              : `I cannot wait to witness you here. Let's begin.`}</p>
+          ${state.tier === "workshop"
+            ? `<div class="day1-welcome-footnote">All these videos and info stay available right here in The Field. Scroll back any time to rewatch.</div>`
+            : `<div class="day1-welcome-footnote">All these videos and info stay available in your <a href="https://www.shimritnativ.com/library" target="_blank" rel="noopener">library</a> or through the "Your Account" button here.</div>`}
         </div>
         <button class="day1-welcome-cta" id="day1-cta-1" type="button" ${card1BtnDone ? "disabled" : ""}>
           ${card1BtnDone ? '<span class="day1-check">✓</span>Started' : `Begin ${dayLabel(1)}`}
@@ -8738,7 +8752,7 @@ Begin.` },
           <p>Welcome to ${state.tier === "workshop" ? "Step 1 of your Power Reset" : "Day 1 of your 72-hour power reset"}.</p>
           <p>Today is the State Reset. Day 1 locates what state you are operating from, what has been directing your thoughts, decisions, and energy, and returns you to your own power.</p>
           <p>When you are ready, find a quiet space and give yourself 15 to 20 minutes where you can be fully present.</p>
-          <p><a href="https://drive.google.com/file/d/1x7z9dQrA-rY7UcCjgE97-weXOUaNIIYl/view?usp=sharing" target="_blank" rel="noopener">Open the Day 1 companion PDF ↗</a><br><span style="font-size: 13px; color: var(--text-dim, #6B5F4C);">Below this video you will find the PDF with some more material you can use to complement this day.</span></p>
+          <p><a href="https://drive.google.com/file/d/1x7z9dQrA-rY7UcCjgE97-weXOUaNIIYl/view?usp=sharing" target="_blank" rel="noopener">Open the ${dayLabel(1)} companion PDF ↗</a><br><span style="font-size: 13px; color: var(--text-dim, #6B5F4C);">Below this video you will find the PDF with some more material you can use to complement this ${state.tier === "workshop" ? "step" : "day"}.</span></p>
         </div>
         <button class="day1-welcome-cta" id="day1-cta-2" type="button" ${card2BtnDone ? "disabled" : ""}>
           ${card2BtnDone ? '<span class="day1-check">✓</span>Prompt inserted' : `Begin ${dayLabel(1)} Now`}
@@ -8851,7 +8865,7 @@ Begin.` },
           <p>Welcome to ${state.tier === "workshop" ? "Step 2 of your Power Reset" : "Day 2 of your 72 Hour Power Reset"}.</p>
           <p>Today is the Decision &amp; Action Alignment. Yesterday you reset your state, and you can return to that reset any day you wish. Today you take the statement you set yesterday, anchor it into your being, and from that place make a clear, aligned decision and turn it into one real action taken from your power.</p>
           <p>Your instrument has three centers: mind, heart, and body. When all three come into alignment around a decision, a goal, or a next move, that move becomes empowered, by allowing the energy that everything is created from to move to and through you into manifestation. That is what today is about.</p>
-          <p><a href="https://drive.google.com/file/d/1QiA4emMS1-bv9F3TwJiLREQ0WUOYs81U/view?usp=sharing" target="_blank" rel="noopener">Open the Day 2 companion PDF ↗</a><br><span style="font-size: 13px; color: var(--text-dim, #6B5F4C);">Below this video you will find the PDF with some more material you can use to complement this day.</span></p>
+          <p><a href="https://drive.google.com/file/d/1QiA4emMS1-bv9F3TwJiLREQ0WUOYs81U/view?usp=sharing" target="_blank" rel="noopener">Open the ${dayLabel(2)} companion PDF ↗</a><br><span style="font-size: 13px; color: var(--text-dim, #6B5F4C);">Below this video you will find the PDF with some more material you can use to complement this ${state.tier === "workshop" ? "step" : "day"}.</span></p>
         </div>
         <button class="day1-welcome-cta" id="day2-cta" type="button" ${btnDone ? "disabled" : ""}>
           ${btnDone ? '<span class="day1-check">✓</span>Prompt inserted' : `Begin ${dayLabel(2)} Now`}
@@ -8919,7 +8933,7 @@ Begin.` },
           <p>Welcome to ${state.tier === "workshop" ? "Step 3 of your Power Reset" : "Day 3 of your 72 Hour Power Reset"}.</p>
           <p>Today is the peak experience of the entire three-day journey. You have reset your state and aligned your decision. Today you step into the frequency of the reality you just decided to create and tuning to it.</p>
           <p>The Field will guide you to build a Determined Imagination scene: a specific, sensory, alive picture of your desired reality, and then step inside it and feel it as already real.</p>
-          <p><a href="https://drive.google.com/file/d/1Zhjf7NyeLo1tWco_G8KBs2R1UKRFtodv/view?usp=sharing" target="_blank" rel="noopener">Open the Day 3 companion PDF ↗</a><br><span style="font-size: 13px; color: var(--text-dim, #6B5F4C);">Below this video you will find the PDF with some more material you can use to complement this day.</span></p>
+          <p><a href="https://drive.google.com/file/d/1Zhjf7NyeLo1tWco_G8KBs2R1UKRFtodv/view?usp=sharing" target="_blank" rel="noopener">Open the ${dayLabel(3)} companion PDF ↗</a><br><span style="font-size: 13px; color: var(--text-dim, #6B5F4C);">Below this video you will find the PDF with some more material you can use to complement this ${state.tier === "workshop" ? "step" : "day"}.</span></p>
         </div>
         <button class="day1-welcome-cta" id="day3-cta" type="button" ${btnDone ? "disabled" : ""}>
           ${btnDone ? '<span class="day1-check">✓</span>Prompt inserted' : `Begin ${dayLabel(3)} Now`}
