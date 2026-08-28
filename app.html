@@ -8880,8 +8880,11 @@ Begin.` },
         </div>
         <div class="day1-welcome-body">
           <p>Welcome to ${state.tier === "workshop" ? "Step 2 of your Power Reset" : "Day 2 of your 72 Hour Power Reset"}.</p>
-          <p>Today is the Decision &amp; Action Alignment. Yesterday you reset your state, and you can return to that reset any day you wish. Today you take the statement you set yesterday, anchor it into your being, and from that place make a clear, aligned decision and turn it into one real action taken from your power.</p>
-          <p>Your instrument has three centers: mind, heart, and body. When all three come into alignment around a decision, a goal, or a next move, that move becomes empowered, by allowing the energy that everything is created from to move to and through you into manifestation. That is what today is about.</p>
+          ${state.tier === "workshop"
+            ? `<p>This step is the Decision &amp; Action Alignment. You reset your state in the previous step, and you can return to that reset any time you wish. Here you take the statement you set in Step 1, anchor it into your being, and from that place make a clear, aligned decision and turn it into one real action taken from your power.</p>
+          <p>Your instrument has three centers: mind, heart, and body. When all three come into alignment around a decision, a goal, or a next move, that move becomes empowered, by allowing the energy that everything is created from to move to and through you into manifestation. That is what this step is about.</p>`
+            : `<p>Today is the Decision &amp; Action Alignment. Yesterday you reset your state, and you can return to that reset any day you wish. Today you take the statement you set yesterday, anchor it into your being, and from that place make a clear, aligned decision and turn it into one real action taken from your power.</p>
+          <p>Your instrument has three centers: mind, heart, and body. When all three come into alignment around a decision, a goal, or a next move, that move becomes empowered, by allowing the energy that everything is created from to move to and through you into manifestation. That is what today is about.</p>`}
           <p><a href="https://drive.google.com/file/d/1QiA4emMS1-bv9F3TwJiLREQ0WUOYs81U/view?usp=sharing" target="_blank" rel="noopener">Open the ${dayLabel(2)} companion PDF ↗</a></p>
         </div>
         <button class="day1-welcome-cta" id="day2-cta" type="button" ${btnDone ? "disabled" : ""}>
@@ -8948,8 +8951,11 @@ Begin.` },
         </div>
         <div class="day1-welcome-body">
           <p>Welcome to ${state.tier === "workshop" ? "Step 3 of your Power Reset" : "Day 3 of your 72 Hour Power Reset"}.</p>
-          <p>Today is the peak experience of the entire three-day journey. You have reset your state and aligned your decision. Today you step into the frequency of the reality you just decided to create and tuning to it.</p>
-          <p>The Field will guide you to build a Determined Imagination scene: a specific, sensory, alive picture of your desired reality, and then step inside it and feel it as already real.</p>
+          ${state.tier === "workshop"
+            ? `<p>This step is the peak experience of the Power Reset. You have reset your state and aligned your decision. Here you step into the frequency of the reality you just decided to create and tune to it.</p>
+          <p>The Field will guide you to build a Determined Imagination scene: a specific, sensory, alive picture of your desired reality, and then step inside it and feel it as already real.</p>`
+            : `<p>Today is the peak experience of the entire three-day journey. You have reset your state and aligned your decision. Today you step into the frequency of the reality you just decided to create and tuning to it.</p>
+          <p>The Field will guide you to build a Determined Imagination scene: a specific, sensory, alive picture of your desired reality, and then step inside it and feel it as already real.</p>`}
           <p><a href="https://drive.google.com/file/d/1Zhjf7NyeLo1tWco_G8KBs2R1UKRFtodv/view?usp=sharing" target="_blank" rel="noopener">Open the ${dayLabel(3)} companion PDF ↗</a></p>
         </div>
         <button class="day1-welcome-cta" id="day3-cta" type="button" ${btnDone ? "disabled" : ""}>
