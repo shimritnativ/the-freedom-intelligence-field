@@ -8180,8 +8180,18 @@ Begin.` },
     if (autoplayCheckbox) autoplayCheckbox.addEventListener("change", onAutoplayChange);
     // Day items should be clickable in ANY view (entry, chat, unlimited-chat)
     // so users can navigate freely between days and Unlimited.
+    // Two flavors:
+    //   - Reset step items carry data-day="N" -> onDayClick(N).
+    //   - Workshop-integration items carry data-process-key="workshop-
+    //     integration-1|2|3" -> onProcessPick(key), which starts the
+    //     guided process the same way a Library card would.
     document.querySelectorAll(".day-item").forEach(el => {
-      el.addEventListener("click", () => onDayClick(parseInt(el.dataset.day, 10)));
+      const processKey = el.getAttribute("data-process-key");
+      if (processKey) {
+        el.addEventListener("click", () => onProcessPick(processKey));
+      } else if (el.dataset.day) {
+        el.addEventListener("click", () => onDayClick(parseInt(el.dataset.day, 10)));
+      }
     });
 
     // ===== Mobile chrome wiring =====
