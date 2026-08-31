@@ -162,6 +162,66 @@ export default async function handler(req, res) {
     const data = await openaiRes.json();
     const text = ((data && data.text) || "").trim();
 
+    // Whisper repetition-hallucination guard.
+    //
+    // Even with no prompt bias, Whisper occasionally locks into a loop
+    // and returns the same short phrase repeated 3+ times, sometimes
+    // in a language different from what the member actually spoke
+    // (Antonella, Italian speaker, 2026-08-29: got "3-4 хвилини
+    // попередніше 3-4 хвилини попередніше 3-4 хвилини попередніше" —
+    // Ukrainian for "3-4 minutes previously" x3 — while she was still
+    // recording her Frequency Booster session in Italian).
+    //
+    // This is a known Whisper failure mode triggered by long silences,
+    // background noise, or ambiguous language detection. The fix is to
+    // detect the repetition pattern server-side and refuse to return
+    // the hallucination as if it were real speech. The member sees a
+    // clean error and re-records, rather than seeing gibberish appear
+    // in their input.
+    //
+    // Detection heuristic: split on whitespace; if there is a token
+    // sequence of 2+ words that repeats 3+ times consecutively, and
+    // the repeated block accounts for most of the total text, it is a
+    // hallucination. Legitimate speech almost never repeats the same
+    // phrase 3 times in a row.
+    function looksLikeRepetitionHallucination(t) {
+      if (!t || t.length < 20) return false;
+      const words = t.split(/\s+/).filter(Boolean);
+      if (words.length < 6) return false;
+      // Try phrase lengths 2..6 words. If any consecutive repetition
+      // of the same phrase covers >= 60% of the words, it's hallucinated.
+      for (let phraseLen = 2; phraseLen <= 6; phraseLen++) {
+        for (let start = 0; start + phraseLen * 3 <= words.length; start++) {
+          const phrase = words.slice(start, start + phraseLen).join(" ").toLowerCase();
+          let reps = 1;
+          let cursor = start + phraseLen;
+          while (cursor + phraseLen <= words.length &&
+                 words.slice(cursor, cursor + phraseLen).join(" ").toLowerCase() === phrase) {
+            reps++;
+            cursor += phraseLen;
+          }
+          if (reps >= 3 && (reps * phraseLen) / words.length >= 0.6) {
+            return { phrase, reps };
+          }
+        }
+      }
+      return false;
+    }
+    const rep = looksLikeRepetitionHallucination(text);
+    if (rep) {
+      console.warn("transcribe_repetition_hallucination", {
+        user_id: user.id,
+        audio_bytes: audioBuffer.length,
+        text_preview: text.slice(0, 200),
+        repeated_phrase: rep.phrase,
+        repetition_count: rep.reps,
+      });
+      return res.status(422).json({
+        error: "audio_unclear",
+        message: "The recording didn't transcribe cleanly. Please try again in a quieter space, or speak a little closer to the microphone.",
+      });
+    }
+
     // Success-path logging so we can spot patterns without waiting
     // for a user report. Every transcribe leaves a trace with the
     // audio size, mime type, whether Whisper returned empty text,
