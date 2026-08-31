@@ -4356,10 +4356,39 @@
       desc: "Render your personal Beyond Potential Board with the Field.",
     },
   ];
+  // Tester override for the workshop-integration drip.
+  //
+  // The three workshop-integration processes unlock at 4pm CET on Sept
+  // 21, 22, and 23. Geo needs to test the full flow (especially the
+  // Beyond Potential Board on Day 3) before launch. This function
+  // returns true if the current user is a sanctioned tester:
+  //   - Any @shimritnativ.com email (admin domain).
+  //   - Any ge.amaral3+... alias on Gmail (Geo's test-account pattern).
+  //   - AND the URL has ?unlock_all=1 (opt-in, so testers who forget
+  //     to add it still see the real drip and can spot member-facing
+  //     issues).
+  //
+  // Regular VIP members always follow the real drip schedule.
+  function isWorkshopTester() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("unlock_all") !== "1") return false;
+    } catch (_) { return false; }
+    const email = String(state && state.userEmail || "").toLowerCase();
+    if (!email) return false;
+    if (email.endsWith("@shimritnativ.com")) return true;
+    // Geo's Gmail test-account pattern: ge.amaral3+anything@gmail.com.
+    if (/^ge\.amaral3(?:\+[^@]*)?@gmail\.com$/.test(email)) return true;
+    return false;
+  }
+
   // Is a specific workshop-integration process currently unlocked?
-  // Purely time-based, matches the drip schedule on the LP.
+  // Purely time-based, matches the drip schedule on the LP. Sanctioned
+  // testers with ?unlock_all=1 bypass the drip so they can walk the
+  // whole flow before Sept 21.
   function isWorkshopProcessUnlocked(unlockIso) {
     if (!unlockIso) return true;
+    if (isWorkshopTester()) return true;
     return new Date(unlockIso).getTime() <= Date.now();
   }
 
