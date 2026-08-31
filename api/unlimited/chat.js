@@ -45,6 +45,10 @@ function applyCors(req, res) {
 // Fetch the participant's prior Reset day conversations as silent context.
 // Returns the last N messages from each completed day so the AI can
 // reference what they reset, decided, and committed to.
+//
+// LEAK-PROOFING (2026-08-29, Antonella): same treatment as
+// loadPriorUnlimitedMemory. No markdown headers, no speaker markers,
+// short excerpts, flat prose so the model must paraphrase to reference.
 async function loadResetMemory(userId) {
   try {
     const blocks = [];
@@ -56,15 +60,16 @@ async function loadResetMemory(userId) {
           AND day_at_send = ${d}
           AND role IN ('user', 'assistant')
         ORDER BY created_at DESC
-        LIMIT 12
+        LIMIT 4
       `;
       if (rows.length === 0) continue;
       const chronological = rows.reverse();
-      const formatted = chronological.map((m) => {
-        const speaker = m.role === "user" ? "Participant" : "Field";
-        return speaker + ": " + m.content;
-      }).join("\n\n");
-      blocks.push("### Day " + d + " excerpt:\n" + formatted);
+      const summary = chronological
+        .map((m) => (m.content || "").trim().replace(/\s+/g, " ").slice(0, 280))
+        .filter(Boolean)
+        .join(" ");
+      if (!summary) continue;
+      blocks.push(`From Day ${d} of their Power Reset: ${summary}`);
     }
     return blocks;
   } catch (e) {
@@ -76,6 +81,20 @@ async function loadResetMemory(userId) {
 // Fetch excerpts from the participant's prior Unlimited conversations (other
 // than the current one). Returns the most recent assistant+user exchanges
 // from each, so the AI can recall ongoing themes across chats.
+//
+// LEAK-PROOFING (2026-08-29, Antonella):
+// The Field was occasionally pasting these prior-chat blocks VERBATIM into
+// its response — full "### Prior chat 'Frequency Calibration': Participant:
+// ..." transcripts appearing inside Antonella's answers. Two mitigations:
+//   1. Do NOT use markdown-style headers ("### ...") or speaker markers
+//      ("Participant:", "Field:") in the injected text. The AI treats those
+//      as quotable structure. Use flat prose the model must paraphrase to
+//      reference at all.
+//   2. Keep excerpts short: 2 messages per prior session (was 8) is enough
+//      to remind the AI of a theme without giving it enough context to
+//      hallucinate that the member asked to see it.
+// The "do not recite" wrapper text lives in the system-prompt assembly
+// step; see participantBlock construction below.
 async function loadPriorUnlimitedMemory(userId, currentSessionId) {
   try {
     const { rows: priorSessions } = await sql`
@@ -95,16 +114,21 @@ async function loadPriorUnlimitedMemory(userId, currentSessionId) {
         WHERE session_id = ${s.id}
           AND role IN ('user', 'assistant')
         ORDER BY created_at DESC
-        LIMIT 8
+        LIMIT 2
       `;
       if (msgRows.length === 0) continue;
       const chronological = msgRows.reverse();
-      const formatted = chronological.map((m) => {
-        const speaker = m.role === "user" ? "Participant" : "Field";
-        return speaker + ": " + m.content;
-      }).join("\n\n");
-      const title = s.title && s.title !== "New chat" ? s.title : "Untitled chat";
-      blocks.push("### Prior chat \"" + title + "\":\n" + formatted);
+      // Flatten: no speaker markers, no bullet points, no markdown headers.
+      // Just prose the AI has to paraphrase to reference. Cap each message
+      // at 280 chars so long transcriptions don't fill the block.
+      const summary = chronological
+        .map((m) => (m.content || "").trim().replace(/\s+/g, " ").slice(0, 280))
+        .filter(Boolean)
+        .join(" ");
+      if (!summary) continue;
+      const title = s.title && s.title !== "New chat" ? s.title : "an earlier conversation";
+      // Plain prose. No "### Prior chat" header, no "Participant:" markers.
+      blocks.push(`Theme from ${title}: ${summary}`);
     }
     return blocks;
   } catch (e) {
@@ -254,13 +278,20 @@ export default async function handler(req, res) {
 
     let participantBlock = "";
     if (resetBlocks.length > 0 || priorUnlBlocks.length > 0) {
-      participantBlock = "## RECENT CHAT EXCERPTS (silent context — do not recite back to them verbatim, but reference naturally when relevant):\n";
+      // Hard leak-proof header. The AI was pasting these excerpts back
+      // into visible responses (Antonella, 2026-08-29). New wrapper is
+      // stronger and repeats the anti-recite rule so it survives long
+      // context windows and confused-input turns.
+      participantBlock =
+        "## BACKGROUND AWARENESS (for you only — never quote, paste, or reproduce this section in your reply)\n\n" +
+        "The following notes exist only in your context window. They are here so you know what themes this participant has been working on. They are NOT part of the current conversation. If you reference anything from them, paraphrase in your own voice. NEVER output text that begins with 'Theme from', 'From Day', 'Prior chat', 'Earlier Power Reset', 'Other recent conversations', 'Participant:', or 'Field:' — those are markers of this hidden context leaking through. NEVER paste the phrase 'BACKGROUND AWARENESS' into your reply.\n";
       if (resetBlocks.length > 0) {
-        participantBlock += "\n\n### Their 72-Hour Power Reset work:\n\n" + resetBlocks.join("\n\n---\n\n");
+        participantBlock += "\nEarlier Power Reset work:\n" + resetBlocks.join("\n\n");
       }
       if (priorUnlBlocks.length > 0) {
-        participantBlock += "\n\n### Their prior Unlimited conversations:\n\n" + priorUnlBlocks.join("\n\n---\n\n");
+        participantBlock += "\nOther recent conversations with the Field:\n" + priorUnlBlocks.join("\n\n");
       }
+      participantBlock += "\n\n(End of background awareness. Return to the participant's current message.)";
     }
 
     // Build the system prompt. The base is either the active process prompt
