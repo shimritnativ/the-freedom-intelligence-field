@@ -1250,6 +1250,90 @@
      the declaration. The card renders in two states: loading (spinner +
      "Generating in Shimrit's voice...") and ready (download icon + duration
      + Download button). Generation auto-fires when the card mounts. */
+
+  /* ===== Beyond Potential Board (workshop-integration-3) =====
+     Two forms: [[genimg:PROMPT]] renders as a loading card while
+     processGenimgCards() calls /api/generate-image; the response comes
+     back as [[img:BASE64]] which renders the persisted PNG inline with
+     a download button. The persisted form survives page reloads because
+     the base64 is stored in the message row, so we do not re-bill
+     OpenAI when the member reopens the conversation. */
+  .genimg-card {
+    display: block;
+    margin: 16px 0 6px;
+    border-radius: 16px;
+    max-width: 520px;
+    overflow: hidden;
+  }
+  .genimg-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+    border: 1px solid var(--gold-line);
+    background: var(--gold-soft);
+  }
+  .genimg-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+  }
+  .genimg-download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    background: var(--gold);
+    color: var(--bg);
+    border-radius: 999px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+    transition: filter 0.15s ease;
+  }
+  .genimg-download-btn:hover { filter: brightness(0.94); }
+  .genimg-loading {
+    border-radius: 14px;
+    border: 1px solid var(--gold-line);
+    background: var(--gold-soft);
+    padding: 22px 18px;
+    max-width: 440px;
+  }
+  .genimg-loading-inner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  .genimg-orb {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: transparent;
+    border: 2px solid var(--gold-line);
+    border-top-color: var(--gold);
+    animation: genimgspin 1.1s linear infinite;
+  }
+  @keyframes genimgspin { to { transform: rotate(360deg); } }
+  .genimg-loading-text { flex: 1; min-width: 0; }
+  .genimg-loading-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.35;
+  }
+  .genimg-loading-meta {
+    font-size: 12px;
+    color: var(--text-mute);
+    margin-top: 3px;
+  }
+  .genimg-loading.errored .genimg-orb {
+    border-top-color: var(--text-mute);
+    animation: none;
+  }
+
   .mp3-card {
     display: block;
     margin: 14px 0 4px;
@@ -4267,9 +4351,9 @@
     },
     {
       processKey: "workshop-integration-3",
-      name: "Integration Work · Day 3",
+      name: "Beyond Potential Board · Day 3",
       unlockAt: "2026-09-23T14:00:00Z",  // 4pm CET on workshop Day 3
-      desc: "Close the loop from the workshop and calibrate for what comes next.",
+      desc: "Render your personal Beyond Potential Board with the Field.",
     },
   ];
   // Is a specific workshop-integration process currently unlocked?
@@ -5082,6 +5166,51 @@ Begin.` },
         + '<span class="msg-cta-arrow" aria-hidden="true">→</span></button>';
     });
 
+    // Persisted image syntax: [[img:BASE64_DATA]] -> inline PNG.
+    // Generated at Turn 5 of the Beyond Potential Board flow (workshop
+    // tier). The base64 is stored INSIDE the message row so page reloads
+    // do not re-bill OpenAI's Images API. Renders with a download button
+    // so the member can save the Board to their device.
+    html = html.replace(/\[\[img:([A-Za-z0-9+/=]+)\]\]/g, function (m, b64) {
+      if (!b64 || b64.length < 100) return "";
+      // We build the <img> with an inline data URL. Chrome caps data URLs
+      // at ~2MB on some builds but our images are ~1.5MB base64 which is
+      // well within limits.
+      return '<div class="genimg-card">'
+        + '<img class="genimg-img" src="data:image/png;base64,' + b64 + '" alt="Your Beyond Potential Board" />'
+        + '<div class="genimg-actions">'
+        + '<a class="genimg-download-btn" href="data:image/png;base64,' + b64 + '" download="beyond-potential-board.png">'
+        + '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'
+        + '<span>Download Board</span>'
+        + '</a>'
+        + '</div>'
+        + '</div>';
+    });
+
+    // Live image generation syntax: [[genimg:PROMPT_TEXT]] -> loading card.
+    // Emitted by the workshop-integration-3 (Beyond Potential Board) prompt.
+    // Renders as a loading card that processGenimgCards() picks up after
+    // render; that function POSTs to /api/generate-image with the prompt
+    // and the assistant messageId, and the server writes the returned
+    // base64 back into the message row as [[img:BASE64]] so subsequent
+    // page loads render the image directly (no re-billing OpenAI).
+    html = html.replace(/\[\[genimg:([\s\S]+?)\]\]/g, function (m, prompt) {
+      const p = prompt.trim();
+      if (!p) return "";
+      try {
+        const b64Prompt = btoa(unescape(encodeURIComponent(p)));
+        return '<div class="genimg-card genimg-loading" data-genimg-prompt-b64="' + b64Prompt + '">'
+          + '<div class="genimg-loading-inner">'
+          + '<div class="genimg-orb" aria-hidden="true"></div>'
+          + '<div class="genimg-loading-text">'
+          + '<div class="genimg-loading-title">Rendering your Beyond Potential Board…</div>'
+          + '<div class="genimg-loading-meta">This takes about 30 seconds.</div>'
+          + '</div></div></div>';
+      } catch (e) {
+        return "";
+      }
+    });
+
     // MP3 audio download syntax: [[mp3:Title|Text to speak]] -> audio card.
     // Renders a loading card that auto-fires generation via /api/speak (which
     // uses Shimrit's ElevenLabs cloned voice). The text portion may span
@@ -5181,6 +5310,113 @@ Begin.` },
   // pointing at the same text share one request.
   const mp3BlobCache = new Map(); // b64Text -> { url, duration, title }
   const mp3InFlight = new Map(); // b64Text -> Promise<{ url, duration, title }>
+
+  // ===== Beyond Potential Board image generation =====
+  // Each [[genimg:PROMPT]] token in an assistant message renders as a
+  // loading card (see the regex in renderMarkdown). After the message is
+  // in the DOM we scan for any cards that haven't been processed yet and
+  // POST to /api/generate-image with the prompt + the DB message id.
+  // The server generates the image, writes the base64 back into the
+  // message row as [[img:BASE64]] so subsequent renders skip the API,
+  // and returns the base64 to us. We swap the loading card for the
+  // ready image inline. In-session dedupe via genimgInFlight + cache
+  // via genimgB64Cache keeps re-renders cheap.
+  const genimgB64Cache = new Map();     // b64Prompt -> b64Image
+  const genimgInFlight = new Map();     // b64Prompt -> Promise<b64Image>
+
+  function processGenimgCards() {
+    document.querySelectorAll(".genimg-loading:not(.genimg-processed)").forEach(card => {
+      card.classList.add("genimg-processed");
+      const b64Prompt = card.getAttribute("data-genimg-prompt-b64") || "";
+      if (!b64Prompt || !state.sessionToken) {
+        renderGenimgError(card);
+        return;
+      }
+      // Cache hit — the same prompt was rendered earlier this session
+      // and we already have the base64. Show it immediately.
+      const cached = genimgB64Cache.get(b64Prompt);
+      if (cached) {
+        renderGenimgReady(card, cached);
+        return;
+      }
+      // Recover the DB row id from the enclosing assistant message so
+      // the server can persist the returned base64 into that row.
+      const msgRow = card.closest(".msg-row.assistant");
+      const messageId = msgRow ? msgRow.getAttribute("data-msg-id") : null;
+      let prompt = "";
+      try {
+        prompt = decodeURIComponent(escape(atob(b64Prompt)));
+      } catch (e) {
+        prompt = "";
+      }
+      if (!prompt) {
+        renderGenimgError(card);
+        return;
+      }
+      generateBoardImage(card, prompt, b64Prompt, messageId);
+    });
+  }
+
+  async function generateBoardImage(card, prompt, cacheKey, messageId) {
+    try {
+      let inflight = genimgInFlight.get(cacheKey);
+      if (!inflight) {
+        inflight = (async () => {
+          const res = await fetch(API_BASE + "/generate-image", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken },
+            body: JSON.stringify({ prompt, message_id: messageId })
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            const err = new Error(body.error || ("genimg_" + res.status));
+            err.statusCode = res.status;
+            err.serverMessage = body.message || null;
+            throw err;
+          }
+          const data = await res.json();
+          if (!data || !data.image_b64) throw new Error("empty_image");
+          return data.image_b64;
+        })();
+        genimgInFlight.set(cacheKey, inflight);
+      }
+      const b64Image = await inflight;
+      genimgB64Cache.set(cacheKey, b64Image);
+      renderGenimgReady(card, b64Image);
+    } catch (err) {
+      console.error("genimg_generation_failed", err);
+      genimgInFlight.delete(cacheKey);
+      renderGenimgError(card, err && err.serverMessage);
+    }
+  }
+
+  function renderGenimgReady(card, b64Image) {
+    const dataUrl = "data:image/png;base64," + b64Image;
+    card.classList.remove("genimg-loading");
+    card.className = "genimg-card";
+    card.innerHTML =
+      '<img class="genimg-img" src="' + dataUrl + '" alt="Your Beyond Potential Board" />' +
+      '<div class="genimg-actions">' +
+        '<a class="genimg-download-btn" href="' + dataUrl + '" download="beyond-potential-board.png">' +
+          '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
+          '<span>Download Board</span>' +
+        '</a>' +
+      '</div>';
+    const wrapper = document.getElementById("messages-wrap");
+    if (wrapper) wrapper.scrollTop = wrapper.scrollHeight;
+  }
+
+  function renderGenimgError(card, serverMessage) {
+    card.classList.add("errored");
+    const titleEl = card.querySelector(".genimg-loading-title");
+    const metaEl = card.querySelector(".genimg-loading-meta");
+    if (titleEl) titleEl.textContent = "The Board didn't render.";
+    if (metaEl) {
+      metaEl.textContent = serverMessage
+        ? String(serverMessage).slice(0, 200)
+        : "Try again in a moment, or ask me to render it once more.";
+    }
+  }
 
   // Wire the [[go:Label|dayN]] buttons that the Field can drop into a
   // message to send the member straight to Day N in a single tap. Runs
@@ -11246,7 +11482,12 @@ Begin.` },
     }
     let html = state.unlimitedMessages.map((m, i) => {
       if (m.role === "user") return '<div class="msg-row user"><div class="msg">' + renderUserMessage(m.content) + '</div></div>';
-      return '<div class="msg-row assistant"><div class="msg">' + renderMarkdown(m.content) + '</div>'
+      // The data-msg-id attribute lets processGenimgCards find the DB
+      // row id for this assistant message so it can pass message_id to
+      // /api/generate-image and have the server persist the base64
+      // back onto the same row.
+      const idAttr = m.id ? ' data-msg-id="' + String(m.id) + '"' : '';
+      return '<div class="msg-row assistant"' + idAttr + '><div class="msg">' + renderMarkdown(m.content) + '</div>'
         + '<button class="speak-btn" data-unl-msg-index="' + i + '" type="button" aria-label="Play in Shimrit\'s voice">'
         + '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/><path d="M14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>'
         + '</button></div>';
@@ -11263,6 +11504,11 @@ Begin.` },
     processMp3Cards();
     // Same wiring for in-app [[go:Label|dayN]] buttons (idempotent).
     wireGoDayButtons();
+    // Beyond Potential Board (workshop-integration-3): scan any
+    // newly rendered [[genimg:PROMPT]] cards and call /api/generate-image
+    // to render + persist the Board. Idempotent — a card that has
+    // already fired sits in in-flight state until the response lands.
+    processGenimgCards();
   }
 
   function onUnlimitedKeyDown(e) {
@@ -11291,7 +11537,10 @@ Begin.` },
     renderUnlimitedMessages();
     try {
       const data = await apiUnlimitedChat(state.activeUnlimitedId, text);
-      state.unlimitedMessages.push({ role: "assistant", content: data.reply });
+      // Keep the DB row id on the assistant message so processGenimgCards
+      // can attach it to a /api/generate-image call and the server can
+      // persist the resulting image back into the same message row.
+      state.unlimitedMessages.push({ role: "assistant", content: data.reply, id: data.messageId || null });
       state.loading = false;
       const idx = state.unlimitedSessions.findIndex(s => s.id === state.activeUnlimitedId);
       if (idx >= 0) {
