@@ -27,7 +27,25 @@
 // erroring, so accidental double-clicks are harmless.
 
 import { sql } from "@vercel/postgres";
-import { getUserBySessionToken } from "../../lib/db.js";
+import { getUserBySessionToken, grantWorkshopEntitlement } from "../../lib/db.js";
+
+// Workshop product detection mirror. Kept in sync with
+// api/webhooks/thrivecart.js — any product that grants workshop tier there
+// should ALSO grant it here so a manual admin backfill (or a Zap
+// accidentally pointing at this endpoint instead of /api/webhooks/
+// thrivecart) still lands the buyer in the ATWT experience. Aug 2026:
+// Geo's own VIP-purchase Zap was pointed here by mistake, which recorded
+// the sale but skipped the tier grant, so the buyer couldn't sign in.
+const WORKSHOP_PRODUCT_IDS = new Set(["153"]);
+const WORKSHOP_PRODUCT_NAME_PATTERNS = ["all the way to the top"];
+const WORKSHOP_EXPIRES_AT = new Date("2026-10-02T23:59:59Z");
+
+function isWorkshopProduct(productId, productName) {
+  if (productId && WORKSHOP_PRODUCT_IDS.has(String(productId))) return true;
+  const nameLower = String(productName || "").toLowerCase();
+  if (!nameLower) return false;
+  return WORKSHOP_PRODUCT_NAME_PATTERNS.some((p) => nameLower.includes(p));
+}
 
 const ALLOWED_DOMAIN = "@shimritnativ.com";
 
@@ -200,6 +218,42 @@ export default async function handler(req, res) {
       }
     }
 
+    // Workshop-tier grant safety net. If the entered product is a VIP
+    // workshop product, provision the user record so login works. Runs
+    // on both new inserts AND idempotent re-submissions (the grant
+    // itself is idempotent via ON CONFLICT DO UPDATE in
+    // grantWorkshopEntitlement). We only trigger on order.success so
+    // refund events don't accidentally grant access.
+    let workshopGranted = false;
+    if (eventType === "order.success" && email && isWorkshopProduct(productId, productName)) {
+      try {
+        await grantWorkshopEntitlement({
+          email,
+          expiresAt: WORKSHOP_EXPIRES_AT,
+          utm: {
+            source: utmSource,
+            medium: utmMedium,
+            campaign: utmCampaign,
+            content: utmContent,
+            term: utmTerm,
+          },
+        });
+        workshopGranted = true;
+        console.log("manual_purchase_workshop_grant_ok", {
+          email,
+          productId,
+          productName,
+          expiresAt: WORKSHOP_EXPIRES_AT.toISOString(),
+        });
+      } catch (grantErr) {
+        console.error("manual_purchase_workshop_grant_failed", {
+          email,
+          productId,
+          message: grantErr?.message,
+        });
+      }
+    }
+
     if (rows.length === 0) {
       // Conflict — already exists. Return existing row so the UI can
       // show "this purchase is already logged" instead of "saved".
@@ -212,6 +266,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         ok: true,
         already_existed: true,
+        workshop_granted: workshopGranted,
         row: existing[0] || null,
       });
     }
@@ -219,6 +274,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       already_existed: false,
+      workshop_granted: workshopGranted,
       row: rows[0],
     });
   } catch (err) {
