@@ -11477,6 +11477,29 @@ Begin.` },
   // The normal app startup. In embed mode this runs only AFTER the identity
   // gate has verified the member.
   function initApp() {
+    // ?logout=1 escape hatch. Workshop-tier ATWT members don't see the
+    // sidebar Log out button, so Geo (and any tester impersonating a
+    // workshop VIP) needs a URL she can hit to sign out and switch to
+    // another account. Detected at boot, before we try to resume any
+    // saved session. Clears the local token, strips the query param,
+    // and lands on a clean login screen. Safe on any tier — for
+    // preview/full members it just does the same thing the sidebar
+    // Log out button does.
+    try {
+      const bootParams = new URLSearchParams(location.search);
+      if (bootParams.get("logout") === "1") {
+        clearToken();
+        state.sessionToken = null;
+        state.view = "login";
+        state.loginStep = "email";
+        // Preserve pathname (works from any route: /, /app, /app.html)
+        // but drop the ?logout=1 param so a reload doesn't loop.
+        const cleanUrl = location.origin + location.pathname;
+        // Use replaceState so browser history doesn't accumulate a
+        // logout entry the user has to click back through.
+        try { history.replaceState(null, "", cleanUrl); } catch (_) {}
+      }
+    } catch (_) {}
     // Register the push notification service worker. Fire-and-forget — this
     // is the only thing the SW does in this app, so failing silently is fine.
     // The "Get reminders" button in the sidebar handles permission + subscribe.
