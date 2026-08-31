@@ -10153,8 +10153,10 @@ Begin.` },
     if (!err) return "Something went wrong.";
     if (err.name === "AbortError") return "Took too long. Your network may be slow. Your recording is saved.";
     if (err.message === "transcription_empty") return "We didn't pick up any speech. Try again, or check the recording.";
+    if (err.message === "audio_unclear") return "The recording didn't transcribe cleanly. Try again in a quieter space, or speak a little closer to the microphone. Your recording is saved.";
     if (err.statusCode === 401) return "Your session expired. Refresh the page and try again. Your recording is saved.";
     if (err.statusCode === 413) return "Recording is too large. Try a shorter clip.";
+    if (err.statusCode === 422) return "The recording didn't transcribe cleanly. Try again in a quieter space, or speak a little closer to the microphone. Your recording is saved.";
     if (err.statusCode >= 500) return "Our transcription service hiccupped. Your recording is saved. Try again in a moment.";
     if (err.message && err.message.includes("Failed to fetch")) return "Couldn't reach the server. Check your connection. Your recording is saved.";
     return "Couldn't transcribe. Your recording is saved. Try again, or download it.";
