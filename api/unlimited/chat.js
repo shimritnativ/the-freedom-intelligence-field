@@ -378,11 +378,16 @@ export default async function handler(req, res) {
       reply += "\n\n[This response reached its length limit and may be incomplete. Ask me to continue where I left off and I will pick up from the exact word.]";
     }
 
-    // Persist the assistant reply.
-    await sql`
+    // Persist the assistant reply. Return the row id so the client can
+    // pass it back to /api/generate-image when the reply contains a
+    // [[genimg:PROMPT]] token, letting that endpoint replace the token
+    // with a persistent [[img:BASE64]] on the same message row.
+    const { rows: assistantRows } = await sql`
       INSERT INTO messages (session_id, user_id, role, content, model, system_prompt_version)
       VALUES (${sessionId}, ${user.id}, 'assistant', ${reply}, ${ANTHROPIC_MODEL}, ${PROMPT_VERSION})
+      RETURNING id
     `;
+    const assistantMessageId = assistantRows[0]?.id || null;
 
     // Bump the session's last_message_at so it sorts to the top of the list.
     await sql`
@@ -413,6 +418,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       reply,
+      messageId: assistantMessageId,
       title: updatedTitle,
       retrievedSources: retrievedChunks.map((c) => ({
         title: c.title,
