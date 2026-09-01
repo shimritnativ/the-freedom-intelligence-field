@@ -31,9 +31,15 @@ export default async function handler(req, res) {
     const user = await getUserBySessionToken(token);
     if (!user) return res.status(401).json({ error: "unauthorized" });
 
-    // Tier gate: real Kajabi members on preview tier blocked; anonymous
-    // demo accounts (kajabi_entitled = false) bypass so demo testing works.
-    if (user.tier !== "full" && user.kajabi_entitled === true) {
+    // Tier gate: only preview-tier entitled members are blocked.
+    //   - full: standard Unlimited access.
+    //   - workshop: ATWT VIP tier, uses this endpoint to open the
+    //     three workshop-integration processes (Beyond Potential Board,
+    //     Pattern Breakthrough, Quantum Leap Decision).
+    //   - kajabi_entitled = false: anonymous demo accounts, bypassed so
+    //     demo testing works.
+    const allowedTier = user.tier === "full" || user.tier === "workshop";
+    if (!allowedTier && user.kajabi_entitled === true) {
       return res.status(403).json({ error: "unlimited_locked" });
     }
 
