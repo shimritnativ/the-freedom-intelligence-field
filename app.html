@@ -8099,7 +8099,13 @@ Begin.` },
         if (id) onUnlimitedChatClick(id);
       });
     } else if (state.view === "unlimited-chat") {
-      if (!unlimitedUnlocked()) {
+      // Workshop VIPs enter this view when they tap one of the three
+      // integration processes in their sidebar. They don't hold the
+      // Unlimited entitlement, but they DO get to run guided
+      // processes here — so the paywall must be suppressed for them.
+      // Only preview-tier members (who genuinely lack access) see the
+      // upsell.
+      if (!unlimitedUnlocked() && state.tier !== "workshop") {
         app.innerHTML = `
           ${renderMobileTopBar()}
           <div class="main-row">
