@@ -43,9 +43,12 @@ export default async function handler(req, res) {
     const user = await getUserBySessionToken(token);
     if (!user) return res.status(401).json({ error: "unauthorized" });
 
-    // Tier gate: real Kajabi members on preview tier blocked; anonymous
-    // demo accounts (kajabi_entitled = false) bypass so demo testing works.
-    if (user.tier !== "full" && user.kajabi_entitled === true) {
+    // Tier gate: only preview-tier entitled members are blocked. Full and
+    // workshop tiers both need this endpoint (workshop VIPs use it to
+    // reload their integration-work sessions). Anonymous demo accounts
+    // (kajabi_entitled = false) bypass so demo testing works.
+    const allowedTier = user.tier === "full" || user.tier === "workshop";
+    if (!allowedTier && user.kajabi_entitled === true) {
       return res.status(403).json({ error: "unlimited_locked" });
     }
 
