@@ -4552,6 +4552,23 @@ Begin.` },
 I am here to work with my sense of worthiness in a specific area of life, to surface the stories and conditioning that have been blocking my capacity to receive, reclaim my worth, and open the field for what I desire to flow.
 Guide me through Worthy to Receive now.
 Begin.` },
+    // Workshop VIP integration processes. Activation phrases mirror those
+    // defined in lib/prompts/processes/index.js so the server routes the
+    // conversation to the correct system prompt on the first turn. Only
+    // visible from the workshop-tier sidebar; onProcessPick uses this
+    // array to resolve the process metadata when a member taps one.
+    { key: "workshop-integration-1", name: "Beyond Potential Board", prompt: `Freedom Intelligence Field, I am entering the Beyond Potential Board process.
+I am ready to build my Beyond Potential Board with you.
+Guide me through it now.
+Begin.` },
+    { key: "workshop-integration-2", name: "Pattern Breakthrough", prompt: `Freedom Intelligence Field, I am entering the Pattern Breakthrough process.
+I am ready to surface a limiting pattern that is still running in my instrument, see it clearly, and write its polar opposite from the version of me who is already living my desire.
+Guide me through the Pattern Breakthrough now.
+Begin.` },
+    { key: "workshop-integration-3", name: "Quantum Leap Decision", prompt: `Freedom Intelligence Field, I am entering the Quantum Leap Decision process.
+I am ready to name the one crucial decision my twelve-month future self is calling me to make, and back it with action.
+Guide me through the Quantum Leap Decision now.
+Begin.` },
   ];
   // ===== Process categories =====
   // Mirrors the Kajabi taxonomy. Built processes reference DEMO_PROCESSES by
