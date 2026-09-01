@@ -180,12 +180,18 @@ export default async function handler(req, res) {
     const user = await getUserBySessionToken(token);
     if (!user) return res.status(401).json({ error: "unauthorized" });
 
-    // Server-side tier gate. The Field Unlimited is for "full" tier members
-    // only. Real Kajabi members (kajabi_entitled = true) on the preview tier
-    // get blocked here, even if they pass ?tier=full in the URL or toggle
-    // the client-side tier. Anonymous demo accounts (kajabi_entitled = false)
-    // bypass the gate so the team can still test Unlimited in the demo flow.
-    if (user.tier !== "full" && user.kajabi_entitled === true) {
+    // Server-side tier gate. Two tiers can drive chats through this
+    // endpoint:
+    //   - full: standard Unlimited members.
+    //   - workshop: ATWT VIP tier, uses this endpoint for the three
+    //     workshop-integration processes (Beyond Potential Board,
+    //     Pattern Breakthrough, Quantum Leap Decision).
+    // Preview-tier entitled members get blocked, even if they pass
+    // ?tier=full in the URL or toggle the client-side tier. Anonymous
+    // demo accounts (kajabi_entitled = false) bypass the gate so the
+    // team can still test in the demo flow.
+    const allowedTier = user.tier === "full" || user.tier === "workshop";
+    if (!allowedTier && user.kajabi_entitled === true) {
       return res.status(403).json({ error: "unlimited_locked" });
     }
 
