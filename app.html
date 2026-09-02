@@ -1232,6 +1232,9 @@
     padding: 11px 22px;
     background: var(--gold);
     color: var(--bg);
+    border: none;
+    outline: none;
+    box-shadow: none;
     border-radius: 999px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: 12px;
@@ -1240,6 +1243,13 @@
     text-transform: uppercase;
     text-decoration: none;
     transition: opacity 0.15s ease, transform 0.05s ease;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .msg-cta-btn:focus,
+  .msg-cta-btn:focus-visible {
+    outline: 2px solid var(--gold-line);
+    outline-offset: 2px;
   }
   .msg-cta-btn:hover { opacity: 0.88; }
   .msg-cta-btn:active { transform: scale(0.98); }
@@ -5521,12 +5531,12 @@ Begin.` },
     }
   }
 
-  // Wire the [[renderbtn:...]] Render Board button (workshop tier's
-  // Beyond Potential Board flow). Tapping the button sends the literal
-  // message "render" as if the member typed it, which triggers the AI
-  // to emit its [[genimg:...]] token on the next turn. Also disables
-  // the button after one click so members don't accidentally fire two
-  // renders and burn their daily image quota.
+  // Wire the [[renderbtn:...]] Create Board button (workshop tier's
+  // Beyond Potential Board flow). Tapping it sends "Create my Board"
+  // as if the member typed it, which triggers the AI to emit its
+  // [[genimg:...]] token on the next turn. Also disables the button
+  // after one click so members don't accidentally fire two renders
+  // and burn their daily image quota.
   function wireRenderButtons() {
     document.querySelectorAll(".render-btn:not(.render-btn-wired)").forEach(btn => {
       btn.classList.add("render-btn-wired");
@@ -5540,7 +5550,7 @@ Begin.` },
         try {
           const inputEl = document.getElementById("input");
           if (inputEl) {
-            inputEl.value = "render";
+            inputEl.value = "Create my Board";
             inputEl.dispatchEvent(new Event("input", { bubbles: true }));
           }
           if (typeof onUnlimitedSendClick === "function") {
