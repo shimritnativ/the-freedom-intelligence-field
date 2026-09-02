@@ -1848,22 +1848,47 @@
     background: var(--panel);
     border: 1px solid var(--gold-line);
     border-radius: 12px;
-    padding: 4px 10px;
+    padding: 4px 4px 4px 10px;
     font-size: 11px;
     color: var(--text-dim);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     white-space: nowrap;
-    pointer-events: none;
     z-index: 5;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
   .recording-indicator .red-dot {
     display: inline-block;
     width: 6px; height: 6px;
     border-radius: 50%;
     background: #e57373;
-    margin-right: 5px;
     vertical-align: middle;
     animation: blink 1s ease-in-out infinite;
+  }
+  /* Cancel × button — always clickable, so a stuck recording or a
+     stuck transcription can be aborted without closing the tab. */
+  .recording-cancel-btn,
+  .transcribing-cancel-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-mute);
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 14px;
+    line-height: 1;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+  .recording-cancel-btn:hover,
+  .transcribing-cancel-btn:hover {
+    background: rgba(229, 115, 115, 0.15);
+    color: #e57373;
   }
   @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
@@ -10339,8 +10364,38 @@ Begin.` },
     const maxLabel = `${maxMin}:${String(maxSec).padStart(2, "0")}`;
     voiceState.indicatorEl = document.createElement("div");
     voiceState.indicatorEl.className = "recording-indicator";
-    voiceState.indicatorEl.innerHTML = `<span class="red-dot"></span><span class="rec-time">0:00</span> / ${maxLabel}`;
+    voiceState.indicatorEl.innerHTML =
+      '<span class="red-dot"></span>' +
+      '<span class="rec-time">0:00</span> / ' + maxLabel +
+      '<button class="recording-cancel-btn" type="button" aria-label="Cancel recording" title="Cancel recording">×</button>';
     composer.appendChild(voiceState.indicatorEl);
+    const cancelBtn = voiceState.indicatorEl.querySelector(".recording-cancel-btn");
+    if (cancelBtn) cancelBtn.addEventListener("click", cancelRecording);
+  }
+
+  // Discard an in-progress recording without transcribing it. Used by
+  // the × button on the recording indicator. Members were reporting
+  // "I don't know how to cancel the recording" — tapping the red mic
+  // stops AND transcribes, so there was no true discard path.
+  function cancelRecording() {
+    try {
+      if (voiceState.mediaRecorder && voiceState.mediaRecorder.state === "recording") {
+        // Swap the onstop handler to a no-op so the audio chunks
+        // never reach transcribeBlob.
+        voiceState.mediaRecorder.onstop = () => {
+          cleanupRecording();
+          const micBtn = document.getElementById("mic-btn");
+          if (micBtn) micBtn.classList.remove("recording");
+          voiceState.audioChunks = [];
+          showTranscribingMessage("Recording cancelled.", "warning");
+          setTimeout(removeTranscribingIndicator, 2200);
+        };
+        voiceState.mediaRecorder.stop();
+      }
+    } catch (e) {
+      console.warn("cancel_recording_failed", e);
+      cleanupRecording();
+    }
   }
 
   function updateRecordingIndicator() {
@@ -10474,11 +10529,34 @@ Begin.` },
     el.className = "transcribing-indicator";
     el.id = "transcribing-indicator";
     const showSpinner = variant !== "warning";
+    // Cancel × visible during in-flight transcription only. Warning
+    // states (recording too short, cancelled, etc.) are transient
+    // and don't need a cancel affordance.
+    const showCancel = variant !== "warning";
     el.innerHTML = (showSpinner ? '<span class="transcribing-spinner"></span>' : '') +
-      '<span class="transcribing-text"></span>';
+      '<span class="transcribing-text"></span>' +
+      (showCancel ? '<button class="transcribing-cancel-btn" type="button" aria-label="Cancel transcription" title="Cancel">×</button>' : '');
     const textEl = el.querySelector(".transcribing-text");
     if (textEl) textEl.textContent = text;
     composer.appendChild(el);
+    const cancelBtn = el.querySelector(".transcribing-cancel-btn");
+    if (cancelBtn) cancelBtn.addEventListener("click", cancelTranscription);
+  }
+
+  // Abort an in-flight transcription and reset the UI. Used by the
+  // × button on the transcribing indicator so a hung/slow Whisper
+  // call doesn't lock the composer for minutes with no way out.
+  function cancelTranscription() {
+    try {
+      if (voiceState.transcribeController) {
+        voiceState.transcribeController.abort();
+      }
+    } catch (e) {}
+    const micBtn = document.getElementById("mic-btn");
+    if (micBtn) micBtn.classList.remove("transcribing");
+    removeTranscribingIndicator();
+    showTranscribingMessage("Transcription cancelled. Your recording is saved.", "warning");
+    setTimeout(removeTranscribingIndicator, 2600);
   }
 
   function removeTranscribingIndicator() {
