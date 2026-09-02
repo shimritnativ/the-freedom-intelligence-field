@@ -1244,6 +1244,21 @@
   .msg-cta-btn:hover { opacity: 0.88; }
   .msg-cta-btn:active { transform: scale(0.98); }
   .msg-cta-arrow { font-size: 14px; line-height: 1; }
+  /* Render Board button — same base as msg-cta-btn but a hair larger
+     to signal it as a moment. When it's been fired, it dims and shows
+     a small "sending" state so the member knows the tap registered. */
+  .render-btn {
+    padding: 14px 28px;
+    font-size: 13px;
+  }
+  .render-btn:disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+  .render-btn-fired .msg-cta-arrow {
+    animation: rbtnspin 0.9s linear infinite;
+  }
+  @keyframes rbtnspin { to { transform: rotate(360deg); } }
 
   /* ===== MP3 audio download card (Day 3 Living Power Declaration) =====
      The AI emits a [[mp3:Title|Text]] token after the participant has read
@@ -5262,6 +5277,19 @@ Begin.` },
         + '</div>';
     });
 
+    // Render-Board button: [[renderbtn:Label]] -> gold pill button that
+    // auto-sends the message "render" when tapped. Used by the Beyond
+    // Potential Board flow so members do not have to type the word to
+    // trigger generation. Idempotent — wireRenderButtons() attaches
+    // click handlers on each new render.
+    html = html.replace(/\[\[renderbtn:([^\]]+)\]\]/g, function (m, label) {
+      const lbl = label.trim();
+      if (!lbl) return "";
+      return '<button type="button" class="msg-cta-btn render-btn" data-render-board="1">'
+        + escapeHtml(lbl)
+        + '<span class="msg-cta-arrow" aria-hidden="true">✦</span></button>';
+    });
+
     // Live image generation syntax: [[genimg:PROMPT_TEXT]] -> loading card.
     // Emitted by the workshop-integration-3 (Beyond Potential Board) prompt.
     // Renders as a loading card that processGenimgCards() picks up after
@@ -5491,6 +5519,40 @@ Begin.` },
         ? String(serverMessage).slice(0, 200)
         : "Try again in a moment, or ask me to render it once more.";
     }
+  }
+
+  // Wire the [[renderbtn:...]] Render Board button (workshop tier's
+  // Beyond Potential Board flow). Tapping the button sends the literal
+  // message "render" as if the member typed it, which triggers the AI
+  // to emit its [[genimg:...]] token on the next turn. Also disables
+  // the button after one click so members don't accidentally fire two
+  // renders and burn their daily image quota.
+  function wireRenderButtons() {
+    document.querySelectorAll(".render-btn:not(.render-btn-wired)").forEach(btn => {
+      btn.classList.add("render-btn-wired");
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (btn.disabled) return;
+        btn.disabled = true;
+        btn.classList.add("render-btn-fired");
+        // Route through the unlimited send path since that's where
+        // workshop-integration processes live.
+        try {
+          const inputEl = document.getElementById("input");
+          if (inputEl) {
+            inputEl.value = "render";
+            inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+          }
+          if (typeof onUnlimitedSendClick === "function") {
+            onUnlimitedSendClick();
+          }
+        } catch (err) {
+          console.warn("render_btn_click_failed", err);
+          btn.disabled = false;
+          btn.classList.remove("render-btn-fired");
+        }
+      });
+    });
   }
 
   // Wire the [[go:Label|dayN]] buttons that the Field can drop into a
@@ -11653,6 +11715,9 @@ Begin.` },
     // to render + persist the Board. Idempotent — a card that has
     // already fired sits in in-flight state until the response lands.
     processGenimgCards();
+    // Wire the [[renderbtn:...]] Render Board button so tapping it
+    // sends "render" without the member having to type.
+    wireRenderButtons();
   }
 
   function onUnlimitedKeyDown(e) {
