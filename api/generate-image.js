@@ -129,23 +129,83 @@ export default async function handler(req, res) {
 
     if (!openaiRes.ok) {
       const errText = await openaiRes.text().catch(() => "");
+      // Try to parse OpenAI's structured error so we can distinguish
+      // between: real content-policy violation, model-not-available
+      // (org verification required), rate limit, quota, and other
+      // 400/403 conditions. Each needs a different member-facing
+      // message and dev-facing log signal.
+      let parsedErr = null;
+      try { parsedErr = JSON.parse(errText); } catch (_) {}
+      const errCode = parsedErr?.error?.code || parsedErr?.error?.type || null;
+      const errMsg = parsedErr?.error?.message || errText.slice(0, 300);
       console.error("generate_image_openai_error", {
         status: openaiRes.status,
+        code: errCode,
+        message: errMsg,
         body: errText.slice(0, 500),
         user_id: user.id,
         prompt_preview: prompt.slice(0, 200),
         elapsed_ms: Date.now() - startedAt,
       });
-      // Surface a member-friendly error. 400s from OpenAI usually mean
-      // the prompt tripped a content filter; 5xx means their side is
-      // hiccuping.
-      if (openaiRes.status === 400) {
+
+      // Org-verification required (recent OpenAI change for gpt-image-1
+      // — some accounts need to complete organization verification at
+      // platform.openai.com before they can call this model).
+      const lowerMsg = String(errMsg).toLowerCase();
+      if (
+        lowerMsg.includes("must be verified") ||
+        lowerMsg.includes("verify your organization") ||
+        lowerMsg.includes("organization verification") ||
+        errCode === "organization_must_be_verified"
+      ) {
+        return res.status(400).json({
+          error: "org_verification_required",
+          message: "OpenAI needs to verify the organization before this model can be used. Visit platform.openai.com/settings/organization/general and complete verification.",
+        });
+      }
+
+      // Model not available (usually means the API key doesn't have
+      // access to gpt-image-1 yet or the model name is wrong).
+      if (
+        lowerMsg.includes("does not have access") ||
+        lowerMsg.includes("model_not_found") ||
+        errCode === "model_not_found"
+      ) {
+        return res.status(400).json({
+          error: "model_unavailable",
+          message: "The image model is not enabled on this OpenAI account. Check that gpt-image-1 is available under platform.openai.com/limits.",
+        });
+      }
+
+      // Rate limit / quota.
+      if (openaiRes.status === 429 || errCode === "rate_limit_exceeded" || errCode === "insufficient_quota") {
+        return res.status(429).json({
+          error: "openai_rate_limited",
+          message: "OpenAI is rate-limiting or the account has no billing balance. Check platform.openai.com/usage.",
+        });
+      }
+
+      // Real content policy violation — the prompt itself is what
+      // tripped the safety filter.
+      if (
+        openaiRes.status === 400 &&
+        (errCode === "content_policy_violation" ||
+         lowerMsg.includes("safety system") ||
+         lowerMsg.includes("content policy") ||
+         lowerMsg.includes("did not pass"))
+      ) {
         return res.status(400).json({
           error: "prompt_rejected",
           message: "OpenAI's safety system didn't accept that prompt. Try adjusting the wording.",
         });
       }
-      return res.status(502).json({ error: "image_generation_failed" });
+
+      // Anything else: surface the raw OpenAI message so we can see it
+      // in the client instead of a generic "failed".
+      return res.status(502).json({
+        error: "image_generation_failed",
+        message: "OpenAI: " + errMsg.slice(0, 200),
+      });
     }
 
     const data = await openaiRes.json();
