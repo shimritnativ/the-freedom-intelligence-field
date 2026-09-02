@@ -160,7 +160,105 @@ export default async function handler(req, res) {
     }
 
     const data = await openaiRes.json();
-    const text = ((data && data.text) || "").trim();
+    let text = ((data && data.text) || "").trim();
+
+    // Whisper YouTube-boilerplate stripper.
+    //
+    // Whisper was trained on YouTube captions and often hallucinates
+    // subscription callouts at the end of transcriptions when the audio
+    // has silence, background noise, or a pause. These come in many
+    // languages regardless of what the member actually spoke —
+    // Antonella (Italian) got Japanese "チャンネル登録をお願いいたします"
+    // ("please subscribe to my channel") tacked onto her English
+    // transcript, 2026-08-30.
+    //
+    // Strategy: match a curated list of known Whisper boilerplate
+    // phrases anywhere in the text and remove them. Case-insensitive.
+    // Whitespace and punctuation around the phrase get cleaned up too.
+    const WHISPER_BOILERPLATE = [
+      // English YouTube outros
+      /thanks?\s+(you\s+)?for\s+watching[.!]?/gi,
+      /please\s+subscribe(?:\s+to\s+(?:my|our|the)\s+channel)?[.!]?/gi,
+      /don'?t\s+forget\s+to\s+subscribe[.!]?/gi,
+      /like\s+and\s+subscribe[.!]?/gi,
+      /see\s+you\s+in\s+the\s+next\s+video[.!]?/gi,
+      /subscribe\s+to\s+(?:my|our|the)\s+channel[.!]?/gi,
+      // Chinese (simplified + traditional): "Thanks for watching",
+      // "Please subscribe", "Please like/subscribe/share"
+      /感谢您的观看[.。!！]?/g,
+      /感謝您的觀看[.。!！]?/g,
+      /请订阅我的频道[.。!！]?/g,
+      /請訂閱我的頻道[.。!！]?/g,
+      /请点赞订阅[.。!！]?/g,
+      // Japanese: channel subscription callouts
+      /チャンネル登録[をお]?願いいたします[.。!！]?/g,
+      /チャンネル登録[をお]?願いします[.。!！]?/g,
+      /高評価[とと]?チャンネル登録[.。!！]?/g,
+      /ご視聴ありがとうございました[.。!！]?/g,
+      // Korean
+      /구독과\s*좋아요\s*부탁드립니다[.。!！]?/g,
+      /구독\s*부탁드립니다[.。!！]?/g,
+      // Russian: "Don't forget to subscribe"
+      /не\s+забудьте\s+подписаться[.!]?/gi,
+      /подпишитесь\s+на\s+(?:мой|наш)\s+канал[.!]?/gi,
+      // Spanish
+      /gracias\s+por\s+ver[.!]?/gi,
+      /suscr[ií]bete\s+al\s+canal[.!]?/gi,
+      // French
+      /merci\s+d'avoir\s+regard[ée][.!]?/gi,
+      /abonnez-vous[.!]?/gi,
+      // Portuguese
+      /obrigad[oa]\s+por\s+assistir[.!]?/gi,
+      // German
+      /vielen\s+dank\s+f[üu]rs?\s+zuschauen[.!]?/gi,
+      // Arabic (subscription/like)
+      /اشترك\s+في\s+القناة/g,
+    ];
+    let strippedBoilerplate = false;
+    for (const pattern of WHISPER_BOILERPLATE) {
+      if (pattern.test(text)) {
+        strippedBoilerplate = true;
+        text = text.replace(pattern, "");
+      }
+    }
+    // Also strip a trailing block of characters that switches scripts
+    // (Latin body + CJK/Cyrillic/Arabic tail, or vice versa). Covers
+    // hallucinations we don't have a specific phrase pattern for.
+    // We look at the last 60 chars; if it contains any characters
+    // whose script differs from the majority script of the body,
+    // and the tail is at least 4 chars long, we drop the mismatched
+    // trailing span.
+    (function stripScriptMismatchTail() {
+      if (text.length < 40) return;
+      const body = text.slice(0, Math.floor(text.length * 0.7));
+      const tail = text.slice(Math.floor(text.length * 0.7));
+      // CJK/Cyrillic/Arabic script detection.
+      const bodyHasCjk = /[぀-ヿ一-鿿]/.test(body);
+      const bodyHasCyrillic = /[Ѐ-ӿ]/.test(body);
+      const bodyHasArabic = /[؀-ۿ]/.test(body);
+      const tailCjkMatch = tail.match(/[぀-ヿ一-鿿][぀-ヿ一-鿿\s.。!！?？]*$/);
+      const tailCyrillicMatch = tail.match(/[Ѐ-ӿ][Ѐ-ӿ\s.!?]*$/);
+      const tailArabicMatch = tail.match(/[؀-ۿ][؀-ۿ\s.!?]*$/);
+      if (tailCjkMatch && !bodyHasCjk && tailCjkMatch[0].length >= 3) {
+        text = text.slice(0, text.length - tailCjkMatch[0].length).trim();
+        strippedBoilerplate = true;
+      } else if (tailCyrillicMatch && !bodyHasCyrillic && tailCyrillicMatch[0].length >= 3) {
+        text = text.slice(0, text.length - tailCyrillicMatch[0].length).trim();
+        strippedBoilerplate = true;
+      } else if (tailArabicMatch && !bodyHasArabic && tailArabicMatch[0].length >= 3) {
+        text = text.slice(0, text.length - tailArabicMatch[0].length).trim();
+        strippedBoilerplate = true;
+      }
+    })();
+    // Clean up any doubled spaces / trailing punctuation the stripping
+    // left behind.
+    text = text.replace(/\s+/g, " ").replace(/\s+([.,!?])/g, "$1").trim();
+    if (strippedBoilerplate) {
+      console.log("transcribe_boilerplate_stripped", {
+        user_id: user.id,
+        final_length: text.length,
+      });
+    }
 
     // Whisper repetition-hallucination guard.
     //
