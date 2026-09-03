@@ -3279,14 +3279,13 @@
     border: 1.5px solid var(--gold);
     border-radius: 12px;
     background: rgba(201, 168, 76, 0.06);
-    overflow: hidden;
   }
   .workshop-addon-toggle {
     width: 100%;
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 14px;
+    padding: 14px 14px 14px 12px;
     background: transparent;
     border: none;
     outline: none;
@@ -3295,6 +3294,7 @@
     text-align: left;
     -webkit-appearance: none;
     appearance: none;
+    font-family: inherit;
   }
   .workshop-addon-icon {
     flex-shrink: 0;
@@ -3340,13 +3340,10 @@
     font-size: 14px;
   }
   .workshop-addon-list {
-    padding: 4px 8px 10px;
+    padding: 4px 10px 12px;
     display: flex;
     flex-direction: column;
     gap: 4px;
-  }
-  .workshop-addon-list .day-item {
-    background: var(--sidebar-bg, transparent);
   }
 
   .process-menu { margin-bottom: 10px; }
