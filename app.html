@@ -6494,12 +6494,18 @@ Begin.` },
   // during login/state fetch and callers may query it before the fetch
   // has completed.
   function isWorkshopTier() { return state.tier === "workshop"; }
-  // True when a full-tier Unlimited member has been granted the
+  // True when any member (preview or full) has been granted the
   // Workshop Integration add-on and the expiry is still in the future.
-  // Drives whether the "WORKSHOP INTEGRATION WORK / All the way to the
-  // top" dropdown renders in the Unlimited sidebar.
+  //   - Full-tier members see the addon dropdown alongside their standard
+  //     Unlimited library.
+  //   - Preview-tier members (people who bought only the €9 Power Reset
+  //     but not Unlimited) see the addon dropdown BELOW the "Unlock the
+  //     Unlimited" paywall card — they get the workshop integration
+  //     without also being upgraded to Unlimited.
+  // Workshop tier already has its own dedicated integration UI, so this
+  // helper returns false for them (avoids double-rendering).
   function hasWorkshopAddon() {
-    if (state.tier !== "full") return false;
+    if (state.tier !== "full" && state.tier !== "preview") return false;
     if (!state.workshopAddonExpiresAt) return false;
     return new Date(state.workshopAddonExpiresAt).getTime() > Date.now();
   }
@@ -6753,6 +6759,54 @@ Begin.` },
           <div class="unlimited-desc">Unlimited conversations with the Field, plus the six guided processes — mind, heart, and body, anytime.</div>
           <a class="unlimited-btn" href="${UNLIMITED_URL}" target="_blank" rel="noopener noreferrer">Unlock The Field <span class="unlimited-btn-arrow" aria-hidden="true">↗</span></a>
         </div>
+
+        ${hasWorkshopAddon() ? `
+        <div class="workshop-addon-section${state.workshopAddonExpanded ? " expanded" : ""}" style="margin-top: 14px;">
+          <button class="workshop-addon-toggle" id="workshop-addon-toggle" type="button">
+            <span class="workshop-addon-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 20h9"/>
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+              </svg>
+            </span>
+            <span class="workshop-addon-labels">
+              <span class="workshop-addon-pill">Workshop Integration Work</span>
+              <span class="workshop-addon-sub">All the way to the top</span>
+            </span>
+            <span class="workshop-addon-caret" aria-hidden="true">${state.workshopAddonExpanded ? "▴" : "▾"}</span>
+          </button>
+          ${state.workshopAddonExpanded ? `
+          <div class="workshop-addon-list">
+            <div class="workshop-addon-unlock-note">Unlocks on September 21</div>
+            ${WORKSHOP_PROCESSES.map((p, i) => {
+              const n = i + 1;
+              const unlocked = isWorkshopProcessUnlocked(p.unlockAt);
+              if (!unlocked) {
+                return `
+                  <div class="day-item locked" title="Opens ${new Date(p.unlockAt).toLocaleString(undefined, { month: 'short', day: 'numeric' })}">
+                    <div class="day-num">${n}</div>
+                    <div class="day-info">
+                      <div class="day-title">${escapeHtml(p.name)}</div>
+                      <div class="day-theme">${escapeHtml(p.desc || "")}</div>
+                    </div>
+                    <span class="day-lock" aria-hidden="true">${lockIconSvg()}</span>
+                  </div>
+                `;
+              }
+              return `
+                <div class="day-item" data-process-key="${p.processKey}">
+                  <div class="day-num">${n}</div>
+                  <div class="day-info">
+                    <div class="day-title">${escapeHtml(p.name)}</div>
+                    <div class="day-theme">${escapeHtml(p.desc || "")}</div>
+                  </div>
+                </div>
+              `;
+            }).join("")}
+          </div>
+          ` : ""}
+        </div>
+        ` : ""}
         `}
         ` : ""}
 
