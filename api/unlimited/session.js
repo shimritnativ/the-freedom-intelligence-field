@@ -43,14 +43,21 @@ export default async function handler(req, res) {
     const user = await getUserBySessionToken(token);
     if (!user) return res.status(401).json({ error: "unauthorized" });
 
-    // Tier gate: only preview-tier entitled members are blocked. Full and
-    // workshop tiers both need this endpoint (workshop VIPs use it to
-    // reload their integration-work sessions). Anonymous demo accounts
-    // (kajabi_entitled = false) bypass so demo testing works.
-    const allowedTier = user.tier === "full" || user.tier === "workshop";
+    // Tier gate. Full and workshop tiers both need this endpoint (workshop
+    // VIPs use it to reload their integration-work sessions). Preview
+    // tier with the workshop add-on can also open workshop-integration
+    // sessions — the per-session check below enforces that they only
+    // touch their addon sessions, not any Unlimited chat. Anonymous
+    // demo accounts (kajabi_entitled = false) bypass so demo testing
+    // works.
+    const hasWorkshopAddon = user.workshop_addon_expires_at
+      ? new Date(user.workshop_addon_expires_at).getTime() > Date.now()
+      : false;
+    const allowedTier = user.tier === "full" || user.tier === "workshop" || hasWorkshopAddon;
     if (!allowedTier && user.kajabi_entitled === true) {
       return res.status(403).json({ error: "unlimited_locked" });
     }
+    const previewAddonOnly = hasWorkshopAddon && user.tier === "preview";
 
     const sessionId = req.query.id;
     if (!sessionId) return res.status(400).json({ error: "missing_session_id" });
@@ -70,6 +77,18 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: "session_not_found" });
     }
     const ownedSession = ownershipRows[0];
+
+    // Preview-tier addon holders can only touch sessions bound to a
+    // workshop-integration process — never a general Unlimited chat.
+    // The coarse tier gate above lets them past the door; this check
+    // enforces the per-session scope.
+    if (previewAddonOnly) {
+      const meta = ownedSession.metadata || {};
+      const sessionProcess = String(meta.process || "");
+      if (!sessionProcess.startsWith("workshop-integration-")) {
+        return res.status(403).json({ error: "workshop_addon_scope" });
+      }
+    }
 
     // ===== GET: full session + messages =====
     // Fetch the MOST RECENT N messages, then re-order chronologically
