@@ -78,6 +78,7 @@ export default async function handler(req, res) {
       firstLoginAt: user.first_login_at,
       previewEndsAt: user.preview_ends_at,
       workshopExpiresAt: user.workshop_expires_at || null,
+      workshopAddonExpiresAt: user.workshop_addon_expires_at || null,
       displayName: user.display_name || null,
       email: user.email,
       termsAcceptedAt: user.terms_accepted_at || null,
