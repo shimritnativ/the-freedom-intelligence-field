@@ -3348,6 +3348,15 @@
     flex-direction: column;
     gap: 4px;
   }
+  .workshop-addon-unlock-note {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 12px;
+    color: var(--text-mute, rgba(31, 24, 16, 0.55));
+    padding: 6px 8px 8px;
+    text-align: center;
+    line-height: 1.4;
+  }
 
   .process-menu { margin-bottom: 10px; }
   .process-menu-btn {
@@ -6698,15 +6707,32 @@ Begin.` },
           </button>
           ${state.workshopAddonExpanded ? `
           <div class="workshop-addon-list">
-            ${WORKSHOP_PROCESSES.map((p, i) => `
-              <div class="day-item" data-process-key="${p.processKey}">
-                <div class="day-num">${i + 1}</div>
-                <div class="day-info">
-                  <div class="day-title">${escapeHtml(p.name)}</div>
-                  <div class="day-theme">${escapeHtml(p.desc || "")}</div>
+            <div class="workshop-addon-unlock-note">Unlocks on September 21</div>
+            ${WORKSHOP_PROCESSES.map((p, i) => {
+              const n = i + 1;
+              const unlocked = isWorkshopProcessUnlocked(p.unlockAt);
+              if (!unlocked) {
+                return `
+                  <div class="day-item locked" title="Opens ${new Date(p.unlockAt).toLocaleString(undefined, { month: 'short', day: 'numeric' })}">
+                    <div class="day-num">${n}</div>
+                    <div class="day-info">
+                      <div class="day-title">${escapeHtml(p.name)}</div>
+                      <div class="day-theme">${escapeHtml(p.desc || "")}</div>
+                    </div>
+                    <span class="day-lock" aria-hidden="true">${lockIconSvg()}</span>
+                  </div>
+                `;
+              }
+              return `
+                <div class="day-item" data-process-key="${p.processKey}">
+                  <div class="day-num">${n}</div>
+                  <div class="day-info">
+                    <div class="day-title">${escapeHtml(p.name)}</div>
+                    <div class="day-theme">${escapeHtml(p.desc || "")}</div>
+                  </div>
                 </div>
-              </div>
-            `).join("")}
+              `;
+            }).join("")}
           </div>
           ` : ""}
         </div>
