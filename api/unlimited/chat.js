@@ -180,20 +180,26 @@ export default async function handler(req, res) {
     const user = await getUserBySessionToken(token);
     if (!user) return res.status(401).json({ error: "unauthorized" });
 
-    // Server-side tier gate. Two tiers can drive chats through this
+    // Server-side tier gate. Three tiers can drive chats through this
     // endpoint:
     //   - full: standard Unlimited members.
     //   - workshop: ATWT VIP tier, uses this endpoint for the three
     //     workshop-integration processes (Beyond Potential Board,
     //     Pattern Breakthrough, Quantum Leap Decision).
-    // Preview-tier entitled members get blocked, even if they pass
-    // ?tier=full in the URL or toggle the client-side tier. Anonymous
-    // demo accounts (kajabi_entitled = false) bypass the gate so the
+    //   - preview WITH workshop_addon_expires_at in the future: Power
+    //     Reset buyers who bought the workshop add-on only. The
+    //     per-session scope check below limits them to their addon
+    //     sessions.
+    // Anonymous demo accounts (kajabi_entitled = false) bypass so the
     // team can still test in the demo flow.
-    const allowedTier = user.tier === "full" || user.tier === "workshop";
+    const hasWorkshopAddon = user.workshop_addon_expires_at
+      ? new Date(user.workshop_addon_expires_at).getTime() > Date.now()
+      : false;
+    const allowedTier = user.tier === "full" || user.tier === "workshop" || hasWorkshopAddon;
     if (!allowedTier && user.kajabi_entitled === true) {
       return res.status(403).json({ error: "unlimited_locked" });
     }
+    const previewAddonOnly = hasWorkshopAddon && user.tier === "preview";
 
     const anthropicKey = process.env.ANTHROPIC_API_KEY;
     if (!anthropicKey) {
@@ -221,6 +227,17 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: "session_not_found" });
     }
     const session = sessionRows[0];
+
+    // Preview-tier addon holders can only send to workshop-integration
+    // sessions. Any other session (a mistaken carryover from a past
+    // Unlimited period, a hand-crafted request) gets rejected here so
+    // the addon can't be used as a backdoor into the full library.
+    if (previewAddonOnly) {
+      const sessionProcess = String((session.metadata && session.metadata.process) || "");
+      if (!sessionProcess.startsWith("workshop-integration-")) {
+        return res.status(403).json({ error: "workshop_addon_scope" });
+      }
+    }
 
     // Load recent conversation history.
     const { rows: priorMessages } = await sql`
