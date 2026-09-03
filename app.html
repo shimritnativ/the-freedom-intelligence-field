@@ -3270,6 +3270,85 @@
   .rename-modal-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.15); }
 
   /* Guided-process dropdown in the Unlimited section */
+  /* Workshop Integration add-on dropdown — shows for full-tier
+     Unlimited members who have been granted the workshop integration
+     add-on (workshop_addon_expires_at in the future). Sits just below
+     the standard "Start a guided process" picker. */
+  .workshop-addon-section {
+    margin: 6px 0 12px;
+    border: 1.5px solid var(--gold);
+    border-radius: 12px;
+    background: rgba(201, 168, 76, 0.06);
+    overflow: hidden;
+  }
+  .workshop-addon-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: transparent;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    color: var(--text);
+    text-align: left;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .workshop-addon-icon {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    color: var(--gold);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .workshop-addon-icon svg { width: 20px; height: 20px; display: block; }
+  .workshop-addon-labels {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .workshop-addon-pill {
+    align-self: flex-start;
+    display: inline-block;
+    padding: 3px 10px;
+    background: var(--gold);
+    color: var(--bg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .workshop-addon-sub {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 12px;
+    color: var(--text-mute, rgba(31, 24, 16, 0.55));
+    line-height: 1.3;
+  }
+  .workshop-addon-caret {
+    flex-shrink: 0;
+    color: var(--gold);
+    font-size: 14px;
+  }
+  .workshop-addon-list {
+    padding: 4px 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .workshop-addon-list .day-item {
+    background: var(--sidebar-bg, transparent);
+  }
+
   .process-menu { margin-bottom: 10px; }
   .process-menu-btn {
     width: 100%;
@@ -4772,6 +4851,15 @@ Begin.` },
     // Preview-tier members always see it expanded since it IS their current
     // practice. initApp/loadFullState/verify-code set this based on tier.
     resetSectionExpanded: true,
+    // Workshop-integration add-on: expiry timestamp from the server.
+    // Populated for full-tier members who have been granted the add-on
+    // (via /api/admin/grant-workshop-addon or a direct Neon UPDATE).
+    // When in the future, the "Workshop Integration Work / All the way
+    // to the top" dropdown renders in the Unlimited sidebar.
+    workshopAddonExpiresAt: null,
+    // Collapsed by default so the sidebar stays quiet until the member
+    // actually taps it open. State is client-only (not persisted).
+    workshopAddonExpanded: false,
     // Which chat's 3-dot menu is currently open (null = none).
     // Used for both the sidebar list AND the chat header menu.
     openChatMenuId: null,
@@ -6397,6 +6485,15 @@ Begin.` },
   // during login/state fetch and callers may query it before the fetch
   // has completed.
   function isWorkshopTier() { return state.tier === "workshop"; }
+  // True when a full-tier Unlimited member has been granted the
+  // Workshop Integration add-on and the expiry is still in the future.
+  // Drives whether the "WORKSHOP INTEGRATION WORK / All the way to the
+  // top" dropdown renders in the Unlimited sidebar.
+  function hasWorkshopAddon() {
+    if (state.tier !== "full") return false;
+    if (!state.workshopAddonExpiresAt) return false;
+    return new Date(state.workshopAddonExpiresAt).getTime() > Date.now();
+  }
   // True whenever the member is entitled to work with the Reset days
   // (or Steps) at all. Preview, full, and workshop qualify.
   function hasResetAccess() {
@@ -6583,6 +6680,39 @@ Begin.` },
             `).join("")}
           </div>
         </div>
+
+        ${hasWorkshopAddon() ? `
+        <div class="workshop-addon-section${state.workshopAddonExpanded ? " expanded" : ""}">
+          <button class="workshop-addon-toggle" id="workshop-addon-toggle" type="button">
+            <span class="workshop-addon-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4z"/>
+                <path d="M4 8h13"/>
+                <path d="M4 12h13"/>
+                <path d="M18 4l3 3-6 6-3 1 1-3z"/>
+              </svg>
+            </span>
+            <span class="workshop-addon-labels">
+              <span class="workshop-addon-pill">Workshop Integration Work</span>
+              <span class="workshop-addon-sub">All the way to the top</span>
+            </span>
+            <span class="workshop-addon-caret" aria-hidden="true">${state.workshopAddonExpanded ? "▴" : "▾"}</span>
+          </button>
+          ${state.workshopAddonExpanded ? `
+          <div class="workshop-addon-list">
+            ${WORKSHOP_PROCESSES.map((p, i) => `
+              <div class="day-item" data-process-key="${p.processKey}">
+                <div class="day-num">${i + 1}</div>
+                <div class="day-info">
+                  <div class="day-title">${escapeHtml(p.name)}</div>
+                  <div class="day-theme">${escapeHtml(p.desc || "")}</div>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+          ` : ""}
+        </div>
+        ` : ""}
 
         <div class="unl-search-wrap ${state.searchOpen ? "open" : ""}">
           <input type="text" id="unl-search-input" placeholder="Search your conversations" value="${escapeHtml(state.searchQuery || "")}" />
@@ -8342,6 +8472,15 @@ Begin.` },
     if (magBtn) magBtn.addEventListener("click", onMagnifierClick);
     const processMenuBtn = document.getElementById("process-menu-btn");
     if (processMenuBtn) processMenuBtn.addEventListener("click", onProcessMenuToggle);
+    // Workshop Integration add-on dropdown toggle (full-tier members
+    // with the manually-granted add-on entitlement).
+    const workshopAddonToggle = document.getElementById("workshop-addon-toggle");
+    if (workshopAddonToggle) {
+      workshopAddonToggle.addEventListener("click", () => {
+        state.workshopAddonExpanded = !state.workshopAddonExpanded;
+        render();
+      });
+    }
     // Dropdown items are now CATEGORIES (data-category) — clicking one opens
     // the category view in the main pane. Process selection happens there,
     // on a card click that fires onProcessPick.
@@ -10168,6 +10307,7 @@ Begin.` },
         state.tier = URL_TIER || data.tier || "preview";
       }
       state.workshopExpiresAt = data.workshopExpiresAt || null;
+      state.workshopAddonExpiresAt = data.workshopAddonExpiresAt || null;
       state.view = "chat";
       state.messages = [{ role: "user", content: opening }];
       state.loading = true;
@@ -11845,6 +11985,7 @@ Begin.` },
         state.tier = data.tier;
       }
       state.workshopExpiresAt = data.workshopExpiresAt || null;
+      state.workshopAddonExpiresAt = data.workshopAddonExpiresAt || null;
       // Same rehydration discipline for subscription plan so the Your
       // Account modal shows the right copy after a monthly to yearly upgrade.
       if (data.subscriptionPlan === "monthly" || data.subscriptionPlan === "yearly") {
