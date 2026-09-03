@@ -31,24 +31,53 @@ export default async function handler(req, res) {
     const user = await getUserBySessionToken(token);
     if (!user) return res.status(401).json({ error: "unauthorized" });
 
-    // Tier gate: only preview-tier entitled members are blocked.
-    //   - full: standard Unlimited access.
-    //   - workshop: ATWT VIP tier, uses this endpoint to open the
-    //     three workshop-integration processes (Beyond Potential Board,
+    // Tier gate:
+    //   - full: standard Unlimited access (list + create any session).
+    //   - workshop: ATWT VIP tier, uses this endpoint to open the three
+    //     workshop-integration processes (Beyond Potential Board,
     //     Pattern Breakthrough, Quantum Leap Decision).
-    //   - kajabi_entitled = false: anonymous demo accounts, bypassed so
-    //     demo testing works.
-    const allowedTier = user.tier === "full" || user.tier === "workshop";
+    //   - preview WITH addon: allowed ONLY to create/list workshop-
+    //     integration sessions (the per-request process check further
+    //     down enforces that). This is the "Power Reset buyer bought
+    //     the workshop integration add-on without upgrading to
+    //     Unlimited" path.
+    //   - kajabi_entitled = false: anonymous demo accounts, bypassed
+    //     so demo testing works.
+    const hasWorkshopAddon = user.workshop_addon_expires_at
+      ? new Date(user.workshop_addon_expires_at).getTime() > Date.now()
+      : false;
+    const allowedTier = user.tier === "full" || user.tier === "workshop" || hasWorkshopAddon;
     if (!allowedTier && user.kajabi_entitled === true) {
       return res.status(403).json({ error: "unlimited_locked" });
     }
+    // Preview-tier addon holders can ONLY list workshop-integration
+    // sessions, not their (nonexistent) library. On GET, filter the
+    // list to workshop-integration sessions only.
+    const previewAddonOnly = hasWorkshopAddon && user.tier === "preview";
 
     if (req.method === "GET") {
-      // List the user's Unlimited sessions.
-      // Pinned chats sort to the top (most recently pinned first), then
-      // unpinned chats by recency. Matches the sidebar render order in
-      // app.html so the client can render straight from the response.
-      const { rows } = await sql`
+      // List the user's Unlimited sessions. Pinned chats sort to the top
+      // (most recently pinned first), then unpinned chats by recency.
+      // Preview-tier addon holders only get to see their workshop-
+      // integration sessions (they don't have a real Unlimited library).
+      const { rows } = previewAddonOnly ? await sql`
+        SELECT
+          id,
+          title,
+          started_at,
+          last_message_at,
+          metadata,
+          pinned_at,
+          folder_id
+        FROM sessions
+        WHERE user_id = ${user.id}
+          AND session_type = 'unlimited'
+          AND metadata->>'process' LIKE 'workshop-integration-%'
+        ORDER BY
+          pinned_at DESC NULLS LAST,
+          COALESCE(last_message_at, started_at) DESC
+        LIMIT 100
+      ` : await sql`
         SELECT
           id,
           title,
@@ -86,23 +115,30 @@ export default async function handler(req, res) {
 
       // Workshop-integration process gate. These three processes
       // (workshop-integration-1/2/3) are the paid add-on for the
-      // September 2026 ATTT VIP cohort. Two paths allow it:
+      // September 2026 ATTT VIP cohort. Three paths allow it:
       //   1. tier='workshop' — the full ATTT VIP tier that also
       //      includes the Power Reset Steps.
-      //   2. tier='full' AND workshop_addon_expires_at > now — the
-      //      manual add-on granted to existing Unlimited members
-      //      who bought the workshop integration only.
-      // Anyone else who tries to open a workshop-integration process
+      //   2. tier='full' AND workshop_addon_expires_at > now — an
+      //      Unlimited member who bought the workshop add-on.
+      //   3. tier='preview' AND workshop_addon_expires_at > now — a
+      //      Power Reset buyer who bought the workshop add-on but not
+      //      Unlimited. They still see the "Unlock Unlimited" paywall,
+      //      but the addon dropdown is theirs to use.
+      // Anyone else trying to open a workshop-integration process
       // (URL-hack, curl, etc.) gets 403.
-      if (proc && String(proc.key || "").startsWith("workshop-integration-")) {
+      const isWorkshopIntegration = proc && String(proc.key || "").startsWith("workshop-integration-");
+      if (isWorkshopIntegration) {
         const hasWorkshopTier = user.tier === "workshop";
-        const addonExpiresAt = user.workshop_addon_expires_at
-          ? new Date(user.workshop_addon_expires_at).getTime()
-          : 0;
-        const hasAddon = user.tier === "full" && addonExpiresAt > Date.now();
-        if (!hasWorkshopTier && !hasAddon) {
+        const canUseAddon = (user.tier === "full" || user.tier === "preview") && hasWorkshopAddon;
+        if (!hasWorkshopTier && !canUseAddon) {
           return res.status(403).json({ error: "workshop_addon_required" });
         }
+      }
+      // Preview-tier addon holders can ONLY create workshop-integration
+      // sessions (not general Unlimited chats). Enforce that here since
+      // the coarse tier gate above lets them in for both.
+      if (previewAddonOnly && !isWorkshopIntegration) {
+        return res.status(403).json({ error: "unlimited_locked" });
       }
 
       const newTitle = proc ? proc.displayName : "New chat";
