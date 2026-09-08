@@ -10936,7 +10936,16 @@ Begin.` },
       const res = await fetch(API_BASE + "/transcribe", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken },
-        body: JSON.stringify({ audioBase64, mimeType }),
+        body: JSON.stringify({
+          audioBase64,
+          mimeType,
+          // Language hint — the browser's locale, so Whisper stops
+          // guessing between closely-related languages (Danish ↔
+          // Swedish was the concrete case). Server-side allow-list
+          // validates before forwarding to Whisper. Falls back to
+          // Whisper's auto-detect if empty.
+          language: (typeof navigator !== "undefined" && navigator.language) || ""
+        }),
         signal: voiceState.transcribeController.signal
       });
       const data = await res.json().catch(() => ({}));
