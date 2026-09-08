@@ -2509,6 +2509,17 @@
     color: var(--bg);
     border-color: transparent;
   }
+  /* When playing, swap the speaker icon for a clear stop mark so the
+     member sees they can tap to stop (Antonella feedback, Sep 2026). */
+  .speak-btn.playing svg { display: none; }
+  .speak-btn.playing::after {
+    content: "";
+    width: 8px;
+    height: 8px;
+    background: var(--bg);
+    border-radius: 2px;
+    display: block;
+  }
   .autoplay-toggle {
     display: flex;
     align-items: center;
@@ -2609,7 +2620,130 @@
   .welcome-divider { width: 80px; height: 1.5px; background: var(--gold); margin: 0 auto 56px; opacity: 0.7; }
   .welcome-quote-label { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.3em; color: var(--text-mute); margin-bottom: 22px; }
   .welcome-quote { font-family: Georgia, "Times New Roman", serif; font-style: italic; font-weight: 400; font-size: 28px; line-height: 1.45; color: var(--text); margin: 0 auto 18px; max-width: 720px; opacity: 0.92; }
-  .welcome-quote-source { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-style: italic; font-size: 13px; color: var(--text-mute); margin-bottom: 56px; }
+  .welcome-quote-source { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-style: italic; font-size: 13px; color: var(--text-mute); margin-bottom: 20px; }
+  .welcome-quote-archive-btn {
+    display: inline-block;
+    background: transparent;
+    border: 1px solid var(--gold-line);
+    color: var(--gold);
+    padding: 8px 18px;
+    border-radius: 999px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-bottom: 44px;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .welcome-quote-archive-btn:hover { background: var(--gold-soft); border-color: var(--gold); }
+
+  /* Quote archive modal */
+  .quote-archive-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(26, 22, 18, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 200;
+    backdrop-filter: blur(4px);
+  }
+  .quote-archive-modal {
+    background: var(--sidebar-bg, var(--bg));
+    border: 1px solid var(--gold-line);
+    border-radius: 20px;
+    max-width: 720px;
+    width: 100%;
+    max-height: 82vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .quote-archive-head {
+    padding: 24px 28px 18px;
+    border-bottom: 1px solid var(--dark-line, rgba(26,22,18,0.10));
+  }
+  .quote-archive-eyebrow {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.28em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .quote-archive-title {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 22px;
+    color: var(--text);
+    margin: 0;
+  }
+  .quote-archive-close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: var(--text-mute);
+    cursor: pointer;
+    font-size: 22px;
+    line-height: 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease;
+  }
+  .quote-archive-close:hover { background: rgba(26, 22, 18, 0.06); color: var(--text); }
+  .quote-archive-body {
+    overflow-y: auto;
+    padding: 12px 28px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .quote-archive-item {
+    padding: 18px 20px;
+    border-radius: 14px;
+    background: var(--panel, rgba(0,0,0,0.02));
+    border: 1px solid transparent;
+    transition: border-color 0.15s ease;
+  }
+  .quote-archive-item.today {
+    border-color: var(--gold);
+    background: var(--gold-soft);
+  }
+  .quote-archive-item-badge {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .quote-archive-item-text {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  .quote-archive-item-source {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 11px;
+    font-style: italic;
+    color: var(--text-mute);
+    margin-top: 10px;
+  }
   .welcome-prompt { font-family: Georgia, "Times New Roman", serif; font-style: italic; font-size: 19px; color: var(--text-mute); margin-bottom: 28px; opacity: 0.9; }
   .welcome-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 880px; margin: 0 auto; }
   .welcome-card { position: relative; padding: 22px 22px 26px; background: var(--bg); border: 1px solid rgba(201, 168, 76, 0.25); border-radius: 14px; cursor: pointer; text-align: left; font-family: inherit; transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
@@ -4571,6 +4705,37 @@
     { text: "What would the version of you who already chose this do today?", source: "Identity Upgrade" },
     { text: "The Field guides. You decide. You move.", source: "The Field" }
   ];
+  // Render the quote archive modal. Lists every quote in DAILY_QUOTES,
+  // marks today's, and lets the member browse. Wired by the
+  // "Browse all quotes" button on the Welcome view.
+  function renderQuoteArchiveModal() {
+    if (!state.quoteArchiveOpen) return "";
+    const today = getDailyQuote();
+    return `
+      <div class="quote-archive-overlay" id="quote-archive-overlay">
+        <div class="quote-archive-modal" role="dialog" aria-modal="true" aria-labelledby="quote-archive-title">
+          <button class="quote-archive-close" id="quote-archive-close" type="button" aria-label="Close">✕</button>
+          <div class="quote-archive-head">
+            <div class="quote-archive-eyebrow">Quotes from The Field</div>
+            <h2 class="quote-archive-title" id="quote-archive-title">Every line Shimrit has shared here.</h2>
+          </div>
+          <div class="quote-archive-body">
+            ${DAILY_QUOTES.map((q) => {
+              const isToday = q.text === today.text;
+              return `
+                <div class="quote-archive-item${isToday ? ' today' : ''}">
+                  ${isToday ? '<div class="quote-archive-item-badge">Today</div>' : ''}
+                  <div class="quote-archive-item-text">"${escapeHtml(q.text)}"</div>
+                  <div class="quote-archive-item-source">Shimrit Nativ · ${escapeHtml(q.source)}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   function getDailyQuote() {
     // Same quote for everyone on the same UTC day. % length wraps around so
     // the rotation is stable even if the array grows over time.
@@ -4860,6 +5025,8 @@ Begin.` },
     // Preview-tier members always see it expanded since it IS their current
     // practice. initApp/loadFullState/verify-code set this based on tier.
     resetSectionExpanded: true,
+    // Quote archive modal (Antonella Sep 2026 feature).
+    quoteArchiveOpen: false,
     // Workshop-integration add-on: expiry timestamp from the server.
     // Populated for full-tier members who have been granted the add-on
     // (via /api/admin/grant-workshop-addon or a direct Neon UPDATE).
@@ -8356,6 +8523,7 @@ Begin.` },
               <div class="welcome-quote-label">FROM THE FIELD TODAY</div>
               <blockquote class="welcome-quote">"${escapeHtml(quote.text)}"</blockquote>
               <div class="welcome-quote-source">Shimrit Nativ · ${escapeHtml(quote.source)}</div>
+              <button class="welcome-quote-archive-btn" id="welcome-quote-archive-btn" type="button">Browse all quotes ↗</button>
 
               <div class="welcome-prompt">What is alive in you right now?</div>
 
@@ -8383,6 +8551,7 @@ Begin.` },
         ${renderFloatingChatMenu()}
         ${renderInstallModal()}
         ${renderNotifPromptModal()}
+        ${renderQuoteArchiveModal()}
       `;
       // Common sidebar wiring (mobile menu, account, logout, theme, etc.)
       // runs unconditionally at the bottom of render() for every view, so
@@ -8402,6 +8571,23 @@ Begin.` },
       if (continueBtn) continueBtn.addEventListener("click", () => {
         const id = continueBtn.dataset.recentId;
         if (id) onUnlimitedChatClick(id);
+      });
+      // Quote archive open button (Antonella Sep 2026 feature).
+      const quoteArchiveBtn = document.getElementById("welcome-quote-archive-btn");
+      if (quoteArchiveBtn) quoteArchiveBtn.addEventListener("click", () => {
+        state.quoteArchiveOpen = true;
+        render();
+      });
+      const quoteArchiveOverlay = document.getElementById("quote-archive-overlay");
+      const quoteArchiveCloseBtn = document.getElementById("quote-archive-close");
+      const closeQuoteArchive = () => {
+        state.quoteArchiveOpen = false;
+        render();
+      };
+      if (quoteArchiveCloseBtn) quoteArchiveCloseBtn.addEventListener("click", closeQuoteArchive);
+      if (quoteArchiveOverlay) quoteArchiveOverlay.addEventListener("click", (e) => {
+        // Only close when clicking the dim area, not the modal itself.
+        if (e.target === quoteArchiveOverlay) closeQuoteArchive();
       });
     } else if (state.view === "unlimited-chat") {
       // Workshop VIPs enter this view when they tap one of the three
@@ -10934,8 +11120,18 @@ Begin.` },
   function setSpeakerBtnState(btnEl, stateName) {
     if (!btnEl) return;
     btnEl.classList.remove("loading", "playing");
-    if (stateName === "loading") btnEl.classList.add("loading");
-    else if (stateName === "playing") btnEl.classList.add("playing");
+    if (stateName === "loading") {
+      btnEl.classList.add("loading");
+      btnEl.setAttribute("aria-label", "Loading Shimrit's voice");
+      btnEl.setAttribute("title", "Loading…");
+    } else if (stateName === "playing") {
+      btnEl.classList.add("playing");
+      btnEl.setAttribute("aria-label", "Stop Shimrit's voice");
+      btnEl.setAttribute("title", "Tap to stop");
+    } else {
+      btnEl.setAttribute("aria-label", "Play in Shimrit's voice");
+      btnEl.setAttribute("title", "Play in Shimrit's voice");
+    }
   }
 
   function stopCurrentAudio() {
