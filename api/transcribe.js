@@ -68,10 +68,29 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "transcription_unavailable" });
     }
 
-    const { audioBase64, mimeType } = req.body || {};
+    const { audioBase64, mimeType, language: bodyLanguage } = req.body || {};
     if (!audioBase64 || typeof audioBase64 !== "string") {
       return res.status(400).json({ error: "missing_audio" });
     }
+    // Language hint. Client sends the user's preferred language (from
+    // navigator.language, e.g. "da-DK" → "da") so Whisper stops guessing
+    // between closely-related languages. Whisper accepts ISO 639-1
+    // codes. This solved Susse's problem (Sep 2026): she is Danish
+    // but Whisper was auto-detecting Swedish for the same speech,
+    // producing garbled Swedish-with-Danish-sounds output.
+    // Only a curated allow-list of codes is passed through — a random
+    // string in the request body must not be forwarded to Whisper.
+    const ALLOWED_LANGUAGES = new Set([
+      "en", "da", "sv", "no", "nb", "nn", "fi",
+      "it", "es", "pt", "fr", "de", "nl",
+      "pl", "cs", "sk", "hu", "ro", "bg", "el",
+      "ru", "uk", "he", "ar", "tr",
+      "ja", "ko", "zh",
+    ]);
+    const languageHint = typeof bodyLanguage === "string"
+      ? bodyLanguage.trim().toLowerCase().split(/[-_]/)[0]
+      : "";
+    const validLanguage = ALLOWED_LANGUAGES.has(languageHint) ? languageHint : null;
 
     // Decode the base64 audio into a buffer.
     let audioBuffer;
@@ -104,9 +123,15 @@ export default async function handler(req, res) {
     const blob = new Blob([audioBuffer], { type: fileType });
     formData.append("file", blob, filename);
     formData.append("model", "whisper-1");
-    // Language auto-detection enabled. Whisper detects the spoken language
-    // automatically when no language parameter is provided. This lets the
-    // Field support clients in any language they speak naturally.
+    // Language hint. When the client passes a valid ISO 639-1 language
+    // (via navigator.language or a stored user preference), we forward
+    // it so Whisper stops auto-detecting. Auto-detect was flipping
+    // Danish → Swedish for Susse (Sep 2026). If no hint arrives,
+    // Whisper falls back to auto-detect as before.
+    if (validLanguage) {
+      formData.append("language", validLanguage);
+    }
+    // Whisper prompt bias intentionally OFF (see history below).
     //
     // Whisper prompt bias intentionally OFF.
     //
