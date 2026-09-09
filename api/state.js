@@ -63,6 +63,27 @@ export default async function handler(req, res) {
         `;
         if (rows[0]) user = rows[0];
       }
+      // Language preference. Drives BOTH the Whisper language hint and the
+      // Field's response language. Curated allow-list only — a random
+      // string in the body must never reach Whisper or the model.
+      if (Object.prototype.hasOwnProperty.call(body, "preferredLanguage")) {
+        const ALLOWED_LANGUAGES = new Set([
+          "en", "it", "da", "sv", "no", "fi",
+          "es", "pt", "fr", "de", "nl", "he",
+        ]);
+        const raw = body.preferredLanguage;
+        const normalized = (typeof raw === "string")
+          ? raw.trim().toLowerCase().split(/[-_]/)[0]
+          : "";
+        const sanitized = ALLOWED_LANGUAGES.has(normalized) ? normalized : null;
+        const { rows } = await sql`
+          UPDATE users
+             SET preferred_language = ${sanitized}, updated_at = NOW()
+           WHERE id = ${user.id}
+           RETURNING *
+        `;
+        if (rows[0]) user = rows[0];
+      }
     }
 
     const session = await getOrCreateSession(user.id);
@@ -80,6 +101,7 @@ export default async function handler(req, res) {
       workshopExpiresAt: user.workshop_expires_at || null,
       workshopAddonExpiresAt: user.workshop_addon_expires_at || null,
       displayName: user.display_name || null,
+      preferredLanguage: user.preferred_language || null,
       email: user.email,
       termsAcceptedAt: user.terms_accepted_at || null,
       messages: messages.map((m) => ({
