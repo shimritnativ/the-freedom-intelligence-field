@@ -20,6 +20,48 @@ import { loadUserMemory, maybeRecordDurableFacts } from "../../lib/memory.js";
 const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 const MAX_MESSAGES_IN_CONTEXT = 20;
 
+// Language preference override. Mirrors the block in api/chat.js — keep
+// the two in sync. When a member has explicitly set preferred_language
+// via Your Account → Preferences, the Field replies in that language
+// no matter what language Whisper returns for their voice input.
+const LANGUAGE_NAMES = {
+  en: "English",
+  it: "Italian",
+  da: "Danish",
+  sv: "Swedish",
+  no: "Norwegian",
+  fi: "Finnish",
+  es: "Spanish",
+  pt: "Portuguese",
+  fr: "French",
+  de: "German",
+  nl: "Dutch",
+  he: "Hebrew",
+};
+
+function buildLanguageOverride(preferredLanguage) {
+  if (!preferredLanguage) return "";
+  const code = String(preferredLanguage).trim().toLowerCase().split(/[-_]/)[0];
+  const name = LANGUAGE_NAMES[code];
+  if (!name) return "";
+  return `
+
+---
+
+## OVERRIDE — MEMBER LANGUAGE PREFERENCE
+
+This member has set their preferred language to **${name}**. Respond in ${name} for every message in this session.
+
+Rules:
+- Every reply, every reflection, every free-text button label — all in ${name}.
+- If the member's message arrives in a different language (voice transcription can misidentify language for multilingual speakers), you STILL respond in ${name}. Do not switch languages to match the input. Do not translate the reply into the input's language. Do not comment on the language mismatch.
+- Do NOT translate the member's own words back to them in ${name} unless they explicitly ask. Simply understand the message and respond in ${name}.
+- Preserve all sanctioned tokens ([[button:...]], [[go:...]], [[link:...]], [[img:...]], [[genimg:...]], [[renderbtn:...]]) exactly as specified elsewhere. Only the human-readable label portion of a button gets translated; the URL/target stays untouched.
+- Proper names (Shimrit Nativ, Master Your Path, The Freedom Intelligence Field, Human Instrument, Power Reset) stay in their canonical English form even when the surrounding text is in ${name}.
+
+This override applies to language only. Every other instruction in the system prompt — voice, cadence, structure, retrieved brain context, memory usage — remains fully in effect.`;
+}
+
 // Extend timeout: retrieval + embedding + Claude call can together take
 // 10-20 seconds on first message. Default 10s would time out.
 export const config = {
@@ -326,7 +368,8 @@ export default async function handler(req, res) {
     const retrievedBlock = formatRetrievedContext(retrievedChunks);
     const memorySection = userMemoryBlock ? `${userMemoryBlock}\n\n---\n\n` : "";
     const excerptSection = participantBlock ? `${participantBlock}\n\n---\n\n` : "";
-    const systemPrompt = `${baseSystem}\n\n---\n\n${memorySection}${excerptSection}${retrievedBlock}`;
+    const languageOverride = buildLanguageOverride(user.preferred_language);
+    const systemPrompt = `${baseSystem}\n\n---\n\n${memorySection}${excerptSection}${retrievedBlock}${languageOverride}`;
 
     // Build the message array for Claude. Use last MAX_MESSAGES_IN_CONTEXT
     // turns to keep context tight.
