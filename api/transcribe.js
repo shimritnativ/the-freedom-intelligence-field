@@ -68,18 +68,27 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "transcription_unavailable" });
     }
 
-    const { audioBase64, mimeType, language: bodyLanguage } = req.body || {};
+    const { audioBase64, mimeType } = req.body || {};
     if (!audioBase64 || typeof audioBase64 !== "string") {
       return res.status(400).json({ error: "missing_audio" });
     }
-    // Language hint. Client sends the user's preferred language (from
-    // navigator.language, e.g. "da-DK" → "da") so Whisper stops guessing
-    // between closely-related languages. Whisper accepts ISO 639-1
-    // codes. This solved Susse's problem (Sep 2026): she is Danish
-    // but Whisper was auto-detecting Swedish for the same speech,
-    // producing garbled Swedish-with-Danish-sounds output.
-    // Only a curated allow-list of codes is passed through — a random
-    // string in the request body must not be forwarded to Whisper.
+    // Language hint. Sourced from the user's stored `preferred_language`
+    // ONLY — never from a client-side body field or navigator.language.
+    //
+    // Why not navigator.language: multilingual members set their browser
+    // to their native locale but often speak English inside The Field.
+    // Antonella (Italian browser, Sep 2026) got her English speech
+    // transcribed as Italian because navigator.language forced Whisper
+    // into Italian mode. Whisper's `language` param is a hard input
+    // hint, not a soft suggestion: setting it to "it" tells Whisper
+    // the audio IS Italian, which produces Italian text for English
+    // input.
+    //
+    // Only a curated allow-list of codes is passed through. When no
+    // preference is stored, we fall back to Whisper auto-detect — this
+    // works well for English/Italian/Spanish/etc. speakers; Danish
+    // speakers who hit the auto-detect Swedish confusion should set
+    // their preference to "da" (Susse's fix).
     const ALLOWED_LANGUAGES = new Set([
       "en", "da", "sv", "no", "nb", "nn", "fi",
       "it", "es", "pt", "fr", "de", "nl",
@@ -87,10 +96,10 @@ export default async function handler(req, res) {
       "ru", "uk", "he", "ar", "tr",
       "ja", "ko", "zh",
     ]);
-    const languageHint = typeof bodyLanguage === "string"
-      ? bodyLanguage.trim().toLowerCase().split(/[-_]/)[0]
+    const storedPref = user.preferred_language
+      ? String(user.preferred_language).trim().toLowerCase().split(/[-_]/)[0]
       : "";
-    const validLanguage = ALLOWED_LANGUAGES.has(languageHint) ? languageHint : null;
+    const validLanguage = ALLOWED_LANGUAGES.has(storedPref) ? storedPref : null;
 
     // Decode the base64 audio into a buffer.
     let audioBuffer;
@@ -123,11 +132,11 @@ export default async function handler(req, res) {
     const blob = new Blob([audioBuffer], { type: fileType });
     formData.append("file", blob, filename);
     formData.append("model", "whisper-1");
-    // Language hint. When the client passes a valid ISO 639-1 language
-    // (via navigator.language or a stored user preference), we forward
-    // it so Whisper stops auto-detecting. Auto-detect was flipping
-    // Danish → Swedish for Susse (Sep 2026). If no hint arrives,
-    // Whisper falls back to auto-detect as before.
+    // Language hint. Only forwarded when the user has EXPLICITLY set a
+    // preferred_language via Your Account → Preferences. See the block
+    // above for why navigator.language is a bad source. If no
+    // preference is stored, Whisper auto-detects — which works reliably
+    // for most speakers.
     if (validLanguage) {
       formData.append("language", validLanguage);
     }
