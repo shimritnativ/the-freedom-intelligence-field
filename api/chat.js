@@ -269,7 +269,7 @@ This override applies only to the upgrade invitation and button at the end of th
 
 ## OVERRIDE — WORKSHOP VIP PARTICIPANT
 
-This participant is on the Workshop VIP tier (€47 "All The Way To The Top & Beyond" upgrade). The Power Reset is delivered to them as "Steps" instead of "Days" and simply as "the Power Reset" instead of "the 72-Hour Power Reset". Adjust every reference accordingly:
+This participant is on the Workshop VIP tier (€27 "All The Way To The Top & Beyond" upgrade). The Power Reset is delivered to them as "Steps" instead of "Days" and simply as "the Power Reset" instead of "the 72-Hour Power Reset". Adjust every reference accordingly:
 
 - Say "Step 1", "Step 2", "Step 3" instead of "Day 1", "Day 2", "Day 3" when referring to this Reset flow. Preserve "Day 1", "Day 2", "Day 3" only inside verbatim quoted headings such as "DAY 1 RECORD" if they anchor a proper name; if in doubt, use Step language.
 - Say "the Power Reset" instead of "the 72-Hour Power Reset" or "the 72 Hour Power Reset". The 72-hour framing does not apply here because they can move through the Steps at their own pace before the workshop begins.
@@ -299,7 +299,16 @@ Then close with:
 This override applies to language, the upgrade pitch, Day 4 handoff suppression, and library / portal references. Everything else in the system prompt remains unchanged.`
       : "";
 
-    const systemPrompt = getSystemPromptForDay(day) + fullTierOverride + workshopTierOverride + memorySection + priorDayContext;
+    // Language preference override. When the member has explicitly set
+    // a preferred_language via Your Account → Preferences, the Field
+    // MUST respond in that language regardless of the language the
+    // transcribed input arrives in. This is the durable fix for
+    // Antonella (Italian browser, English speaker): even when Whisper
+    // fails and returns Italian text for her English audio, the Field
+    // still replies in English.
+    const languageOverride = buildLanguageOverride(user.preferred_language);
+
+    const systemPrompt = getSystemPromptForDay(day) + fullTierOverride + workshopTierOverride + memorySection + priorDayContext + languageOverride;
     const systemHash = hashSystemPrompt(systemPrompt);
 
     // ----- Persist user message FIRST so it never gets lost -----
@@ -480,6 +489,59 @@ function detectActivatedDay(message) {
   if (!hasActivationVerb) return null;
   const match = sample.match(/(?:day|step)\s*([123])/i);
   return match ? Number(match[1]) : null;
+}
+
+// ============================================================================
+// Language override
+// ============================================================================
+//
+// Injected at the END of the system prompt (after day + tier overrides +
+// memory + prior day context) when the user has set a preferred_language.
+// Placed last so it wins any earlier voice/style guidance and cannot be
+// diluted by memory content in a different language.
+//
+// Behavior:
+//   • Field replies in the preferred language, always.
+//   • If a transcribed user message arrives in a different language
+//     (Whisper mis-detected, or the member spoke another language),
+//     the Field understands it and STILL replies in the preferred
+//     language — not silently translating back and forth.
+//   • Preserves all other prompt instructions (voice, cadence, tokens).
+
+const LANGUAGE_NAMES = {
+  en: "English",
+  it: "Italian",
+  da: "Danish",
+  sv: "Swedish",
+  no: "Norwegian",
+  fi: "Finnish",
+  es: "Spanish",
+  pt: "Portuguese",
+  fr: "French",
+  de: "German",
+  nl: "Dutch",
+  he: "Hebrew",
+};
+
+function buildLanguageOverride(preferredLanguage) {
+  if (!preferredLanguage) return "";
+  const code = String(preferredLanguage).trim().toLowerCase().split(/[-_]/)[0];
+  const name = LANGUAGE_NAMES[code];
+  if (!name) return "";
+  return `
+
+## OVERRIDE — MEMBER LANGUAGE PREFERENCE
+
+This member has set their preferred language to **${name}**. Respond in ${name} for every message in this session.
+
+Rules:
+- Every reply, every Day Record, every reflection, every button label that is free-text — all in ${name}.
+- If the member's message arrives in a different language (voice transcription can misidentify language for multilingual speakers), you STILL respond in ${name}. Do not switch languages to match the input. Do not translate the reply into the input's language. Do not comment on the language mismatch.
+- Do NOT translate the member's own words back to them in ${name} unless they explicitly ask. Simply understand the message and respond in ${name}.
+- Preserve all sanctioned tokens ([[button:...]], [[go:...]], [[link:...]], [[img:...]], [[genimg:...]], [[renderbtn:...]]) exactly as specified elsewhere. Only the human-readable label portion of a button gets translated; the URL/target stays untouched.
+- Proper names (Shimrit Nativ, Master Your Path, The Freedom Intelligence Field, Human Instrument, Power Reset) stay in their canonical English form even when the surrounding text is in ${name}.
+
+This override applies to language only. Every other instruction in the system prompt — voice, cadence, structure, day-specific flow, tier overrides, memory usage — remains fully in effect.`;
 }
 
 async function callAnthropicWithRetry({ systemPrompt, messages }) {
