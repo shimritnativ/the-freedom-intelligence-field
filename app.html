@@ -299,13 +299,17 @@
     animation: acctFadeIn 0.24s ease-out;
   }
   .acct-modal {
-    background: var(--sidebar-bg);
+    /* Uses --bg (main app background) not --sidebar-bg because the
+       sidebar-bg cream (#EFE6D2 in light mode) reads too yellow inside
+       a large modal surface. --bg is a softer ivory that keeps the MYP
+       warmth without the yellow cast. */
+    background: var(--bg);
     color: var(--text);
     border-radius: 16px;
     border: 1px solid var(--gold-line);
-    max-width: 520px;
+    max-width: 720px;
     width: 100%;
-    padding: 26px 28px 22px;
+    padding: 28px 34px 24px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     position: relative;
     box-shadow: var(--shadow);
