@@ -506,6 +506,29 @@
     opacity: 0.6;
     cursor: wait;
   }
+  /* Select dropdown inside a preferences card (language picker). Sits
+     where the toggle sits, sized to match the visual weight. */
+  .pref-select {
+    flex-shrink: 0;
+    align-self: center;
+    background: var(--bg);
+    border: 1px solid var(--gold-line);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 7px 30px 7px 10px;
+    font-size: 12.5px;
+    font-family: inherit;
+    cursor: pointer;
+    max-width: 160px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5 L5 6.5 L8 3.5' stroke='%23c9a84c' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    transition: border-color 0.15s ease;
+  }
+  .pref-select:hover { border-color: var(--gold); }
+  .pref-select:focus { outline: none; border-color: var(--gold); }
   .acct-name-row { display: flex; gap: 10px; align-items: stretch; }
   .acct-name-input {
     flex: 1;
@@ -4981,6 +5004,11 @@ Begin.` },
     firstLoginAt: null,
     previewEndsAt: null,
     displayName: "",
+    // Language preference. When set (ISO 639-1: en, it, da, sv, no, fi,
+    // es, pt, fr, de, nl, he), drives Whisper transcription language and
+    // Field response language server-side. Null = auto-detect / Field
+    // matches whatever language the member writes in.
+    preferredLanguage: null,
     userEmail: "",
     // Timestamp the member accepted the T&C + Privacy modal. Null until
     // they tick the box + click "I understand — begin". Rehydrated from
@@ -7913,6 +7941,35 @@ Begin.` },
 
           <div class="acct-section" id="acct-section-prefs">
             <div class="acct-section-label">Preferences</div>
+            <div class="pref-card" id="pref-lang-card">
+              <div class="pref-card-icon">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9"/>
+                  <path d="M3 12h18"/>
+                  <path d="M12 3a14 14 0 0 1 0 18"/>
+                  <path d="M12 3a14 14 0 0 0 0 18"/>
+                </svg>
+              </div>
+              <div class="pref-card-body">
+                <div class="pref-card-title">Language</div>
+                <div class="pref-card-desc">The Field responds in this language. Voice transcription uses it too.</div>
+              </div>
+              <select class="pref-select" id="pref-lang-select" aria-label="Preferred language">
+                <option value="">Auto</option>
+                <option value="en"${state.preferredLanguage === "en" ? " selected" : ""}>English</option>
+                <option value="it"${state.preferredLanguage === "it" ? " selected" : ""}>Italiano</option>
+                <option value="da"${state.preferredLanguage === "da" ? " selected" : ""}>Dansk</option>
+                <option value="sv"${state.preferredLanguage === "sv" ? " selected" : ""}>Svenska</option>
+                <option value="no"${state.preferredLanguage === "no" ? " selected" : ""}>Norsk</option>
+                <option value="fi"${state.preferredLanguage === "fi" ? " selected" : ""}>Suomi</option>
+                <option value="es"${state.preferredLanguage === "es" ? " selected" : ""}>Español</option>
+                <option value="pt"${state.preferredLanguage === "pt" ? " selected" : ""}>Português</option>
+                <option value="fr"${state.preferredLanguage === "fr" ? " selected" : ""}>Français</option>
+                <option value="de"${state.preferredLanguage === "de" ? " selected" : ""}>Deutsch</option>
+                <option value="nl"${state.preferredLanguage === "nl" ? " selected" : ""}>Nederlands</option>
+                <option value="he"${state.preferredLanguage === "he" ? " selected" : ""}>עברית</option>
+              </select>
+            </div>
             <div class="pref-card" id="pref-notif-card">
               <div class="pref-card-icon">
                 <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -8772,6 +8829,11 @@ Begin.` },
     if (acctCloseBtn) acctCloseBtn.addEventListener("click", onAccountClose);
     const acctNameForm = document.getElementById("acct-name-form");
     if (acctNameForm) acctNameForm.addEventListener("submit", onAccountSaveName);
+    // Language dropdown — saves immediately on change, no confirmation.
+    // Empty value = clear preference (Field falls back to auto-detect
+    // and matching input language).
+    const acctLangSelect = document.getElementById("pref-lang-select");
+    if (acctLangSelect) acctLangSelect.addEventListener("change", onAccountSaveLanguage);
     const acctSignoutBtn = document.getElementById("acct-signout-btn");
     if (acctSignoutBtn) acctSignoutBtn.addEventListener("click", () => {
       // Close the modal first so the confirm dialog isn't behind the overlay.
@@ -10046,6 +10108,7 @@ Begin.` },
       state.firstLoginAt = data.firstLoginAt || null;
       state.previewEndsAt = data.previewEndsAt || null;
       state.displayName = data.displayName || "";
+      state.preferredLanguage = data.preferredLanguage || null;
       state.userEmail = data.email || state.loginEmail || "";
       state.timeRemainingMs = data.timeRemainingMs;
       state.loginLoading = false;
@@ -10519,6 +10582,30 @@ Begin.` },
     }
   }
 
+  // Language preference save — fires on <select> change. Empty value
+  // clears the preference (Field falls back to matching input language,
+  // Whisper falls back to auto-detect).
+  async function onAccountSaveLanguage(e) {
+    const select = e && e.target ? e.target : document.getElementById("pref-lang-select");
+    if (!select) return;
+    const raw = String(select.value || "").trim().toLowerCase();
+    const value = raw === "" ? null : raw;
+    const previous = state.preferredLanguage;
+    // Optimistic update — the dropdown already shows the new value
+    // because it's a native <select>; we just keep state in sync so
+    // re-renders don't fight it.
+    state.preferredLanguage = value;
+    try {
+      const data = await apiSaveAccount(state.sessionToken, { preferredLanguage: value });
+      // Server is source of truth.
+      state.preferredLanguage = (data && (data.preferredLanguage || null)) || null;
+    } catch (err) {
+      state.preferredLanguage = previous;
+      alert("Could not save your language preference. Please try again.");
+      render();
+    }
+  }
+
   // Clear the session and return the visitor to the login screen.
   function onLogout() {
     if (!confirm("Sign out of The Field?")) return;
@@ -10938,13 +11025,15 @@ Begin.` },
         headers: { "Content-Type": "application/json", "x-session-token": state.sessionToken },
         body: JSON.stringify({
           audioBase64,
-          mimeType,
-          // Language hint — the browser's locale, so Whisper stops
-          // guessing between closely-related languages (Danish ↔
-          // Swedish was the concrete case). Server-side allow-list
-          // validates before forwarding to Whisper. Falls back to
-          // Whisper's auto-detect if empty.
-          language: (typeof navigator !== "undefined" && navigator.language) || ""
+          mimeType
+          // Language hint is now sourced server-side from the user's
+          // stored preferred_language (Your Account → Preferences →
+          // Language). We intentionally do NOT send navigator.language
+          // here anymore: for multilingual members whose browser locale
+          // differs from their spoken language, forcing Whisper to the
+          // browser locale produced wrong-language transcriptions
+          // (Antonella, Italian browser + English speech → Italian
+          // gibberish, Sep 2026).
         }),
         signal: voiceState.transcribeController.signal
       });
@@ -12251,6 +12340,7 @@ Begin.` },
       state.firstLoginAt = data.firstLoginAt || state.firstLoginAt;
       state.previewEndsAt = data.previewEndsAt || state.previewEndsAt;
       state.displayName = data.displayName || state.displayName;
+      state.preferredLanguage = data.preferredLanguage || null;
       state.userEmail = data.email || state.userEmail;
       state.termsAcceptedAt = data.termsAcceptedAt || null;
       // CRITICAL: rehydrate tier from the server on every page open.
