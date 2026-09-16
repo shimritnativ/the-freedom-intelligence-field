@@ -1616,6 +1616,88 @@
   }
 
   /* ===== Section: Testimonials ===== */
+  /* Featured video testimonial. One 16:9 Wistia clip on a dark band, placed
+     just above the written testimonial wall so video (feel) leads into text
+     (proof at scale). Same rationale as the vertical pair on /try, but this
+     clip is landscape so it gets a single wide card instead of a grid. */
+  .vtesti-section {
+    background: var(--bg-dark);
+  }
+  .vtesti-head {
+    text-align: center;
+    max-width: 760px;
+    margin: 0 auto 48px;
+  }
+  .vtesti-card {
+    max-width: 880px;
+    margin: 0 auto;
+    background: var(--bg-card);
+    border: 1px solid var(--gold-line);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    box-shadow: var(--shadow-dark);
+  }
+  .vtesti-frame {
+    background: #000;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    position: relative;
+  }
+  .vtesti-frame wistia-player {
+    width: 100%;
+    height: 100%;
+    display: block;
+    background: #000;
+  }
+  .vtesti-quote {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--text);
+    margin: 0;
+    padding: 24px 12px 14px;
+    text-align: left;
+  }
+  .vtesti-quote::before {
+    content: '\201C';
+    font-family: var(--font-serif);
+    font-size: 46px;
+    color: var(--gold);
+    line-height: 0.6;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .vtesti-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px 6px;
+  }
+  .vtesti-initial {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-pill);
+    display: grid;
+    place-items: center;
+    background: var(--gold-soft);
+    color: var(--gold);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .vtesti-author {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--text-dim);
+    margin: 0;
+  }
+  @media (max-width: 720px) {
+    .vtesti-card { padding: 14px; border-radius: var(--radius-md); }
+    .vtesti-quote { font-size: 17px; padding: 20px 8px 12px; }
+    .vtesti-head { margin-bottom: 36px; }
+  }
   .testimonials-section {
     background: var(--bg-cream);
   }
@@ -2888,6 +2970,21 @@
     .particle { display: none; }
   }
 </style>
+
+<!-- Wistia player runtime + registration for the featured video testimonial
+     (media 5ra7r9x4sn). The :not(:defined) rule paints the poster swatch while
+     the custom element loads so the card never flashes empty. -->
+<script src="https://fast.wistia.com/player.js" async></script>
+<script src="https://fast.wistia.com/embed/5ra7r9x4sn.js" async type="module"></script>
+<style>
+  wistia-player[media-id='5ra7r9x4sn']:not(:defined) {
+    background: center / contain no-repeat url('https://fast.wistia.com/embed/medias/5ra7r9x4sn/swatch');
+    display: block;
+    filter: blur(5px);
+    padding-top: 56.25%;
+  }
+</style>
+
 </head>
 <body>
 
@@ -3461,6 +3558,30 @@
           </tr>
         </tbody>
       </table>
+    </div>
+  </div>
+</section>
+
+<!-- =================== VIDEO TESTIMONIAL =================== -->
+<section class="vtesti-section">
+  <div class="container">
+    <div class="vtesti-head">
+      <div class="eyebrow reveal reveal-up" style="margin-bottom: 18px;">Real Member. On Camera.</div>
+      <div class="gold-divider reveal"></div>
+      <h2 class="h-section reveal reveal-up reveal-delay-1" style="color: var(--text-inverse); margin-top: 14px;">What using <span class="shimmer">The Field</span> every day actually looks like.</h2>
+    </div>
+
+    <div class="vtesti-card reveal reveal-up reveal-delay-2">
+      <div class="vtesti-frame">
+        <wistia-player media-id="5ra7r9x4sn" aspect="1.7777777777777777"></wistia-player>
+      </div>
+      <blockquote class="vtesti-quote">
+        It&rsquo;s like I have my own coach. At the end of the conversation I am always feeling much, much better and much calmer.
+      </blockquote>
+      <div class="vtesti-meta">
+        <div class="vtesti-initial">M</div>
+        <p class="vtesti-author">Member, using The Field daily</p>
+      </div>
     </div>
   </div>
 </section>
