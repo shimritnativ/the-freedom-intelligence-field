@@ -94,7 +94,7 @@ The repo is owned by the personal account `shimritnativ` ("MYP Support", support
 
 - `ge-amaral` (Geo's own GitHub account) has **read-only** access to this repo. A push as `ge-amaral` fails with a 403.
 - Pushing requires being authenticated as `shimritnativ`. Run `gh auth login` once and sign in as support@shimritnativ.com, then `gh auth setup-git`.
-- This clone's **local** git identity is pinned to `MYP Support <support@shimritnativ.com>` so new commits match the existing history. Geo's global identity (`Geovanna Amaral <geo@bloomacare.com>`) is untouched, so her BloomaCare repos are unaffected.
+- This clone's **local** git identity is pinned to `MYP Support <support@shimritnativ.com>` so new commits match the existing history. The machine's global git identity is something else, so set the local identity explicitly on any new repo instead of relying on the global default.
 - The `vercel` CLI is authenticated as `support-myp` on team `myp-team`, and `vercel ls` / `vercel inspect` work already.
 
 **Read-only checks Claude can run any time:** `git log`, `git status`, `git diff`, `vercel ls`, `vercel inspect <url>`, `vercel project inspect the-field`.
