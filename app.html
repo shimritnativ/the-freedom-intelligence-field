@@ -3431,94 +3431,6 @@
   .rename-modal-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.15); }
 
   /* Guided-process dropdown in the Unlimited section */
-  /* Workshop Integration add-on dropdown — shows for full-tier
-     Unlimited members who have been granted the workshop integration
-     add-on (workshop_addon_expires_at in the future). Sits just below
-     the standard "Start a guided process" picker. */
-  .workshop-addon-section {
-    margin: 6px 0 12px;
-    border: 1.5px solid var(--gold);
-    border-radius: 12px;
-    background: rgba(201, 168, 76, 0.06);
-  }
-  .workshop-addon-toggle {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 14px 14px 12px;
-    background: transparent;
-    border: none;
-    outline: none;
-    cursor: pointer;
-    color: var(--text);
-    text-align: left;
-    -webkit-appearance: none;
-    appearance: none;
-    font-family: inherit;
-  }
-  .workshop-addon-icon {
-    flex-shrink: 0;
-    width: 22px;
-    height: 22px;
-    color: var(--gold);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .workshop-addon-icon svg { width: 20px; height: 20px; display: block; }
-  .workshop-addon-labels {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .workshop-addon-pill {
-    align-self: flex-start;
-    display: inline-block;
-    padding: 3px 9px;
-    background: var(--gold);
-    color: var(--bg);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
-    border-radius: 999px;
-    white-space: nowrap;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .workshop-addon-sub {
-    font-family: Georgia, "Times New Roman", serif;
-    font-style: italic;
-    font-size: 12px;
-    color: var(--text-mute, rgba(31, 24, 16, 0.55));
-    line-height: 1.3;
-  }
-  .workshop-addon-caret {
-    flex-shrink: 0;
-    color: var(--gold);
-    font-size: 14px;
-  }
-  .workshop-addon-list {
-    padding: 4px 10px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .workshop-addon-unlock-note {
-    font-family: Georgia, "Times New Roman", serif;
-    font-style: italic;
-    font-size: 12px;
-    color: var(--text-mute, rgba(31, 24, 16, 0.55));
-    padding: 6px 8px 8px;
-    text-align: center;
-    line-height: 1.4;
-  }
-
   .process-menu { margin-bottom: 10px; }
   .process-menu-btn {
     width: 100%;
@@ -4627,74 +4539,6 @@
     return "Day " + n;
   }
 
-  // Workshop-tier integration processes. These are the three placeholder
-  // processes that unlock on the three workshop days for the €47 VIP
-  // audience of "All The Way To The Top & Beyond" (September 21-23, 2026).
-  // Real content and system prompts land closer to the workshop; for now
-  // the sidebar renders each entry with its unlock date so members know
-  // when it goes live. processKey values match placeholder entries in
-  // lib/prompts/processes/index.js that will be swapped for real content
-  // before Sep 21.
-  // Short, matches the visual rhythm of the Reset Step items above:
-  // day-title is the "Step 1" equivalent, day-theme is the short theme
-  // (State Reset / Decision & Action / Beyond Potential Board). Keeps
-  // both lines readable at 220px sidebar width without wrapping.
-  const WORKSHOP_PROCESSES = [
-    {
-      processKey: "workshop-integration-1",
-      name: "Day 1",
-      unlockAt: "2026-09-21T14:00:00Z",  // 4pm CET on workshop Day 1
-      desc: "Beyond Potential Board",
-    },
-    {
-      processKey: "workshop-integration-2",
-      name: "Day 2",
-      unlockAt: "2026-09-22T14:00:00Z",  // 4pm CET on workshop Day 2
-      desc: "Pattern Breakthrough",
-    },
-    {
-      processKey: "workshop-integration-3",
-      name: "Day 3",
-      unlockAt: "2026-09-23T14:00:00Z",  // 4pm CET on workshop Day 3
-      desc: "Quantum Leap Decision",
-    },
-  ];
-  // Tester override for the workshop-integration drip.
-  //
-  // The three workshop-integration processes unlock at 4pm CET on Sept
-  // 21, 22, and 23. Geo needs to test the full flow (especially the
-  // Beyond Potential Board on Day 3) before launch. This function
-  // returns true if the current user is a sanctioned tester:
-  //   - Any @shimritnativ.com email (admin domain).
-  //   - Any ge.amaral3+... alias on Gmail (Geo's test-account pattern).
-  //   - AND the URL has ?unlock_all=1 (opt-in, so testers who forget
-  //     to add it still see the real drip and can spot member-facing
-  //     issues).
-  //
-  // Regular VIP members always follow the real drip schedule.
-  function isWorkshopTester() {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("unlock_all") !== "1") return false;
-    } catch (_) { return false; }
-    const email = String(state && state.userEmail || "").toLowerCase();
-    if (!email) return false;
-    if (email.endsWith("@shimritnativ.com")) return true;
-    // Geo's Gmail test-account pattern: ge.amaral3+anything@gmail.com.
-    if (/^ge\.amaral3(?:\+[^@]*)?@gmail\.com$/.test(email)) return true;
-    return false;
-  }
-
-  // Is a specific workshop-integration process currently unlocked?
-  // Purely time-based, matches the drip schedule on the LP. Sanctioned
-  // testers with ?unlock_all=1 bypass the drip so they can walk the
-  // whole flow before Sept 21.
-  function isWorkshopProcessUnlocked(unlockIso) {
-    if (!unlockIso) return true;
-    if (isWorkshopTester()) return true;
-    return new Date(unlockIso).getTime() <= Date.now();
-  }
-
   // ===== Daily quotes =====
   // 30 curated lines pulled from Shimrit's voice anchors and the methodology.
   // One rotates daily based on UTC epoch-day, so everyone with the same
@@ -4882,23 +4726,6 @@ Begin.` },
 I am here to work with my sense of worthiness in a specific area of life, to surface the stories and conditioning that have been blocking my capacity to receive, reclaim my worth, and open the field for what I desire to flow.
 Guide me through Worthy to Receive now.
 Begin.` },
-    // Workshop VIP integration processes. Activation phrases mirror those
-    // defined in lib/prompts/processes/index.js so the server routes the
-    // conversation to the correct system prompt on the first turn. Only
-    // visible from the workshop-tier sidebar; onProcessPick uses this
-    // array to resolve the process metadata when a member taps one.
-    { key: "workshop-integration-1", name: "Beyond Potential Board", prompt: `Freedom Intelligence Field, I am entering the Beyond Potential Board process.
-I am ready to build my Beyond Potential Board with you.
-Guide me through it now.
-Begin.` },
-    { key: "workshop-integration-2", name: "Pattern Breakthrough", prompt: `Freedom Intelligence Field, I am entering the Pattern Breakthrough process.
-I am ready to surface a limiting pattern that is still running in my instrument, see it clearly, and write its polar opposite from the version of me who is already living my desire.
-Guide me through the Pattern Breakthrough now.
-Begin.` },
-    { key: "workshop-integration-3", name: "Quantum Leap Decision", prompt: `Freedom Intelligence Field, I am entering the Quantum Leap Decision process.
-I am ready to name the one crucial decision my twelve-month future self is calling me to make, and back it with action.
-Guide me through the Quantum Leap Decision now.
-Begin.` },
   ];
   // ===== Process categories =====
   // Mirrors the Kajabi taxonomy. Built processes reference DEMO_PROCESSES by
@@ -5060,14 +4887,6 @@ Begin.` },
     // Quote archive modal (Antonella Sep 2026 feature).
     quoteArchiveOpen: false,
     // Workshop-integration add-on: expiry timestamp from the server.
-    // Populated for full-tier members who have been granted the add-on
-    // (via /api/admin/grant-workshop-addon or a direct Neon UPDATE).
-    // When in the future, the "Workshop Integration Work / All the way
-    // to the top" dropdown renders in the Unlimited sidebar.
-    workshopAddonExpiresAt: null,
-    // Collapsed by default so the sidebar stays quiet until the member
-    // actually taps it open. State is client-only (not persisted).
-    workshopAddonExpanded: false,
     // Which chat's 3-dot menu is currently open (null = none).
     // Used for both the sidebar list AND the chat header menu.
     openChatMenuId: null,
@@ -6693,21 +6512,6 @@ Begin.` },
   // during login/state fetch and callers may query it before the fetch
   // has completed.
   function isWorkshopTier() { return state.tier === "workshop"; }
-  // True when any member (preview or full) has been granted the
-  // Workshop Integration add-on and the expiry is still in the future.
-  //   - Full-tier members see the addon dropdown alongside their standard
-  //     Unlimited library.
-  //   - Preview-tier members (people who bought only the €9 Power Reset
-  //     but not Unlimited) see the addon dropdown BELOW the "Unlock the
-  //     Unlimited" paywall card — they get the workshop integration
-  //     without also being upgraded to Unlimited.
-  // Workshop tier already has its own dedicated integration UI, so this
-  // helper returns false for them (avoids double-rendering).
-  function hasWorkshopAddon() {
-    if (state.tier !== "full" && state.tier !== "preview") return false;
-    if (!state.workshopAddonExpiresAt) return false;
-    return new Date(state.workshopAddonExpiresAt).getTime() > Date.now();
-  }
   // True whenever the member is entitled to work with the Reset days
   // (or Steps) at all. Preview, full, and workshop qualify.
   function hasResetAccess() {
@@ -6829,38 +6633,6 @@ Begin.` },
           }).join("")}
         </div>
 
-        ${state.tier === "workshop" ? `
-        <div class="sidebar-divider"></div>
-        <div class="sidebar-section-eyebrow">WORKSHOP INTEGRATION WORK</div>
-        <div style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 13px; color: var(--text-mute, rgba(31, 24, 16, 0.55)); margin: 2px 0 10px; line-height: 1.4;">Unlocks on September 21</div>
-        <div class="day-list" style="margin-top: 12px;">
-          ${WORKSHOP_PROCESSES.map((p, i) => {
-            const unlocked = isWorkshopProcessUnlocked(p.unlockAt);
-            const n = i + 1;
-            if (!unlocked) {
-              return `
-                <div class="day-item locked" title="Opens ${new Date(p.unlockAt).toLocaleString(undefined, { month: 'short', day: 'numeric' })}">
-                  <div class="day-num">${n}</div>
-                  <div class="day-info">
-                    <div class="day-title">${escapeHtml(p.name)}</div>
-                    <div class="day-theme">Opens ${new Date(p.unlockAt).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</div>
-                  </div>
-                  <span class="day-lock" aria-hidden="true">${lockIconSvg()}</span>
-                </div>
-              `;
-            }
-            return `
-              <div class="day-item" data-process-key="${p.processKey}">
-                <div class="day-num">${n}</div>
-                <div class="day-info">
-                  <div class="day-title">${escapeHtml(p.name)}</div>
-                  <div class="day-theme">${escapeHtml(p.desc || "")}</div>
-                </div>
-              </div>
-            `;
-          }).join("")}
-        </div>
-        ` : ""}
 
         ${state.tier !== "workshop" ? `
         <div class="sidebar-divider"></div>
@@ -6895,53 +6667,6 @@ Begin.` },
           </div>
         </div>
 
-        ${hasWorkshopAddon() ? `
-        <div class="workshop-addon-section${state.workshopAddonExpanded ? " expanded" : ""}">
-          <button class="workshop-addon-toggle" id="workshop-addon-toggle" type="button">
-            <span class="workshop-addon-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 20h9"/>
-                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
-              </svg>
-            </span>
-            <span class="workshop-addon-labels">
-              <span class="workshop-addon-pill">Workshop Integration Work</span>
-              <span class="workshop-addon-sub">All the way to the top</span>
-            </span>
-            <span class="workshop-addon-caret" aria-hidden="true">${state.workshopAddonExpanded ? "▴" : "▾"}</span>
-          </button>
-          ${state.workshopAddonExpanded ? `
-          <div class="workshop-addon-list">
-            <div class="workshop-addon-unlock-note">Unlocks on September 21</div>
-            ${WORKSHOP_PROCESSES.map((p, i) => {
-              const n = i + 1;
-              const unlocked = isWorkshopProcessUnlocked(p.unlockAt);
-              if (!unlocked) {
-                return `
-                  <div class="day-item locked" title="Opens ${new Date(p.unlockAt).toLocaleString(undefined, { month: 'short', day: 'numeric' })}">
-                    <div class="day-num">${n}</div>
-                    <div class="day-info">
-                      <div class="day-title">${escapeHtml(p.name)}</div>
-                      <div class="day-theme">${escapeHtml(p.desc || "")}</div>
-                    </div>
-                    <span class="day-lock" aria-hidden="true">${lockIconSvg()}</span>
-                  </div>
-                `;
-              }
-              return `
-                <div class="day-item" data-process-key="${p.processKey}">
-                  <div class="day-num">${n}</div>
-                  <div class="day-info">
-                    <div class="day-title">${escapeHtml(p.name)}</div>
-                    <div class="day-theme">${escapeHtml(p.desc || "")}</div>
-                  </div>
-                </div>
-              `;
-            }).join("")}
-          </div>
-          ` : ""}
-        </div>
-        ` : ""}
 
         <div class="unl-search-wrap ${state.searchOpen ? "open" : ""}">
           <input type="text" id="unl-search-input" placeholder="Search your conversations" value="${escapeHtml(state.searchQuery || "")}" />
@@ -6959,53 +6684,6 @@ Begin.` },
           <a class="unlimited-btn" href="${UNLIMITED_URL}" target="_blank" rel="noopener noreferrer">Unlock The Field <span class="unlimited-btn-arrow" aria-hidden="true">↗</span></a>
         </div>
 
-        ${hasWorkshopAddon() ? `
-        <div class="workshop-addon-section${state.workshopAddonExpanded ? " expanded" : ""}" style="margin-top: 14px;">
-          <button class="workshop-addon-toggle" id="workshop-addon-toggle" type="button">
-            <span class="workshop-addon-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 20h9"/>
-                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
-              </svg>
-            </span>
-            <span class="workshop-addon-labels">
-              <span class="workshop-addon-pill">Workshop Integration Work</span>
-              <span class="workshop-addon-sub">All the way to the top</span>
-            </span>
-            <span class="workshop-addon-caret" aria-hidden="true">${state.workshopAddonExpanded ? "▴" : "▾"}</span>
-          </button>
-          ${state.workshopAddonExpanded ? `
-          <div class="workshop-addon-list">
-            <div class="workshop-addon-unlock-note">Unlocks on September 21</div>
-            ${WORKSHOP_PROCESSES.map((p, i) => {
-              const n = i + 1;
-              const unlocked = isWorkshopProcessUnlocked(p.unlockAt);
-              if (!unlocked) {
-                return `
-                  <div class="day-item locked" title="Opens ${new Date(p.unlockAt).toLocaleString(undefined, { month: 'short', day: 'numeric' })}">
-                    <div class="day-num">${n}</div>
-                    <div class="day-info">
-                      <div class="day-title">${escapeHtml(p.name)}</div>
-                      <div class="day-theme">${escapeHtml(p.desc || "")}</div>
-                    </div>
-                    <span class="day-lock" aria-hidden="true">${lockIconSvg()}</span>
-                  </div>
-                `;
-              }
-              return `
-                <div class="day-item" data-process-key="${p.processKey}">
-                  <div class="day-num">${n}</div>
-                  <div class="day-info">
-                    <div class="day-title">${escapeHtml(p.name)}</div>
-                    <div class="day-theme">${escapeHtml(p.desc || "")}</div>
-                  </div>
-                </div>
-              `;
-            }).join("")}
-          </div>
-          ` : ""}
-        </div>
-        ` : ""}
         `}
         ` : ""}
 
@@ -8797,15 +8475,6 @@ Begin.` },
     if (magBtn) magBtn.addEventListener("click", onMagnifierClick);
     const processMenuBtn = document.getElementById("process-menu-btn");
     if (processMenuBtn) processMenuBtn.addEventListener("click", onProcessMenuToggle);
-    // Workshop Integration add-on dropdown toggle (full-tier members
-    // with the manually-granted add-on entitlement).
-    const workshopAddonToggle = document.getElementById("workshop-addon-toggle");
-    if (workshopAddonToggle) {
-      workshopAddonToggle.addEventListener("click", () => {
-        state.workshopAddonExpanded = !state.workshopAddonExpanded;
-        render();
-      });
-    }
     // Dropdown items are now CATEGORIES (data-category) — clicking one opens
     // the category view in the main pane. Process selection happens there,
     // on a card click that fires onProcessPick.
@@ -10662,7 +10331,6 @@ Begin.` },
         state.tier = URL_TIER || data.tier || "preview";
       }
       state.workshopExpiresAt = data.workshopExpiresAt || null;
-      state.workshopAddonExpiresAt = data.workshopAddonExpiresAt || null;
       state.view = "chat";
       state.messages = [{ role: "user", content: opening }];
       state.loading = true;
@@ -12362,7 +12030,6 @@ Begin.` },
         state.tier = data.tier;
       }
       state.workshopExpiresAt = data.workshopExpiresAt || null;
-      state.workshopAddonExpiresAt = data.workshopAddonExpiresAt || null;
       // Same rehydration discipline for subscription plan so the Your
       // Account modal shows the right copy after a monthly to yearly upgrade.
       if (data.subscriptionPlan === "monthly" || data.subscriptionPlan === "yearly") {

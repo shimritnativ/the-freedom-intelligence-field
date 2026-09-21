@@ -24,7 +24,7 @@ Three product tiers, all under one codebase:
 - **Full** (`user_tier = 'full'`): **The Field Unlimited** members (€64.71/mo net or €640/yr net). Unlimited daily access, 20+ guided processes, free-form chat with retrieval-augmented Shimrit "brain".
 - **Workshop** (`user_tier = 'workshop'`): €47 VIP tier for the September 21-23, 2026 "All The Way To The Top & Beyond" workshop. Geo calls this **"The Field ATWT"**. Reset is delivered as "Steps" not "Days", no 72h clock, no Unlimited upsell, stripped-down sidebar, workshop-specific portal. Workshop-tier UI/copy changes must NEVER touch preview or full tiers.
 
-**Adjacent product:** a workshop-integration add-on for full or preview members who buy just the integration content. Granted via `users.workshop_addon_expires_at` timestamp, not a tier switch.
+**Retired 2026-09-21:** the workshop-integration add-on (three drip-unlocked processes for ATWT VIPs, plus a paid add-on for full and preview members granted via `users.workshop_addon_expires_at`) was removed from the product. The sidebar sections, the three processes, their prompts, and `/api/admin/grant-workshop-addon` are all gone. The `workshop_addon_expires_at` column is still on `users` but nothing reads it. Do not rebuild this without asking.
 
 **The Reset IS The Field.** The Reset is the 3-day guided experience inside The Field itself. Same environment, same interface. Never treat the Reset as a separate course or product.
 
@@ -54,7 +54,8 @@ api/                       Vercel serverless functions
   unlimited/               Unlimited chat + session endpoints
   chat.js                  Reset chat (preview/workshop tier)
   transcribe.js            Whisper transcription
-  generate-image.js        gpt-image-1 image generation (workshop integration Beyond Potential Board)
+  generate-image.js        gpt-image-1 image generation, resolves [[genimg:PROMPT]] tokens. Built for
+                           the retired Beyond Potential Board; now inert since no prompt emits the token.
   state.js                 GET /POST for user state (rehydrates client on load, saves mutable fields)
   export-pdf.js            PDFShift proxy for Reset/Field conversation exports
 lib/
@@ -258,20 +259,11 @@ Do not propose "build a 5-day activation email sequence" as new work. Geo alread
 
 ### Ongoing / not yet shipped
 - **Widen `revokeEntitlementByEmail` guard from 30 min to 30 days** in `lib/db.js` (Monika Sep 2026 case).
-- Real Day 2 and Day 3 workshop-integration process content (currently placeholders in `lib/prompts/processes/workshop-integration.js`).
+- ~~Real Day 2 and Day 3 workshop-integration process content~~ dropped, the add-on was retired 2026-09-21.
 
 ---
 
 ## Common admin tasks: quick reference
-
-### Grant workshop-addon to an existing member
-```sql
-UPDATE users
-SET workshop_addon_expires_at = '2026-10-02 23:59:59+00',
-    updated_at = NOW()
-WHERE email = 'member@example.com';
-```
-Or use `/api/admin/grant-workshop-addon` with admin token.
 
 ### Grant workshop VIP tier manually
 Set `users.tier = 'workshop'::user_tier` and `users.workshop_expires_at`. Enum casting is required or `ON CONFLICT DO UPDATE` fails with "column tier is of type user_tier but expression is of type text".
