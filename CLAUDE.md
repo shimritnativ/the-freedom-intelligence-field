@@ -192,7 +192,7 @@ Geo herself writes casual, lowercase, with occasional "lol" and "amazing". When 
 - Meta paid campaigns filter by name via `META_ADS_CAMPAIGN_INCLUDE` env var.
 
 ### Webhook drops are real
-ThriveCart silently drops webhooks for some sales. Confirmed 5+ cases through 2026-06-24 (Antonella, Alexandra, Anne Bork, Sofie, Kaija). Recovery layer: `api/admin/auto-reconcile.js` runs every 10 min via Vercel cron. Scans reliable Kajabi activation webhooks in the last 24h, finds emails with no matching purchase row, inserts a placeholder with `raw_payload.needs_verification = true` and default amounts from `inferDefaults()`. Refresh button passes `?force=1` to skip the 5-min grace window. When a placeholder amount is wrong, correct via admin roster edit form or targeted UPDATE.
+ThriveCart silently drops webhooks for some sales. Confirmed 5+ cases through 2026-06-24 (Antonella, Alexandra, Anne Bork, Sofie, Kaija). Recovery layer: `api/admin/auto-reconcile.js` runs every 10 min via Vercel cron. Scans reliable Kajabi activation webhooks in the last 24h, finds emails with no matching purchase row, inserts a placeholder with `raw_payload.needs_verification = true` and default amounts from `inferDefaults()`. Refresh button passes `?force=1` to skip the 5-min grace window. When a placeholder amount is wrong, correct it with a targeted UPDATE in Neon: there is no roster edit form for amounts in `admin.html`, and `/api/admin/manual-purchase` is `ON CONFLICT DO NOTHING`, so re-submitting an existing invoice reports `already_existed` and changes nothing. For a sale auto-reconcile missed entirely, use the **Log a missing sale** panel at the bottom of the Revenue tab.
 
 ### Kajabi payload extraction
 Kajabi's real payload nests everything under `payload.member_email`, `payload.member_id`, `payload.member.email`, etc. `api/webhooks/kajabi.js` checks nested first, then top-level. Add both shapes when extending.
@@ -290,7 +290,8 @@ Always verify with SELECTs before running. Also update the ThriveCart subscripti
 ### Diagnose a "missing sale"
 1. `SELECT * FROM webhook_events WHERE source = 'thrivecart' AND payload::text LIKE '%email%'`: if zero rows, ThriveCart dropped the webhook.
 2. Check `purchases` for the email. Auto-reconcile should have inserted a placeholder within 10 min via Kajabi as backup signal.
-3. If the placeholder amount is default (wrong), correct it via admin roster edit or SQL.
+3. If the placeholder amount is default (wrong), fix it with SQL in Neon. The manual-purchase endpoint will not overwrite an existing row.
+4. If no placeholder appeared at all (Kajabi never fired either), add the sale by hand: Revenue tab → **Log a missing sale**.
 
 ---
 

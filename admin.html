@@ -4711,6 +4711,53 @@
           <div data-tab-content="revenue" style="display: none;">
             ${renderChannelDeepDive(d.channelAttribution, d.realProfit, d.monthlyCosts)}
             ${tc.connected ? renderThrivecartSection(tc) : renderThrivecartNotConnected()}
+            <!-- Log a sale ThriveCart never told us about. The handler
+                 (runManualPurchase) was in the file for months with no form
+                 to drive it; this is that form. Posts to
+                 /api/admin/manual-purchase, which is idempotent on
+                 (thrivecart_id, event_type). -->
+            <div class="section" id="panel-manual-purchase">
+              <h2><span class="h2-eyebrow">Repair</span><span>Log a missing sale</span></h2>
+              <p style="margin: 0 0 14px; font-size: 13px; color: var(--text-mid); line-height: 1.6;">
+                ThriveCart drops webhooks now and then. Auto-reconcile catches most of them within ten
+                minutes using Kajabi as a backup signal, so check the roster first: this is for the ones it
+                missed entirely. Adding a sale that is already on file is safe, it will tell you and change
+                nothing.
+              </p>
+              <div class="note-box" style="line-height: 1.7; font-size: 12px; margin-bottom: 14px;">
+                <strong>Amount is NET</strong>, without VAT, exactly as ThriveCart reports it. A €9 Power
+                Reset is <code>7.56</code>, not <code>9.00</code>.
+                <br>
+                <strong>Product name has to match ThriveCart exactly.</strong> Ads-funnel sales end in
+                <code>- Ads</code>, and the ads dashboard keys off that suffix, so a typo there drops the
+                sale out of ads attribution.
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px;">
+                <input type="text" id="mp-thrivecart-id" placeholder="Invoice / order ID"
+                       autocomplete="off"
+                       style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;" />
+                <input type="email" id="mp-email" placeholder="buyer@example.com" autocomplete="off"
+                       style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;" />
+                <input type="text" id="mp-product" placeholder="Product name (exact)"
+                       autocomplete="off"
+                       style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;" />
+                <input type="number" id="mp-amount" placeholder="Net amount, e.g. 7.56" step="0.01" min="0"
+                       style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;" />
+                <input type="text" id="mp-coupon" placeholder="Coupon code (optional)" autocomplete="off"
+                       style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;" />
+                <select id="mp-event-type"
+                        style="grid-column: span 2; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;">
+                  <option value="order.success">order.success (new purchase)</option>
+                  <option value="order.subscription_payment">order.subscription_payment (rebill)</option>
+                  <option value="order.refund">order.refund</option>
+                </select>
+              </div>
+              <div style="margin-top: 12px;">
+                <button id="mp-btn" class="preset-btn" onclick="runManualPurchase()"
+                        style="font-size: 12px; padding: 8px 16px;">Log this sale</button>
+              </div>
+              <div id="mp-status" style="margin-top: 12px; font-size: 13px; line-height: 1.6; min-height: 20px;"></div>
+            </div>
           </div>
           <!-- /end Revenue tab -->
 
@@ -8266,9 +8313,14 @@
     async function runManualPurchase() {
       const status = document.getElementById("mp-status");
       const btn = document.getElementById("mp-btn");
+      if (!status || !btn) return;
+      // Every failure path below paints red, success paints green, so a
+      // validation message is never mistaken for a saved sale.
+      const fail = (msg) => { status.style.color = "var(--red)"; status.textContent = msg; };
+      status.style.color = "";
       const token = localStorage.getItem(STORAGE_KEY);
       if (!token) {
-        status.textContent = "Session expired. Refresh the page and try again.";
+        fail("Session expired. Refresh the page and try again.");
         return;
       }
       const thrivecartId = (document.getElementById("mp-thrivecart-id").value || "").trim();
@@ -8278,10 +8330,10 @@
       const couponCode = (document.getElementById("mp-coupon").value || "").trim() || null;
       const eventType = document.getElementById("mp-event-type").value || "order.success";
 
-      if (!thrivecartId) { status.textContent = "Invoice ID is required."; return; }
-      if (!email || !email.includes("@")) { status.textContent = "Valid email is required."; return; }
-      if (!productName) { status.textContent = "Product name is required."; return; }
-      if (!isFinite(amountEuros) || amountEuros < 0) { status.textContent = "Amount must be a positive number."; return; }
+      if (!thrivecartId) { fail("Invoice ID is required."); return; }
+      if (!email || !email.includes("@")) { fail("Valid email is required."); return; }
+      if (!productName) { fail("Product name is required."); return; }
+      if (!isFinite(amountEuros) || amountEuros < 0) { fail("Amount must be a positive number."); return; }
 
       btn.disabled = true;
       status.textContent = "Saving…";
@@ -8302,14 +8354,19 @@
         });
         if (!r.ok) {
           const errBody = await r.text().catch(() => "");
-          status.textContent = "Save failed (HTTP " + r.status + "). " + errBody.slice(0, 200);
+          fail("Save failed (HTTP " + r.status + "). " + errBody.slice(0, 200));
           return;
         }
         const data = await r.json();
         if (data.already_existed) {
-          status.innerHTML = "This purchase was already on file (idempotent skip). Existing row: <strong>"
-            + thrivecartId + "</strong> · " + email + ".";
+          // Not an error, but nothing changed either, so neither red nor green.
+          status.style.color = "var(--text-mid)";
+          status.innerHTML = "Already on file, so nothing changed. Existing row: <strong>"
+            + escapeHtml(thrivecartId) + "</strong> · " + escapeHtml(email)
+            + ". If the amount on it is wrong, that needs a SQL update in Neon: this endpoint only adds "
+            + "rows, it never overwrites one.";
         } else {
+          status.style.color = "var(--green)";
           status.innerHTML = "Saved. Revenue numbers will pick this up on the next refresh.";
           // Clear form so a second entry doesn't accidentally re-submit the same one.
           document.getElementById("mp-thrivecart-id").value = "";
@@ -8321,7 +8378,7 @@
           setTimeout(() => loadMetrics(), 1200);
         }
       } catch (err) {
-        status.textContent = "Network error: " + (err.message || err);
+        fail("Network error: " + (err.message || err));
       } finally {
         btn.disabled = false;
       }
