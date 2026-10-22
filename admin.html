@@ -2371,6 +2371,49 @@
     const THEME_STORAGE_KEY = "tfif_admin_theme_v1";
     const root = document.getElementById("root");
 
+    // ===== Per-tab URLs =====
+    // Every tab has its own address, e.g. /admin/members, so a tab can be
+    // linked, bookmarked and reached with the browser's back button.
+    // vercel.json rewrites /admin/:tab to /admin.html, so the server serves
+    // the same page for all of them and the tab is picked here from the path.
+    // This list is also the allowlist: anything else in the path is ignored
+    // and we fall back to the stored tab, then to Overview.
+    const ADMIN_TABS = [
+      "overview", "intelligence", "members", "revenue", "ads",
+      "engagement", "notifications", "launch", "lead-nurture",
+    ];
+
+    function tabFromPath() {
+      const m = String(location.pathname || "").match(/^\/admin\/([a-z-]+)\/?$/i);
+      const t = m ? m[1].toLowerCase() : "";
+      return ADMIN_TABS.indexOf(t) !== -1 ? t : null;
+    }
+
+    // Point the address bar at the given tab. "replace" on first paint so
+    // landing on /admin does not leave a junk history entry, "push" for a
+    // real tab change. If the URL already names this tab we do nothing,
+    // which is what keeps the re-render paths (renderDashboard re-applying
+    // the active tab) and the popstate handler from stacking entries.
+    function syncTabUrl(tab, mode) {
+      if (!window.history || !history.pushState) return;
+      const next = "/admin/" + tab;
+      const current = String(location.pathname || "").replace(/\/+$/, "");
+      if (current === next) return;
+      const url = next + (location.search || "") + (location.hash || "");
+      try {
+        if (mode === "replace") history.replaceState({ tab: tab }, "", url);
+        else history.pushState({ tab: tab }, "", url);
+      } catch (e) { /* history is unavailable, the tab still switches */ }
+    }
+
+    // Back and forward between tabs. The URL has already changed by the time
+    // this fires, so switchTab's own sync sees a matching path and adds no
+    // further entry.
+    window.addEventListener("popstate", function () {
+      const tab = tabFromPath();
+      if (tab && typeof switchTab === "function") switchTab(tab);
+    });
+
     // ===== Light/dark theme =====
     // Applied via data-theme="dark" on documentElement so CSS variables flip
     // for the whole dashboard. Choice persists in localStorage. Defaults to
@@ -2551,6 +2594,9 @@
       centerActiveTab();
       requestAnimationFrame(() => requestAnimationFrame(centerActiveTab));
       try { localStorage.setItem(TAB_STORAGE_KEY, tab); } catch {}
+      // Keep the address bar on the tab being shown.
+      syncTabUrl(tab, switchTab._initial ? "replace" : "push");
+      switchTab._initial = false;
       // Mobile: close the hamburger drawer after picking a tab so the
       // user lands on the new content immediately (no extra tap).
       if (typeof closeMobileMenu === "function") closeMobileMenu();
@@ -4571,11 +4617,23 @@
               </p>
               <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
                 <input type="email" id="grant-email" placeholder="name@example.com" autocomplete="off"
-                       style="flex: 1 1 240px; min-width: 200px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;" />
+                       style="flex: 1 1 220px; min-width: 190px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;" />
+                <!-- value is tier|plan. Unlimited is billed monthly or yearly;
+                     the Reset carries no plan, hence the trailing pipe. -->
                 <select id="grant-tier"
                         style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;">
-                  <option value="full">The Field Unlimited</option>
-                  <option value="preview">The 72-Hour Power Reset</option>
+                  <option value="full|monthly">The Field Unlimited &middot; monthly</option>
+                  <option value="full|yearly">The Field Unlimited &middot; yearly</option>
+                  <option value="preview|">The 72-Hour Power Reset</option>
+                </select>
+                <select id="grant-source"
+                        style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;">
+                  <option value="">Where from? (optional)</option>
+                  <option value="freedom-mastermind">The Freedom Mastermind</option>
+                  <option value="myp-team">MYP team</option>
+                  <option value="coach">Coach / certification</option>
+                  <option value="partner">Partner or affiliate</option>
+                  <option value="goodwill">Goodwill / support gesture</option>
                 </select>
                 <button id="grant-btn" class="preset-btn" onclick="runGrantAccess('grant')"
                         style="font-size: 12px; padding: 8px 16px;">Give access</button>
@@ -4584,8 +4642,12 @@
               </div>
               <div id="grant-status" style="margin-top: 12px; font-size: 13px; line-height: 1.6; min-height: 20px;"></div>
               <p style="margin: 14px 0 0; font-size: 12px; color: var(--text-mid); line-height: 1.6;">
-                Unlimited granted here has <strong>no end date</strong>. For time-limited comps, note the
-                date and remove access by hand when it runs out.
+                <strong>Spend is &euro;0.</strong> Nothing is written to purchases, so these people show as
+                <em>free access</em> in the roster and never touch revenue or AOV. Where-from is saved as
+                their traffic source, so it shows in the roster's Source column.
+                <br>
+                <strong>No end date.</strong> A six-month Mastermind comp has to be removed by hand when it
+                runs out: note the date somewhere, nothing expires on its own.
               </p>
             </div>
 
@@ -5204,9 +5266,13 @@
           </div><!-- /.dashboard-body -->
         </div>
       `;
-      // Restore last-active tab (or default to overview).
+      // Pick the tab to show: the one named in the URL first, so
+      // /admin/members opens Members even if the last visit ended somewhere
+      // else, then the remembered tab, then Overview. Marked as the initial
+      // switch so it replaces the history entry instead of adding one.
       const savedTab = (function () { try { return localStorage.getItem(TAB_STORAGE_KEY); } catch { return null; } })();
-      switchTab(savedTab || "overview");
+      switchTab._initial = true;
+      switchTab(tabFromPath() || savedTab || "overview");
       // Repaint the theme toggle icon now that the topbar exists.
       const currentTheme = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
       const themeBtn = document.getElementById("theme-toggle-btn");
@@ -6487,7 +6553,7 @@
       // of bouncing back to Overview.
       if (typeof renderDashboard === "function" && state && state.data) {
         const currentTab = (() => {
-          try { return localStorage.getItem(TAB_STORAGE_KEY) || "overview"; }
+          try { return tabFromPath() || localStorage.getItem(TAB_STORAGE_KEY) || "overview"; }
           catch { return "overview"; }
         })();
         renderDashboard(state.data);
@@ -8223,6 +8289,13 @@
       full: "The Field Unlimited",
       preview: "The 72-Hour Power Reset",
     };
+    const GRANT_SOURCE_LABELS = {
+      "freedom-mastermind": "The Freedom Mastermind",
+      "myp-team": "MYP team",
+      "coach": "Coach / certification",
+      "partner": "Partner or affiliate",
+      "goodwill": "Goodwill / support gesture",
+    };
 
     async function runGrantAccess(action) {
       const status = document.getElementById("grant-status");
@@ -8232,7 +8305,11 @@
       if (!status || !emailInput) return;
 
       const email = (emailInput.value || "").trim().toLowerCase();
-      const tier = (document.getElementById("grant-tier") || {}).value || "full";
+      // The tier select carries "tier|plan" in one value.
+      const picked = ((document.getElementById("grant-tier") || {}).value || "full|monthly").split("|");
+      const tier = picked[0] || "full";
+      const plan = picked[1] || "";
+      const source = (document.getElementById("grant-source") || {}).value || "";
 
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         status.style.color = "var(--red)";
@@ -8267,7 +8344,10 @@
         const r = await fetch("/api/admin/grant", {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-session-token": token },
-          body: JSON.stringify({ email: email, tier: tier, action: action }),
+          body: JSON.stringify({
+            email: email, tier: tier, action: action,
+            plan: plan || undefined, source: source || undefined,
+          }),
         });
         let data = {};
         try { data = await r.json(); } catch (e) { data = {}; }
@@ -8288,9 +8368,21 @@
             + "</strong>. Their account and history are untouched.";
         } else {
           const label = GRANT_TIER_LABELS[data.tier] || data.tier || tier;
+          const planBit = data.plan ? ", billed " + escapeHtml(data.plan) : "";
+          // grantEntitlement keeps first-touch attribution, so say which way
+          // it went rather than implying the chosen source was written.
+          let sourceBit = "";
+          if (data.source_kept_existing) {
+            sourceBit = " Source stayed as <strong>" + escapeHtml(data.source)
+              + "</strong>: they already had one on file and first-touch attribution is never overwritten.";
+          } else if (data.source) {
+            sourceBit = " Source recorded as <strong>"
+              + escapeHtml(GRANT_SOURCE_LABELS[data.source] || data.source) + "</strong>.";
+          }
           status.style.color = "var(--green)";
           status.innerHTML = "<strong>" + escapeHtml(data.email || email) + "</strong> now has "
-            + escapeHtml(label) + ". They sign in at "
+            + escapeHtml(label) + planBit + ", spend &euro;0." + sourceBit
+            + " They sign in at "
             + "<a href=\"https://thefieldai.app/\" target=\"_blank\" rel=\"noopener\" style=\"color: var(--gold);\">thefieldai.app</a> "
             + "with an email code.";
         }

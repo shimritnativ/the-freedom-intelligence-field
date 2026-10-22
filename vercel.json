@@ -36,6 +36,10 @@
       "destination": "/admin.html"
     },
     {
+      "source": "/admin/:tab",
+      "destination": "/admin.html"
+    },
+    {
       "source": "/reset",
       "destination": "/reset.html"
     },
@@ -146,6 +150,15 @@
     },
     {
       "source": "/admin",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/admin/:tab",
       "headers": [
         {
           "key": "Cache-Control",

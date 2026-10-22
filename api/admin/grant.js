@@ -69,6 +69,12 @@ export default async function handler(req, res) {
   const email = String(q.email || body.email || "").trim().toLowerCase();
   const tier = String(q.tier || body.tier || "preview").trim().toLowerCase();
   const action = String(q.action || body.action || "grant").trim().toLowerCase();
+  // Unlimited is billed monthly or yearly. The column is nullable, and the
+  // Reset has no plan at all, so an empty value is normal.
+  const plan = String(q.plan || body.plan || "").trim().toLowerCase();
+  // Where a comped member came from, written to utm_source so it shows in
+  // the roster's Source column like any other attribution.
+  const source = String(q.source || body.source || "").trim().toLowerCase();
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return respond(req, res, 400, {
@@ -91,6 +97,44 @@ export default async function handler(req, res) {
       ok: false,
       error: "invalid_tier",
       message: "tier must be 'preview' or 'full'",
+    });
+  }
+
+  if (plan && plan !== "monthly" && plan !== "yearly") {
+    return respond(req, res, 400, {
+      ok: false,
+      error: "invalid_plan",
+      message: "plan must be 'monthly', 'yearly', or left empty",
+    });
+  }
+
+  if (plan && tier !== "full") {
+    return respond(req, res, 400, {
+      ok: false,
+      error: "plan_needs_full",
+      message: "Only The Field Unlimited is billed monthly or yearly. The Reset takes no plan.",
+    });
+  }
+
+  // Allowlist rather than free text: this value feeds the roster's Source
+  // column and the ads-versus-organic attribution, so a typo would create a
+  // new bucket nobody notices. None of these collide with the values the
+  // attribution hierarchy treats specially (whatsapp, meta, facebook,
+  // instagram, fb, ig, power-reset, or anything containing email,
+  // newsletter, klaviyo, mailchimp or kajabi), so they all land in the
+  // "other tracked" bucket, which is what a comp should be.
+  const COMP_SOURCES = [
+    "freedom-mastermind",
+    "myp-team",
+    "coach",
+    "partner",
+    "goodwill",
+  ];
+  if (source && COMP_SOURCES.indexOf(source) === -1) {
+    return respond(req, res, 400, {
+      ok: false,
+      error: "invalid_source",
+      message: "source must be one of: " + COMP_SOURCES.join(", "),
     });
   }
 
@@ -139,13 +183,28 @@ export default async function handler(req, res) {
       email: email,
       tier: tier,
       kajabiMemberId: null, // admin grants are not tied to a Kajabi member
+      subscriptionPlan: plan || null,
+      // utm_campaign marks this as a comp rather than a tracked campaign, so
+      // these grants are separable from real attribution later.
+      utm: source ? { source: source, campaign: "comp" } : undefined,
     });
-    console.log("admin_grant", { actor: actor, email: user.email, tier: user.tier });
+    console.log("admin_grant", {
+      actor: actor, email: user.email, tier: user.tier,
+      plan: user.subscription_plan, source: user.utm_source,
+    });
     return respond(req, res, 200, {
       ok: true,
       action: "grant",
       email: user.email,
       tier: user.tier,
+      // Read back what actually landed, not what was asked for. grantEntitlement
+      // keeps first-touch attribution, so an existing member with a source
+      // already on file keeps it and the requested one is ignored. The caller
+      // needs to see which happened.
+      plan: user.subscription_plan || null,
+      source: user.utm_source || null,
+      source_requested: source || null,
+      source_kept_existing: !!(source && user.utm_source && user.utm_source !== source),
       preview_ends_at: user.preview_ends_at,
       login_url: "https://thefieldai.app/",
     });
