@@ -11,24 +11,55 @@
 //     -H "content-type: application/json" \
 //     -d '{"email":"teammate@x.com","tier":"preview"}'
 //
-// Tier values: 'preview' (72-Hour Reset) | 'full' (Unlimited)
+// Usage (admin dashboard, what the team actually uses):
+//   The "Give access" panel on the Members tab posts here with the
+//   signed-in @shimritnativ.com session token, so nobody needs to hold
+//   ADMIN_TOKEN just to comp someone.
 //
-// Auth: gated by ADMIN_TOKEN env var. Never expose this token publicly.
-// Idempotent: re-running for the same email is safe — it upserts.
+// Tier values: 'preview' (The 72-Hour Power Reset) | 'full' (The Field Unlimited)
+//
+// Auth: @shimritnativ.com session OR ADMIN_TOKEN, the same pair every other
+// admin endpoint accepts. ADMIN_TOKEN is still read from the query string so
+// the plain browser URL above keeps working. Never expose that token publicly.
+// Idempotent: re-running for the same email is safe, it upserts.
 
-import { grantEntitlement, revokeEntitlementByEmail } from "../../lib/db.js";
+import { sql } from "@vercel/postgres";
+import {
+  grantEntitlement,
+  revokeEntitlementByEmail,
+  getUserBySessionToken,
+} from "../../lib/db.js";
+
+const ALLOWED_DOMAIN = "@shimritnativ.com";
 
 export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-session-token, x-admin-token");
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  // Admin auth — accept token from header OR query string so this can be
-  // triggered with a plain browser URL.
+  // Admin auth. ADMIN_TOKEN is accepted from a header OR the query string so
+  // this can still be triggered with a plain browser URL. The dashboard
+  // instead sends the signed-in member's session token.
   const adminToken = process.env.ADMIN_TOKEN;
-  const provided =
+  const providedAdminToken =
     (req.headers && req.headers["x-admin-token"]) ||
     (req.query && req.query.token) ||
     "";
-  if (!adminToken || provided !== adminToken) {
+  const sessionToken = req.headers && req.headers["x-session-token"];
+  let authorized = false;
+  let actor = null;
+  if (adminToken && providedAdminToken === adminToken) {
+    authorized = true;
+    actor = "admin_token";
+  } else if (sessionToken) {
+    const admin = await getUserBySessionToken(sessionToken);
+    if (admin && (admin.email || "").toLowerCase().endsWith(ALLOWED_DOMAIN)) {
+      authorized = true;
+      actor = admin.email;
+    }
+  }
+  if (!authorized) {
     return res.status(401).json({ error: "unauthorized" });
   }
 
@@ -68,12 +99,33 @@ export default async function handler(req, res) {
     if (action === "revoke") {
       user = await revokeEntitlementByEmail(email);
       if (!user) {
+        // revokeEntitlementByEmail returns null for two unrelated reasons:
+        // the email is not in users at all, or the revoke was deliberately
+        // skipped by its 30-minute activate:full guard (the monthly to yearly
+        // upgrade race). Reporting both as user_not_found sends the team
+        // hunting for a typo when the guard is what actually fired.
+        const { rows } = await sql`
+          SELECT email FROM users WHERE email = ${email} LIMIT 1
+        `;
+        if (rows.length > 0) {
+          return respond(req, res, 409, {
+            ok: false,
+            error: "revoke_skipped_recent_grant",
+            email: email,
+            message:
+              "A webhook granted this account full access in the last 30 " +
+              "minutes, so the revoke was skipped to protect a monthly to " +
+              "yearly upgrade. Try again in half an hour.",
+          });
+        }
         return respond(req, res, 404, {
           ok: false,
           error: "user_not_found",
           email: email,
+          message: "No account has ever signed up with that email.",
         });
       }
+      console.log("admin_revoke", { actor: actor, email: user.email });
       return respond(req, res, 200, {
         ok: true,
         action: "revoke",
@@ -88,6 +140,7 @@ export default async function handler(req, res) {
       tier: tier,
       kajabiMemberId: null, // admin grants are not tied to a Kajabi member
     });
+    console.log("admin_grant", { actor: actor, email: user.email, tier: user.tier });
     return respond(req, res, 200, {
       ok: true,
       action: "grant",

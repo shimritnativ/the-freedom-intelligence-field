@@ -4558,6 +4558,37 @@
 
           <!-- ===== MEMBERS TAB ===== -->
           <div data-tab-content="members" style="display: none;">
+            <!-- Give access: comp someone into The Field by email, without a
+                 Kajabi or ThriveCart checkout. Posts to /api/admin/grant with
+                 the signed-in session token. -->
+            <div class="section" id="panel-grant">
+              <h2><span class="h2-eyebrow">Access</span><span>Give someone access</span></h2>
+              <p style="margin: 0 0 14px; font-size: 13px; color: var(--text-mid); line-height: 1.6;">
+                Comps an email straight into The Field, no checkout needed. Safe to run twice on the same
+                address: it updates the existing account rather than creating a second one. They sign in at
+                <a href="https://thefieldai.app/" target="_blank" rel="noopener" style="color: var(--gold);">thefieldai.app</a> with an
+                email code, so the address has to be one they can actually open.
+              </p>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                <input type="email" id="grant-email" placeholder="name@example.com" autocomplete="off"
+                       style="flex: 1 1 240px; min-width: 200px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;" />
+                <select id="grant-tier"
+                        style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;">
+                  <option value="full">The Field Unlimited</option>
+                  <option value="preview">The 72-Hour Power Reset</option>
+                </select>
+                <button id="grant-btn" class="preset-btn" onclick="runGrantAccess('grant')"
+                        style="font-size: 12px; padding: 8px 16px;">Give access</button>
+                <button id="grant-revoke-btn" class="preset-btn" onclick="runGrantAccess('revoke')"
+                        style="font-size: 12px; padding: 8px 16px;">Remove access</button>
+              </div>
+              <div id="grant-status" style="margin-top: 12px; font-size: 13px; line-height: 1.6; min-height: 20px;"></div>
+              <p style="margin: 14px 0 0; font-size: 12px; color: var(--text-mid); line-height: 1.6;">
+                Unlimited granted here has <strong>no end date</strong>. For time-limited comps, note the
+                date and remove access by hand when it runs out.
+              </p>
+            </div>
+
             <!-- Recent signups roster — fully filterable + paginated, rendered by JS -->
             <div class="section" id="panel-roster">
               <h2><span class="h2-eyebrow">Roster</span><span id="roster-title">Every member in this range</span></h2>
@@ -8137,6 +8168,97 @@
         return;
       }
     });
+
+    // Give or remove Field access for one email, from the Members tab.
+    // Posts to /api/admin/grant, which accepts this dashboard's
+    // @shimritnativ.com session token as well as ADMIN_TOKEN.
+    const GRANT_TIER_LABELS = {
+      full: "The Field Unlimited",
+      preview: "The 72-Hour Power Reset",
+    };
+
+    async function runGrantAccess(action) {
+      const status = document.getElementById("grant-status");
+      const grantBtn = document.getElementById("grant-btn");
+      const revokeBtn = document.getElementById("grant-revoke-btn");
+      const emailInput = document.getElementById("grant-email");
+      if (!status || !emailInput) return;
+
+      const email = (emailInput.value || "").trim().toLowerCase();
+      const tier = (document.getElementById("grant-tier") || {}).value || "full";
+
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        status.style.color = "var(--red)";
+        status.textContent = "Enter a valid email address.";
+        return;
+      }
+
+      // Removing access is the destructive direction, so confirm it. Granting
+      // is harmless and idempotent, so it goes straight through.
+      if (action === "revoke") {
+        const sure = window.confirm(
+          "Remove Field access for " + email + "?\n\n" +
+          "They drop to an expired Reset and lose Unlimited straight away. " +
+          "Their account, history and chats stay intact."
+        );
+        if (!sure) return;
+      }
+
+      const token = localStorage.getItem(STORAGE_KEY);
+      if (!token) {
+        status.style.color = "var(--red)";
+        status.textContent = "Session expired. Refresh the page and try again.";
+        return;
+      }
+
+      if (grantBtn) grantBtn.disabled = true;
+      if (revokeBtn) revokeBtn.disabled = true;
+      status.style.color = "";
+      status.textContent = action === "revoke" ? "Removing…" : "Granting…";
+
+      try {
+        const r = await fetch("/api/admin/grant", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-session-token": token },
+          body: JSON.stringify({ email: email, tier: tier, action: action }),
+        });
+        let data = {};
+        try { data = await r.json(); } catch (e) { data = {}; }
+
+        if (!r.ok || !data.ok) {
+          status.style.color = "var(--red)";
+          // The endpoint sends a human-readable message for the cases the team
+          // will actually hit (unknown email, revoke blocked by the upgrade
+          // guard). Fall back to the raw code only when it does not.
+          status.textContent = data.message
+            || ("Did not go through (" + (data.error || "HTTP " + r.status) + ").");
+          return;
+        }
+
+        if (data.action === "revoke") {
+          status.style.color = "var(--green)";
+          status.innerHTML = "Removed access for <strong>" + escapeHtml(data.email || email)
+            + "</strong>. Their account and history are untouched.";
+        } else {
+          const label = GRANT_TIER_LABELS[data.tier] || data.tier || tier;
+          status.style.color = "var(--green)";
+          status.innerHTML = "<strong>" + escapeHtml(data.email || email) + "</strong> now has "
+            + escapeHtml(label) + ". They sign in at "
+            + "<a href=\"https://thefieldai.app/\" target=\"_blank\" rel=\"noopener\" style=\"color: var(--gold);\">thefieldai.app</a> "
+            + "with an email code.";
+        }
+        emailInput.value = "";
+        // Pull the roster again so the member shows up without a manual reload.
+        setTimeout(() => loadMetrics(), 1200);
+      } catch (e) {
+        status.style.color = "var(--red)";
+        status.textContent = "Network error. Check the connection and try again.";
+      } finally {
+        if (grantBtn) grantBtn.disabled = false;
+        if (revokeBtn) revokeBtn.disabled = false;
+      }
+    }
+    window.runGrantAccess = runGrantAccess;
 
     // Submit the manual purchase form to /api/admin/manual-purchase.
     // Used to log a ThriveCart payment that never reached our webhook,
