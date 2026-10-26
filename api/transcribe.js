@@ -7,6 +7,7 @@
 // client-side 5-minute recording limit (~3¢/clip worst case).
 
 import { getUserBySessionToken } from "../lib/db.js";
+import { notifyAdmins } from "../lib/adminNotify.js";
 
 // Allow up to 25MB request body. A 5-minute clip:
 //   • WebM/Opus @ 48kbps ≈ 1.5MB (Chrome/Firefox default)
@@ -234,17 +235,47 @@ export default async function handler(req, res) {
     }
 
     if (!openaiRes) {
+      const reason = transportError
+        ? (transportError.name === "AbortError" ? "attempt_timeout" : "transport_error")
+        : ("http_" + lastStatus);
       console.error("transcribe_openai_error", {
         status: lastStatus,
         body: lastErrText.slice(0, 200),
         transport: transportError
           ? (transportError.name === "AbortError" ? "attempt_timeout" : transportError.message)
           : null,
+        reason: reason,
         audio_bytes: audioBuffer.length,
         mime_type: mimeType,
         user_id: user.id,
         elapsed_ms: Date.now() - startedAt,
       });
+
+      // Tell the team now rather than waiting for the member to complain.
+      // Vercel's runtime logs are short-lived and awkward to query after the
+      // fact, so the October 2026 reports arrived long after the evidence had
+      // aged out. Deliberately carries no transcript and no audio, only who
+      // it happened to and what broke.
+      //
+      // notificationKey is bucketed by the hour, and it is the dedup key in
+      // push_notifications_sent, so an OpenAI outage sends one ping an hour
+      // instead of one per member.
+      try {
+        const hourBucket = new Date().toISOString().slice(0, 13);
+        await notifyAdmins({
+          title: "A voice note failed to transcribe",
+          body: `${user.email}: ${reason}, ${(audioBuffer.length / 1024 / 1024).toFixed(1)}MB `
+            + `of ${mimeType || "audio"}, after ${Math.round((Date.now() - startedAt) / 1000)}s. `
+            + `Their recording is still on their screen behind Try again.`,
+          url: "/admin/members",
+          tag: "transcribe-fail",
+          notificationKey: `transcribe-fail-${hourBucket}`,
+          requireInteraction: false,
+        });
+      } catch (e) {
+        console.error("transcribe_notify_failed", { message: e && e.message });
+      }
+
       return res.status(502).json({ error: "transcription_failed" });
     }
 
