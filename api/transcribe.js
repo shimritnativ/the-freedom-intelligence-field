@@ -127,19 +127,16 @@ export default async function handler(req, res) {
     const filename = `audio.${ext}`;
     const fileType = mimeType || `audio/${ext}`;
 
-    // Build multipart form data the way OpenAI's audio endpoint expects.
-    const formData = new FormData();
-    const blob = new Blob([audioBuffer], { type: fileType });
-    formData.append("file", blob, filename);
-    formData.append("model", "whisper-1");
+    // The multipart body is built inside the retry loop below, because a
+    // FormData whose body has been sent cannot be re-sent on a second
+    // attempt. Two fields go into it:
+    //
     // Language hint. Only forwarded when the user has EXPLICITLY set a
     // preferred_language via Your Account → Preferences. See the block
     // above for why navigator.language is a bad source. If no
-    // preference is stored, Whisper auto-detects — which works reliably
+    // preference is stored, Whisper auto-detects, which works reliably
     // for most speakers.
-    if (validLanguage) {
-      formData.append("language", validLanguage);
-    }
+    //
     // Whisper prompt bias intentionally OFF (see history below).
     //
     // Whisper prompt bias intentionally OFF.
@@ -174,17 +171,75 @@ export default async function handler(req, res) {
     // Do NOT add a `prompt` field back without a proven mitigation
     // (e.g. VAD trimming of silence, per-language separate paths).
 
-    const openaiRes = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}` },
-      body: formData
-    });
+    // Call Whisper with a per-attempt deadline and one retry.
+    //
+    // Before this, the call had no timeout and no retry: a slow or flaky
+    // response from OpenAI hung until the platform killed the function,
+    // and a single transient 429 or 5xx surfaced to the member as "our
+    // transcription service hiccupped" with no second attempt. Members
+    // recording two or three minutes lost the transcription and re-recorded
+    // the whole thing (reported October 2026).
+    //
+    // 120s per attempt is generous even for the 15-minute client ceiling,
+    // and two attempts fit inside the 300s function budget set in
+    // vercel.json with room to spare. Only transport errors, 408, 429 and
+    // 5xx are retried: a 400 means the audio itself is the problem and
+    // sending it again would fail the same way.
+    const OPENAI_ATTEMPT_TIMEOUT_MS = 120 * 1000;
+    const retryableStatus = (s) => s === 408 || s === 429 || s >= 500;
 
-    if (!openaiRes.ok) {
-      const errText = await openaiRes.text().catch(() => "");
+    let openaiRes = null;
+    let lastStatus = 0;
+    let lastErrText = "";
+    let transportError = null;
+
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const ac = new AbortController();
+      const killer = setTimeout(() => ac.abort(), OPENAI_ATTEMPT_TIMEOUT_MS);
+      try {
+        // FormData is rebuilt per attempt: a consumed body cannot be re-sent.
+        const fd = new FormData();
+        fd.append("file", new Blob([audioBuffer], { type: fileType }), filename);
+        fd.append("model", "whisper-1");
+        if (validLanguage) fd.append("language", validLanguage);
+
+        const r = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}` },
+          body: fd,
+          signal: ac.signal,
+        });
+        if (r.ok) { openaiRes = r; break; }
+
+        lastStatus = r.status;
+        lastErrText = await r.text().catch(() => "");
+        if (attempt === 2 || !retryableStatus(r.status)) break;
+        console.warn("transcribe_openai_retry", {
+          attempt: attempt, status: r.status, user_id: user.id,
+          audio_bytes: audioBuffer.length,
+        });
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+      } catch (e) {
+        transportError = e;
+        if (attempt === 2) break;
+        console.warn("transcribe_openai_retry", {
+          attempt: attempt,
+          reason: e && e.name === "AbortError" ? "attempt_timeout" : "transport",
+          message: e && e.message, user_id: user.id,
+        });
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+      } finally {
+        clearTimeout(killer);
+      }
+    }
+
+    if (!openaiRes) {
       console.error("transcribe_openai_error", {
-        status: openaiRes.status,
-        body: errText.slice(0, 200),
+        status: lastStatus,
+        body: lastErrText.slice(0, 200),
+        transport: transportError
+          ? (transportError.name === "AbortError" ? "attempt_timeout" : transportError.message)
+          : null,
         audio_bytes: audioBuffer.length,
         mime_type: mimeType,
         user_id: user.id,

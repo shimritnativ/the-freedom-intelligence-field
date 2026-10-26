@@ -10754,15 +10754,15 @@ Begin.` },
   // retry will work or they should download and try later.
   function describeTranscribeError(err) {
     if (!err) return "Something went wrong.";
-    if (err.name === "AbortError") return "Took too long. Your network may be slow. Your recording is saved.";
+    if (err.name === "AbortError") return "That took too long, your network may be slow. Your recording is safe: press Try again below, you don't need to say it all over.";
     if (err.message === "transcription_empty") return "We didn't pick up any speech. Try again, or check the recording.";
     if (err.message === "audio_unclear") return "The recording didn't transcribe cleanly. Try again in a quieter space, or speak a little closer to the microphone. Your recording is saved.";
     if (err.statusCode === 401) return "Your session expired. Refresh the page and try again. Your recording is saved.";
     if (err.statusCode === 413) return "Recording is too large. Try a shorter clip.";
     if (err.statusCode === 422) return "The recording didn't transcribe cleanly. Try again in a quieter space, or speak a little closer to the microphone. Your recording is saved.";
-    if (err.statusCode >= 500) return "Our transcription service hiccupped. Your recording is saved. Try again in a moment.";
-    if (err.message && err.message.includes("Failed to fetch")) return "Couldn't reach the server. Check your connection. Your recording is saved.";
-    return "Couldn't transcribe. Your recording is saved. Try again, or download it.";
+    if (err.statusCode >= 500) return "Transcription didn't come back this time. Your recording is safe: press Try again below, you don't need to say it all over.";
+    if (err.message && err.message.includes("Failed to fetch")) return "Couldn't reach the server, check your connection. Your recording is safe: press Try again below, you don't need to say it all over.";
+    return "That didn't transcribe. Your recording is safe: press Try again below, you don't need to say it all over.";
   }
 
   // Inline progress message shown in the composer area while
@@ -10824,7 +10824,7 @@ Begin.` },
 
     const msg = document.createElement("div");
     msg.className = "voice-recovery-msg";
-    msg.textContent = errorMessage || "Couldn't transcribe — your recording is saved.";
+    msg.textContent = errorMessage || "That didn't transcribe. Your recording is safe: press Try again below.";
 
     const actions = document.createElement("div");
     actions.className = "voice-recovery-actions";

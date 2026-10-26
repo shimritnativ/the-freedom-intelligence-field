@@ -1,5 +1,8 @@
 {
   "functions": {
+    "api/transcribe.js": {
+      "maxDuration": 300
+    },
     "api/speak.js": {
       "maxDuration": 60
     },
