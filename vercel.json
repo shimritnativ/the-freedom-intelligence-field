@@ -51,6 +51,10 @@
       "destination": "/Aira_Daily_SOPs.html"
     },
     {
+      "source": "/backend",
+      "destination": "/backend-runbook.html"
+    },
+    {
       "source": "/carmen",
       "destination": "/Carmen_Outreach.html"
     },
@@ -134,7 +138,7 @@
   ],
   "headers": [
     {
-      "source": "/(app|admin|demo|embed|launch-tracker|the-field-website|reset|try|orientation-call)\\.html",
+      "source": "/(app|admin|demo|embed|launch-tracker|the-field-website|reset|try|orientation-call|backend-runbook)\\.html",
       "headers": [
         {
           "key": "Cache-Control",

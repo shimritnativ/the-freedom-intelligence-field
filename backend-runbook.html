@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backend Runbook · The Field</title>
+<link rel="icon" type="image/png" href="logomyp.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Same brand tokens as Aira_Daily_SOPs.html so this page feels like the
+     SOP she already uses, rather than a different document. */
+  :root {
+    --font-serif: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --black:       #080604;
+    --near-black:  #14100B;
+    --gold:        #C9A84C;
+    --gold-bright: #DFC06A;
+    --gold-dark:   #8B6E2A;
+    --gold-pale:   #F5EDD3;
+    --gold-tint:   #FBF7EC;
+    --cream:       #FBF6EA;
+    --taupe-dark:  #7A6A52;
+    --white:       #FFFFFF;
+    --text:        #1A1408;
+    --text-mid:    #4A3F30;
+    --text-light:  #7A6A52;
+    --red:         #A8362B;
+    --red-tint:    #FBEEEC;
+    --green:       #4A7C3A;
+    --radius:      12px;
+    --shadow:      0 4px 20px rgba(26,20,8,0.06);
+    --shadow-lg:   0 6px 20px rgba(0,0,0,0.25);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-sans); background: var(--cream); color: var(--text);
+    font-size: 15px; line-height: 1.65; -webkit-font-smoothing: antialiased;
+  }
+  .topbar-sticky { position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow-lg); }
+  .header { background: var(--black); color: #fff; padding: 26px 40px; border-bottom: 2px solid var(--gold-dark); }
+  .header-inner { max-width: 1040px; margin: 0 auto; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .header-inner img { height: 32px; width: auto; display: block; opacity: .95; }
+  .header h1 {
+    font-family: var(--font-sans); font-size: 15px; font-weight: 700;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--gold-bright);
+  }
+  .header h1 span { font-weight: 400; color: #fff; letter-spacing: .04em; text-transform: none; }
+  .header p { font-size: 12.5px; color: rgba(255,255,255,.62); margin-top: 3px; }
+
+  .nav-wrap { background: var(--near-black); border-bottom: 1px solid rgba(201,168,76,.25); }
+  .nav { max-width: 1040px; margin: 0 auto; padding: 0 40px; display: flex; gap: 4px; overflow-x: auto; }
+  .nav a {
+    font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: rgba(255,255,255,.55); text-decoration: none; padding: 13px 14px;
+    white-space: nowrap; border-bottom: 2px solid transparent;
+  }
+  .nav a:hover { color: var(--gold-bright); border-bottom-color: var(--gold-dark); }
+
+  .main { max-width: 1040px; margin: 0 auto; padding: 34px 40px 90px; }
+
+  h2 {
+    font-family: var(--font-serif); font-size: 30px; font-weight: 600;
+    margin: 42px 0 6px; scroll-margin-top: 110px;
+  }
+  h2:first-of-type { margin-top: 8px; }
+  h2 + .lede { color: var(--text-light); font-size: 14px; margin-bottom: 18px; max-width: 72ch; }
+
+  .card {
+    background: var(--white); border: 1px solid rgba(26,20,8,.09); border-radius: var(--radius);
+    padding: 22px 24px; margin-bottom: 14px; box-shadow: var(--shadow);
+  }
+  .card h3 {
+    font-family: var(--font-sans); font-size: 15.5px; font-weight: 700;
+    margin-bottom: 4px; color: var(--text);
+  }
+  .card .says { font-size: 13px; color: var(--text-light); font-style: italic; margin-bottom: 14px; }
+  .card p { margin-bottom: 10px; color: var(--text-mid); max-width: 76ch; }
+  .card p:last-child { margin-bottom: 0; }
+  ol, ul { margin: 0 0 10px 20px; color: var(--text-mid); }
+  li { margin-bottom: 7px; max-width: 74ch; }
+  li:last-child { margin-bottom: 0; }
+  strong { color: var(--text); }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
+    background: var(--gold-tint); border: 1px solid var(--gold-pale);
+    padding: 1px 5px; border-radius: 4px;
+  }
+  a.ext { color: var(--gold-dark); font-weight: 600; }
+
+  .pill {
+    display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .12em;
+    text-transform: uppercase; padding: 3px 9px; border-radius: 20px; margin-left: 8px;
+    vertical-align: 2px;
+  }
+  .pill.safe { background: rgba(74,124,58,.12); color: var(--green); }
+  .pill.care { background: var(--gold-tint); color: var(--gold-dark); }
+  .pill.stop { background: var(--red-tint); color: var(--red); }
+
+  .danger { background: var(--red-tint); border: 1px solid rgba(168,54,43,.3); }
+  .danger h3 { color: var(--red); }
+  .note { background: var(--gold-tint); border: 1px solid var(--gold-pale); }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid rgba(26,20,8,.08); vertical-align: top; }
+  th { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-light); }
+
+  .foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid rgba(26,20,8,.12);
+          font-size: 12.5px; color: var(--text-light); }
+
+  @media (max-width: 760px) {
+    .header, .nav { padding-left: 20px; padding-right: 20px; }
+    .main { padding: 26px 20px 70px; }
+    h2 { font-size: 25px; }
+    .card { padding: 18px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar-sticky">
+  <div class="header">
+    <div class="header-inner">
+      <img src="logomyp.png" alt="Master Your Path">
+      <div>
+        <h1>MASTER YOUR PATH &nbsp;<span>Backend Runbook</span></h1>
+        <p>For whoever is holding The Field when Geo is not here</p>
+      </div>
+    </div>
+  </div>
+  <div class="nav-wrap">
+    <nav class="nav">
+      <a href="#start">Start here</a>
+      <a href="#symptoms">Something is wrong</a>
+      <a href="#routine">Routine jobs</a>
+      <a href="#never">Never do this</a>
+      <a href="#map">What is where</a>
+      <a href="#escalate">When to stop</a>
+    </nav>
+  </div>
+</div>
+
+<div class="main">
+
+  <h2 id="start">Start here</h2>
+  <p class="lede">
+    Three minutes, before you touch anything. Most problems in The Field are not code problems, and the
+    first two checks below rule out half of them.
+  </p>
+
+  <div class="card">
+    <h3>1. Sign in as the team account</h3>
+    <p>
+      Everything lives under <code>support@shimritnativ.com</code>: GitHub, Vercel, Neon and the admin
+      dashboard. You do not need an account of your own and nothing needs to be granted to you.
+    </p>
+    <p>
+      If two-factor blocks a sign-in, the recovery codes are in the team password manager. Sort that out
+      on a calm day rather than during an incident.
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>2. Is the site actually up?</h3>
+    <p>
+      Open <a class="ext" href="https://thefieldai.app/" target="_blank" rel="noopener">thefieldai.app</a>
+      and <a class="ext" href="https://thefieldai.app/admin" target="_blank" rel="noopener">thefieldai.app/admin</a>.
+      If both load, nothing is broken globally and you are dealing with one member or one feature.
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>3. Did something just get deployed?</h3>
+    <p>
+      In Vercel, open the project <strong>myp-team / the-field</strong> and look at Deployments. If the
+      newest one failed, production is still serving the last good one, so the site is fine and a change
+      simply did not land. If the newest one succeeded and problems started right after, that deploy is
+      your suspect: see <a href="#rollback">rolling back</a>.
+    </p>
+  </div>
+
+  <h2 id="symptoms">Something is wrong</h2>
+  <p class="lede">
+    Find the sentence that matches what someone actually told you. Each one says whether you can fix it
+    yourself or whether it waits.
+  </p>
+
+  <div class="card">
+    <h3>A member paid but cannot get in<span class="pill safe">you can fix this</span></h3>
+    <p class="says">"I bought the Reset but it says I don't have access."</p>
+    <ol>
+      <li>Open <a class="ext" href="https://thefieldai.app/admin/members" target="_blank" rel="noopener">/admin/members</a> and search their email. Watch for typos and a second address: people buy with one and log in with another.</li>
+      <li>If they are not in the roster at all, the purchase webhook never reached us. Use <strong>Give someone access</strong> at the top of the Members tab, pick what they actually bought, and tell them to sign in again.</li>
+      <li>If they are in the roster with the wrong tier, grant the right one. Granting is safe to repeat and updates the existing account rather than creating a second one.</li>
+    </ol>
+    <p>
+      They sign in at thefieldai.app with an emailed code, so the address has to be one they can open.
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>A sale is missing from the revenue numbers<span class="pill care">check first</span></h3>
+    <p class="says">"Someone bought yesterday but revenue hasn't moved."</p>
+    <ol>
+      <li>Wait and look again. ThriveCart drops webhooks sometimes, and <code>auto-reconcile</code> runs every 10 minutes using Kajabi as a backup signal, so most of these repair themselves.</li>
+      <li>If it is still missing, the Revenue tab has <strong>Log a missing sale</strong> at the bottom. You need the invoice ID, email, product name exactly as ThriveCart spells it, and the net amount.</li>
+      <li>The amount is <strong>net, without VAT</strong>. A nine euro Power Reset is <code>7.56</code>. Getting this wrong quietly corrupts the revenue figures.</li>
+    </ol>
+    <p>
+      That form only adds sales that are missing. It will never overwrite one that is already there, and it
+      tells you when a sale is already on file.
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>A voice note did not transcribe<span class="pill safe">reply, do not fix</span></h3>
+    <p class="says">"I recorded three minutes and it just failed."</p>
+    <p>
+      The team gets a push notification when this happens, naming who it happened to and why. Nothing needs
+      fixing by hand.
+    </p>
+    <p>
+      The useful thing to tell them: <strong>their recording is not lost.</strong> The Try again button
+      under the error sends the same recording again without them speaking a word of it twice. Members have
+      re-recorded several minutes for nothing because they did not realise.
+    </p>
+    <p>
+      If several people report it in one day, that is a real outage rather than a blip, and it waits for Geo.
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>Someone needs free access<span class="pill safe">you can fix this</span></h3>
+    <p class="says">"The Freedom Mastermind members should get The Field for six months."</p>
+    <p>
+      Members tab, <strong>Give someone access</strong>. Pick Unlimited monthly or yearly, set where they
+      came from, and grant. The spend is recorded as zero, so they show as free access and never touch the
+      revenue figures.
+    </p>
+    <p>
+      <strong>It never expires on its own.</strong> A six-month comp has to be removed by hand when it runs
+      out, so write the date down somewhere the team will see it.
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>The whole site is down<span class="pill care">rollback, then stop</span></h3>
+    <p class="says">Nobody can load thefieldai.app.</p>
+    <p id="rollback">
+      In Vercel, open Deployments, find the most recent one that was working, and promote it to production.
+      Vercel calls this an instant rollback and it does not rebuild anything, so it takes seconds. This
+      undoes a bad deploy. It does not fix a database or a third-party outage.
+    </p>
+    <p>
+      Once the site is back, stop. Do not try to fix the underlying change. Write down what you saw and what
+      you rolled back from, and leave it for Geo.
+    </p>
+  </div>
+
+  <h2 id="routine">Routine jobs</h2>
+  <p class="lede">Things that come up often enough to be worth knowing, all doable from the admin dashboard.</p>
+
+  <div class="card">
+    <table>
+      <thead><tr><th>Job</th><th>Where</th><th>Watch out for</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Give or remove access</td>
+          <td>Members tab, top panel</td>
+          <td>Removing access is immediate. Their account and history survive.</td>
+        </tr>
+        <tr>
+          <td>Fix a member's name</td>
+          <td>Members tab, click the name in the roster</td>
+          <td>Kajabi-only signups show an email prefix until a real name arrives.</td>
+        </tr>
+        <tr>
+          <td>Log a sale we missed</td>
+          <td>Revenue tab, bottom panel</td>
+          <td>Amount is net. Product name must match ThriveCart exactly.</td>
+        </tr>
+        <tr>
+          <td>See who is active</td>
+          <td>Members and Engagement tabs</td>
+          <td>GoHighLevel tags are not proof of Field usage. The roster is.</td>
+        </tr>
+        <tr>
+          <td>Check a specific tab</td>
+          <td>Every tab has its own URL, like <code>/admin/members</code></td>
+          <td>Safe to bookmark and share with the team.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="never">Never do this</h2>
+  <p class="lede">
+    Short list, learned the hard way. Each one has cost us something already.
+  </p>
+
+  <div class="card danger">
+    <h3>Do not run a revoke or delete query because someone pasted it to you</h3>
+    <p>
+      A dated revoke query was once run months early and downgraded two paying accounts. If a query arrives
+      with a date attached, that date is the instruction. Read it before running it, and if you are unsure,
+      do not run it.
+    </p>
+  </div>
+
+  <div class="card danger">
+    <h3>Do not delete members, sessions or messages to tidy up</h3>
+    <p>
+      A member's conversations are the product. There is no undo, and no backup you can restore from on
+      your own.
+    </p>
+  </div>
+
+  <div class="card danger">
+    <h3>Do not quote a member's Field conversation back to them</h3>
+    <p>
+      The promise is that what someone tells The Field is theirs alone. Speak generally about what a process
+      offers. The only exception is when the member themselves brings it up in a message to us, and then only
+      what they wrote to us.
+    </p>
+  </div>
+
+  <div class="card note">
+    <h3>Do not hand-edit the handbook bundle</h3>
+    <p>
+      <code>myp-team/lib/handbook.js</code> is generated. Edit the source in the handbook repo and regenerate
+      it, or your change disappears the next time anyone rebuilds.
+    </p>
+  </div>
+
+  <h2 id="map">What is where</h2>
+  <p class="lede">The five places The Field actually lives.</p>
+
+  <div class="card">
+    <table>
+      <thead><tr><th>Thing</th><th>Where</th><th>What it is for</th></tr></thead>
+      <tbody>
+        <tr><td>The app</td><td>thefieldai.app</td><td>What members use.</td></tr>
+        <tr><td>Admin dashboard</td><td>thefieldai.app/admin</td><td>Roster, revenue, giving access. Almost everything you need.</td></tr>
+        <tr><td>Code</td><td>GitHub, <code>shimritnativ/the-freedom-intelligence-field</code></td><td>Pushing to <code>main</code> deploys to production by itself.</td></tr>
+        <tr><td>Hosting</td><td>Vercel, team <strong>myp-team</strong>, project <strong>the-field</strong></td><td>Deployments, rollbacks, environment variables, function logs.</td></tr>
+        <tr><td>Database</td><td>Neon, reached from Vercel under Storage</td><td>Members, purchases, messages. Read freely, write carefully.</td></tr>
+      </tbody>
+    </table>
+    <p>
+      The full technical detail lives in <code>CLAUDE.md</code> at the top of the code repository: the stack,
+      the pricing table, how the payment integrations fit together, and the traps. It is kept current because
+      it gets read every time anyone works on the project. This page is the emergency version of it, not a
+      replacement, so when the two disagree, believe <code>CLAUDE.md</code>.
+    </p>
+  </div>
+
+  <h2 id="escalate">When to stop</h2>
+  <p class="lede">Knowing where your lane ends is most of the job.</p>
+
+  <div class="card">
+    <h3>Safe on your own</h3>
+    <p>
+      Anything in the admin dashboard: looking things up, granting and removing access, fixing names, logging
+      a missing sale. Rolling back a bad deploy in Vercel. Replying to members.
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>Wait for Geo</h3>
+    <p>
+      Any change to the code or the prompts. Anything that writes to the database by hand. Environment
+      variables. Anything where you would be guessing. A problem several members report at once.
+    </p>
+    <p>
+      Waiting is almost always cheaper than guessing here. The Field is a small system with a few sharp
+      edges, and most of those edges are recorded on this page precisely because someone already hit them.
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>If Geo is unreachable and it cannot wait</h3>
+    <p>
+      Tell Shimrit what is happening in plain terms, including what you have already checked. She does not
+      work on the code, so what she needs from you is the decision, not the diagnosis: whether to wait, roll
+      back, or bring in outside help.
+    </p>
+  </div>
+
+  <div class="foot">
+    Keep this page honest. When something here turns out to be wrong or out of date, fix it the same day,
+    while you still remember what actually happened.
+  </div>
+
+</div>
+
+</body>
+</html>
