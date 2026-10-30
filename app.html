@@ -10496,6 +10496,10 @@ Begin.` },
   // interruption looked exactly like one that was still listening, and
   // people kept speaking into nothing for minutes.
   const CHUNK_WATCHDOG_MS = 6000;
+  // How long a muted mic is allowed to stay muted before we call it gone.
+  // Long enough to ride out a momentary blip, short enough that nobody
+  // delivers a paragraph into a muted microphone.
+  const MIC_MUTE_GRACE_MS = 1500;
   const voiceState = {
     mediaRecorder: null, audioChunks: [], stream: null, mimeType: "",
     startedAt: 0, timerInterval: null, autoStopTimer: null, indicatorEl: null,
@@ -10506,6 +10510,15 @@ Begin.` },
     // mic.
     lastChunkAt: 0, watchdogTimer: null, stoppedUnexpectedly: false,
     failureReason: "",
+    // Android grabs the mic by MUTING the track rather than ending it, and
+    // the recorder keeps emitting chunks of silence, so the chunk watchdog
+    // sees a perfectly healthy stream while nothing is being captured. A
+    // short grace period rides out harmless blips; anything longer is the
+    // mic genuinely gone.
+    muteTimer: null,
+    // Screen wake lock held for the duration of a recording. The screen
+    // locking is the most common way a phone kills a recording in progress.
+    wakeLock: null,
     // Preserved audio when transcription fails so the user can retry
     // or download it instead of losing the whole recording. Cleared
     // on successful transcription or user dismiss.
@@ -10596,6 +10609,22 @@ Begin.` },
           console.warn("recorder_track_ended");
           handleRecorderFailure("track_ended");
         });
+        // The Android case. A muted track still feeds the recorder, so it
+        // records silence and every other check sees a healthy stream.
+        // Caught here or not at all.
+        track.addEventListener("mute", () => {
+          if (voiceState.muteTimer) return;
+          voiceState.muteTimer = setTimeout(() => {
+            voiceState.muteTimer = null;
+            if (track.muted) {
+              console.warn("recorder_track_muted");
+              handleRecorderFailure("mic_muted");
+            }
+          }, MIC_MUTE_GRACE_MS);
+        });
+        track.addEventListener("unmute", () => {
+          if (voiceState.muteTimer) { clearTimeout(voiceState.muteTimer); voiceState.muteTimer = null; }
+        });
       });
       voiceState.mediaRecorder.onstop = async () => {
         cleanupRecording();
@@ -10644,6 +10673,13 @@ Begin.` },
       // Android browsers silently drop that buffer or return an empty
       // blob for recordings over ~2 minutes. Chunking bypasses this by
       // streaming data out of the browser into our own array as we go.
+      // Hold the screen awake for the length of the recording. On a phone the
+      // screen locking is the most common way a recording dies: the tab gets
+      // suspended and the mic goes with it. Best effort only, since it needs
+      // a secure context and is not on every browser, and a refusal must
+      // never stop someone recording.
+      requestRecordingWakeLock();
+
       voiceState.mediaRecorder.start(1000);
       voiceState.startedAt = Date.now();
       micBtn.classList.add("recording");
@@ -10682,6 +10718,35 @@ Begin.` },
       voiceState.mediaRecorder.stop();
     }
   }
+
+  // Screen wake lock, held only while recording. The browser drops the lock
+  // whenever the page is hidden, so it is re-taken when the page comes back
+  // if a recording is still running.
+  async function requestRecordingWakeLock() {
+    try {
+      if (!navigator.wakeLock || !navigator.wakeLock.request) return;
+      voiceState.wakeLock = await navigator.wakeLock.request("screen");
+      voiceState.wakeLock.addEventListener("release", () => { voiceState.wakeLock = null; });
+    } catch (e) {
+      // Denied, unsupported, or the page is not visible. Recording continues.
+      console.warn("wake_lock_unavailable", e && e.name);
+    }
+  }
+
+  function releaseRecordingWakeLock() {
+    const lock = voiceState.wakeLock;
+    voiceState.wakeLock = null;
+    if (!lock) return;
+    try { lock.release(); } catch (e) { /* already gone */ }
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") return;
+    if (voiceState.mediaRecorder && voiceState.mediaRecorder.state === "recording"
+        && !voiceState.wakeLock) {
+      requestRecordingWakeLock();
+    }
+  });
 
   // One path for every way a recording can die on us: a recorder error, the
   // mic track ending, the recorder going inactive behind our back, or audio
@@ -10748,6 +10813,8 @@ Begin.` },
     if (voiceState.timerInterval) { clearInterval(voiceState.timerInterval); voiceState.timerInterval = null; }
     if (voiceState.autoStopTimer) { clearTimeout(voiceState.autoStopTimer); voiceState.autoStopTimer = null; }
     if (voiceState.watchdogTimer) { clearInterval(voiceState.watchdogTimer); voiceState.watchdogTimer = null; }
+    if (voiceState.muteTimer) { clearTimeout(voiceState.muteTimer); voiceState.muteTimer = null; }
+    releaseRecordingWakeLock();
     if (voiceState.stream) { voiceState.stream.getTracks().forEach((t) => t.stop()); voiceState.stream = null; }
     removeRecordingIndicator();
   }
