@@ -1893,6 +1893,19 @@
     50% { box-shadow: 0 0 0 8px rgba(228, 87, 87, 0); }
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+  /* When the mic dies mid-recording the indicator has to stop looking
+     alive, or it keeps implying we are still listening. */
+  .recording-indicator.stopped {
+    border-color: rgba(192, 58, 43, .55);
+  }
+  .recording-indicator.stopped .red-dot {
+    background: #C03A2B;
+    opacity: .9;
+  }
+  .recording-indicator.stopped .rec-time {
+    color: #C03A2B;
+    font-weight: 600;
+  }
   .recording-indicator {
     position: absolute;
     top: -30px;
@@ -10475,9 +10488,24 @@ Begin.` },
   // request while still allowing a slow phone on 3G to finish a
   // 15-min upload with headroom to spare.
   const TRANSCRIBE_TIMEOUT_MS = 5 * 60 * 1000;
+  // How long we tolerate silence from ondataavailable before deciding the
+  // recorder has died. start(1000) means a chunk a second, so six seconds
+  // without one is not a slow phone, it is a dead recorder. This is the
+  // thing members could not see: the timer keeps counting up off startedAt
+  // whether or not audio is still arriving, so a recorder killed by an
+  // interruption looked exactly like one that was still listening, and
+  // people kept speaking into nothing for minutes.
+  const CHUNK_WATCHDOG_MS = 6000;
   const voiceState = {
     mediaRecorder: null, audioChunks: [], stream: null, mimeType: "",
     startedAt: 0, timerInterval: null, autoStopTimer: null, indicatorEl: null,
+    // Watchdog bookkeeping, plus a flag saying whether the recording ended
+    // because the member asked it to or because something killed it. The
+    // two cases need completely different messages: "recording too short"
+    // is correct for an accidental tap and insulting for an interrupted
+    // mic.
+    lastChunkAt: 0, watchdogTimer: null, stoppedUnexpectedly: false,
+    failureReason: "",
     // Preserved audio when transcription fails so the user can retry
     // or download it instead of losing the whole recording. Cleared
     // on successful transcription or user dismiss.
@@ -10501,6 +10529,15 @@ Begin.` },
     // Now stop is unconditional; only START is blocked when busy.
     if (voiceState.mediaRecorder && voiceState.mediaRecorder.state === "recording") {
       stopRecording();
+      return;
+    }
+    // The page thinks it is recording but the recorder is not. That is the
+    // "I can't do anything apart from exiting" state: tapping the mic used
+    // to quietly begin a second recording on top of the stuck UI. Unwind it
+    // and let the member tap again deliberately.
+    const micIsLit = document.getElementById("mic-btn");
+    if (voiceState.mediaRecorder && micIsLit && micIsLit.classList.contains("recording")) {
+      handleRecorderFailure("tapped_while_inactive");
       return;
     }
     if (state.loading) return;
@@ -10532,14 +10569,65 @@ Begin.` },
         : { audioBitsPerSecond: 32000 };
       voiceState.mediaRecorder = new MediaRecorder(voiceState.stream, recorderOptions);
       voiceState.audioChunks = [];
+      voiceState.stoppedUnexpectedly = false;
+      voiceState.failureReason = "";
+      voiceState.lastChunkAt = Date.now();
       voiceState.mediaRecorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) voiceState.audioChunks.push(e.data);
+        if (e.data && e.data.size > 0) {
+          voiceState.audioChunks.push(e.data);
+          voiceState.lastChunkAt = Date.now();
+        }
       };
+
+      // MediaRecorder errors were never handled. On an error the recorder
+      // goes inactive, but the red dot, the timer and the button all carried
+      // on as if nothing had happened.
+      voiceState.mediaRecorder.onerror = (e) => {
+        console.error("recorder_error", e && e.error ? e.error.name : e);
+        handleRecorderFailure("error");
+      };
+
+      // The mic track ending is the common one on a phone: another app takes
+      // the microphone, a call arrives, the screen locks, a Bluetooth headset
+      // connects or drops. The track ends, the recorder stops receiving
+      // audio, and nothing in the page noticed.
+      (voiceState.stream.getAudioTracks() || []).forEach((track) => {
+        track.addEventListener("ended", () => {
+          console.warn("recorder_track_ended");
+          handleRecorderFailure("track_ended");
+        });
+      });
       voiceState.mediaRecorder.onstop = async () => {
         cleanupRecording();
         micBtn.classList.remove("recording");
         const blob = new Blob(voiceState.audioChunks, { type: voiceState.mimeType });
         voiceState.audioChunks = [];
+
+        // The mic stopped on its own. Never say "recording too short" here:
+        // the member was most likely still speaking, and the length is our
+        // problem, not theirs. Anything usable still gets transcribed,
+        // because a partial transcript beats losing the thought entirely.
+        if (voiceState.stoppedUnexpectedly) {
+          const secs = Math.max(0, Math.round((Date.now() - voiceState.startedAt) / 1000));
+          if (blob.size >= 1000) {
+            showTranscribingMessage(
+              "Your mic stopped after " + secs + "s, so this may be cut short. Transcribing what we have.",
+              "warning"
+            );
+            await transcribeBlob(blob, voiceState.mimeType);
+          } else {
+            showTranscribingMessage(
+              "Something interrupted your mic, so nothing was recorded. "
+              + "This is usually another app or a call taking the microphone. Tap the mic to start again.",
+              "warning"
+            );
+            setTimeout(removeTranscribingIndicator, 7000);
+          }
+          voiceState.stoppedUnexpectedly = false;
+          voiceState.failureReason = "";
+          return;
+        }
+
         if (blob.size < 1000) {
           // Recording too short — typical when the user taps the mic
           // by accident or releases immediately. Tell them so it
@@ -10566,6 +10654,21 @@ Begin.` },
           stopRecording();
         }
       }, MAX_RECORDING_MS);
+
+      // Watchdog. Some browsers kill the recorder without firing error or
+      // stop at all, which left the page insisting it was recording while
+      // no audio arrived. Checked every second against the last chunk.
+      voiceState.watchdogTimer = setInterval(() => {
+        if (!voiceState.mediaRecorder) return;
+        if (voiceState.mediaRecorder.state !== "recording") {
+          // Went inactive without telling us. Treat it the same as an error.
+          handleRecorderFailure("went_inactive");
+          return;
+        }
+        if (Date.now() - voiceState.lastChunkAt > CHUNK_WATCHDOG_MS) {
+          handleRecorderFailure("no_audio");
+        }
+      }, 1000);
     } catch (err) {
       console.error("mic_permission_or_error", err);
       cleanupRecording();
@@ -10580,9 +10683,71 @@ Begin.` },
     }
   }
 
+  // One path for every way a recording can die on us: a recorder error, the
+  // mic track ending, the recorder going inactive behind our back, or audio
+  // simply not arriving any more. Marks the stop as unexpected so onstop
+  // reports it honestly, flags it on screen immediately so nobody keeps
+  // talking into a dead mic, and forces a stop so whatever was captured
+  // still reaches onstop. Safe to call twice.
+  function handleRecorderFailure(reason) {
+    if (voiceState.stoppedUnexpectedly) return;
+    voiceState.stoppedUnexpectedly = true;
+    voiceState.failureReason = reason || "unknown";
+    // Stop the watchdog first so it cannot re-enter while we unwind.
+    if (voiceState.watchdogTimer) { clearInterval(voiceState.watchdogTimer); voiceState.watchdogTimer = null; }
+    markIndicatorStopped();
+    try {
+      if (voiceState.mediaRecorder && voiceState.mediaRecorder.state === "recording") {
+        voiceState.mediaRecorder.stop();   // routes through onstop
+        return;
+      }
+    } catch (e) {
+      console.warn("recorder_force_stop_failed", e);
+    }
+    // The recorder is already inactive, so onstop will never come. Finish
+    // by hand with whatever chunks we collected.
+    const chunks = voiceState.audioChunks.slice();
+    voiceState.audioChunks = [];
+    const mime = voiceState.mimeType;
+    cleanupRecording();
+    const micBtn = document.getElementById("mic-btn");
+    if (micBtn) micBtn.classList.remove("recording");
+    const blob = new Blob(chunks, { type: mime });
+    const secs = Math.max(0, Math.round((Date.now() - voiceState.startedAt) / 1000));
+    voiceState.stoppedUnexpectedly = false;
+    voiceState.failureReason = "";
+    if (blob.size >= 1000) {
+      showTranscribingMessage(
+        "Your mic stopped after " + secs + "s, so this may be cut short. Transcribing what we have.",
+        "warning"
+      );
+      transcribeBlob(blob, mime);
+    } else {
+      showTranscribingMessage(
+        "Something interrupted your mic, so nothing was recorded. "
+        + "This is usually another app or a call taking the microphone. Tap the mic to start again.",
+        "warning"
+      );
+      setTimeout(removeTranscribingIndicator, 7000);
+    }
+  }
+
+  // Turn the live indicator into a clearly stopped one, so the moment the
+  // mic dies it stops looking like it is still listening.
+  function markIndicatorStopped() {
+    if (!voiceState.indicatorEl) return;
+    if (voiceState.timerInterval) { clearInterval(voiceState.timerInterval); voiceState.timerInterval = null; }
+    voiceState.indicatorEl.classList.add("stopped");
+    const dot = voiceState.indicatorEl.querySelector(".red-dot");
+    if (dot) dot.style.animation = "none";
+    const timeEl = voiceState.indicatorEl.querySelector(".rec-time");
+    if (timeEl) timeEl.textContent = "mic stopped";
+  }
+
   function cleanupRecording() {
     if (voiceState.timerInterval) { clearInterval(voiceState.timerInterval); voiceState.timerInterval = null; }
     if (voiceState.autoStopTimer) { clearTimeout(voiceState.autoStopTimer); voiceState.autoStopTimer = null; }
+    if (voiceState.watchdogTimer) { clearInterval(voiceState.watchdogTimer); voiceState.watchdogTimer = null; }
     if (voiceState.stream) { voiceState.stream.getTracks().forEach((t) => t.stop()); voiceState.stream = null; }
     removeRecordingIndicator();
   }
