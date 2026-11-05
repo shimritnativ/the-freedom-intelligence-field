@@ -9809,6 +9809,12 @@ Begin.` },
         // Pull the inbox so the bell badge shows the unread count from
         // the very first paint. Errors are swallowed inside.
         fetchNotifications();
+        // Same tap-to-go handling the boot path does. Without this, a
+        // ?process= link only worked for someone already signed in: anyone
+        // who had to log in first landed on the dashboard with the param
+        // still sitting unused in the URL, which made shareable process
+        // links look broken to whoever sent them.
+        setTimeout(() => maybeHandleBootCtaParam(), 200);
       }));
     } catch (err) {
       state.loginLoading = false;
