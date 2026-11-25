@@ -490,10 +490,23 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
     gap: 58px;
     padding-right: 58px;
     flex: 0 0 auto;
+    /* Seven logos come to about 1240px. The track used to hold the list
+       twice and shift by half of it, which left the right-hand edge empty
+       for the tail of every cycle on any screen wider than one group: 681px
+       of nothing at 1920, which read as the strip stopping dead.
+       It now holds the list four times and shifts by exactly one group, so
+       three groups' worth of logos always sit ahead of the shift and the
+       spacing stays at the 58px it was designed at.
+       min-width is only a backstop for screens wider than about 3645px,
+       where even three groups would not reach: 3 x 34vw is just over one
+       screen, so the strip cannot run out at any width. */
+    box-sizing: border-box;
+    min-width: 34vw;
+    justify-content: space-around;
   }
   @keyframes mypress-scroll {
     from { transform: translateX(0); }
-    to   { transform: translateX(-50%); }
+    to   { transform: translateX(-25%); }
   }
   /* Clicking a moving target is irritating, so hovering stops it. */
   .mypress:hover .mypress-track { animation-play-state: paused; }
@@ -3791,7 +3804,25 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
       </div>
 
       <!-- Seamless-loop twin. Change the list above and you must
-           change this one too, or the strip jumps halfway round. -->
+           change all three of these too, or the strip jumps mid-cycle. -->
+      <div class="mypress-group" aria-hidden="true">
+        <a class="mypress-item" href="https://www.usatoday.com/press-release/story/59811/shimrit-nativ-launches-the-freedom-intelligence-field-bringing-ai-and-human-coaching-together-through-the-human-instrument-mastery-method/" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/usa-today-dark.png" alt="USA Today" width="679" height="120"><img class="mypress-logo is-light" src="/press/usa-today-light.png" alt="USA Today" width="679" height="120" loading="lazy"></a>
+        <a class="mypress-item" href="https://finance.yahoo.com/technology/ai/articles/shimrit-nativ-launches-freedom-intelligence-150000987.html" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/yahoo-finance-dark.png" alt="Yahoo Finance" width="181" height="50"><img class="mypress-logo is-light" src="/press/yahoo-finance-light.png" alt="Yahoo Finance" width="181" height="50" loading="lazy"></a>
+        <a class="mypress-item" href="https://www.reuters.com/press-releases/shimrit-nativ-launches-freedom-intelligence-field-2026-11-19" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/reuters-dark.png" alt="Reuters" width="150" height="58"><img class="mypress-logo is-light" src="/press/reuters-light.png" alt="Reuters" width="150" height="58" loading="lazy"></a>
+        <a class="mypress-item" href="https://apnews.com/de0f69935b429954ea1ddf01f3d99266" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/ap-dark.png" alt="AP News" width="52" height="58"><img class="mypress-logo is-light" src="/press/ap-light.png" alt="AP News" width="52" height="58" loading="lazy"></a>
+        <a class="mypress-item" href="https://markets.businessinsider.com/news/currencies/shimrit-nativ-launches-the-freedom-intelligence-field-bringing-ai-and-human-coaching-together-through-the-human-instrumentr-mastery-method-1036783932" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/business-insider-dark.png" alt="Business Insider" width="187" height="40"><img class="mypress-logo is-light" src="/press/business-insider-light.png" alt="Business Insider" width="187" height="40" loading="lazy"></a>
+        <a class="mypress-item" href="https://fortune.com/press-releases/shimrit-nativ-launches-freedom-intelligence-field-2026-11-19" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/fortune-dark.png" alt="Fortune" width="163" height="58"><img class="mypress-logo is-light" src="/press/fortune-light.png" alt="Fortune" width="163" height="58" loading="lazy"></a>
+        <a class="mypress-item" href="https://pr.washingtoncitypaper.com/article/Shimrit-Nativ-Launches-The-Freedom-Intelligence-Field-Bringing-AI-and-Human-Coaching-Together-Through-the-Human-Instrumentr-Mastery-Method?storyId=6aff11157be79a0002777877" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/washington-city-paper-dark.png" alt="Washington City Paper" width="126" height="41"><img class="mypress-logo is-light" src="/press/washington-city-paper-light.png" alt="Washington City Paper" width="126" height="41" loading="lazy"></a>
+      </div>
+      <div class="mypress-group" aria-hidden="true">
+        <a class="mypress-item" href="https://www.usatoday.com/press-release/story/59811/shimrit-nativ-launches-the-freedom-intelligence-field-bringing-ai-and-human-coaching-together-through-the-human-instrument-mastery-method/" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/usa-today-dark.png" alt="USA Today" width="679" height="120"><img class="mypress-logo is-light" src="/press/usa-today-light.png" alt="USA Today" width="679" height="120" loading="lazy"></a>
+        <a class="mypress-item" href="https://finance.yahoo.com/technology/ai/articles/shimrit-nativ-launches-freedom-intelligence-150000987.html" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/yahoo-finance-dark.png" alt="Yahoo Finance" width="181" height="50"><img class="mypress-logo is-light" src="/press/yahoo-finance-light.png" alt="Yahoo Finance" width="181" height="50" loading="lazy"></a>
+        <a class="mypress-item" href="https://www.reuters.com/press-releases/shimrit-nativ-launches-freedom-intelligence-field-2026-11-19" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/reuters-dark.png" alt="Reuters" width="150" height="58"><img class="mypress-logo is-light" src="/press/reuters-light.png" alt="Reuters" width="150" height="58" loading="lazy"></a>
+        <a class="mypress-item" href="https://apnews.com/de0f69935b429954ea1ddf01f3d99266" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/ap-dark.png" alt="AP News" width="52" height="58"><img class="mypress-logo is-light" src="/press/ap-light.png" alt="AP News" width="52" height="58" loading="lazy"></a>
+        <a class="mypress-item" href="https://markets.businessinsider.com/news/currencies/shimrit-nativ-launches-the-freedom-intelligence-field-bringing-ai-and-human-coaching-together-through-the-human-instrumentr-mastery-method-1036783932" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/business-insider-dark.png" alt="Business Insider" width="187" height="40"><img class="mypress-logo is-light" src="/press/business-insider-light.png" alt="Business Insider" width="187" height="40" loading="lazy"></a>
+        <a class="mypress-item" href="https://fortune.com/press-releases/shimrit-nativ-launches-freedom-intelligence-field-2026-11-19" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/fortune-dark.png" alt="Fortune" width="163" height="58"><img class="mypress-logo is-light" src="/press/fortune-light.png" alt="Fortune" width="163" height="58" loading="lazy"></a>
+        <a class="mypress-item" href="https://pr.washingtoncitypaper.com/article/Shimrit-Nativ-Launches-The-Freedom-Intelligence-Field-Bringing-AI-and-Human-Coaching-Together-Through-the-Human-Instrumentr-Mastery-Method?storyId=6aff11157be79a0002777877" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/washington-city-paper-dark.png" alt="Washington City Paper" width="126" height="41"><img class="mypress-logo is-light" src="/press/washington-city-paper-light.png" alt="Washington City Paper" width="126" height="41" loading="lazy"></a>
+      </div>
       <div class="mypress-group" aria-hidden="true">
         <a class="mypress-item" href="https://www.usatoday.com/press-release/story/59811/shimrit-nativ-launches-the-freedom-intelligence-field-bringing-ai-and-human-coaching-together-through-the-human-instrument-mastery-method/" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/usa-today-dark.png" alt="USA Today" width="679" height="120"><img class="mypress-logo is-light" src="/press/usa-today-light.png" alt="USA Today" width="679" height="120" loading="lazy"></a>
         <a class="mypress-item" href="https://finance.yahoo.com/technology/ai/articles/shimrit-nativ-launches-freedom-intelligence-150000987.html" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/yahoo-finance-dark.png" alt="Yahoo Finance" width="181" height="50"><img class="mypress-logo is-light" src="/press/yahoo-finance-light.png" alt="Yahoo Finance" width="181" height="50" loading="lazy"></a>
