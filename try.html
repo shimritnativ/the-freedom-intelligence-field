@@ -436,6 +436,105 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
   /* Thin gold-hairline divider used at the seam between the
      pre-hero and the free-preview hero. Keeps the two dark blocks
      reading as connected but marks the transition. */
+  /* ===== Press strip: "as mentioned in" =====
+     Seven outlet logos on an endless loop.
+
+     Class names carry the mypress- prefix because this same block is
+     also pasted into GoHighLevel pages, where a generic .press-item
+     would collide with the builder's own styles. There are three copies
+     of it now (this page, app.html, and the standalone paste-in file in
+     the kajabi-pages folder). Keep them in sync.
+
+     The viewport clips, the track holds the list twice and slides
+     exactly half its own width, so copy two lands where copy one began
+     and the loop has no seam.
+
+     Every outlet ships two logo files: a white one for a dark band and
+     a full-colour one for a light section. The CSS shows whichever fits.
+     The hidden one carries loading="lazy" so a browser can skip fetching
+     it; display:none on its own would not stop the download.
+     For a light section, add .on-light to the wrapper. */
+  .mypress {
+    --mypress-gold: var(--gold);
+    --mypress-fg: var(--text-inverse);
+    --mypress-speed: 38s;            /* lower = faster */
+    font-family: var(--font-sans);
+    background: var(--bg-dark);
+    padding: 34px 0 38px;
+    overflow: hidden;
+  }
+  .mypress-label {
+    text-align: center;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--mypress-gold);
+    margin-bottom: 22px;
+  }
+  /* Masked at both edges so logos fade out rather than being chopped
+     off mid-letter at the edge of the screen. */
+  .mypress-viewport {
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+  }
+  .mypress-track {
+    display: flex;
+    width: max-content;
+    animation: mypress-scroll var(--mypress-speed) linear infinite;
+  }
+  .mypress-group {
+    display: flex;
+    align-items: center;
+    gap: 58px;
+    padding-right: 58px;
+    flex: 0 0 auto;
+  }
+  @keyframes mypress-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  /* Clicking a moving target is irritating, so hovering stops it. */
+  .mypress:hover .mypress-track { animation-play-state: paused; }
+
+  .mypress-item {
+    display: inline-flex;
+    align-items: center;
+    color: var(--mypress-fg);
+    text-decoration: none;
+    opacity: 0.62;
+    transition: opacity 0.18s ease;
+  }
+  .mypress-item:hover, .mypress-item:focus-visible { opacity: 1; }
+
+  /* One height for every mark, so wildly different source files sit on
+     the same optical line. */
+  .mypress-logo { height: 36px; width: auto; display: block; }
+  /* AP is a filled box rather than a wordmark, so at the shared height
+     it reads heavier than everything beside it. */
+  .mypress-item[href*="apnews"] .mypress-logo { height: 29px; }
+  .mypress .is-light { display: none; }
+  .mypress.on-light { background: #FAF6EC; }
+  .mypress.on-light .is-dark { display: none; }
+  .mypress.on-light .is-light { display: block; }
+
+  @media (max-width: 760px) {
+    .mypress { padding: 26px 0 28px; --mypress-speed: 26s; }
+    .mypress-group { gap: 38px; padding-right: 38px; }
+    .mypress-logo { height: 27px; }
+    .mypress-item[href*="apnews"] .mypress-logo { height: 22px; }
+  }
+
+  /* Anyone who has asked their device to reduce motion gets a still,
+     readable strip rather than a moving one. */
+  @media (prefers-reduced-motion: reduce) {
+    .mypress-track { animation: none; flex-wrap: wrap; justify-content: center; width: auto; }
+    .mypress-group { flex-wrap: wrap; justify-content: center; gap: 18px 34px; padding-right: 0; }
+    .mypress-group[aria-hidden="true"] { display: none; }
+    .mypress-viewport { -webkit-mask-image: none; mask-image: none; }
+  }
+
   .section-hairline {
     display: block;
     width: 60%;
@@ -3675,6 +3774,36 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
        Marks the section change without breaking the dark canvas. -->
   <span class="section-hairline" aria-hidden="true"></span>
 </section>
+
+<!-- =================== AS MENTIONED IN =================== -->
+<div class="mypress">
+  <div class="mypress-label">As mentioned in</div>
+  <div class="mypress-viewport">
+    <div class="mypress-track">
+      <div class="mypress-group">
+        <a class="mypress-item" href="https://www.usatoday.com/press-release/story/59811/shimrit-nativ-launches-the-freedom-intelligence-field-bringing-ai-and-human-coaching-together-through-the-human-instrument-mastery-method/" target="_blank" rel="noopener"><img class="mypress-logo is-dark" src="/press/usa-today-dark.png" alt="USA Today" width="679" height="120"><img class="mypress-logo is-light" src="/press/usa-today-light.png" alt="USA Today" width="679" height="120" loading="lazy"></a>
+        <a class="mypress-item" href="https://finance.yahoo.com/technology/ai/articles/shimrit-nativ-launches-freedom-intelligence-150000987.html" target="_blank" rel="noopener"><img class="mypress-logo is-dark" src="/press/yahoo-finance-dark.png" alt="Yahoo Finance" width="181" height="50"><img class="mypress-logo is-light" src="/press/yahoo-finance-light.png" alt="Yahoo Finance" width="181" height="50" loading="lazy"></a>
+        <a class="mypress-item" href="https://www.reuters.com/press-releases/shimrit-nativ-launches-freedom-intelligence-field-2026-11-19" target="_blank" rel="noopener"><img class="mypress-logo is-dark" src="/press/reuters-dark.png" alt="Reuters" width="150" height="58"><img class="mypress-logo is-light" src="/press/reuters-light.png" alt="Reuters" width="150" height="58" loading="lazy"></a>
+        <a class="mypress-item" href="https://apnews.com/de0f69935b429954ea1ddf01f3d99266" target="_blank" rel="noopener"><img class="mypress-logo is-dark" src="/press/ap-dark.png" alt="AP News" width="52" height="58"><img class="mypress-logo is-light" src="/press/ap-light.png" alt="AP News" width="52" height="58" loading="lazy"></a>
+        <a class="mypress-item" href="https://markets.businessinsider.com/news/currencies/shimrit-nativ-launches-the-freedom-intelligence-field-bringing-ai-and-human-coaching-together-through-the-human-instrumentr-mastery-method-1036783932" target="_blank" rel="noopener"><img class="mypress-logo is-dark" src="/press/business-insider-dark.png" alt="Business Insider" width="187" height="40"><img class="mypress-logo is-light" src="/press/business-insider-light.png" alt="Business Insider" width="187" height="40" loading="lazy"></a>
+        <a class="mypress-item" href="https://fortune.com/press-releases/shimrit-nativ-launches-freedom-intelligence-field-2026-11-19" target="_blank" rel="noopener"><img class="mypress-logo is-dark" src="/press/fortune-dark.png" alt="Fortune" width="163" height="58"><img class="mypress-logo is-light" src="/press/fortune-light.png" alt="Fortune" width="163" height="58" loading="lazy"></a>
+        <a class="mypress-item" href="https://pr.washingtoncitypaper.com/article/Shimrit-Nativ-Launches-The-Freedom-Intelligence-Field-Bringing-AI-and-Human-Coaching-Together-Through-the-Human-Instrumentr-Mastery-Method?storyId=6aff11157be79a0002777877" target="_blank" rel="noopener"><img class="mypress-logo is-dark" src="/press/washington-city-paper-dark.png" alt="Washington City Paper" width="126" height="41"><img class="mypress-logo is-light" src="/press/washington-city-paper-light.png" alt="Washington City Paper" width="126" height="41" loading="lazy"></a>
+      </div>
+
+      <!-- Seamless-loop twin. Change the list above and you must
+           change this one too, or the strip jumps halfway round. -->
+      <div class="mypress-group" aria-hidden="true">
+        <a class="mypress-item" href="https://www.usatoday.com/press-release/story/59811/shimrit-nativ-launches-the-freedom-intelligence-field-bringing-ai-and-human-coaching-together-through-the-human-instrument-mastery-method/" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/usa-today-dark.png" alt="USA Today" width="679" height="120"><img class="mypress-logo is-light" src="/press/usa-today-light.png" alt="USA Today" width="679" height="120" loading="lazy"></a>
+        <a class="mypress-item" href="https://finance.yahoo.com/technology/ai/articles/shimrit-nativ-launches-freedom-intelligence-150000987.html" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/yahoo-finance-dark.png" alt="Yahoo Finance" width="181" height="50"><img class="mypress-logo is-light" src="/press/yahoo-finance-light.png" alt="Yahoo Finance" width="181" height="50" loading="lazy"></a>
+        <a class="mypress-item" href="https://www.reuters.com/press-releases/shimrit-nativ-launches-freedom-intelligence-field-2026-11-19" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/reuters-dark.png" alt="Reuters" width="150" height="58"><img class="mypress-logo is-light" src="/press/reuters-light.png" alt="Reuters" width="150" height="58" loading="lazy"></a>
+        <a class="mypress-item" href="https://apnews.com/de0f69935b429954ea1ddf01f3d99266" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/ap-dark.png" alt="AP News" width="52" height="58"><img class="mypress-logo is-light" src="/press/ap-light.png" alt="AP News" width="52" height="58" loading="lazy"></a>
+        <a class="mypress-item" href="https://markets.businessinsider.com/news/currencies/shimrit-nativ-launches-the-freedom-intelligence-field-bringing-ai-and-human-coaching-together-through-the-human-instrumentr-mastery-method-1036783932" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/business-insider-dark.png" alt="Business Insider" width="187" height="40"><img class="mypress-logo is-light" src="/press/business-insider-light.png" alt="Business Insider" width="187" height="40" loading="lazy"></a>
+        <a class="mypress-item" href="https://fortune.com/press-releases/shimrit-nativ-launches-freedom-intelligence-field-2026-11-19" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/fortune-dark.png" alt="Fortune" width="163" height="58"><img class="mypress-logo is-light" src="/press/fortune-light.png" alt="Fortune" width="163" height="58" loading="lazy"></a>
+        <a class="mypress-item" href="https://pr.washingtoncitypaper.com/article/Shimrit-Nativ-Launches-The-Freedom-Intelligence-Field-Bringing-AI-and-Human-Coaching-Together-Through-the-Human-Instrumentr-Mastery-Method?storyId=6aff11157be79a0002777877" target="_blank" rel="noopener" tabindex="-1"><img class="mypress-logo is-dark" src="/press/washington-city-paper-dark.png" alt="Washington City Paper" width="126" height="41"><img class="mypress-logo is-light" src="/press/washington-city-paper-light.png" alt="Washington City Paper" width="126" height="41" loading="lazy"></a>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Dark divider removed 2026-07-23 per Geo — the free-preview
      hero is now a light cream section (below), so the pre-hero
