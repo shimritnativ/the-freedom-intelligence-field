@@ -3855,7 +3855,7 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
       <p class="hero-eyebrow">3-minute breakthrough</p>
       <h1 class="hero-title">Interrupt the pattern and <em>break the loop</em> in this <em>free trial run</em> inside The Field.</h1>
       <p class="hero-lead">
-        You'll be guided through a short five-step process. The Field will ask you questions, reflect back what you share, clarify what's actually running and open the door to what's available when you shift.
+        You'll be guided through a short four-step process. The Field will ask you questions, reflect back what you share, clarify what's actually running and open the door to what's available when you shift.
       </p>
       <p class="hero-lead" style="margin-top: 10px;">
         This is a short sample and will take about three minutes.
@@ -3875,7 +3875,7 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
           <div style="display: flex; align-items: center; gap: 10px;">
             <div class="cw-progress" id="cw-progress" style="display: none;">
               <div class="cw-progress-bar"><div class="cw-progress-fill" id="cw-progress-fill"></div></div>
-              <span id="cw-progress-count">0 / 5</span>
+              <span id="cw-progress-count">0 / 4</span>
             </div>
             <!-- Expand → maximize the chat. Hidden while maximized. -->
             <button class="cw-expand-btn" id="cw-expand-btn" type="button" aria-label="Open chat full-screen" title="Open full-screen">
@@ -4552,7 +4552,7 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
     <div class="faq-list">
       <div class="faq-item">
         <button class="faq-q" type="button">Is the free preview really free?</button>
-        <div class="faq-a">Yes. One conversation, six exchanges, no card required. One preview per person, because we hold it as a real invitation, not a lead-gen game.</div>
+        <div class="faq-a">Yes. One conversation, four exchanges, no card required. One preview per person, because we hold it as a real invitation, not a lead-gen game.</div>
       </div>
 
       <div class="faq-item">
@@ -4696,10 +4696,14 @@ src="https://www.facebook.com/tr?id=1084277818620919&ev=PageView&noscript=1"/></
       hint: "When you can see the next step clearly and still stay exactly where you are." }
   ];
 
-  // Kept in sync with FREE_TRIAL_MAX_EXCHANGES in
-  // lib/prompts/free-trial.js. Reduced from 5 → 4 on 2026-07-27
-  // to match the actual script arc (4 questions, 4 user answers,
-  // closing reflection on the fourth).
+  // Kept in sync with FREE_TRIAL_MAX_EXCHANGES in lib/prompts/free-trial.js.
+  // Reduced from 5 to 4 on 2026-07-27 to match the actual script arc
+  // (4 questions, 4 user answers, closing reflection on the fourth).
+  //
+  // THREE other places on this page state the number in words and none of
+  // them were updated at the time: the hero copy said "five-step process",
+  // the progress meter's initial state said 0 / 5, and the FAQ said six
+  // exchanges. All corrected 2026-11-27. Change all four together.
   const MAX_EXCHANGES = 4;
   // Send all "buy the Reset" CTAs straight to the ads-funnel ThriveCart
   // checkout so attribution stays clean and there's no LP hop.

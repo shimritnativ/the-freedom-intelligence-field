@@ -370,6 +370,55 @@
   }
 
 
+  /* ===== Free preview step =====
+     Sits above the paid options, because someone arriving cold from an
+     article has nothing to click that costs nothing. A slim band rather
+     than a fifth card: the grid is already four wide and the heading
+     above it says "three ways in", so another card would break both. */
+  .freestep {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px 22px;
+    max-width: 760px;
+    margin: 0 auto 40px;
+    padding: 18px 26px;
+    border: 1px solid var(--gold-line);
+    border-radius: var(--radius-pill);
+    background: var(--gold-soft);
+    text-align: center;
+  }
+  .freestep-text {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--text);
+    margin: 0;
+  }
+  .freestep-text strong { font-weight: 600; }
+  .freestep-link {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--text);
+    text-decoration: none;
+    white-space: nowrap;
+    padding: 10px 20px;
+    border-radius: var(--radius-pill);
+    background: var(--gold);
+    transition: background 0.2s ease, transform 0.2s ease;
+  }
+  .freestep-link:hover {
+    background: var(--gold-warm);
+    transform: translateY(-1px);
+  }
+  @media (max-width: 560px) {
+    .freestep { border-radius: var(--radius-md); padding: 20px; }
+    .freestep-link { width: 100%; }
+  }
+
   /* ===== Press strip: "as mentioned in" =====
      Seven outlet logos on an endless loop.
 
@@ -491,8 +540,8 @@
      in it is paraphrased, reworded or invented, and it must stay that
      way: naming a real product and putting words in its mouth is the
      fastest way to lose the trust this section exists to win. If the
-     excerpt is ever refreshed, change the date in .vs-note in the same
-     edit. The word count in the ChatGPT tag is the full answer's, not
+     excerpt is ever refreshed, re-capture it rather than editing it by
+     hand. The word count in the ChatGPT tag is the full answer's, not
      the excerpt's, which is why the column fades rather than ends.
      881 is the answer's own words, counted off the rendered answer:
      the nav, the sign-in prompt and the question itself are excluded.
@@ -669,15 +718,6 @@
   .vs-card--other .vs-points li { color: var(--text-dim); }
   .vs-card--field .vs-points li { color: var(--text-inverse-dim); }
 
-  .vs-note {
-    margin: 24px auto 0;
-    max-width: 760px;
-    text-align: center;
-    font-family: var(--font-sans);
-    font-size: 11.5px;
-    line-height: 1.6;
-    color: var(--text-mute);
-  }
 
   @media (max-width: 860px) {
     .vs-grid { grid-template-columns: 1fr; gap: 16px; }
@@ -941,6 +981,12 @@
   /* ===== Section: How it works ===== */
   .how-section {
     background: var(--bg-cream);
+    /* The Unlimited block is full-bleed, dark, and the last thing in this
+       cream section, so the section's own bottom padding rendered as an
+       empty cream band between it and the dark band below: 100px of
+       nothing at desktop. The block brings its own 100px of inner padding,
+       so dropping the section's lets the two dark areas meet. */
+    padding-bottom: 0;
   }
   .how-header {
     text-align: center;
@@ -3911,7 +3957,6 @@
         </article>
       </div>
 
-      <p class="vs-note">ChatGPT&rsquo;s answer is quoted directly from chatgpt.com on 27 November 2026, shortened to fit. The full reply ran to 881 words. Nothing has been reworded.</p>
     </div>
 
     <!-- Mobile-only hint indicating the table scrolls horizontally.
@@ -4112,6 +4157,12 @@
       <div class="gold-divider reveal"></div>
       <h2 class="h-section reveal reveal-up reveal-delay-1">Three ways in. <span class="shimmer">All under what one human session costs.</span></h2>
       <p class="lead reveal reveal-up reveal-delay-2" style="margin: 0 auto;">The 72-Hour Power Reset is the doorway. The Unlimited Field is what opens beyond it: a private Human + AI-guided self-mastery environment. Annual founding members get the deepest bonus stack.</p>
+    </div>
+
+    <!-- Free way in, before anything priced. -->
+    <div class="freestep reveal reveal-up reveal-delay-2">
+      <p class="freestep-text"><strong>Start free.</strong> A short guided preview inside The Field. No card, nothing to cancel.</p>
+      <a href="/try" class="freestep-link">Try it free &rarr;</a>
     </div>
 
     <div class="pricing-grid">
