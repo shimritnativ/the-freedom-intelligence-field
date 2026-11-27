@@ -482,6 +482,211 @@
     .mypress-viewport { -webkit-mask-image: none; mask-image: none; }
   }
 
+  /* ===== Same question, two answers =====
+     The concrete proof that sits above the comparison table. The table
+     says what The Field does differently; this shows it.
+
+     The ChatGPT column is a VERBATIM excerpt, captured logged-out from
+     chatgpt.com on 27 November 2026 and trimmed for length only. Nothing
+     in it is paraphrased, reworded or invented, and it must stay that
+     way: naming a real product and putting words in its mouth is the
+     fastest way to lose the trust this section exists to win. If the
+     excerpt is ever refreshed, change the date in .vs-note in the same
+     edit. The word count in the ChatGPT tag is the full answer's, not
+     the excerpt's, which is why the column fades rather than ends.
+     881 is the answer's own words, counted off the rendered answer:
+     the nav, the sign-in prompt and the question itself are excluded.
+     Counting the whole page instead gives 960, which is wrong. Recount
+     the same way if the excerpt is ever replaced. */
+  .vs {
+    max-width: 1080px;
+    margin: 0 auto 64px;
+  }
+  .vs-ask {
+    text-align: center;
+    margin-bottom: 34px;
+  }
+  .vs-ask-label {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--text-mute);
+    margin-bottom: 14px;
+  }
+  .vs-ask-text {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: clamp(21px, 2.6vw, 30px);
+    line-height: 1.34;
+    color: var(--text);
+    margin: 0 auto;
+    max-width: 26ch;
+  }
+  .vs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+    align-items: stretch;
+  }
+  .vs-card {
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .vs-card--other {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+  }
+  .vs-card--field {
+    background: var(--bg-dark);
+    border: 1px solid var(--gold-line);
+    box-shadow: var(--shadow-md);
+  }
+  .vs-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 24px 0;
+  }
+  .vs-name {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .vs-card--other .vs-name { color: var(--text-mute); }
+  .vs-card--field .vs-name { color: var(--gold); }
+  .vs-count {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+  .vs-card--other .vs-count { color: var(--text-mute); }
+  .vs-card--field .vs-count { color: var(--text-inverse-mute); }
+
+  .vs-body {
+    padding: 16px 24px 0;
+    font-family: var(--font-sans);
+    font-size: 14.5px;
+    line-height: 1.62;
+    flex: 1 1 auto;
+  }
+  .vs-card--other .vs-body { color: var(--text-dim); }
+  .vs-card--field .vs-body {
+    color: var(--text-inverse);
+    font-size: 16px;
+    line-height: 1.66;
+    /* The short answer is the point, but left to sit at the top it reads
+       as an unfinished card next to the long one. Centring it in the
+       space the other column forces makes the brevity look chosen. */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-bottom: 16px;
+  }
+  .vs-body p { margin: 0 0 13px; }
+  .vs-body p:last-child { margin-bottom: 0; }
+  .vs-step {
+    font-weight: 700;
+    color: var(--text);
+    margin-top: 18px;
+  }
+  /* The point of this column is its length, so it is cut off mid-flow
+     and faded rather than tidily ended. The fade colour has to match the
+     card, not the section behind it. */
+  .vs-clip {
+    position: relative;
+    max-height: 310px;
+    overflow: hidden;
+  }
+  .vs-clip::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 110px;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0), var(--bg-card));
+    pointer-events: none;
+  }
+  /* The verdict is the part most people will read, so it gets its own
+     panel rather than sitting under the answer as a footnote. Tinted,
+     labelled, and heavy enough that the eye lands here before it reads
+     a word of either answer. */
+  .vs-foot {
+    padding: 22px 24px 26px;
+    margin-top: 18px;
+  }
+  .vs-card--other .vs-foot { background: #F4F0E6; }
+  .vs-card--field .vs-foot { background: rgba(201, 168, 76, 0.09); }
+  .vs-result-label {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .vs-card--other .vs-result-label { color: var(--text-mute); }
+  .vs-card--field .vs-result-label { color: var(--gold); }
+  .vs-verdict {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: clamp(22px, 2.1vw, 27px);
+    line-height: 1.22;
+    margin: 0 0 16px;
+  }
+  .vs-card--other .vs-verdict { color: var(--text); }
+  .vs-card--field .vs-verdict { color: var(--gold); }
+  .vs-points {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 9px;
+  }
+  .vs-points li {
+    display: grid;
+    grid-template-columns: 15px 1fr;
+    gap: 10px;
+    font-size: 13.5px;
+    line-height: 1.52;
+  }
+  .vs-mark { font-size: 12px; line-height: 1.6; }
+  .vs-card--other .vs-mark { color: var(--text-mute); }
+  .vs-card--field .vs-mark { color: var(--gold); }
+  .vs-card--field .vs-foot { border-top: 1px solid var(--gold-line); }
+  .vs-card--other .vs-points li { color: var(--text-dim); }
+  .vs-card--field .vs-points li { color: var(--text-inverse-dim); }
+
+  .vs-note {
+    margin: 24px auto 0;
+    max-width: 760px;
+    text-align: center;
+    font-family: var(--font-sans);
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--text-mute);
+  }
+
+  @media (max-width: 860px) {
+    .vs-grid { grid-template-columns: 1fr; gap: 16px; }
+    /* Stacked, the long column stops being a comparison and starts being
+       a wall to scroll past, so it gets cut harder. */
+    .vs-clip { max-height: 230px; }
+    .vs-ask-text { max-width: none; }
+  }
+
   /* ===== Trust strip — proof bar =====
      Four stats laid out as glowing stat cards. Big gold numbers, small
      uppercase labels, hairline dividers between cells on desktop, a
@@ -3648,6 +3853,65 @@
       <div class="gold-divider reveal"></div>
       <h2 class="h-section reveal reveal-up reveal-delay-1">Not a wrapper.<br><span class="shimmer">An entirely different category.</span></h2>
       <p class="lead reveal reveal-up reveal-delay-2" style="margin: 0 auto;">A direct, honest comparison with what's currently on the market in AI-powered coaching and personal development tools.</p>
+    </div>
+
+    <!-- Same question, two answers. See the .vs block in the stylesheet
+         for the rule about keeping the ChatGPT column verbatim. -->
+    <div class="vs reveal reveal-up reveal-delay-3">
+      <div class="vs-ask">
+        <span class="vs-ask-label">One question, asked twice</span>
+        <p class="vs-ask-text">&ldquo;I keep self-sabotaging right when things start going well. How do I stop?&rdquo;</p>
+      </div>
+
+      <div class="vs-grid">
+        <article class="vs-card vs-card--other">
+          <div class="vs-head">
+            <span class="vs-name">ChatGPT</span>
+            <span class="vs-count">881 words back</span>
+          </div>
+          <div class="vs-body vs-clip">
+            <p>First, I want you to understand something: self-sabotage doesn&rsquo;t necessarily mean you don&rsquo;t want good things. Sometimes it means a part of you doesn&rsquo;t know how to feel safe when things are finally going well.</p>
+            <p class="vs-step">1. Understand what you&rsquo;re protecting yourself from</p>
+            <p>Self-sabotage often has an emotional function. It can be an attempt to protect yourself from something that feels threatening.</p>
+            <p class="vs-step">2. Learn to recognize your sabotage sequence</p>
+            <p>Most self-sabotage follows a pattern: things start going well, discomfort appears, you create an escape, you feel temporary relief, then regret and guilt.</p>
+            <p class="vs-step">3. Make one rule: Don&rsquo;t make permanent decisions during temporary discomfort</p>
+            <p>Give yourself 24&ndash;48 hours before making a major decision, unless there&rsquo;s an immediate safety issue.</p>
+          </div>
+          <div class="vs-foot">
+            <span class="vs-result-label">The result</span>
+            <p class="vs-verdict">Sound advice. Just not about you.</p>
+            <ul class="vs-points">
+              <li><span class="vs-mark">&#9675;</span>A general assistant generalising. There is no coaching method underneath it.</li>
+              <li><span class="vs-mark">&#9675;</span>Five numbered steps before it asks you a single open question.</li>
+              <li><span class="vs-mark">&#9675;</span>It suggests you try therapy, because it knows it is not the thing.</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="vs-card vs-card--field">
+          <div class="vs-head">
+            <span class="vs-name"><em>The</em> Field</span>
+            <span class="vs-count">45 words back</span>
+          </div>
+          <div class="vs-body">
+            <p>Before anything else, I want the actual moment.</p>
+            <p>Not the pattern in general. The last time.</p>
+            <p>Something was going well, and then you did the thing that undid it. Take me to the minute before you did it. Where were you, and what was running?</p>
+          </div>
+          <div class="vs-foot">
+            <span class="vs-result-label">The result</span>
+            <p class="vs-verdict">It doesn&rsquo;t answer you. It starts the work.</p>
+            <ul class="vs-points">
+              <li><span class="vs-mark">&#9679;</span>The Human Instrument&reg; method underneath every word, built over 10+ years of client work.</li>
+              <li><span class="vs-mark">&#9679;</span>Starts at the moment it actually happened to you, not at a framework.</li>
+              <li><span class="vs-mark">&#9679;</span>Remembers what you said, and walks you out with something you keep.</li>
+            </ul>
+          </div>
+        </article>
+      </div>
+
+      <p class="vs-note">ChatGPT&rsquo;s answer is quoted directly from chatgpt.com on 27 November 2026, shortened to fit. The full reply ran to 881 words. Nothing has been reworded.</p>
     </div>
 
     <!-- Mobile-only hint indicating the table scrolls horizontally.
